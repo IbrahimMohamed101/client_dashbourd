@@ -1,7 +1,7 @@
 export const routeTranslations: Record<string, string> = {
   dashboard: "لوحة التحكم",
   packages: "الباقات",
-  orders: "الطلبات",
+  orders: "عمليات المطبخ",
   subscriptions: "الاشتراكات",
   users: "المستخدمين",
   addons: "الإضافات",

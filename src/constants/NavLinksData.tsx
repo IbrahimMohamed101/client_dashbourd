@@ -5,7 +5,7 @@ import {
   Users,
   Boxes,
   CalendarPlus,
-  // Truck,
+  ChefHat,
   UtensilsCrossed,
   PlusSquare,
   Utensils,
@@ -49,11 +49,11 @@ export const NavLinksData = {
       url: "/subscriptions",
       icon: <CalendarPlus />,
     },
-    // {
-    //   title: "الطلبات",
-    //   url: "/orders",
-    //   icon: <Truck />,
-    // },
+    {
+      title: "عمليات المطبخ",
+      url: "/orders",
+      icon: <ChefHat />,
+    },
     {
       title: "المستخدمين",
       url: "/users",
