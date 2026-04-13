@@ -18,6 +18,7 @@ import { Route as ProtectedPremiumMealsIndexRouteImport } from './routes/_protec
 import { Route as ProtectedPackagesIndexRouteImport } from './routes/_protected/packages/index'
 import { Route as ProtectedOrdersIndexRouteImport } from './routes/_protected/orders/index'
 import { Route as ProtectedMealsIndexRouteImport } from './routes/_protected/meals/index'
+import { Route as ProtectedDeliveryIndexRouteImport } from './routes/_protected/delivery/index'
 import { Route as ProtectedCategoriesIndexRouteImport } from './routes/_protected/categories/index'
 import { Route as ProtectedAddonsIndexRouteImport } from './routes/_protected/addons/index'
 import { Route as ProtectedUsersCreateRouteImport } from './routes/_protected/users/create'
@@ -80,6 +81,11 @@ const ProtectedOrdersIndexRoute = ProtectedOrdersIndexRouteImport.update({
 const ProtectedMealsIndexRoute = ProtectedMealsIndexRouteImport.update({
   id: '/meals/',
   path: '/meals/',
+  getParentRoute: () => ProtectedRouteRoute,
+} as any)
+const ProtectedDeliveryIndexRoute = ProtectedDeliveryIndexRouteImport.update({
+  id: '/delivery/',
+  path: '/delivery/',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
 const ProtectedCategoriesIndexRoute =
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/users/create': typeof ProtectedUsersCreateRoute
   '/addons/': typeof ProtectedAddonsIndexRoute
   '/categories/': typeof ProtectedCategoriesIndexRoute
+  '/delivery/': typeof ProtectedDeliveryIndexRoute
   '/meals/': typeof ProtectedMealsIndexRoute
   '/orders/': typeof ProtectedOrdersIndexRoute
   '/packages/': typeof ProtectedPackagesIndexRoute
@@ -219,6 +226,7 @@ export interface FileRoutesByTo {
   '/users/create': typeof ProtectedUsersCreateRoute
   '/addons': typeof ProtectedAddonsIndexRoute
   '/categories': typeof ProtectedCategoriesIndexRoute
+  '/delivery': typeof ProtectedDeliveryIndexRoute
   '/meals': typeof ProtectedMealsIndexRoute
   '/orders': typeof ProtectedOrdersIndexRoute
   '/packages': typeof ProtectedPackagesIndexRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/_protected/users/create': typeof ProtectedUsersCreateRoute
   '/_protected/addons/': typeof ProtectedAddonsIndexRoute
   '/_protected/categories/': typeof ProtectedCategoriesIndexRoute
+  '/_protected/delivery/': typeof ProtectedDeliveryIndexRoute
   '/_protected/meals/': typeof ProtectedMealsIndexRoute
   '/_protected/orders/': typeof ProtectedOrdersIndexRoute
   '/_protected/packages/': typeof ProtectedPackagesIndexRoute
@@ -277,6 +286,7 @@ export interface FileRouteTypes {
     | '/users/create'
     | '/addons/'
     | '/categories/'
+    | '/delivery/'
     | '/meals/'
     | '/orders/'
     | '/packages/'
@@ -304,6 +314,7 @@ export interface FileRouteTypes {
     | '/users/create'
     | '/addons'
     | '/categories'
+    | '/delivery'
     | '/meals'
     | '/orders'
     | '/packages'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/_protected/users/create'
     | '/_protected/addons/'
     | '/_protected/categories/'
+    | '/_protected/delivery/'
     | '/_protected/meals/'
     | '/_protected/orders/'
     | '/_protected/packages/'
@@ -416,6 +428,13 @@ declare module '@tanstack/react-router' {
       path: '/meals'
       fullPath: '/meals/'
       preLoaderRoute: typeof ProtectedMealsIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/delivery/': {
+      id: '/_protected/delivery/'
+      path: '/delivery'
+      fullPath: '/delivery/'
+      preLoaderRoute: typeof ProtectedDeliveryIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/categories/': {
@@ -551,6 +570,7 @@ interface ProtectedRouteRouteChildren {
   ProtectedUsersCreateRoute: typeof ProtectedUsersCreateRoute
   ProtectedAddonsIndexRoute: typeof ProtectedAddonsIndexRoute
   ProtectedCategoriesIndexRoute: typeof ProtectedCategoriesIndexRoute
+  ProtectedDeliveryIndexRoute: typeof ProtectedDeliveryIndexRoute
   ProtectedMealsIndexRoute: typeof ProtectedMealsIndexRoute
   ProtectedOrdersIndexRoute: typeof ProtectedOrdersIndexRoute
   ProtectedPackagesIndexRoute: typeof ProtectedPackagesIndexRoute
@@ -578,6 +598,7 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedUsersCreateRoute: ProtectedUsersCreateRoute,
   ProtectedAddonsIndexRoute: ProtectedAddonsIndexRoute,
   ProtectedCategoriesIndexRoute: ProtectedCategoriesIndexRoute,
+  ProtectedDeliveryIndexRoute: ProtectedDeliveryIndexRoute,
   ProtectedMealsIndexRoute: ProtectedMealsIndexRoute,
   ProtectedOrdersIndexRoute: ProtectedOrdersIndexRoute,
   ProtectedPackagesIndexRoute: ProtectedPackagesIndexRoute,

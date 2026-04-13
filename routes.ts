@@ -11,6 +11,7 @@ const SUPERADMIN_ROUTES = [
   "/addons",
   "/meals",
   "/categories",
+  "/delivery",
 ];
 
 const KITCHEN_ROUTES = ["/orders"];

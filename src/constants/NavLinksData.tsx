@@ -9,6 +9,7 @@ import {
   UtensilsCrossed,
   PlusSquare,
   Utensils,
+  Truck,
   FolderOpen,
 } from "lucide-react";
 
@@ -53,6 +54,11 @@ export const NavLinksData = {
       title: "عمليات المطبخ",
       url: "/orders",
       icon: <ChefHat />,
+    },
+    {
+      title: "التوصيل",
+      url: "/delivery",
+      icon: <Truck />,
     },
     {
       title: "المستخدمين",
