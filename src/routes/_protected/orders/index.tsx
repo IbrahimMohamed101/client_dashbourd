@@ -1,13 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { Lock, CalendarIcon, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { KitchenDashboardCards } from "@/components/pages/kitchen/KitchenDashboardCards";
-import { KitchenFilters } from "@/components/pages/kitchen/KitchenFilters";
-import { KitchenTabs } from "@/components/pages/kitchen/KitchenTabs";
-import { KitchenDataTable } from "@/components/pages/kitchen/KitchenDataTable";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -17,6 +14,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { KitchenDashboardCards } from "@/components/pages/kitchen/KitchenDashboardCards";
+import { KitchenFilters } from "@/components/pages/kitchen/KitchenFilters";
+import { KitchenTabs } from "@/components/pages/kitchen/KitchenTabs";
+import { KitchenDataTable } from "@/components/pages/kitchen/KitchenDataTable";
+
 import {
   useKitchenSummaryQuery,
   useKitchenOperationsQuery,
@@ -44,7 +46,6 @@ function KitchenDashboard() {
   );
   const [searchStr, setSearchStr] = useState("");
   const debouncedSearch = useDebounce(searchStr, 500);
-  const [isLockDialogOpen, setIsLockDialogOpen] = useState(false);
 
   // ── Queries ──
   const { data: summaryRes, isLoading: isSummaryLoading } =
@@ -64,16 +65,22 @@ function KitchenDashboard() {
   const actionMutation = useKitchenActionMutation();
   const bulkLockMutation = useBulkLockMutation();
 
-  // ── Handlers ──
-  const handleActionClick = (action: KitchenRowAction) => {
-    actionMutation.mutate({ endpoint: action.endpoint, method: action.method });
-  };
+  const [isLockDialogOpen, setIsLockDialogOpen] = useState(false);
 
   const handleBulkLock = () => {
     bulkLockMutation.mutate(date, {
       onSuccess: () => {
         setIsLockDialogOpen(false);
       },
+    });
+  };
+
+  // ── Handlers ──
+  const handleActionClick = (action: KitchenRowAction, actionData?: any) => {
+    actionMutation.mutate({
+      endpoint: action.endpoint,
+      method: action.method,
+      body: actionData,
     });
   };
 
@@ -137,7 +144,6 @@ function KitchenDashboard() {
         tabCounts={summaryData?.tabs}
       />
 
-      {/* Data table */}
       <KitchenDataTable
         data={rows}
         isLoading={isListLoading}

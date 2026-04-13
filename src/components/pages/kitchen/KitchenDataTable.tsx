@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import {
   Table,
@@ -9,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type {
   KitchenOperationsRow,
   KitchenUiStatus,
@@ -39,7 +41,7 @@ import {
 interface KitchenDataTableProps {
   data: KitchenOperationsRow[];
   isLoading: boolean;
-  onActionClick: (action: KitchenRowAction) => void;
+  onActionClick: (action: KitchenRowAction, actionData?: any) => void;
   isActionLoading: boolean;
 }
 
@@ -52,6 +54,7 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
   const [confirmAction, setConfirmAction] = useState<KitchenRowAction | null>(
     null
   );
+  const [pickupCode, setPickupCode] = useState("");
 
   const getStatusBadge = (status: KitchenUiStatus, statusLabel: string) => {
     const config: Record<
@@ -160,7 +163,13 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
   };
 
   const handleActionPress = (action: KitchenRowAction) => {
-    if (action.requiresConfirmation) {
+    const isNeedsCode =
+      action.endpoint?.includes("/verify") ||
+      action.endpoint?.includes("fulfill-pickup") ||
+      action.key === "fulfill_pickup" ||
+      action.key === "verify";
+
+    if (action.requiresConfirmation || isNeedsCode) {
       setConfirmAction(action);
     } else {
       onActionClick(action);
@@ -179,7 +188,7 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
     return (
       <div className="flex flex-wrap items-center gap-2">
         {row.actions
-          .filter((a) => a.enabled)
+          .filter((a) => a.enabled && a.key !== "lock")
           .map((action) => {
             const isDanger = action.variant === "danger";
             const isPrimary = action.variant === "primary";
@@ -383,7 +392,12 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
       {/* Confirmation dialog */}
       <AlertDialog
         open={!!confirmAction}
-        onOpenChange={() => setConfirmAction(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmAction(null);
+            setPickupCode("");
+          }
+        }}
       >
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
@@ -395,16 +409,51 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
               {confirmAction?.confirmationMessage ||
                 "هل أنت متأكد من المضي قدماً في هذا الإجراء؟ لا يمكن التراجع عن معظم التحديثات بسهولة."}
             </AlertDialogDescription>
+
+            {/* If the action is for pickup verification, show input field for the code */}
+            {(confirmAction?.endpoint?.includes("/verify") ||
+              confirmAction?.endpoint?.includes("fulfill-pickup") ||
+              confirmAction?.key === "fulfill_pickup" ||
+              confirmAction?.key === "verify") && (
+              <div className="mt-4 flex flex-col gap-2">
+                <label className="text-sm font-medium text-foreground">
+                  رمز الاستلام
+                </label>
+                <Input
+                  placeholder="أدخل رمز الاستلام..."
+                  value={pickupCode}
+                  onChange={(e) => setPickupCode(e.target.value)}
+                  className="text-left"
+                  dir="ltr"
+                />
+              </div>
+            )}
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-6 gap-2 sm:gap-0">
+          <AlertDialogFooter className="mt-6 gap-2 sm:gap-4">
             <AlertDialogCancel className="mt-0">إلغاء</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (confirmAction) {
-                  onActionClick(confirmAction);
+                  const needsCode =
+                    confirmAction.endpoint?.includes("/verify") ||
+                    confirmAction.endpoint?.includes("fulfill-pickup") ||
+                    confirmAction.key === "fulfill_pickup" ||
+                    confirmAction.key === "verify";
+                  onActionClick(
+                    confirmAction,
+                    needsCode ? { code: pickupCode } : undefined
+                  );
                   setConfirmAction(null);
+                  setPickupCode("");
                 }
               }}
+              disabled={
+                (confirmAction?.endpoint?.includes("/verify") ||
+                  confirmAction?.endpoint?.includes("fulfill-pickup") ||
+                  confirmAction?.key === "fulfill_pickup" ||
+                  confirmAction?.key === "verify") &&
+                !pickupCode.trim()
+              }
               className={
                 confirmAction?.variant === "danger"
                   ? "text-destructive-foreground bg-destructive hover:bg-destructive/90"

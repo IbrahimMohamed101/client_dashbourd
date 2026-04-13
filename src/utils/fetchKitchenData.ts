@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/lib/apis";
 import type {
   KitchenOperationsSummaryResponse,
@@ -16,7 +17,9 @@ export const fetchKitchenOperationsSummary = async (
 ): Promise<KitchenOperationsSummaryResponse> => {
   const params = new URLSearchParams({ date });
   if (branchId) params.append("branchId", branchId);
-  const response = await api.get(`/api/kitchen/operations/summary?${params.toString()}`);
+  const response = await api.get(
+    `/api/kitchen/operations/summary?${params.toString()}`
+  );
   return response.data;
 };
 
@@ -41,7 +44,11 @@ export const fetchKitchenOperationsList = async ({
   sortBy?: string;
   sortOrder?: string;
 }): Promise<KitchenOperationsListResponse> => {
-  const params = new URLSearchParams({ date, page: page.toString(), limit: limit.toString() });
+  const params = new URLSearchParams({
+    date,
+    page: page.toString(),
+    limit: limit.toString(),
+  });
 
   if (tab) params.append("tab", tab);
   if (status && status !== "all") params.append("status", status);
@@ -50,52 +57,94 @@ export const fetchKitchenOperationsList = async ({
   if (sortBy) params.append("sortBy", sortBy);
   if (sortOrder) params.append("sortOrder", sortOrder);
 
-  const response = await api.get(`/api/kitchen/operations/list?${params.toString()}`);
+  const response = await api.get(
+    `/api/kitchen/operations/list?${params.toString()}`
+  );
   return response.data;
 };
 
 // ----- Generic action executor (uses the endpoint from the row action) -----
-export const executeKitchenAction = async (endpoint: string, method: string = "POST") => {
-  const response = method === "POST"
-    ? await api.post(endpoint)
-    : await api.put(endpoint);
+export const executeKitchenAction = async (
+  endpoint: string,
+  method: string = "POST",
+  body?: any
+) => {
+  const response =
+    method === "POST"
+      ? await api.post(endpoint, body)
+      : await api.put(endpoint, body);
   return response.data;
 };
 
 // ----- Subscriptions Transitions -----
 
-export const lockSubscriptionDay = async (subscriptionId: string, date: string) => {
-  const response = await api.post(`/api/kitchen/subscriptions/${subscriptionId}/days/${date}/lock`);
+export const lockSubscriptionDay = async (
+  subscriptionId: string,
+  date: string
+) => {
+  const response = await api.post(
+    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/lock`
+  );
   return response.data;
 };
 
-export const reopenSubscriptionDay = async (subscriptionId: string, date: string) => {
-  const response = await api.post(`/api/kitchen/subscriptions/${subscriptionId}/days/${date}/reopen`);
+export const reopenSubscriptionDay = async (
+  subscriptionId: string,
+  date: string
+) => {
+  const response = await api.post(
+    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/reopen`
+  );
   return response.data;
 };
 
-export const inPreparationSubscriptionDay = async (subscriptionId: string, date: string) => {
-  const response = await api.post(`/api/kitchen/subscriptions/${subscriptionId}/days/${date}/in-preparation`);
+export const inPreparationSubscriptionDay = async (
+  subscriptionId: string,
+  date: string
+) => {
+  const response = await api.post(
+    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/in-preparation`
+  );
   return response.data;
 };
 
-export const outForDeliverySubscriptionDay = async (subscriptionId: string, date: string) => {
-  const response = await api.post(`/api/kitchen/subscriptions/${subscriptionId}/days/${date}/out-for-delivery`);
+export const outForDeliverySubscriptionDay = async (
+  subscriptionId: string,
+  date: string
+) => {
+  const response = await api.post(
+    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/out-for-delivery`
+  );
   return response.data;
 };
 
-export const readyForPickupSubscriptionDay = async (subscriptionId: string, date: string) => {
-  const response = await api.post(`/api/kitchen/subscriptions/${subscriptionId}/days/${date}/ready-for-pickup`);
+export const readyForPickupSubscriptionDay = async (
+  subscriptionId: string,
+  date: string
+) => {
+  const response = await api.post(
+    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/ready-for-pickup`
+  );
   return response.data;
 };
 
-export const fulfillPickupSubscriptionDay = async (subscriptionId: string, date: string) => {
-  const response = await api.post(`/api/kitchen/subscriptions/${subscriptionId}/days/${date}/fulfill-pickup`);
+export const fulfillPickupSubscriptionDay = async (
+  subscriptionId: string,
+  date: string
+) => {
+  const response = await api.post(
+    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/fulfill-pickup`
+  );
   return response.data;
 };
 
-export const cancelAtBranchSubscriptionDay = async (subscriptionId: string, date: string) => {
-  const response = await api.post(`/api/kitchen/subscriptions/${subscriptionId}/days/${date}/cancel-at-branch`);
+export const cancelAtBranchSubscriptionDay = async (
+  subscriptionId: string,
+  date: string
+) => {
+  const response = await api.post(
+    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/cancel-at-branch`
+  );
   return response.data;
 };
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -50,15 +51,25 @@ export const useKitchenActionMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ endpoint, method }: { endpoint: string; method: string }) =>
-      executeKitchenAction(endpoint, method),
+    mutationFn: ({
+      endpoint,
+      method,
+      body,
+    }: {
+      endpoint: string;
+      method: string;
+      body?: any;
+    }) => executeKitchenAction(endpoint, method, body),
     onSuccess: () => {
       toast.success("تم تنفيذ الإجراء بنجاح");
       queryClient.invalidateQueries({ queryKey: ["kitchenSummary"] });
       queryClient.invalidateQueries({ queryKey: ["kitchenOperations"] });
     },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      const msg = error?.response?.data?.message || "حدث خطأ أثناء تنفيذ الإجراء";
+    onError: (
+      error: Error & { response?: { data?: { message?: string } } }
+    ) => {
+      const msg =
+        error?.response?.data?.message || "حدث خطأ أثناء تنفيذ الإجراء";
       toast.error(msg);
     },
   });
