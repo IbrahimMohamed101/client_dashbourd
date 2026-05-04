@@ -121,11 +121,37 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     }
   html {
     @apply font-sans;
     }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-background/60 backdrop-blur-xl border border-white/10 dark:border-white/5;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .premium-gradient {
+    background: linear-gradient(135deg, oklch(0.7 0.2 140), oklch(0.5 0.2 160));
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-primary to-primary/60;
+  }
+
+  .premium-shadow {
+    box-shadow: 
+      0 2px 4px rgba(0,0,0,0.02),
+      0 10px 20px rgba(0,0,0,0.04),
+      0 20px 40px rgba(0,0,0,0.06);
+  }
+
+  .status-pill {
+    @apply px-3 py-1 rounded-full text-xs font-semibold tracking-wide flex items-center gap-1.5 transition-all duration-300;
+  }
 }
 
 /* Custom scrollbar for delivery list and similar scrollable containers */

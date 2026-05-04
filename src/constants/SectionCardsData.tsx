@@ -12,7 +12,6 @@ import { BadgeCheckIcon } from "lucide-react";
 
 const dashboardSectionCards: SectionCardsData[] = [
   {
-    id: 1,
     description: "إجمالي الاشتراكات النشطة",
     value: "1,250.00",
     percentage: "+12.5%",
@@ -25,7 +24,6 @@ const dashboardSectionCards: SectionCardsData[] = [
     ),
   },
   {
-    id: 2,
     description: "الطلبات اليوم",
     value: "245",
     percentage: "+8.2%",
@@ -38,7 +36,6 @@ const dashboardSectionCards: SectionCardsData[] = [
     ),
   },
   {
-    id: 3,
     description: "عدد الخطط",
     value: "1,892",
     percentage: "-3.1%",
@@ -51,7 +48,6 @@ const dashboardSectionCards: SectionCardsData[] = [
     ),
   },
   {
-    id: 4,
     description: "إجمالي مستخدمي التطبيق",
     value: "87",
     percentage: "+22.4%",
@@ -69,7 +65,6 @@ const getPackagesSectionCards = (
   summary?: PackageSummary
 ): SectionCardsData[] => [
   {
-    id: 1,
     description: "إجمالي الباقات",
     value: summary?.totalPlans?.toString() || "0",
     icon: (
@@ -79,7 +74,6 @@ const getPackagesSectionCards = (
     ),
   },
   {
-    id: 2,
     description: "الباقات النشطة",
     value: summary?.activePlans?.toString() || "0",
     isPositive: true,
@@ -90,7 +84,6 @@ const getPackagesSectionCards = (
     ),
   },
   {
-    id: 3,
     description: "الباقات المعطلة",
     value: summary?.inactivePlans?.toString() || "0",
     isPositive: false,
@@ -101,7 +94,6 @@ const getPackagesSectionCards = (
     ),
   },
   {
-    id: 4,
     description: "متوسط عدد الأيام",
     value: summary?.averageDaysCount?.toString() || "0",
     icon: (
@@ -116,7 +108,6 @@ const getSubscriptionsSectionCards = (
   summary?: SubscriptionSummary
 ): SectionCardsData[] => [
   {
-    id: 1,
     description: "إجمالي الاشتراكات",
     value: summary?.totalSubscriptions?.toString() || "0",
     icon: (
@@ -126,7 +117,6 @@ const getSubscriptionsSectionCards = (
     ),
   },
   {
-    id: 2,
     description: "الاشتراكات النشطة",
     value: summary?.activeSubscriptions?.toString() || "0",
     isPositive: true,
@@ -137,7 +127,6 @@ const getSubscriptionsSectionCards = (
     ),
   },
   {
-    id: 3,
     description: "الاشتراكات الملغاة",
     value: summary?.canceledSubscriptions?.toString() || "0",
     isPositive: false,
@@ -148,7 +137,6 @@ const getSubscriptionsSectionCards = (
     ),
   },
   {
-    id: 4,
     description: "إجمالي الوجبات المتبقية",
     value: summary?.totalRemainingMeals?.toString() || "0",
     icon: (
@@ -159,4 +147,88 @@ const getSubscriptionsSectionCards = (
   },
 ];
 
-export { dashboardSectionCards, getPackagesSectionCards, getSubscriptionsSectionCards };
+const getFinanceSectionCards = (summary?: {
+  totalRevenue: number;
+  totalPayments: number;
+  pendingPayments: number;
+  failedPayments: number;
+}): SectionCardsData[] => [
+  {
+    description: "إجمالي الإيرادات",
+    value: summary?.totalRevenue?.toLocaleString() || "0",
+    icon: (
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 shadow-sm dark:bg-emerald-950 dark:text-emerald-400">
+        <BadgeCheckIcon size={26} />
+      </div>
+    ),
+  },
+  {
+    description: "المدفوعات المكتملة",
+    value: summary?.totalPayments?.toString() || "0",
+    icon: (
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 text-purple-600 shadow-sm dark:bg-purple-950 dark:text-purple-400">
+        <BoxesIcon size={26} />
+      </div>
+    ),
+  },
+  {
+    description: "مدفوعات معلقة",
+    value: summary?.pendingPayments?.toString() || "0",
+    icon: (
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100 text-amber-600 shadow-sm dark:bg-amber-950 dark:text-amber-400">
+        <CalendarCogIcon size={26} />
+      </div>
+    ),
+  },
+  {
+    description: "مدفوعات فاشلة",
+    value: summary?.failedPayments?.toString() || "0",
+    icon: (
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-100 text-red-600 shadow-sm dark:bg-red-950 dark:text-red-400">
+        <BoxIcon size={26} />
+      </div>
+    ),
+  },
+];
+
+const getPromoCodesSectionCards = (summary?: {
+  totalPromoCodes: number;
+  activePromoCodes: number;
+  totalUses: number;
+}): SectionCardsData[] => [
+  {
+    description: "إجمالي الأكواد",
+    value: summary?.totalPromoCodes?.toString() || "0",
+    icon: (
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 text-purple-600 shadow-sm dark:bg-purple-950 dark:text-purple-400">
+        <BoxesIcon size={26} />
+      </div>
+    ),
+  },
+  {
+    description: "الأكواد النشطة",
+    value: summary?.activePromoCodes?.toString() || "0",
+    icon: (
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 shadow-sm dark:bg-emerald-950 dark:text-emerald-400">
+        <BadgeCheckIcon size={26} />
+      </div>
+    ),
+  },
+  {
+    description: "إجمالي الاستخدامات",
+    value: summary?.totalUses?.toString() || "0",
+    icon: (
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-sky-100 text-sky-600 shadow-sm dark:bg-sky-950 dark:text-sky-400">
+        <UsersIcon size={26} />
+      </div>
+    ),
+  },
+];
+
+export {
+  dashboardSectionCards,
+  getPackagesSectionCards,
+  getSubscriptionsSectionCards,
+  getFinanceSectionCards,
+  getPromoCodesSectionCards,
+};

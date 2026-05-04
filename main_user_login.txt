@@ -1,0 +1,2 @@
+user : superadmin@example.com
+pass : StrongPass123

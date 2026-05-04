@@ -4,6 +4,7 @@ import { UserRoles } from "@/types/auth";
 import {
   KITCHEN_ROUTES,
   SUPERADMIN_ROUTES,
+  ADMIN_ROUTES,
   AUTH_ROUTES,
   COURIER_ROUTES,
   ROLE_DEFAULTS,
@@ -16,6 +17,7 @@ const isRouteMatch = (routes: string[], pathName: string) =>
 
 const ROLE_ROUTES: Record<UserRole, string[]> = {
   [UserRoles.SUPERADMIN]: SUPERADMIN_ROUTES,
+  [UserRoles.ADMIN]: ADMIN_ROUTES,
   [UserRoles.KITCHEN]: KITCHEN_ROUTES,
   [UserRoles.COURIER]: COURIER_ROUTES,
 };

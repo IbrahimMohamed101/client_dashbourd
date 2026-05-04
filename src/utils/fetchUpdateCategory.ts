@@ -11,5 +11,5 @@ export const fetchUpdateCategory = async (
   categoryId: string,
   data: UpdateCategoryPayload
 ): Promise<void> => {
-  await api.put(`/api/admin/meal-categories/${categoryId}`, data);
+  await api.put(`/api/dashboard/meal-planner/categories/${categoryId}`, data);
 };

@@ -11,6 +11,9 @@ import {
   Utensils,
   Truck,
   FolderOpen,
+  CreditCard,
+  Ticket,
+  MapPin,
 } from "lucide-react";
 
 export const NavLinksData = {
@@ -19,6 +22,16 @@ export const NavLinksData = {
       title: "لوحة التحكم",
       url: "/dashboard",
       icon: <LayoutDashboardIcon />,
+    },
+    {
+      title: "المدفوعات",
+      url: "/payments",
+      icon: <CreditCard />,
+    },
+    {
+      title: "أكواد الخصم",
+      url: "/promo-codes",
+      icon: <Ticket />,
     },
     {
       title: "الوجبات",
@@ -59,6 +72,11 @@ export const NavLinksData = {
       title: "التوصيل",
       url: "/delivery",
       icon: <Truck />,
+    },
+    {
+      title: "مناطق التوصيل",
+      url: "/zones",
+      icon: <MapPin />,
     },
     {
       title: "المستخدمين",

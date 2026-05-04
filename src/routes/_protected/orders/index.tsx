@@ -2,18 +2,8 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { Lock, CalendarIcon, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CalendarIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { KitchenDashboardCards } from "@/components/pages/kitchen/KitchenDashboardCards";
 import { KitchenFilters } from "@/components/pages/kitchen/KitchenFilters";
 import { KitchenTabs } from "@/components/pages/kitchen/KitchenTabs";
@@ -23,7 +13,6 @@ import {
   useKitchenSummaryQuery,
   useKitchenOperationsQuery,
   useKitchenActionMutation,
-  useBulkLockMutation,
 } from "@/hooks/useKitchenQuery";
 import type {
   KitchenOperationsTab,
@@ -63,17 +52,6 @@ function KitchenDashboard() {
 
   // ── Mutations ──
   const actionMutation = useKitchenActionMutation();
-  const bulkLockMutation = useBulkLockMutation();
-
-  const [isLockDialogOpen, setIsLockDialogOpen] = useState(false);
-
-  const handleBulkLock = () => {
-    bulkLockMutation.mutate(date, {
-      onSuccess: () => {
-        setIsLockDialogOpen(false);
-      },
-    });
-  };
 
   // ── Handlers ──
   const handleActionClick = (action: KitchenRowAction, actionData?: any) => {
@@ -108,15 +86,6 @@ function KitchenDashboard() {
               className="w-44 pr-10 text-right"
             />
           </div>
-          <Button
-            onClick={() => setIsLockDialogOpen(true)}
-            disabled={bulkLockMutation.isPending}
-            variant="secondary"
-            className="bg-[#1C1C1E] text-white hover:bg-[#2C2C2E]"
-          >
-            <Lock className="ml-2 h-4 w-4" />
-            قفل كل الأيام
-          </Button>
         </div>
       </div>
 
@@ -150,44 +119,6 @@ function KitchenDashboard() {
         onActionClick={handleActionClick}
         isActionLoading={actionMutation.isPending}
       />
-
-      {/* Bulk Lock Confirmation Dialog */}
-      <AlertDialog open={isLockDialogOpen} onOpenChange={setIsLockDialogOpen}>
-        <AlertDialogContent className="sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-xl text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              تأكيد قفل اليوم
-            </AlertDialogTitle>
-            <AlertDialogDescription className="pt-2 text-base text-foreground/80">
-              هل أنت متأكد من رغبتك في قفل جميع اشتراكات يوم{" "}
-              <span className="mx-1 font-bold text-foreground" dir="ltr">
-                {date}
-              </span>
-              ؟ <br />
-              بمجرد قفل اليوم، سيتم إرسال التحديثات ولا يمكن التراجع عن معظم
-              الإجراءات.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-6 gap-2 sm:gap-5">
-            <AlertDialogCancel
-              disabled={bulkLockMutation.isPending}
-              className="mt-0"
-            >
-              إلغاء
-            </AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleBulkLock}
-              disabled={bulkLockMutation.isPending}
-            >
-              {bulkLockMutation.isPending
-                ? "جاري القفل..."
-                : "نعم، قفل الطلبات"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

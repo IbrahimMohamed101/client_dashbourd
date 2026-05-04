@@ -1,0 +1,77 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { promoCodesListQueryOptions } from "@/hooks/usePromoCodesQuery";
+import { Loader } from "@/components/global/loader";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { PromoCodesTable } from "@/components/pages/promo-codes/PromoCodesTable";
+import { getPromoCodesSectionCards } from "@/constants/SectionCardsData";
+import { Card, CardContent } from "@/components/ui/card";
+import { Ticket } from "lucide-react";
+import { SectionCards } from "@/components/custom/section-cards";
+import type { PromoCodeDTO } from "@/types/financeTypes";
+
+export const Route = createFileRoute("/_protected/promo-codes/")({
+  component: RouteComponent,
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(promoCodesListQueryOptions(1, 20)),
+  pendingComponent: () => (
+    <Loader variant="full-screen" label="جاري تحميل أكواد الخصم..." />
+  ),
+});
+
+function RouteComponent() {
+  const { data: promoResponse } = useSuspenseQuery(
+    promoCodesListQueryOptions(1, 20)
+  );
+
+  const promos = promoResponse?.data || [];
+
+  const promoSummary = {
+    totalPromoCodes: promos.length,
+    activePromoCodes: promos.filter((p: PromoCodeDTO) => p.status === "active")
+      .length,
+    totalUses: promos.reduce(
+      (acc: number, curr: PromoCodeDTO) => acc + (curr.usageCount || 0),
+      0
+    ),
+  };
+
+  return (
+    <>
+      <div className="px-4 lg:px-6">
+        <Card className="bg-gradient-to-br from-primary/10 via-background to-background text-foreground shadow-none">
+          <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-inner">
+                <Ticket className="size-6 text-primary-foreground" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-xl font-bold tracking-tight">
+                  أكواد الخصم والعروض
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  إدارة كوبونات الخصم، العروض الترويجية، وحملات التسويق.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 sm:border-r sm:pr-6">
+              <div className="text-center sm:text-right">
+                <p className="text-3xl font-black text-primary">
+                  {promos.length}
+                </p>
+                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                  إجمالي الأكواد
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="px-4 lg:px-6">
+        <SectionCards cardsData={getPromoCodesSectionCards(promoSummary)} />
+      </div>
+
+      <PromoCodesTable data={promos} isLoading={false} />
+    </>
+  );
+}

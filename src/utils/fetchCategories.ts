@@ -2,6 +2,6 @@ import api from "@/lib/apis";
 import type { MealCategoriesResponse } from "@/types/categoryTypes";
 
 export const fetchCategories = async (): Promise<MealCategoriesResponse> => {
-  const response = await api.get("/api/admin/meal-categories");
+  const response = await api.get("/api/dashboard/meal-planner/categories");
   return response.data;
 };

@@ -10,5 +10,5 @@ interface CreateCategoryPayload {
 export const fetchCreateCategory = async (
   data: CreateCategoryPayload
 ): Promise<void> => {
-  await api.post("/api/admin/meal-categories", data);
+  await api.post("/api/dashboard/meal-planner/categories", data);
 };

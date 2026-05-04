@@ -12,22 +12,46 @@ const SUPERADMIN_ROUTES = [
   "/meals",
   "/categories",
   "/delivery",
+  "/payments",
+  "/promo-codes",
+  "/zones",
+  "/kitchen-board",
+  "/courier-board",
 ];
 
-const KITCHEN_ROUTES = ["/orders"];
+const ADMIN_ROUTES = [
+  "/dashboard",
+  "/orders",
+  "/subscriptions",
+  "/packages",
+  "/users",
+  "/premium-meals",
+  "/addons",
+  "/meals",
+  "/categories",
+  "/delivery",
+  "/payments",
+  "/promo-codes",
+  "/zones",
+  "/kitchen-board",
+];
 
-const COURIER_ROUTES = ["/orders"];
+const KITCHEN_ROUTES = ["/kitchen-board", "/meals", "/categories"];
+
+const COURIER_ROUTES = ["/courier-board", "/delivery"];
 
 const AUTH_ROUTES = ["/"];
 
 const ROLE_DEFAULTS: Record<UserRole, string> = {
   [UserRoles.SUPERADMIN]: "/dashboard",
-  [UserRoles.KITCHEN]: "/orders",
-  [UserRoles.COURIER]: "/orders",
+  [UserRoles.ADMIN]: "/dashboard",
+  [UserRoles.KITCHEN]: "/kitchen-board",
+  [UserRoles.COURIER]: "/courier-board",
 };
 
 export {
   SUPERADMIN_ROUTES,
+  ADMIN_ROUTES,
   KITCHEN_ROUTES,
   COURIER_ROUTES,
   AUTH_ROUTES,

@@ -6,6 +6,7 @@ import { ROLE_DEFAULTS } from "../../routes";
 import type { UserRole } from "@/types/auth";
 import { ToastMessage } from "@/components/global/ToastMessage";
 import Cookies from "js-cookie";
+import api from "@/lib/apis";
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -16,7 +17,7 @@ export const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginCredentials) => login(credentials),
     onSuccess: (data: AuthResponse) => {
-      Cookies.set("token", data.token, {
+      Cookies.set("dashboardToken", data.token, {
         expires: 7,
         secure: window.location.protocol === "https:",
         sameSite: "strict",
@@ -40,7 +41,12 @@ export const useAuth = () => {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      Cookies.remove("token");
+      try {
+        await api.post("/api/dashboard/auth/logout");
+      } catch {
+        // Even if backend logout fails, clear local session
+      }
+      Cookies.remove("dashboardToken");
     },
     onSuccess: () => {
       queryClient.setQueryData(sessionQueryOptions.queryKey, undefined);

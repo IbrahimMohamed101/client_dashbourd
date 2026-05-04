@@ -1,40 +1,79 @@
-import { Badge } from "@/components/ui/badge";
+import * as React from "react";
 import {
   Card,
-  CardAction,
-  CardDescription,
-  CardFooter,
+  CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { TrendingUpIcon } from "@/components/ui/trending-up";
-import { TrendingDownIcon } from "@/components/ui/trending-down";
-import type { SectionCardsData } from "@/types/sectionCardsTypes";
+import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export function SectionCards({ cardsData }: { cardsData: SectionCardsData[] }) {
+export interface SectionCardProps {
+  description: string;
+  value: string | number;
+  percentage?: string | number;
+  isPositive?: boolean;
+  trendText?: string;
+  icon: React.ReactNode;
+}
+
+interface SectionCardsProps {
+  cardsData: SectionCardProps[];
+}
+
+export function SectionCards({ cardsData }: SectionCardsProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
-      {cardsData.map((card) => (
-        <Card key={card.id} className="@container/card">
-          <CardHeader>
-            <CardDescription>{card.description}</CardDescription>
-            <CardTitle className="mt-3 text-2xl font-semibold tabular-nums @[250px]/card:text-4xl">
-              {card.value}
-            </CardTitle>
-            <CardAction>
-              <Badge variant="outline">
-                {card.isPositive ? (
-                  <TrendingUpIcon size={20} />
-                ) : (
-                  <TrendingDownIcon size={20} />
-                )}
-                {card.percentage}
-              </Badge>
-            </CardAction>
-          </CardHeader>
-          <CardFooter className="flex justify-end">{card.icon}</CardFooter>
-        </Card>
+    <div className="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 lg:grid-cols-4 lg:px-6">
+      {cardsData.map((card, index) => (
+        <SectionCard key={index} {...card} />
       ))}
     </div>
+  );
+}
+
+export function SectionCard({
+  description,
+  value,
+  percentage,
+  isPositive,
+  trendText,
+  icon,
+}: SectionCardProps) {
+  return (
+    <Card className="overflow-hidden border-none bg-background/50 shadow-sm backdrop-blur-sm transition-all hover:bg-background/80 hover:shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {description}
+        </CardTitle>
+        <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          {icon}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold tracking-tight">{value}</div>
+        {(percentage !== undefined || trendText) && (
+          <p className="mt-1 flex items-center text-xs">
+            {percentage !== undefined && (
+              <span
+                className={cn(
+                  "mr-1 flex items-center font-semibold",
+                  isPositive ? "text-emerald-500" : "text-rose-500"
+                )}
+              >
+                {isPositive ? (
+                  <ArrowUpRight className="mr-0.5 h-3 w-3" />
+                ) : (
+                  <ArrowDownRight className="mr-0.5 h-3 w-3" />
+                )}
+                {percentage}%
+              </span>
+            )}
+            {trendText && (
+              <span className="text-muted-foreground">{trendText}</span>
+            )}
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

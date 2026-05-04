@@ -52,8 +52,14 @@ function RouteComponent() {
         <ChartAreaInteractive />
       </div>
       <DataTable
-        columns={columns as unknown as React.ComponentProps<typeof DataTable>["columns"]}
-        data={tableData as unknown as React.ComponentProps<typeof DataTable>["data"]}
+        columns={
+          columns as unknown as React.ComponentProps<
+            typeof DataTable
+          >["columns"]
+        }
+        data={
+          tableData as unknown as React.ComponentProps<typeof DataTable>["data"]
+        }
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />

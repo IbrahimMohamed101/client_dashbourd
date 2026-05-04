@@ -4,6 +4,6 @@ import type { Package } from "@/types/packageTypes";
 export const fetchGetPlanById = async (
   id: string
 ): Promise<{ status: boolean; data: Package }> => {
-  const response = await api.get(`/api/admin/plans/${id}`);
+  const response = await api.get(`/api/dashboard/plans/${id}`);
   return response.data;
 };

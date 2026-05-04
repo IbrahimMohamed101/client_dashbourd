@@ -1,8 +1,7 @@
 interface SectionCardsData {
-  id: number;
   description: string;
-  value: string;
-  percentage?: string;
+  value: string | number;
+  percentage?: string | number;
   isPositive?: boolean;
   trendText?: string;
   icon: React.ReactNode;

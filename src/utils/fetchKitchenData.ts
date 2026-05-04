@@ -18,7 +18,7 @@ export const fetchKitchenOperationsSummary = async (
   const params = new URLSearchParams({ date });
   if (branchId) params.append("branchId", branchId);
   const response = await api.get(
-    `/api/kitchen/operations/summary?${params.toString()}`
+    `/api/dashboard/kitchen/operations/summary?${params.toString()}`
   );
   return response.data;
 };
@@ -58,7 +58,7 @@ export const fetchKitchenOperationsList = async ({
   if (sortOrder) params.append("sortOrder", sortOrder);
 
   const response = await api.get(
-    `/api/kitchen/operations/list?${params.toString()}`
+    `/api/dashboard/kitchen/operations/list?${params.toString()}`
   );
   return response.data;
 };
@@ -83,7 +83,7 @@ export const lockSubscriptionDay = async (
   date: string
 ) => {
   const response = await api.post(
-    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/lock`
+    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/lock`
   );
   return response.data;
 };
@@ -93,7 +93,7 @@ export const reopenSubscriptionDay = async (
   date: string
 ) => {
   const response = await api.post(
-    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/reopen`
+    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/reopen`
   );
   return response.data;
 };
@@ -103,7 +103,7 @@ export const inPreparationSubscriptionDay = async (
   date: string
 ) => {
   const response = await api.post(
-    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/in-preparation`
+    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/in-preparation`
   );
   return response.data;
 };
@@ -113,7 +113,7 @@ export const outForDeliverySubscriptionDay = async (
   date: string
 ) => {
   const response = await api.post(
-    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/out-for-delivery`
+    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/out-for-delivery`
   );
   return response.data;
 };
@@ -123,7 +123,7 @@ export const readyForPickupSubscriptionDay = async (
   date: string
 ) => {
   const response = await api.post(
-    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/ready-for-pickup`
+    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/ready-for-pickup`
   );
   return response.data;
 };
@@ -133,7 +133,7 @@ export const fulfillPickupSubscriptionDay = async (
   date: string
 ) => {
   const response = await api.post(
-    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/fulfill-pickup`
+    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/fulfill-pickup`
   );
   return response.data;
 };
@@ -143,46 +143,46 @@ export const cancelAtBranchSubscriptionDay = async (
   date: string
 ) => {
   const response = await api.post(
-    `/api/kitchen/subscriptions/${subscriptionId}/days/${date}/cancel-at-branch`
+    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/cancel-at-branch`
   );
   return response.data;
 };
 
 export const bulkLockDays = async (date: string): Promise<BulkLockResponse> => {
-  const response = await api.post(`/api/kitchen/days/${date}/lock`);
+  const response = await api.post(`/api/dashboard/kitchen/days/${date}/lock`);
   return response.data;
 };
 
 // ----- Orders Transitions -----
 
 export const prepareOrder = async (id: string) => {
-  const response = await api.post(`/api/kitchen/orders/${id}/preparing`);
+  const response = await api.post(`/api/dashboard/kitchen/orders/${id}/preparing`);
   return response.data;
 };
 
 export const outForDeliveryOrder = async (id: string) => {
-  const response = await api.post(`/api/kitchen/orders/${id}/out-for-delivery`);
+  const response = await api.post(`/api/dashboard/kitchen/orders/${id}/out-for-delivery`);
   return response.data;
 };
 
 export const readyForPickupOrder = async (id: string) => {
-  const response = await api.post(`/api/kitchen/orders/${id}/ready-for-pickup`);
+  const response = await api.post(`/api/dashboard/kitchen/orders/${id}/ready-for-pickup`);
   return response.data;
 };
 
 export const fulfillOrder = async (id: string) => {
-  const response = await api.post(`/api/kitchen/orders/${id}/fulfilled`);
+  const response = await api.post(`/api/dashboard/kitchen/orders/${id}/fulfilled`);
   return response.data;
 };
 
 // ----- Pickups Transitions -----
 
 export const verifyPickup = async (dayId: string) => {
-  const response = await api.post(`/api/kitchen/pickups/${dayId}/verify`);
+  const response = await api.post(`/api/dashboard/kitchen/pickups/${dayId}/verify`);
   return response.data;
 };
 
 export const noShowPickup = async (dayId: string) => {
-  const response = await api.post(`/api/kitchen/pickups/${dayId}/no-show`);
+  const response = await api.post(`/api/dashboard/kitchen/pickups/${dayId}/no-show`);
   return response.data;
 };

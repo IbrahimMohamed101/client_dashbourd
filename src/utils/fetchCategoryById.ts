@@ -4,6 +4,6 @@ import type { MealCategoryDetailResponse } from "@/types/categoryTypes";
 export const fetchCategoryById = async (
   categoryId: string
 ): Promise<MealCategoryDetailResponse> => {
-  const response = await api.get(`/api/admin/meal-categories/${categoryId}`);
+  const response = await api.get(`/api/dashboard/meal-planner/categories/${categoryId}`);
   return response.data;
 };

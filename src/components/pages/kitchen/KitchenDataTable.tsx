@@ -162,14 +162,20 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
     }
   };
 
-  const handleActionPress = (action: KitchenRowAction) => {
-    const isNeedsCode =
+  const isVerificationAction = (action: KitchenRowAction | null) => {
+    if (!action) return false;
+    return (
       action.endpoint?.includes("/verify") ||
       action.endpoint?.includes("fulfill-pickup") ||
+      action.endpoint?.includes("verify-pickup") ||
       action.key === "fulfill_pickup" ||
-      action.key === "verify";
+      action.key === "verify" ||
+      action.key === "verify_pickup"
+    );
+  };
 
-    if (action.requiresConfirmation || isNeedsCode) {
+  const handleActionPress = (action: KitchenRowAction) => {
+    if (action.requiresConfirmation || isVerificationAction(action)) {
       setConfirmAction(action);
     } else {
       onActionClick(action);
@@ -402,30 +408,40 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-xl">
-              <RotateCcw className="h-5 w-5 text-primary" />
-              تأكيد الإجراء
+              {isVerificationAction(confirmAction) ? (
+                <ShieldAlert className="h-5 w-5 text-amber-500" />
+              ) : (
+                <RotateCcw className="h-5 w-5 text-primary" />
+              )}
+              {isVerificationAction(confirmAction)
+                ? "التحقق من رمز الاستلام"
+                : "تأكيد الإجراء"}
             </AlertDialogTitle>
             <AlertDialogDescription className="pt-2 text-base">
               {confirmAction?.confirmationMessage ||
-                "هل أنت متأكد من المضي قدماً في هذا الإجراء؟ لا يمكن التراجع عن معظم التحديثات بسهولة."}
+                (isVerificationAction(confirmAction)
+                  ? "يرجى إدخال رمز الاستلام المقدم من العميل لإتمام الطلب."
+                  : "هل أنت متأكد من المضي قدماً في هذا الإجراء؟ لا يمكن التراجع عن معظم التحديثات بسهولة.")}
             </AlertDialogDescription>
 
-            {/* If the action is for pickup verification, show input field for the code */}
-            {(confirmAction?.endpoint?.includes("/verify") ||
-              confirmAction?.endpoint?.includes("fulfill-pickup") ||
-              confirmAction?.key === "fulfill_pickup" ||
-              confirmAction?.key === "verify") && (
-              <div className="mt-4 flex flex-col gap-2">
-                <label className="text-sm font-medium text-foreground">
-                  رمز الاستلام
-                </label>
-                <Input
-                  placeholder="أدخل رمز الاستلام..."
-                  value={pickupCode}
-                  onChange={(e) => setPickupCode(e.target.value)}
-                  className="text-left"
-                  dir="ltr"
-                />
+            {isVerificationAction(confirmAction) && (
+              <div className="mt-6 space-y-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-foreground/80">
+                    رمز الاستلام (Verification Code)
+                  </label>
+                  <Input
+                    placeholder="0000"
+                    value={pickupCode}
+                    onChange={(e) => setPickupCode(e.target.value)}
+                    className="h-12 border-2 text-center text-2xl font-bold tracking-[0.5em] focus-visible:ring-primary"
+                    dir="ltr"
+                    autoFocus
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    هذا الرمز ضروري لضمان تسليم الطلب للعميل الصحيح.
+                  </p>
+                </div>
               </div>
             )}
           </AlertDialogHeader>
@@ -434,33 +450,28 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
             <AlertDialogAction
               onClick={() => {
                 if (confirmAction) {
-                  const needsCode =
-                    confirmAction.endpoint?.includes("/verify") ||
-                    confirmAction.endpoint?.includes("fulfill-pickup") ||
-                    confirmAction.key === "fulfill_pickup" ||
-                    confirmAction.key === "verify";
                   onActionClick(
                     confirmAction,
-                    needsCode ? { code: pickupCode } : undefined
+                    isVerificationAction(confirmAction)
+                      ? { code: pickupCode }
+                      : undefined
                   );
                   setConfirmAction(null);
                   setPickupCode("");
                 }
               }}
               disabled={
-                (confirmAction?.endpoint?.includes("/verify") ||
-                  confirmAction?.endpoint?.includes("fulfill-pickup") ||
-                  confirmAction?.key === "fulfill_pickup" ||
-                  confirmAction?.key === "verify") &&
-                !pickupCode.trim()
+                isVerificationAction(confirmAction) && !pickupCode.trim()
               }
               className={
                 confirmAction?.variant === "danger"
                   ? "text-destructive-foreground bg-destructive hover:bg-destructive/90"
+                  : isVerificationAction(confirmAction)
+                  ? "bg-primary font-bold px-8"
                   : ""
               }
             >
-              تأكيد الإجراء
+              {isVerificationAction(confirmAction) ? "تحقق وإتمام" : "تأكيد الإجراء"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

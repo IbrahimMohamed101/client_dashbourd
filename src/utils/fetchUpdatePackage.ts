@@ -5,6 +5,6 @@ export const fetchUpdatePackage = async (
   id: string,
   data: CreatePackageSchemaType
 ) => {
-  const response = await api.put(`/api/admin/plans/${id}`, data);
+  const response = await api.put(`/api/dashboard/plans/${id}`, data);
   return response.data;
 };

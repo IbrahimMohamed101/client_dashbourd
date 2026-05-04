@@ -4,7 +4,7 @@ export const fetchSortCategory = async (
   categoryId: string,
   sortOrder: number
 ): Promise<void> => {
-  await api.patch(`/api/admin/meal-categories/${categoryId}/sort`, {
+  await api.patch(`/api/dashboard/meal-planner/categories/${categoryId}/sort`, {
     sortOrder,
   });
 };

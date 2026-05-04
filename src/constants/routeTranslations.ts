@@ -9,6 +9,8 @@ export const routeTranslations: Record<string, string> = {
   categories: "تصنيفات الوجبات",
   delivery: "التوصيل",
   "premium-meals": "الوجبات المميزة",
+  payments: "المدفوعات",
+  "promo-codes": "أكواد الخصم",
   create: "إضافة جديد",
   update: "تعديل",
   edit: "تعديل",
