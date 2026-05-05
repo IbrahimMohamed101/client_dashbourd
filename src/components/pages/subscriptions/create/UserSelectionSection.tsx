@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -19,12 +19,12 @@ interface UserSelectionSectionProps {
 
 export function UserSelectionSection({ form }: UserSelectionSectionProps) {
   const { data: usersResponse, isLoading } = useAllUsersQuery();
-  const users = useMemo(() => usersResponse?.data || [], [usersResponse?.data]);
+  const users = usersResponse?.data || [];
   const [search, setSearch] = useState("");
 
   const selectedUserId = form.watch("userId");
 
-  const filteredUsers = useMemo(() => {
+  const getFilteredUsers = () => {
     if (!search.trim()) return users;
     const q = search.toLowerCase();
     return users.filter(
@@ -33,9 +33,11 @@ export function UserSelectionSection({ form }: UserSelectionSectionProps) {
         u.phone.includes(q) ||
         u.email?.toLowerCase().includes(q)
     );
-  }, [users, search]);
+  };
 
-  const selectedUser = users.find((u: User) => u.id === selectedUserId || u.coreUserId === selectedUserId);
+  const selectedUser = users.find(
+    (u: User) => u.id === selectedUserId || u.coreUserId === selectedUserId
+  );
 
   return (
     <Card>
@@ -46,12 +48,14 @@ export function UserSelectionSection({ form }: UserSelectionSectionProps) {
           </div>
           اختيار المستخدم
         </CardTitle>
-        <CardDescription>اختر المستخدم الذي تريد إنشاء الاشتراك له</CardDescription>
+        <CardDescription>
+          اختر المستخدم الذي تريد إنشاء الاشتراك له
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="ابحث بالاسم أو رقم الجوال..."
             value={search}
@@ -68,7 +72,9 @@ export function UserSelectionSection({ form }: UserSelectionSectionProps) {
             </div>
             <div>
               <p className="text-sm font-semibold">{selectedUser.fullName}</p>
-              <p className="text-xs text-muted-foreground" dir="ltr">{selectedUser.phone}</p>
+              <p className="text-xs text-muted-foreground" dir="ltr">
+                {selectedUser.phone}
+              </p>
             </div>
           </div>
         )}
@@ -79,18 +85,24 @@ export function UserSelectionSection({ form }: UserSelectionSectionProps) {
             <div className="flex items-center justify-center py-8">
               <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
-          ) : filteredUsers.length === 0 ? (
+          ) : getFilteredUsers().length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               لا يوجد مستخدمين
             </p>
           ) : (
-            filteredUsers.map((user: User) => {
-              const isSelected = selectedUserId === user.id || selectedUserId === user.coreUserId;
+            getFilteredUsers().map((user: User) => {
+              const isSelected =
+                selectedUserId === user.id ||
+                selectedUserId === user.coreUserId;
               return (
                 <button
                   key={user.id}
                   type="button"
-                  onClick={() => form.setValue("userId", user.coreUserId || user.id, { shouldValidate: true })}
+                  onClick={() =>
+                    form.setValue("userId", user.coreUserId || user.id, {
+                      shouldValidate: true,
+                    })
+                  }
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-right transition-all ${
                     isSelected
                       ? "bg-primary/10 ring-1 ring-primary/30"

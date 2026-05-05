@@ -9,7 +9,8 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/lib/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -49,11 +50,7 @@ import { categoriesColumns } from "./categories-columns";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
-export function CategoriesTable({
-  data,
-}: {
-  data: MealCategory[];
-}) {
+export function CategoriesTable({ data }: { data: MealCategory[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -86,7 +83,11 @@ export function CategoriesTable({
       const nameEn = (row.original.name.en || "").toLowerCase();
       const key = (row.original.key || "").toLowerCase();
       const search = filterValue.toLowerCase();
-      return nameAr.includes(search) || nameEn.includes(search) || key.includes(search);
+      return (
+        nameAr.includes(search) ||
+        nameEn.includes(search) ||
+        key.includes(search)
+      );
     },
     getRowId: (row) => row._id,
   });

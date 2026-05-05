@@ -9,7 +9,8 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/lib/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -49,11 +50,7 @@ import { premiumMealsColumns } from "./premium-meals-columns";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
-export function PremiumMealsTable({
-  data,
-}: {
-  data: PremiumMeal[];
-}) {
+export function PremiumMealsTable({ data }: { data: PremiumMeal[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []

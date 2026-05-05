@@ -9,7 +9,8 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/lib/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -52,7 +53,9 @@ import { cn } from "@/lib/utils";
 export function AddonsTable({ data: initialData }: { data: Addon[] }) {
   const [data, setData] = React.useState(initialData);
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  );
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
@@ -101,10 +104,12 @@ export function AddonsTable({ data: initialData }: { data: Addon[] }) {
     <div className="w-full flex-col justify-start gap-6" dir="rtl">
       {/* Toolbar */}
       <div className="flex flex-col gap-4 px-4 lg:px-6">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Status filter */}
           <Select
-            value={(table.getColumn("isActive")?.getFilterValue() as string) || "all"}
+            value={
+              (table.getColumn("isActive")?.getFilterValue() as string) || "all"
+            }
             onValueChange={(value) => {
               table
                 .getColumn("isActive")
@@ -125,7 +130,9 @@ export function AddonsTable({ data: initialData }: { data: Addon[] }) {
 
           {/* Category filter */}
           <Select
-            value={(table.getColumn("category")?.getFilterValue() as string) || "all"}
+            value={
+              (table.getColumn("category")?.getFilterValue() as string) || "all"
+            }
             onValueChange={(value) => {
               table
                 .getColumn("category")
@@ -139,14 +146,16 @@ export function AddonsTable({ data: initialData }: { data: Addon[] }) {
               <SelectGroup>
                 <SelectItem value="all">كل التصنيفات</SelectItem>
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat} className="capitalize">{cat}</SelectItem>
+                  <SelectItem key={cat} value={cat} className="capitalize">
+                    {cat}
+                  </SelectItem>
                 ))}
               </SelectGroup>
             </SelectContent>
           </Select>
 
           {/* Search box */}
-          <div className="relative flex-1 min-w-50">
+          <div className="relative min-w-50 flex-1">
             <SearchIcon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="البحث باسم الإضافة"
@@ -190,19 +199,19 @@ export function AddonsTable({ data: initialData }: { data: Addon[] }) {
                 )
                 .map((column) => {
                   return (
-                     <DropdownMenuCheckboxItem
-                       key={column.id}
-                       className="text-right capitalize"
-                       checked={column.getIsVisible()}
-                       onCheckedChange={(value) =>
-                         column.toggleVisibility(!!value)
-                       }
-                     >
-                       {typeof column.columnDef.header === "string"
-                         ? column.columnDef.header
-                         : column.id}
-                     </DropdownMenuCheckboxItem>
-                   );
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="text-right capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {typeof column.columnDef.header === "string"
+                        ? column.columnDef.header
+                        : column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -213,54 +222,62 @@ export function AddonsTable({ data: initialData }: { data: Addon[] }) {
       <div className="relative mt-4 flex flex-col gap-4 overflow-auto px-4 lg:px-6">
         <div className="overflow-hidden rounded-lg border bg-card">
           <Table>
-             <TableHeader className="sticky top-0 z-10 bg-muted">
-               {table.getHeaderGroups().map((headerGroup) => (
-                 <TableRow
-                   key={headerGroup.id}
-                   className="border-b hover:bg-transparent"
-                 >
-                   {headerGroup.headers.map((header) => (
-                     <TableHead
-                       key={header.id}
-                       className="py-4 text-right font-medium"
-                       style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
-                     >
-                       {header.isPlaceholder
-                         ? null
-                         : flexRender(
-                             header.column.columnDef.header,
-                             header.getContext()
-                           )}
-                     </TableHead>
-                   ))}
-                 </TableRow>
-               ))}
-             </TableHeader>
-             <TableBody>
-               {table.getRowModel().rows?.length ? (
-                 table.getRowModel().rows.map((row) => (
-                   <TableRow key={row.id} className="border-b last:border-0 hover:bg-muted/50 data-[state=selected]:bg-muted">
-                     {row.getVisibleCells().map((cell) => (
-                       <TableCell key={cell.id} className="py-4 text-right">
-                         {flexRender(
-                           cell.column.columnDef.cell,
-                           cell.getContext()
-                         )}
-                       </TableCell>
-                     ))}
-                   </TableRow>
-                 ))
-               ) : (
-                 <TableRow>
-                   <TableCell
-                     colSpan={addonsColumns.length}
-                     className="h-24 text-center"
-                   >
-                     لا توجد إضافات.
-                   </TableCell>
-                 </TableRow>
-               )}
-             </TableBody>
+            <TableHeader className="sticky top-0 z-10 bg-muted">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow
+                  key={headerGroup.id}
+                  className="border-b hover:bg-transparent"
+                >
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="py-4 text-right font-medium"
+                      style={{
+                        width:
+                          header.getSize() !== 150
+                            ? header.getSize()
+                            : undefined,
+                      }}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className="border-b last:border-0 hover:bg-muted/50 data-[state=selected]:bg-muted"
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-4 text-right">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={addonsColumns.length}
+                    className="h-24 text-center"
+                  >
+                    لا توجد إضافات.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
           </Table>
         </div>
 
@@ -302,45 +319,45 @@ export function AddonsTable({ data: initialData }: { data: Addon[] }) {
 
             <div className="mr-auto flex items-center gap-1 lg:mr-0">
               <Button
-                 variant="outline"
-                 size="icon"
-                 className="hidden size-8 lg:flex"
-                 onClick={() => table.setPageIndex(0)}
-                 disabled={!table.getCanPreviousPage()}
-               >
-                 <span className="sr-only">الصفحة الأولى</span>
-                 <ChevronsRightIcon className="size-4" />
-               </Button>
-               <Button
-                 variant="outline"
-                 size="icon"
-                 className="size-8"
-                 onClick={() => table.previousPage()}
-                 disabled={!table.getCanPreviousPage()}
-               >
-                 <span className="sr-only">الصفحة السابقة</span>
-                 <ChevronRightIcon className="size-4" />
-               </Button>
-               <Button
-                 variant="outline"
-                 size="icon"
-                 className="size-8"
-                 onClick={() => table.nextPage()}
-                 disabled={!table.getCanNextPage()}
-               >
-                 <span className="sr-only">الصفحة التالية</span>
-                 <ChevronLeftIcon className="size-4" />
-               </Button>
-               <Button
-                 variant="outline"
-                 size="icon"
-                 className="hidden size-8 lg:flex"
-                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                 disabled={!table.getCanNextPage()}
-               >
-                 <span className="sr-only">الصفحة الأخيرة</span>
-                 <ChevronsLeftIcon className="size-4" />
-               </Button>
+                variant="outline"
+                size="icon"
+                className="hidden size-8 lg:flex"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <span className="sr-only">الصفحة الأولى</span>
+                <ChevronsRightIcon className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <span className="sr-only">الصفحة السابقة</span>
+                <ChevronRightIcon className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-8"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <span className="sr-only">الصفحة التالية</span>
+                <ChevronLeftIcon className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="hidden size-8 lg:flex"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
+                <span className="sr-only">الصفحة الأخيرة</span>
+                <ChevronsLeftIcon className="size-4" />
+              </Button>
             </div>
           </div>
         </div>

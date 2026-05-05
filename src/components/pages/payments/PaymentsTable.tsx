@@ -46,8 +46,13 @@ export function PaymentsTable() {
     debouncedSearch
   );
 
-  const data = React.useMemo(() => response?.data || [], [response]);
-  const meta = response?.meta || { total: 0, totalPages: 1, currentPage: 1, lastPage: 1 };
+  const data = response?.data || [];
+  const meta = response?.meta || {
+    total: 0,
+    totalPages: 1,
+    currentPage: 1,
+    lastPage: 1,
+  };
 
   const table = useReactTable({
     data,
@@ -103,7 +108,9 @@ export function PaymentsTable() {
             <SelectContent dir="rtl">
               <SelectGroup>
                 <SelectItem value="all">الكل</SelectItem>
-                <SelectItem value="subscription_activation">تفعيل اشتراك</SelectItem>
+                <SelectItem value="subscription_activation">
+                  تفعيل اشتراك
+                </SelectItem>
                 <SelectItem value="addon_purchase">شراء إضافات</SelectItem>
                 <SelectItem value="delivery_fee">رسوم توصيل</SelectItem>
                 <SelectItem value="custom">أخرى</SelectItem>

@@ -36,42 +36,41 @@ function RouteComponent() {
   };
 
   return (
-    <>
-      <div className="px-4 lg:px-6">
-        <Card className="bg-gradient-to-br from-primary/10 via-background to-background text-foreground shadow-none">
-          <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-inner">
-                <Ticket className="size-6 text-primary-foreground" />
-              </div>
-              <div className="space-y-1">
-                <h2 className="text-xl font-bold tracking-tight">
-                  أكواد الخصم والعروض
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  إدارة كوبونات الخصم، العروض الترويجية، وحملات التسويق.
-                </p>
-              </div>
+    <div className="space-y-8 px-4 lg:px-6">
+      <Card className="bg-gradient-to-br from-primary/10 via-background to-background text-foreground shadow-none">
+        <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-inner">
+              <Ticket className="size-6 text-primary-foreground" />
             </div>
-            <div className="flex items-center gap-4 sm:border-r sm:pr-6">
-              <div className="text-center sm:text-right">
-                <p className="text-3xl font-black text-primary">
-                  {promos.length}
-                </p>
-                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                  إجمالي الأكواد
-                </p>
-              </div>
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold tracking-tight">
+                أكواد الخصم والعروض
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                إدارة كوبونات الخصم، العروض الترويجية، وحملات التسويق.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          <div className="flex items-center gap-4 sm:border-r sm:pr-6">
+            <div className="text-center sm:text-right">
+              <p className="text-3xl font-black text-primary">
+                {promos.length}
+              </p>
+              <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                إجمالي الأكواد
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="px-4 lg:px-6">
-        <SectionCards cardsData={getPromoCodesSectionCards(promoSummary)} />
-      </div>
+      <SectionCards
+        cardsData={getPromoCodesSectionCards(promoSummary)}
+        className="px-0!"
+      />
 
       <PromoCodesTable data={promos} isLoading={false} />
-    </>
+    </div>
   );
 }

@@ -28,7 +28,7 @@ import { subscriptionsColumns } from "./subscriptions-columns";
 import { useSubscriptionsListQuery } from "@/hooks/useSubscriptionsQuery";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Link } from "@tanstack/react-router";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/lib/button-variants";
 import { cn } from "@/lib/utils";
 
 export function SubscriptionsTable() {
@@ -47,7 +47,7 @@ export function SubscriptionsTable() {
     debouncedSearch
   );
 
-  const data = React.useMemo(() => response?.data || [], [response]);
+  const data = response?.data || [];
   const meta = response?.meta || { total: 0, totalPages: 1 };
 
   // eslint-disable-next-line react-hooks/incompatible-library

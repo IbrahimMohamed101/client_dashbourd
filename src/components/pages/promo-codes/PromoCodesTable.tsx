@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -62,11 +62,11 @@ export function PromoCodesTable({ data, isLoading }: PromoCodesTableProps) {
 
   const deleteMutation = useDeletePromoCodeMutation();
 
-  const filteredData = useMemo(() => {
+  const getFilteredData = () => {
     return data.filter((item) =>
       item.code.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [data, searchQuery]);
+  };
 
   const handleEdit = (promo: PromoCodeDTO) => {
     setEditData(promo);
@@ -194,7 +194,7 @@ export function PromoCodesTable({ data, isLoading }: PromoCodesTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.map((promo) => (
+            {getFilteredData().map((promo: PromoCodeDTO) => (
               <TableRow
                 key={promo.id}
                 className="group border-muted-foreground/5 transition-colors hover:bg-primary/[0.03]"
@@ -286,7 +286,7 @@ export function PromoCodesTable({ data, isLoading }: PromoCodesTableProps) {
                 </TableCell>
               </TableRow>
             ))}
-            {filteredData.length === 0 && (
+            {getFilteredData().length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="h-64 text-center">
                   <div className="flex flex-col items-center justify-center gap-4 opacity-50 grayscale">

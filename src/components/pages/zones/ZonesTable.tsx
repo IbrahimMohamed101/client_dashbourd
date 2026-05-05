@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   MapPin,
   Search,
@@ -34,7 +34,8 @@ interface ZonesTableProps {
 function safeStr(val: unknown): string {
   if (typeof val === "string") return val;
   if (val == null) return "";
-  if (typeof val === "object" && "ar" in (val as Record<string, unknown>)) return String((val as Record<string, unknown>).ar ?? val);
+  if (typeof val === "object" && "ar" in (val as Record<string, unknown>))
+    return String((val as Record<string, unknown>).ar ?? val);
   return String(val);
 }
 
@@ -46,14 +47,18 @@ export function ZonesTable({ data, isLoading }: ZonesTableProps) {
 
   const deleteMutation = useDeleteDeliveryZoneMutation();
 
-  const filteredData = useMemo(() => {
+  const getFilteredData = () => {
     const q = searchQuery.toLowerCase();
     return data.filter((item) => {
-      const name = typeof item.name === "string" ? item.name : String(item.name ?? "");
-      const desc = typeof item.coverage_description === "string" ? item.coverage_description : String(item.coverage_description ?? "");
+      const name =
+        typeof item.name === "string" ? item.name : String(item.name ?? "");
+      const desc =
+        typeof item.coverage_description === "string"
+          ? item.coverage_description
+          : String(item.coverage_description ?? "");
       return name.toLowerCase().includes(q) || desc.toLowerCase().includes(q);
     });
-  }, [data, searchQuery]);
+  };
 
   const handleEdit = (zone: DeliveryZone) => {
     setEditData(zone);
@@ -133,13 +138,13 @@ export function ZonesTable({ data, isLoading }: ZonesTableProps) {
                 <th className="h-16 p-4 text-sm font-black text-foreground/80">
                   الحالة
                 </th>
-                <th className="h-16 p-4 text-sm font-black text-foreground/80 text-center">
+                <th className="h-16 p-4 text-center text-sm font-black text-foreground/80">
                   إجراءات
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-muted-foreground/5">
-              {filteredData.length === 0 && (
+              {getFilteredData().length === 0 && (
                 <tr>
                   <td
                     colSpan={5}
@@ -161,7 +166,7 @@ export function ZonesTable({ data, isLoading }: ZonesTableProps) {
                   </td>
                 </tr>
               )}
-              {filteredData.map((zone) => (
+              {getFilteredData().map((zone: DeliveryZone) => (
                 <tr
                   key={zone.id}
                   className="group border-muted-foreground/5 transition-colors hover:bg-primary/[0.03]"
@@ -234,7 +239,8 @@ export function ZonesTable({ data, isLoading }: ZonesTableProps) {
               هل أنت متأكد من الحذف؟
             </AlertDialogTitle>
             <AlertDialogDescription className="pt-2 text-right font-medium text-muted-foreground">
-              سيتم حذف منطقة التوصيل بشكل نهائي. هذا الإجراء لا يمكن التراجع عنه.
+              سيتم حذف منطقة التوصيل بشكل نهائي. هذا الإجراء لا يمكن التراجع
+              عنه.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4 flex-row-reverse gap-2">

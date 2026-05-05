@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -18,29 +18,19 @@ interface AddonsSectionProps {
 
 export function AddonsSection({ form }: AddonsSectionProps) {
   const { data: addonsResponse, isLoading } = useAddonsQuery();
-  const allAddons = useMemo(
-    () => addonsResponse?.data?.filter((a) => a.isActive) || [],
-    [addonsResponse?.data]
-  );
+  const allAddons = addonsResponse?.data?.filter((a) => a.isActive) || [];
 
-  const subscriptionAddons = useMemo(
-    () => allAddons.filter((a: Addon) => a.type === "subscription"),
-    [allAddons]
-  );
-  const oneTimeAddons = useMemo(
-    () => allAddons.filter((a: Addon) => a.type === "one_time"),
-    [allAddons]
-  );
+  const getSubscriptionAddons = () =>
+    allAddons.filter((a: Addon) => a.type === "subscription");
+  const getOneTimeAddons = () =>
+    allAddons.filter((a: Addon) => a.type === "one_time");
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "addons",
   });
 
-  const selectedSet = useMemo(
-    () => new Set(fields.map((f) => f.value)),
-    [fields]
-  );
+  const getSelectedSet = () => new Set(fields.map((f) => f.value));
 
   const toggleAddon = useCallback(
     (addonId: string) => {
@@ -79,18 +69,22 @@ export function AddonsSection({ form }: AddonsSectionProps) {
           </div>
         ) : (
           <>
-            {subscriptionAddons.length > 0 && (
+            {getSubscriptionAddons().length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-foreground">إضافات الاشتراك</h4>
-                  <span className="text-xs text-muted-foreground">(تضاف يومياً)</span>
+                  <h4 className="text-sm font-semibold text-foreground">
+                    إضافات الاشتراك
+                  </h4>
+                  <span className="text-xs text-muted-foreground">
+                    (تضاف يومياً)
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  {subscriptionAddons.map((addon) => (
+                  {getSubscriptionAddons().map((addon: Addon) => (
                     <AddonCard
                       key={addon._id}
                       addon={addon}
-                      isSelected={selectedSet.has(addon._id)}
+                      isSelected={getSelectedSet().has(addon._id)}
                       onToggle={toggleAddon}
                     />
                   ))}
@@ -98,18 +92,22 @@ export function AddonsSection({ form }: AddonsSectionProps) {
               </div>
             )}
 
-            {oneTimeAddons.length > 0 && (
+            {getOneTimeAddons().length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold text-foreground">إضافات لمرة واحدة</h4>
-                  <span className="text-xs text-muted-foreground">(تضاف مرة واحدة)</span>
+                  <h4 className="text-sm font-semibold text-foreground">
+                    إضافات لمرة واحدة
+                  </h4>
+                  <span className="text-xs text-muted-foreground">
+                    (تضاف مرة واحدة)
+                  </span>
                 </div>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  {oneTimeAddons.map((addon) => (
+                  {getOneTimeAddons().map((addon: Addon) => (
                     <AddonCard
                       key={addon._id}
                       addon={addon}
-                      isSelected={selectedSet.has(addon._id)}
+                      isSelected={getSelectedSet().has(addon._id)}
                       onToggle={toggleAddon}
                     />
                   ))}
@@ -117,10 +115,12 @@ export function AddonsSection({ form }: AddonsSectionProps) {
               </div>
             )}
 
-            {allAddons.length === 0 && (
+            {getSubscriptionAddons().length === 0 && (
               <div className="rounded-lg border border-dashed border-border/60 py-8 text-center">
                 <ShoppingBag className="mx-auto mb-2 size-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">لا توجد إضافات متاحة</p>
+                <p className="text-sm text-muted-foreground">
+                  لا توجد إضافات متاحة
+                </p>
               </div>
             )}
           </>

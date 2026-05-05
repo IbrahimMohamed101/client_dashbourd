@@ -1,10 +1,5 @@
 import * as React from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,11 +14,17 @@ export interface SectionCardProps {
 
 interface SectionCardsProps {
   cardsData: SectionCardProps[];
+  className?: string;
 }
 
-export function SectionCards({ cardsData }: SectionCardsProps) {
+export function SectionCards({ cardsData, className }: SectionCardsProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 lg:grid-cols-4 lg:px-6">
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 lg:grid-cols-4 lg:px-6",
+        className
+      )}
+    >
       {cardsData.map((card, index) => (
         <SectionCard key={index} {...card} />
       ))}
@@ -45,14 +46,12 @@ export function SectionCard({
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {description}
         </CardTitle>
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          {icon}
-        </div>
+        {icon}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold tracking-tight">{value}</div>
+        <div className="text-4xl font-bold tracking-tight">{value}</div>
         {(percentage !== undefined || trendText) && (
-          <p className="mt-1 flex items-center text-xs">
+          <p className="mt-1 flex items-center justify-end gap-3 text-xs">
             {percentage !== undefined && (
               <span
                 className={cn(
