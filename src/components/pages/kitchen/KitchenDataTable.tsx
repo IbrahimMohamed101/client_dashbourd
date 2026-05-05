@@ -109,6 +109,31 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
         dot: "bg-red-500 dark:bg-red-400",
         border: "border-red-500/20",
       },
+      // One-time order statuses
+      confirmed: {
+        bg: "bg-blue-500/10",
+        text: "text-blue-600 dark:text-blue-400",
+        dot: "bg-blue-500 dark:bg-blue-400",
+        border: "border-blue-500/20",
+      },
+      pending_payment: {
+        bg: "bg-gray-500/10",
+        text: "text-gray-600 dark:text-gray-400",
+        dot: "bg-gray-500 dark:bg-gray-400",
+        border: "border-gray-500/20",
+      },
+      cancelled: {
+        bg: "bg-red-500/10",
+        text: "text-red-600 dark:text-red-400",
+        dot: "bg-red-500 dark:bg-red-400",
+        border: "border-red-500/20",
+      },
+      expired: {
+        bg: "bg-orange-500/10",
+        text: "text-orange-600 dark:text-orange-400",
+        dot: "bg-orange-500 dark:bg-orange-400",
+        border: "border-orange-500/20",
+      },
     };
     const style = config[status] || config["locked"];
     return (
@@ -467,11 +492,13 @@ export const KitchenDataTable: React.FC<KitchenDataTableProps> = ({
                 confirmAction?.variant === "danger"
                   ? "text-destructive-foreground bg-destructive hover:bg-destructive/90"
                   : isVerificationAction(confirmAction)
-                  ? "bg-primary font-bold px-8"
-                  : ""
+                    ? "bg-primary px-8 font-bold"
+                    : ""
               }
             >
-              {isVerificationAction(confirmAction) ? "تحقق وإتمام" : "تأكيد الإجراء"}
+              {isVerificationAction(confirmAction)
+                ? "تحقق وإتمام"
+                : "تأكيد الإجراء"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

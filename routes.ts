@@ -4,6 +4,8 @@ import type { UserRole } from "@/types/auth";
 const SUPERADMIN_ROUTES = [
   "/dashboard",
   "/orders",
+  "/one-time-orders",
+  "/pickup-board",
   "/subscriptions",
   "/packages",
   "/users",
@@ -22,6 +24,8 @@ const SUPERADMIN_ROUTES = [
 const ADMIN_ROUTES = [
   "/dashboard",
   "/orders",
+  "/one-time-orders",
+  "/pickup-board",
   "/subscriptions",
   "/packages",
   "/users",
@@ -36,7 +40,13 @@ const ADMIN_ROUTES = [
   "/kitchen-board",
 ];
 
-const KITCHEN_ROUTES = ["/kitchen-board", "/meals", "/categories"];
+const KITCHEN_ROUTES = [
+  "/kitchen-board",
+  "/one-time-orders",
+  "/pickup-board",
+  "/meals",
+  "/categories",
+];
 
 const COURIER_ROUTES = ["/courier-board", "/delivery"];
 

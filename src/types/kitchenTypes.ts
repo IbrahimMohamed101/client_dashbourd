@@ -1,16 +1,23 @@
 // ── Tab identifiers ──
-export type KitchenOperationsTab = "daily_subscriptions" | "individual_orders" | "branch_pickup";
+export type KitchenOperationsTab =
+  | "daily_subscriptions"
+  | "individual_orders"
+  | "branch_pickup";
 
 // ── Status values returned by the backend ──
 export type KitchenUiStatus =
   | "open"
   | "locked"
+  | "confirmed"
   | "in_preparation"
   | "ready_for_pickup"
   | "out_for_delivery"
   | "fulfilled"
   | "not_prepared"
-  | "no_show";
+  | "no_show"
+  | "pending_payment"
+  | "cancelled"
+  | "expired";
 
 export type KitchenOperationsMode = "pickup" | "delivery";
 
@@ -112,6 +119,7 @@ export interface KitchenRowMeta {
 export interface KitchenOperationsRow {
   id: string;
   entityType: string; // "subscription_day" | "order" | "pickup"
+  source?: "subscription" | "one_time_order";
   reference: string;
   customer: KitchenRowCustomer;
   date: string;
@@ -131,6 +139,8 @@ export interface KitchenOperationsRow {
     createdAtLabel: string;
   };
   meta: KitchenRowMeta;
+  paymentStatus?: string;
+  fulfillmentMethod?: "pickup" | "delivery";
 }
 
 export interface KitchenOperationsListResponse {

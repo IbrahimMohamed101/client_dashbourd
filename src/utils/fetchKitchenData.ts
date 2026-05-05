@@ -76,113 +76,83 @@ export const executeKitchenAction = async (
   return response.data;
 };
 
-// ----- Subscriptions Transitions -----
+// ----- Unified Kitchen Board Actions -----
+// POST /api/dashboard/kitchen/actions/:action
+// Body: { entityId, entityType: "subscription_day", payload: { reason, notes } }
 
-export const lockSubscriptionDay = async (
-  subscriptionId: string,
-  date: string
+export interface KitchenActionPayload {
+  entityId: string;
+  entityType: "subscription_day" | "order";
+  payload: {
+    reason?: string;
+    notes?: string;
+    courierId?: string;
+  };
+}
+
+export const executeKitchenBoardAction = async (
+  action: string,
+  body: KitchenActionPayload
 ) => {
   const response = await api.post(
-    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/lock`
+    `/api/dashboard/kitchen/actions/${action}`,
+    body
   );
   return response.data;
 };
 
-export const reopenSubscriptionDay = async (
-  subscriptionId: string,
-  date: string
+// ----- Unified Pickup Board Actions -----
+// POST /api/dashboard/pickup/actions/:action
+// Body: { entityId, entityType: "subscription_day" | "order", payload: { reason, notes } }
+
+export interface PickupActionPayload {
+  entityId: string;
+  entityType: "subscription_day" | "order";
+  source?: "subscription" | "one_time_order";
+  payload: {
+    reason?: string;
+    notes?: string;
+    pickupCode?: string;
+  };
+}
+
+export const executePickupBoardAction = async (
+  action: string,
+  body: PickupActionPayload
 ) => {
   const response = await api.post(
-    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/reopen`
+    `/api/dashboard/pickup/actions/${action}`,
+    body
   );
   return response.data;
 };
 
-export const inPreparationSubscriptionDay = async (
-  subscriptionId: string,
-  date: string
-) => {
-  const response = await api.post(
-    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/in-preparation`
-  );
-  return response.data;
-};
+// ----- Unified Courier Board Actions -----
+// POST /api/dashboard/courier/actions/:action
+// Body: { entityId, entityType: "subscription_day", payload: { reason, notes, courierId? } }
 
-export const outForDeliverySubscriptionDay = async (
-  subscriptionId: string,
-  date: string
-) => {
-  const response = await api.post(
-    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/out-for-delivery`
-  );
-  return response.data;
-};
+export interface CourierActionPayload {
+  entityId: string;
+  entityType: "subscription_day" | "order";
+  payload: {
+    reason?: string;
+    notes?: string;
+    courierId?: string;
+  };
+}
 
-export const readyForPickupSubscriptionDay = async (
-  subscriptionId: string,
-  date: string
+export const executeCourierBoardAction = async (
+  action: string,
+  body: CourierActionPayload
 ) => {
   const response = await api.post(
-    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/ready-for-pickup`
-  );
-  return response.data;
-};
-
-export const fulfillPickupSubscriptionDay = async (
-  subscriptionId: string,
-  date: string
-) => {
-  const response = await api.post(
-    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/fulfill-pickup`
-  );
-  return response.data;
-};
-
-export const cancelAtBranchSubscriptionDay = async (
-  subscriptionId: string,
-  date: string
-) => {
-  const response = await api.post(
-    `/api/dashboard/kitchen/subscriptions/${subscriptionId}/days/${date}/cancel-at-branch`
+    `/api/dashboard/courier/actions/${action}`,
+    body
   );
   return response.data;
 };
 
 export const bulkLockDays = async (date: string): Promise<BulkLockResponse> => {
   const response = await api.post(`/api/dashboard/kitchen/days/${date}/lock`);
-  return response.data;
-};
-
-// ----- Orders Transitions -----
-
-export const prepareOrder = async (id: string) => {
-  const response = await api.post(`/api/dashboard/kitchen/orders/${id}/preparing`);
-  return response.data;
-};
-
-export const outForDeliveryOrder = async (id: string) => {
-  const response = await api.post(`/api/dashboard/kitchen/orders/${id}/out-for-delivery`);
-  return response.data;
-};
-
-export const readyForPickupOrder = async (id: string) => {
-  const response = await api.post(`/api/dashboard/kitchen/orders/${id}/ready-for-pickup`);
-  return response.data;
-};
-
-export const fulfillOrder = async (id: string) => {
-  const response = await api.post(`/api/dashboard/kitchen/orders/${id}/fulfilled`);
-  return response.data;
-};
-
-// ----- Pickups Transitions -----
-
-export const verifyPickup = async (dayId: string) => {
-  const response = await api.post(`/api/dashboard/kitchen/pickups/${dayId}/verify`);
-  return response.data;
-};
-
-export const noShowPickup = async (dayId: string) => {
-  const response = await api.post(`/api/dashboard/kitchen/pickups/${dayId}/no-show`);
   return response.data;
 };

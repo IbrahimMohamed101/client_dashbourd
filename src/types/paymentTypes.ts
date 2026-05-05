@@ -10,7 +10,12 @@ export interface Payment {
   status: "pending" | "paid" | "completed" | "failed" | "refunded";
   method: "credit_card" | "apple_pay" | "google_pay" | "wallet" | "moyasar";
   provider?: string;
-  type: "subscription_activation" | "addon_purchase" | "delivery_fee" | "custom";
+  type:
+    | "subscription_activation"
+    | "addon_purchase"
+    | "delivery_fee"
+    | "one_time_order"
+    | "custom";
   date: string;
   subscriptionId?: string;
   orderId?: string;

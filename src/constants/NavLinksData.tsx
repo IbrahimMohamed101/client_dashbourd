@@ -14,6 +14,8 @@ import {
   CreditCard,
   Ticket,
   MapPin,
+  ShoppingBag,
+  Store,
 } from "lucide-react";
 
 export const NavLinksData = {
@@ -67,6 +69,16 @@ export const NavLinksData = {
       title: "عمليات المطبخ",
       url: "/orders",
       icon: <ChefHat />,
+    },
+    {
+      title: "طلبات لمرة واحدة",
+      url: "/one-time-orders",
+      icon: <ShoppingBag />,
+    },
+    {
+      title: "لوحة الاستلام",
+      url: "/pickup-board",
+      icon: <Store />,
     },
     {
       title: "التوصيل",

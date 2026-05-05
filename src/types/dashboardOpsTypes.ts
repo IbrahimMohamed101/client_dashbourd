@@ -3,6 +3,7 @@
 export interface UnifiedOperationalDTO {
   id: string;
   type: "subscription" | "order";
+  source?: "subscription" | "one_time_order";
   mode: "delivery" | "pickup";
   reference: string;
   status: string;
@@ -45,8 +46,14 @@ export interface DashboardOpsListResponse {
 export interface DashboardOpsActionRequest {
   entityId: string;
   type: "subscription" | "order";
+  source?: "subscription" | "one_time_order";
   reason?: string;
   note?: string;
+  payload?: {
+    reason?: string;
+    pickupCode?: string;
+    notes?: string;
+  };
 }
 
 export interface DashboardOpsActionResponse {
@@ -61,35 +68,54 @@ export type DashboardOpsStatusFilter =
   | "preparing"
   | "out_for_delivery"
   | "delivered"
-  | "canceled";
+  | "canceled"
+  | "confirmed"
+  | "in_preparation"
+  | "ready_for_pickup"
+  | "fulfilled"
+  | "expired"
+  | "pending_payment";
 
 // ── Status grouping helpers ──
 // Centralised status-matching so every component uses the same logic.
 
 const DELIVERED_STATUSES = ["delivered", "fulfilled"];
-const CANCELED_STATUSES = ["canceled", "delivery_canceled"];
+const CANCELED_STATUSES = ["canceled", "cancelled", "delivery_canceled"];
+const PREPARING_STATUSES = ["preparing", "in_preparation"];
 
 export function matchesStatusFilter(
   itemStatus: string,
-  filter: DashboardOpsStatusFilter,
+  filter: DashboardOpsStatusFilter
 ): boolean {
   switch (filter) {
     case "all":
       return true;
     case "preparing":
-      return itemStatus === "preparing";
+      return PREPARING_STATUSES.includes(itemStatus);
     case "out_for_delivery":
       return itemStatus === "out_for_delivery";
     case "delivered":
       return DELIVERED_STATUSES.includes(itemStatus);
     case "canceled":
       return CANCELED_STATUSES.includes(itemStatus);
+    case "confirmed":
+      return itemStatus === "confirmed";
+    case "in_preparation":
+      return itemStatus === "in_preparation";
+    case "ready_for_pickup":
+      return itemStatus === "ready_for_pickup";
+    case "fulfilled":
+      return itemStatus === "fulfilled";
+    case "expired":
+      return itemStatus === "expired";
+    case "pending_payment":
+      return itemStatus === "pending_payment";
   }
 }
 
 export function countByFilter(
   items: UnifiedOperationalDTO[],
-  filter: DashboardOpsStatusFilter,
+  filter: DashboardOpsStatusFilter
 ): number {
   if (filter === "all") return items.length;
   return items.filter((i) => matchesStatusFilter(i.status, filter)).length;
@@ -100,8 +126,7 @@ export function countByFilter(
 export type BadgeColorKey = "green" | "red" | "blue" | "orange" | "yellow";
 
 const BADGE_CLASSES: Record<string, string> = {
-  green:
-    "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400",
+  green: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400",
   red: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400",
   blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400",
   orange:

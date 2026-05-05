@@ -22,6 +22,7 @@ import { Route as ProtectedPremiumMealsIndexRouteImport } from './routes/_protec
 import { Route as ProtectedPaymentsIndexRouteImport } from './routes/_protected/payments/index'
 import { Route as ProtectedPackagesIndexRouteImport } from './routes/_protected/packages/index'
 import { Route as ProtectedOrdersIndexRouteImport } from './routes/_protected/orders/index'
+import { Route as ProtectedOneTimeOrdersIndexRouteImport } from './routes/_protected/one-time-orders/index'
 import { Route as ProtectedMealsIndexRouteImport } from './routes/_protected/meals/index'
 import { Route as ProtectedDeliveryIndexRouteImport } from './routes/_protected/delivery/index'
 import { Route as ProtectedCategoriesIndexRouteImport } from './routes/_protected/categories/index'
@@ -30,6 +31,7 @@ import { Route as ProtectedUsersCreateRouteImport } from './routes/_protected/us
 import { Route as ProtectedSubscriptionsCreateRouteImport } from './routes/_protected/subscriptions/create'
 import { Route as ProtectedPremiumMealsCreateRouteImport } from './routes/_protected/premium-meals/create'
 import { Route as ProtectedPackagesCreateRouteImport } from './routes/_protected/packages/create'
+import { Route as ProtectedOneTimeOrdersOrderIdRouteImport } from './routes/_protected/one-time-orders/$orderId'
 import { Route as ProtectedMealsCreateRouteImport } from './routes/_protected/meals/create'
 import { Route as ProtectedCategoriesCreateRouteImport } from './routes/_protected/categories/create'
 import { Route as ProtectedAddonsCreateRouteImport } from './routes/_protected/addons/create'
@@ -42,6 +44,9 @@ import { Route as ProtectedMealsMealIdUpdateRouteImport } from './routes/_protec
 import { Route as ProtectedCategoriesCategoryIdUpdateRouteImport } from './routes/_protected/categories/$categoryId/update'
 import { Route as ProtectedAddonsAddonIdUpdateRouteImport } from './routes/_protected/addons/$addonId/update'
 
+const ProtectedPickupBoardIndexLazyRouteImport = createFileRoute(
+  '/_protected/pickup-board/',
+)()
 const ProtectedKitchenBoardIndexLazyRouteImport = createFileRoute(
   '/_protected/kitchen-board/',
 )()
@@ -63,6 +68,14 @@ const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
+const ProtectedPickupBoardIndexLazyRoute =
+  ProtectedPickupBoardIndexLazyRouteImport.update({
+    id: '/pickup-board/',
+    path: '/pickup-board/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_protected/pickup-board/index.lazy').then((d) => d.Route),
+  )
 const ProtectedKitchenBoardIndexLazyRoute =
   ProtectedKitchenBoardIndexLazyRouteImport.update({
     id: '/kitchen-board/',
@@ -122,6 +135,12 @@ const ProtectedOrdersIndexRoute = ProtectedOrdersIndexRouteImport.update({
   path: '/orders/',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
+const ProtectedOneTimeOrdersIndexRoute =
+  ProtectedOneTimeOrdersIndexRouteImport.update({
+    id: '/one-time-orders/',
+    path: '/one-time-orders/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
 const ProtectedMealsIndexRoute = ProtectedMealsIndexRouteImport.update({
   id: '/meals/',
   path: '/meals/',
@@ -165,6 +184,12 @@ const ProtectedPackagesCreateRoute = ProtectedPackagesCreateRouteImport.update({
   path: '/packages/create',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
+const ProtectedOneTimeOrdersOrderIdRoute =
+  ProtectedOneTimeOrdersOrderIdRouteImport.update({
+    id: '/one-time-orders/$orderId',
+    path: '/one-time-orders/$orderId',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
 const ProtectedMealsCreateRoute = ProtectedMealsCreateRouteImport.update({
   id: '/meals/create',
   path: '/meals/create',
@@ -236,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/addons/create': typeof ProtectedAddonsCreateRoute
   '/categories/create': typeof ProtectedCategoriesCreateRoute
   '/meals/create': typeof ProtectedMealsCreateRoute
+  '/one-time-orders/$orderId': typeof ProtectedOneTimeOrdersOrderIdRoute
   '/packages/create': typeof ProtectedPackagesCreateRoute
   '/premium-meals/create': typeof ProtectedPremiumMealsCreateRoute
   '/subscriptions/create': typeof ProtectedSubscriptionsCreateRoute
@@ -244,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/categories/': typeof ProtectedCategoriesIndexRoute
   '/delivery/': typeof ProtectedDeliveryIndexRoute
   '/meals/': typeof ProtectedMealsIndexRoute
+  '/one-time-orders/': typeof ProtectedOneTimeOrdersIndexRoute
   '/orders/': typeof ProtectedOrdersIndexRoute
   '/packages/': typeof ProtectedPackagesIndexRoute
   '/payments/': typeof ProtectedPaymentsIndexRoute
@@ -254,6 +281,7 @@ export interface FileRoutesByFullPath {
   '/zones/': typeof ProtectedZonesIndexRoute
   '/courier-board/': typeof ProtectedCourierBoardIndexLazyRoute
   '/kitchen-board/': typeof ProtectedKitchenBoardIndexLazyRoute
+  '/pickup-board/': typeof ProtectedPickupBoardIndexLazyRoute
   '/addons/$addonId/update': typeof ProtectedAddonsAddonIdUpdateRoute
   '/categories/$categoryId/update': typeof ProtectedCategoriesCategoryIdUpdateRoute
   '/meals/$mealId/update': typeof ProtectedMealsMealIdUpdateRoute
@@ -269,6 +297,7 @@ export interface FileRoutesByTo {
   '/addons/create': typeof ProtectedAddonsCreateRoute
   '/categories/create': typeof ProtectedCategoriesCreateRoute
   '/meals/create': typeof ProtectedMealsCreateRoute
+  '/one-time-orders/$orderId': typeof ProtectedOneTimeOrdersOrderIdRoute
   '/packages/create': typeof ProtectedPackagesCreateRoute
   '/premium-meals/create': typeof ProtectedPremiumMealsCreateRoute
   '/subscriptions/create': typeof ProtectedSubscriptionsCreateRoute
@@ -277,6 +306,7 @@ export interface FileRoutesByTo {
   '/categories': typeof ProtectedCategoriesIndexRoute
   '/delivery': typeof ProtectedDeliveryIndexRoute
   '/meals': typeof ProtectedMealsIndexRoute
+  '/one-time-orders': typeof ProtectedOneTimeOrdersIndexRoute
   '/orders': typeof ProtectedOrdersIndexRoute
   '/packages': typeof ProtectedPackagesIndexRoute
   '/payments': typeof ProtectedPaymentsIndexRoute
@@ -287,6 +317,7 @@ export interface FileRoutesByTo {
   '/zones': typeof ProtectedZonesIndexRoute
   '/courier-board': typeof ProtectedCourierBoardIndexLazyRoute
   '/kitchen-board': typeof ProtectedKitchenBoardIndexLazyRoute
+  '/pickup-board': typeof ProtectedPickupBoardIndexLazyRoute
   '/addons/$addonId/update': typeof ProtectedAddonsAddonIdUpdateRoute
   '/categories/$categoryId/update': typeof ProtectedCategoriesCategoryIdUpdateRoute
   '/meals/$mealId/update': typeof ProtectedMealsMealIdUpdateRoute
@@ -304,6 +335,7 @@ export interface FileRoutesById {
   '/_protected/addons/create': typeof ProtectedAddonsCreateRoute
   '/_protected/categories/create': typeof ProtectedCategoriesCreateRoute
   '/_protected/meals/create': typeof ProtectedMealsCreateRoute
+  '/_protected/one-time-orders/$orderId': typeof ProtectedOneTimeOrdersOrderIdRoute
   '/_protected/packages/create': typeof ProtectedPackagesCreateRoute
   '/_protected/premium-meals/create': typeof ProtectedPremiumMealsCreateRoute
   '/_protected/subscriptions/create': typeof ProtectedSubscriptionsCreateRoute
@@ -312,6 +344,7 @@ export interface FileRoutesById {
   '/_protected/categories/': typeof ProtectedCategoriesIndexRoute
   '/_protected/delivery/': typeof ProtectedDeliveryIndexRoute
   '/_protected/meals/': typeof ProtectedMealsIndexRoute
+  '/_protected/one-time-orders/': typeof ProtectedOneTimeOrdersIndexRoute
   '/_protected/orders/': typeof ProtectedOrdersIndexRoute
   '/_protected/packages/': typeof ProtectedPackagesIndexRoute
   '/_protected/payments/': typeof ProtectedPaymentsIndexRoute
@@ -322,6 +355,7 @@ export interface FileRoutesById {
   '/_protected/zones/': typeof ProtectedZonesIndexRoute
   '/_protected/courier-board/': typeof ProtectedCourierBoardIndexLazyRoute
   '/_protected/kitchen-board/': typeof ProtectedKitchenBoardIndexLazyRoute
+  '/_protected/pickup-board/': typeof ProtectedPickupBoardIndexLazyRoute
   '/_protected/addons/$addonId/update': typeof ProtectedAddonsAddonIdUpdateRoute
   '/_protected/categories/$categoryId/update': typeof ProtectedCategoriesCategoryIdUpdateRoute
   '/_protected/meals/$mealId/update': typeof ProtectedMealsMealIdUpdateRoute
@@ -339,6 +373,7 @@ export interface FileRouteTypes {
     | '/addons/create'
     | '/categories/create'
     | '/meals/create'
+    | '/one-time-orders/$orderId'
     | '/packages/create'
     | '/premium-meals/create'
     | '/subscriptions/create'
@@ -347,6 +382,7 @@ export interface FileRouteTypes {
     | '/categories/'
     | '/delivery/'
     | '/meals/'
+    | '/one-time-orders/'
     | '/orders/'
     | '/packages/'
     | '/payments/'
@@ -357,6 +393,7 @@ export interface FileRouteTypes {
     | '/zones/'
     | '/courier-board/'
     | '/kitchen-board/'
+    | '/pickup-board/'
     | '/addons/$addonId/update'
     | '/categories/$categoryId/update'
     | '/meals/$mealId/update'
@@ -372,6 +409,7 @@ export interface FileRouteTypes {
     | '/addons/create'
     | '/categories/create'
     | '/meals/create'
+    | '/one-time-orders/$orderId'
     | '/packages/create'
     | '/premium-meals/create'
     | '/subscriptions/create'
@@ -380,6 +418,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/delivery'
     | '/meals'
+    | '/one-time-orders'
     | '/orders'
     | '/packages'
     | '/payments'
@@ -390,6 +429,7 @@ export interface FileRouteTypes {
     | '/zones'
     | '/courier-board'
     | '/kitchen-board'
+    | '/pickup-board'
     | '/addons/$addonId/update'
     | '/categories/$categoryId/update'
     | '/meals/$mealId/update'
@@ -406,6 +446,7 @@ export interface FileRouteTypes {
     | '/_protected/addons/create'
     | '/_protected/categories/create'
     | '/_protected/meals/create'
+    | '/_protected/one-time-orders/$orderId'
     | '/_protected/packages/create'
     | '/_protected/premium-meals/create'
     | '/_protected/subscriptions/create'
@@ -414,6 +455,7 @@ export interface FileRouteTypes {
     | '/_protected/categories/'
     | '/_protected/delivery/'
     | '/_protected/meals/'
+    | '/_protected/one-time-orders/'
     | '/_protected/orders/'
     | '/_protected/packages/'
     | '/_protected/payments/'
@@ -424,6 +466,7 @@ export interface FileRouteTypes {
     | '/_protected/zones/'
     | '/_protected/courier-board/'
     | '/_protected/kitchen-board/'
+    | '/_protected/pickup-board/'
     | '/_protected/addons/$addonId/update'
     | '/_protected/categories/$categoryId/update'
     | '/_protected/meals/$mealId/update'
@@ -460,6 +503,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof ProtectedDashboardRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/pickup-board/': {
+      id: '/_protected/pickup-board/'
+      path: '/pickup-board'
+      fullPath: '/pickup-board/'
+      preLoaderRoute: typeof ProtectedPickupBoardIndexLazyRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/kitchen-board/': {
@@ -532,6 +582,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedOrdersIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
+    '/_protected/one-time-orders/': {
+      id: '/_protected/one-time-orders/'
+      path: '/one-time-orders'
+      fullPath: '/one-time-orders/'
+      preLoaderRoute: typeof ProtectedOneTimeOrdersIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
     '/_protected/meals/': {
       id: '/_protected/meals/'
       path: '/meals'
@@ -586,6 +643,13 @@ declare module '@tanstack/react-router' {
       path: '/packages/create'
       fullPath: '/packages/create'
       preLoaderRoute: typeof ProtectedPackagesCreateRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/one-time-orders/$orderId': {
+      id: '/_protected/one-time-orders/$orderId'
+      path: '/one-time-orders/$orderId'
+      fullPath: '/one-time-orders/$orderId'
+      preLoaderRoute: typeof ProtectedOneTimeOrdersOrderIdRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/meals/create': {
@@ -673,6 +737,7 @@ interface ProtectedRouteRouteChildren {
   ProtectedAddonsCreateRoute: typeof ProtectedAddonsCreateRoute
   ProtectedCategoriesCreateRoute: typeof ProtectedCategoriesCreateRoute
   ProtectedMealsCreateRoute: typeof ProtectedMealsCreateRoute
+  ProtectedOneTimeOrdersOrderIdRoute: typeof ProtectedOneTimeOrdersOrderIdRoute
   ProtectedPackagesCreateRoute: typeof ProtectedPackagesCreateRoute
   ProtectedPremiumMealsCreateRoute: typeof ProtectedPremiumMealsCreateRoute
   ProtectedSubscriptionsCreateRoute: typeof ProtectedSubscriptionsCreateRoute
@@ -681,6 +746,7 @@ interface ProtectedRouteRouteChildren {
   ProtectedCategoriesIndexRoute: typeof ProtectedCategoriesIndexRoute
   ProtectedDeliveryIndexRoute: typeof ProtectedDeliveryIndexRoute
   ProtectedMealsIndexRoute: typeof ProtectedMealsIndexRoute
+  ProtectedOneTimeOrdersIndexRoute: typeof ProtectedOneTimeOrdersIndexRoute
   ProtectedOrdersIndexRoute: typeof ProtectedOrdersIndexRoute
   ProtectedPackagesIndexRoute: typeof ProtectedPackagesIndexRoute
   ProtectedPaymentsIndexRoute: typeof ProtectedPaymentsIndexRoute
@@ -691,6 +757,7 @@ interface ProtectedRouteRouteChildren {
   ProtectedZonesIndexRoute: typeof ProtectedZonesIndexRoute
   ProtectedCourierBoardIndexLazyRoute: typeof ProtectedCourierBoardIndexLazyRoute
   ProtectedKitchenBoardIndexLazyRoute: typeof ProtectedKitchenBoardIndexLazyRoute
+  ProtectedPickupBoardIndexLazyRoute: typeof ProtectedPickupBoardIndexLazyRoute
   ProtectedAddonsAddonIdUpdateRoute: typeof ProtectedAddonsAddonIdUpdateRoute
   ProtectedCategoriesCategoryIdUpdateRoute: typeof ProtectedCategoriesCategoryIdUpdateRoute
   ProtectedMealsMealIdUpdateRoute: typeof ProtectedMealsMealIdUpdateRoute
@@ -706,6 +773,7 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedAddonsCreateRoute: ProtectedAddonsCreateRoute,
   ProtectedCategoriesCreateRoute: ProtectedCategoriesCreateRoute,
   ProtectedMealsCreateRoute: ProtectedMealsCreateRoute,
+  ProtectedOneTimeOrdersOrderIdRoute: ProtectedOneTimeOrdersOrderIdRoute,
   ProtectedPackagesCreateRoute: ProtectedPackagesCreateRoute,
   ProtectedPremiumMealsCreateRoute: ProtectedPremiumMealsCreateRoute,
   ProtectedSubscriptionsCreateRoute: ProtectedSubscriptionsCreateRoute,
@@ -714,6 +782,7 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedCategoriesIndexRoute: ProtectedCategoriesIndexRoute,
   ProtectedDeliveryIndexRoute: ProtectedDeliveryIndexRoute,
   ProtectedMealsIndexRoute: ProtectedMealsIndexRoute,
+  ProtectedOneTimeOrdersIndexRoute: ProtectedOneTimeOrdersIndexRoute,
   ProtectedOrdersIndexRoute: ProtectedOrdersIndexRoute,
   ProtectedPackagesIndexRoute: ProtectedPackagesIndexRoute,
   ProtectedPaymentsIndexRoute: ProtectedPaymentsIndexRoute,
@@ -724,6 +793,7 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedZonesIndexRoute: ProtectedZonesIndexRoute,
   ProtectedCourierBoardIndexLazyRoute: ProtectedCourierBoardIndexLazyRoute,
   ProtectedKitchenBoardIndexLazyRoute: ProtectedKitchenBoardIndexLazyRoute,
+  ProtectedPickupBoardIndexLazyRoute: ProtectedPickupBoardIndexLazyRoute,
   ProtectedAddonsAddonIdUpdateRoute: ProtectedAddonsAddonIdUpdateRoute,
   ProtectedCategoriesCategoryIdUpdateRoute:
     ProtectedCategoriesCategoryIdUpdateRoute,
