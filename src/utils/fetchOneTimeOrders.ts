@@ -10,7 +10,7 @@ import type {
   UnifiedOpsActionRequest,
   OneTimeOrderError,
 } from "@/types/oneTimeOrderTypes";
-import { UNSUPPORTED_ONE_TIME_ACTIONS } from "@/types/oneTimeOrderTypes";
+import { isOneTimeOrderActionAllowed } from "@/types/oneTimeOrderTypes";
 
 // ── Step 1: List dashboard orders ──
 // GET /api/dashboard/orders
@@ -139,7 +139,7 @@ export const executeOneTimeOrderAction = async (
   body: OneTimeOrderActionRequest = {}
 ): Promise<OneTimeOrderActionResponse> => {
   // Block unsupported actions for pickup-only one-time orders
-  if (UNSUPPORTED_ONE_TIME_ACTIONS.includes(action)) {
+  if (!isOneTimeOrderActionAllowed(action)) {
     return Promise.reject({
       status: false,
       code: "ACTION_NOT_ALLOWED",
@@ -219,11 +219,8 @@ export const fetchPickupQueue = async (
     );
   if (params.method) searchParams.append("method", params.method);
   else searchParams.append("method", "pickup");
-  if (params.q !== undefined) searchParams.append("q", params.q);
-  else searchParams.append("q", "");
-  if (params.branchId !== undefined)
-    searchParams.append("branchId", params.branchId);
-  else searchParams.append("branchId", "");
+  if (params.q) searchParams.append("q", params.q);
+  if (params.branchId) searchParams.append("branchId", params.branchId);
 
   const response = await api.get(
     `/api/dashboard/pickup/queue?${searchParams.toString()}`
@@ -240,7 +237,7 @@ export const executeUnifiedOpsAction = async (
   payload: UnifiedOpsActionRequest
 ): Promise<OneTimeOrderActionResponse> => {
   // Block unsupported actions
-  if (UNSUPPORTED_ONE_TIME_ACTIONS.includes(action)) {
+  if (!isOneTimeOrderActionAllowed(action)) {
     return Promise.reject({
       status: false,
       code: "ACTION_NOT_ALLOWED",

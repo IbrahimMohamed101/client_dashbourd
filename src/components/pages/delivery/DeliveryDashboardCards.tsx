@@ -70,7 +70,7 @@ export function DeliveryDashboardCards({
   // We'll show up to 4 cards on desktop, maybe stack differently if we add 'preparing'
   // Actually, adding 'preparing' makes it 5 cards. We should decide if we want 4 or 5.
   // The user had 4. I'll stick to 4 for the grid (4 columns) or adjust the grid.
-  // Let's keep the user's original 4 (Total, Out for Delivery, Delivered, Canceled) 
+  // Let's keep the user's original 4 (Total, Out for Delivery, Delivered, Canceled)
   // but use the correct keys. I'll remove 'preparing' for now unless they want it.
 
   const activeCards = STAT_CARDS.filter((c) => c.key !== "preparing");
@@ -99,21 +99,23 @@ export function DeliveryDashboardCards({
         return (
           <div
             key={card.key}
-            className="group flex items-center gap-2.5 rounded-xl border bg-card p-3 shadow-sm transition-all hover:border-blue-200 hover:shadow-md md:gap-4 md:p-4 dark:hover:border-blue-900"
+            className="group space-y-5 rounded-xl border bg-card p-3 shadow-sm transition-all hover:border-blue-200 hover:shadow-md md:gap-4 md:p-4 dark:hover:border-blue-900"
           >
-            <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg md:h-10 md:w-10 ${card.bgClass}`}
-            >
-              <Icon className={`h-4 w-4 md:h-5 md:w-5 ${card.colorClass}`} />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-[10px] font-medium text-muted-foreground md:text-xs">
+            <div className="flex min-w-0 justify-between gap-5">
+              <p className="truncate text-[10px] font-medium text-muted-foreground md:text-xs lg:text-xl">
                 {card.label}
               </p>
-              <p className="text-sm font-bold tracking-tight md:text-xl">
-                {count}
-              </p>
+
+              <div
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg md:h-10 md:w-10 ${card.bgClass}`}
+              >
+                <Icon className={`h-4 w-4 md:h-5 md:w-5 ${card.colorClass}`} />
+              </div>
             </div>
+
+            <p className="text-sm font-bold tracking-tight md:text-xl">
+              {count}
+            </p>
           </div>
         );
       })}

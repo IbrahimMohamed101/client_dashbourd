@@ -4,7 +4,7 @@ import type {
   DashboardOpsActionResponse,
   DashboardOpsActionRequest,
 } from "@/types/dashboardOpsTypes";
-import { UNSUPPORTED_ONE_TIME_ACTIONS } from "@/types/oneTimeOrderTypes";
+import { isOneTimeOrderActionAllowed } from "@/types/oneTimeOrderTypes";
 
 // ── Fetch all ops for a date ──
 
@@ -39,7 +39,7 @@ export const executeDashboardOpsAction = async (
   // Block unsupported actions for pickup-only one-time orders
   if (
     payload.source === "one_time_order" &&
-    UNSUPPORTED_ONE_TIME_ACTIONS.includes(action)
+    !isOneTimeOrderActionAllowed(action)
   ) {
     return Promise.reject({
       ok: false,

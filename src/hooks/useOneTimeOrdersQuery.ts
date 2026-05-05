@@ -126,6 +126,8 @@ export const useOneTimeOrderActionMutation = () => {
       queryClient.invalidateQueries({ queryKey: ["kitchenOperations"] });
       queryClient.invalidateQueries({ queryKey: ["kitchenSummary"] });
       queryClient.invalidateQueries({ queryKey: ["kitchen-orders"] });
+      // Keep the ops board in sync too
+      queryClient.invalidateQueries({ queryKey: ["dashboardOpsList"] });
     },
 
     onError: (

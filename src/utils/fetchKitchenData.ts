@@ -18,7 +18,7 @@ export const fetchKitchenOperationsSummary = async (
   const params = new URLSearchParams({ date });
   if (branchId) params.append("branchId", branchId);
   const response = await api.get(
-    `/api/dashboard/kitchen/operations/summary?${params.toString()}`
+    `/api/kitchen/operations/summary?${params.toString()}`
   );
   return response.data;
 };
@@ -58,7 +58,7 @@ export const fetchKitchenOperationsList = async ({
   if (sortOrder) params.append("sortOrder", sortOrder);
 
   const response = await api.get(
-    `/api/dashboard/kitchen/operations/list?${params.toString()}`
+    `/api/kitchen/operations/list?${params.toString()}`
   );
   return response.data;
 };
@@ -83,6 +83,7 @@ export const executeKitchenAction = async (
 export interface KitchenActionPayload {
   entityId: string;
   entityType: "subscription_day" | "order";
+  source?: "subscription" | "one_time_order";
   payload: {
     reason?: string;
     notes?: string;
@@ -134,6 +135,7 @@ export const executePickupBoardAction = async (
 export interface CourierActionPayload {
   entityId: string;
   entityType: "subscription_day" | "order";
+  source?: "subscription" | "one_time_order";
   payload: {
     reason?: string;
     notes?: string;

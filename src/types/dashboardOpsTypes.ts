@@ -41,6 +41,12 @@ export interface UnifiedOperationalDTO {
 export interface DashboardOpsListResponse {
   ok: boolean;
   data: UnifiedOperationalDTO[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export interface DashboardOpsActionRequest {
@@ -110,6 +116,8 @@ export function matchesStatusFilter(
       return itemStatus === "expired";
     case "pending_payment":
       return itemStatus === "pending_payment";
+    default:
+      return false;
   }
 }
 

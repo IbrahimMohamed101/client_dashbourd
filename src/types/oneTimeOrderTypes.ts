@@ -34,7 +34,7 @@ export type OneTimeOrderAction =
 // Do NOT show: dispatch, notify_arrival, courier fulfill,
 // delivery assignment, delivery zone, delivery address/window editing
 
-export const UNSUPPORTED_ONE_TIME_ACTIONS: string[] = [
+export const UNSUPPORTED_ONE_TIME_ACTIONS = [
   "dispatch",
   "notify_arrival",
   "courier_fulfill",
@@ -43,7 +43,17 @@ export const UNSUPPORTED_ONE_TIME_ACTIONS: string[] = [
   "delivery_address_edit",
   "delivery_window_edit",
   "reopen",
-];
+] as const;
+
+export type UnsupportedOneTimeAction =
+  (typeof UNSUPPORTED_ONE_TIME_ACTIONS)[number];
+
+/** Returns true if the given action is allowed for one-time pickup orders. */
+export function isOneTimeOrderActionAllowed(action: string): boolean {
+  return !(
+    UNSUPPORTED_ONE_TIME_ACTIONS as readonly string[]
+  ).includes(action);
+}
 
 // ── Final states ──
 export const ONE_TIME_ORDER_FINAL_STATES: OneTimeOrderStatus[] = [
@@ -281,7 +291,7 @@ export function getOneTimeOrderStatusColor(status: OneTimeOrderStatus): {
   border: string;
 } {
   const config: Record<
-    string,
+    OneTimeOrderStatus,
     { bg: string; text: string; dot: string; border: string }
   > = {
     pending_payment: {

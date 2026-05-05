@@ -56,6 +56,10 @@ export const useDashboardOpsActionMutation = () => {
       // Invalidate both list and search queries to ensure freshness
       queryClient.invalidateQueries({ queryKey: ["dashboardOpsList"] });
       queryClient.invalidateQueries({ queryKey: ["dashboardOpsSearch"] });
+      // Keep one-time orders and kitchen boards in sync
+      queryClient.invalidateQueries({ queryKey: ["oneTimeOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenOperations"] });
+      queryClient.invalidateQueries({ queryKey: ["kitchenSummary"] });
     },
 
     onError: (

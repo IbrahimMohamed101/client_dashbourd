@@ -39,10 +39,10 @@ export function DeliveryFilters({
   baseData,
 }: DeliveryFiltersProps) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-wrap items-center justify-between">
       {/* Search Bar */}
-      <div className="relative w-full">
-        <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative w-full md:w-[70%]">
+        <Search className="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="ابحث بالاسم، رقم الهاتف، أو رقم المرجع..."
           value={searchStr}
@@ -52,11 +52,11 @@ export function DeliveryFilters({
       </div>
 
       {/* Segmented Tabs */}
-      <div className="relative w-full overflow-hidden">
+      <div className="relative w-full overflow-hidden md:w-fit">
         {/* Scroll hint gradient (mobile only) */}
-        <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-8 bg-gradient-to-l from-muted/50 to-transparent lg:hidden" />
+        <div className="pointer-events-none absolute top-0 right-0 z-10 h-full w-8 bg-gradient-to-l from-muted/50 to-transparent lg:hidden" />
 
-        <div className="flex w-full overflow-x-auto rounded-full bg-muted/50 p-1 custom-scrollbar no-scrollbar lg:w-fit">
+        <div className="custom-scrollbar no-scrollbar flex w-full overflow-x-auto rounded-full bg-muted/50 p-1 lg:w-fit">
           {FILTER_TABS.map((tab) => {
             const isActive = statusFilter === tab.value;
             const count = countByFilter(baseData, tab.value);
