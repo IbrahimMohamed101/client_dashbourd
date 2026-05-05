@@ -48,7 +48,7 @@ import {
   getOneTimeOrderStatusLabel,
   getOneTimeOrderStatusColor,
   isOneTimeOrderFinal,
-  UNSUPPORTED_ONE_TIME_ACTIONS,
+  isUnsupportedOneTimeOrderAction,
 } from "@/types/oneTimeOrderTypes";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -111,7 +111,7 @@ export const OneTimeOrderList: React.FC = () => {
     action: OneTimeOrderAction
   ) => {
     // Block unsupported actions
-    if (UNSUPPORTED_ONE_TIME_ACTIONS.includes(action)) return;
+    if (isUnsupportedOneTimeOrderAction(action)) return;
 
     // Do not act on pending_payment orders
     if (order.paymentStatus !== "paid" && action === "prepare") {
@@ -405,7 +405,7 @@ export const OneTimeOrderList: React.FC = () => {
                         {/* Action buttons based on allowedActions from backend */}
                         {order.allowedActions
                           ?.filter(
-                            (a) => !UNSUPPORTED_ONE_TIME_ACTIONS.includes(a)
+                            (a) => !isUnsupportedOneTimeOrderAction(a)
                           )
                           .map((action) => {
                             const config = getActionConfig(action);

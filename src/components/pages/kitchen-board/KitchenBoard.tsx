@@ -29,7 +29,7 @@ import {
   Bell,
 } from "lucide-react";
 import { Loader } from "@/components/global/loader";
-import { UNSUPPORTED_ONE_TIME_ACTIONS } from "@/types/oneTimeOrderTypes";
+import { isUnsupportedOneTimeOrderAction } from "@/types/oneTimeOrderTypes";
 
 // ── Unified queue item that handles both subscription days and one-time orders ──
 // Use source and entityType to choose the correct UI and action endpoints.
@@ -134,7 +134,7 @@ export const KitchenBoard: React.FC = () => {
       // Block unsupported actions for pickup-only one-time orders
       if (
         isOneTimeOrder(item) &&
-        UNSUPPORTED_ONE_TIME_ACTIONS.includes(action)
+        isUnsupportedOneTimeOrderAction(action)
       ) {
         throw new Error(
           `Action "${action}" is not supported for pickup-only one-time orders`
@@ -314,16 +314,16 @@ export const KitchenBoard: React.FC = () => {
                       !isNonOperational;
                     const canCancel =
                       order.allowedActions?.includes("cancel") &&
-                      !UNSUPPORTED_ONE_TIME_ACTIONS.includes("cancel");
+                      !isUnsupportedOneTimeOrderAction("cancel");
                     const canReopen =
                       order.allowedActions?.includes("reopen") &&
-                      !UNSUPPORTED_ONE_TIME_ACTIONS.includes("reopen");
+                      !isUnsupportedOneTimeOrderAction("reopen");
                     const canDispatch =
                       order.allowedActions?.includes("dispatch") &&
-                      !UNSUPPORTED_ONE_TIME_ACTIONS.includes("dispatch");
+                      !isUnsupportedOneTimeOrderAction("dispatch");
                     const canNotifyArrival =
                       order.allowedActions?.includes("notify_arrival") &&
-                      !UNSUPPORTED_ONE_TIME_ACTIONS.includes("notify_arrival");
+                      !isUnsupportedOneTimeOrderAction("notify_arrival");
 
                     return (
                       <Card

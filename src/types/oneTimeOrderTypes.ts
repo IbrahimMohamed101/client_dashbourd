@@ -48,11 +48,14 @@ export const UNSUPPORTED_ONE_TIME_ACTIONS = [
 export type UnsupportedOneTimeAction =
   (typeof UNSUPPORTED_ONE_TIME_ACTIONS)[number];
 
+/** Returns true if `action` is in the blocked list for pickup-only one-time orders. */
+export function isUnsupportedOneTimeOrderAction(action: string): boolean {
+  return (UNSUPPORTED_ONE_TIME_ACTIONS as readonly string[]).includes(action);
+}
+
 /** Returns true if the given action is allowed for one-time pickup orders. */
 export function isOneTimeOrderActionAllowed(action: string): boolean {
-  return !(
-    UNSUPPORTED_ONE_TIME_ACTIONS as readonly string[]
-  ).includes(action);
+  return !isUnsupportedOneTimeOrderAction(action);
 }
 
 // ── Final states ──

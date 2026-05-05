@@ -39,7 +39,7 @@ import type {
 } from "@/types/oneTimeOrderTypes";
 import {
   getOneTimeOrderStatusColor,
-  UNSUPPORTED_ONE_TIME_ACTIONS,
+  isUnsupportedOneTimeOrderAction,
 } from "@/types/oneTimeOrderTypes";
 import api from "@/lib/apis";
 
@@ -271,19 +271,19 @@ export const PickupBoard: React.FC = () => {
                 };
             const canFulfill =
               order.allowedActions?.includes("fulfill") &&
-              !UNSUPPORTED_ONE_TIME_ACTIONS.includes("fulfill");
+              !isUnsupportedOneTimeOrderAction("fulfill");
             const canReadyForPickup =
               order.allowedActions?.includes("ready_for_pickup") &&
-              !UNSUPPORTED_ONE_TIME_ACTIONS.includes("ready_for_pickup");
+              !isUnsupportedOneTimeOrderAction("ready_for_pickup");
             const canCancel =
               order.allowedActions?.includes("cancel") &&
-              !UNSUPPORTED_ONE_TIME_ACTIONS.includes("cancel");
+              !isUnsupportedOneTimeOrderAction("cancel");
             const canNoShow =
               order.allowedActions?.includes("no_show") &&
-              !UNSUPPORTED_ONE_TIME_ACTIONS.includes("no_show");
+              !isUnsupportedOneTimeOrderAction("no_show");
             const canReopen =
               order.allowedActions?.includes("reopen") &&
-              !UNSUPPORTED_ONE_TIME_ACTIONS.includes("reopen");
+              !isUnsupportedOneTimeOrderAction("reopen");
 
             const displayName = isOTO
               ? order.customer?.name || order.orderNumber || order.entityId

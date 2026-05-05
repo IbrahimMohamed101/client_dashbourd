@@ -37,7 +37,7 @@ import {
   getOneTimeOrderStatusLabel,
   getOneTimeOrderStatusColor,
   isOneTimeOrderFinal,
-  UNSUPPORTED_ONE_TIME_ACTIONS,
+  isUnsupportedOneTimeOrderAction,
 } from "@/types/oneTimeOrderTypes";
 import type { OneTimeOrderAction, OneTimeOrderActionRequest } from "@/types/oneTimeOrderTypes";
 
@@ -90,7 +90,7 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
   const isNonOperational = order.payment?.status !== "paid" || order.status === "pending_payment";
 
   const handleAction = (action: OneTimeOrderAction) => {
-    if (UNSUPPORTED_ONE_TIME_ACTIONS.includes(action)) return;
+    if (isUnsupportedOneTimeOrderAction(action)) return;
     if (action === "prepare" && isNonOperational) return;
 
     if (action === "fulfill" || action === "cancel") {
@@ -378,7 +378,7 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
               <CardContent>
                 <div className="flex flex-wrap gap-3">
                   {order.allowedActions
-                    .filter((a) => !UNSUPPORTED_ONE_TIME_ACTIONS.includes(a))
+                    .filter((a) => !isUnsupportedOneTimeOrderAction(a))
                     .map((action) => {
                       const config = getActionConfig(action);
                       if (action === "prepare" && isNonOperational) return null;
