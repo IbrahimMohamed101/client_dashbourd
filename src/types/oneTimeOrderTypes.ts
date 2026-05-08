@@ -87,12 +87,21 @@ export interface OneTimeOrderItem {
 }
 
 // ── Pricing (backend-calculated, frontend must NOT recalculate) ──
+// Used in order detail response
 export interface OneTimeOrderPricing {
   subtotal?: number;
   discount?: number;
   vat?: number; // Already included – do NOT add again
   total?: number;
   currency?: string;
+}
+
+// ── List item pricing (from GET /api/dashboard/orders list response) ──
+// All prices are Halala, VAT is included, dashboard must not calculate final totals or add VAT.
+export interface OneTimeOrderListPricing {
+  totalHalala: number;
+  currency: string;
+  vatIncluded: boolean;
 }
 
 // ── Payment ──
@@ -130,13 +139,14 @@ export interface OneTimeOrderListItem {
   source: "one_time_order";
   entityType: "order";
   entityId: string;
+  orderId: string; // Same as entityId, returned by backend for clarity
   orderNumber: string;
   status: OneTimeOrderStatus;
   paymentStatus: OneTimeOrderPaymentStatus;
   fulfillmentMethod: OneTimeOrderFulfillmentMethod;
   customer: OneTimeOrderCustomer;
   items: OneTimeOrderItem[];
-  pricing: OneTimeOrderPricing;
+  pricing: OneTimeOrderListPricing;
   allowedActions: OneTimeOrderAction[];
   createdAt?: string;
   updatedAt?: string;
@@ -249,7 +259,10 @@ export type OneTimeOrderErrorCode =
   | "ACTION_NOT_ALLOWED"
   | "PAYMENT_NOT_PAID"
   | "ORDER_FINAL"
+  | "FINAL_STATUS"
   | "INVALID_OBJECT_ID"
+  | "INVALID_ORDER_ID"
+  | "DELIVERY_NOT_SUPPORTED"
   | "ONE_TIME_ORDER_DELIVERY_DISABLED";
 
 export interface OneTimeOrderError {
@@ -260,7 +273,7 @@ export interface OneTimeOrderError {
 
 // ── List query params ──
 export interface OneTimeOrderListParams {
-  status?: OneTimeOrderStatus;
+  status?: string; // Comma-separated normalized order statuses
   paymentStatus?: OneTimeOrderPaymentStatus;
   fulfillmentMethod?: "pickup";
   date?: string;

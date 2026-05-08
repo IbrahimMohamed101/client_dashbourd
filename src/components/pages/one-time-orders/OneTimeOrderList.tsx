@@ -51,6 +51,7 @@ import {
   isUnsupportedOneTimeOrderAction,
 } from "@/types/oneTimeOrderTypes";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useNewOrderDetection } from "@/hooks/useNewOrderDetection";
 
 // ── Status filter options ──
 const statusFilters: { value: OneTimeOrderStatus | "all"; label: string }[] = [
@@ -96,6 +97,17 @@ export const OneTimeOrderList: React.FC = () => {
 
   const orders = listRes?.data?.items ?? [];
   const pagination = listRes?.data?.pagination;
+
+  // ── New order detection: sound + notification ──
+  const { resetDetection } = useNewOrderDetection({
+    orders,
+    enabled: true,
+  });
+
+  // Reset detection when filters change to avoid false positives
+  React.useEffect(() => {
+    resetDetection();
+  }, [statusFilter, date, resetDetection]);
 
   // ── Action handlers ──
   const isActionRequiresConfirmation = (action: OneTimeOrderAction) => {
@@ -404,9 +416,7 @@ export const OneTimeOrderList: React.FC = () => {
 
                         {/* Action buttons based on allowedActions from backend */}
                         {order.allowedActions
-                          ?.filter(
-                            (a) => !isUnsupportedOneTimeOrderAction(a)
-                          )
+                          ?.filter((a) => !isUnsupportedOneTimeOrderAction(a))
                           .map((action) => {
                             const config = getActionConfig(action);
                             // Do not show prepare for unpaid orders

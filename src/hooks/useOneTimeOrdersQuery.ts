@@ -47,7 +47,9 @@ export const useOneTimeOrdersListQuery = (
   useQuery({
     queryKey: KEYS.list(params),
     queryFn: () => fetchOneTimeOrders(params),
-    refetchInterval: 30_000,
+    refetchInterval: 60_000, // Poll every 60s for new orders
+    refetchIntervalInBackground: true, // Keep polling even when tab is in background
+    placeholderData: (prev) => prev, // Keep showing previous data while refetching
   });
 
 // ── Order detail ──
@@ -57,6 +59,9 @@ export const useOneTimeOrderDetailQuery = (orderId: string) =>
     queryKey: KEYS.detail(orderId),
     queryFn: () => fetchOneTimeOrderDetail(orderId),
     enabled: !!orderId,
+    refetchInterval: 60_000, // Keep detail in sync
+    refetchIntervalInBackground: true,
+    placeholderData: (prev) => prev,
   });
 
 // ── Kitchen queue ──
@@ -75,7 +80,9 @@ export const useKitchenQueueQuery = (
     queryKey: KEYS.kitchenQueue(params),
     queryFn: () => fetchKitchenQueue(params),
     enabled: !!params.date,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: true,
+    placeholderData: (prev) => prev,
   });
 
 // ── Pickup queue ──
@@ -93,7 +100,9 @@ export const usePickupQueueQuery = (
     queryKey: KEYS.pickupQueue(params),
     queryFn: () => fetchPickupQueue(params),
     enabled: !!params.date,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: true,
+    placeholderData: (prev) => prev,
   });
 
 // ── Action mutation (prepare / ready_for_pickup / fulfill / cancel) ──
@@ -169,10 +178,18 @@ export const useOneTimeOrderActionMutation = () => {
           toast.error("هذا الطلب في حالة نهائية");
           queryClient.invalidateQueries({ queryKey: ["oneTimeOrders"] });
           break;
+        case "FINAL_STATUS":
+          toast.error("هذا الطلب في حالة نهائية");
+          queryClient.invalidateQueries({ queryKey: ["oneTimeOrders"] });
+          break;
         case "ONE_TIME_ORDER_DELIVERY_DISABLED":
           toast.error("طلبات لمرة واحدة متاحة للاستلام من الفرع فقط");
           break;
+        case "DELIVERY_NOT_SUPPORTED":
+          toast.error("التوصيل غير مدعوم لطلبات لمرة واحدة");
+          break;
         case "INVALID_OBJECT_ID":
+        case "INVALID_ORDER_ID":
           toast.error("معرف الطلب غير صالح");
           break;
         default:

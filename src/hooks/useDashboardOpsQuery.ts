@@ -21,7 +21,9 @@ export const useDashboardOpsListQuery = (date: string) =>
     queryKey: KEYS.list(date),
     queryFn: () => fetchDashboardOpsList(date),
     enabled: !!date,
-    refetchInterval: 30_000, // live-poll every 30s for delivery tracking
+    refetchInterval: 60_000, // Poll every 60s for new orders
+    refetchIntervalInBackground: true, // Keep polling even when tab is in background
+    placeholderData: (prev) => prev, // Keep showing previous data while refetching
   });
 
 // ── Search across ops ──
@@ -51,7 +53,7 @@ export const useDashboardOpsActionMutation = () => {
       toast.success(
         data?.data?.ui?.label
           ? `تم تحديث الحالة إلى: ${data.data.ui.label}`
-          : "تم تنفيذ الإجراء بنجاح",
+          : "تم تنفيذ الإجراء بنجاح"
       );
       // Invalidate both list and search queries to ensure freshness
       queryClient.invalidateQueries({ queryKey: ["dashboardOpsList"] });
@@ -63,7 +65,7 @@ export const useDashboardOpsActionMutation = () => {
     },
 
     onError: (
-      error: Error & { response?: { data?: { message?: string } } },
+      error: Error & { response?: { data?: { message?: string } } }
     ) => {
       const msg =
         error?.response?.data?.message || "حدث خطأ أثناء تنفيذ الإجراء";

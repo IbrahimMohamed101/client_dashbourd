@@ -18,6 +18,9 @@ export const useKitchenSummaryQuery = (date: string, branchId?: string) => {
     queryKey: ["kitchenSummary", date, branchId],
     queryFn: () => fetchKitchenOperationsSummary(date, branchId),
     enabled: !!date,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: true,
+    placeholderData: (prev) => prev,
   });
 };
 
@@ -43,6 +46,9 @@ export const useKitchenOperationsQuery = (params: {
     ],
     queryFn: () => fetchKitchenOperationsList(params),
     enabled: !!params.date,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: true,
+    placeholderData: (prev) => prev,
   });
 };
 
