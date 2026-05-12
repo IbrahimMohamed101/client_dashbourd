@@ -44,9 +44,9 @@ function RouteComponent() {
               <Ticket className="size-6 text-primary-foreground" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-xl font-bold tracking-tight">
+              <h1 className="text-xl font-bold tracking-tight">
                 أكواد الخصم والعروض
-              </h2>
+              </h1>
               <p className="text-sm text-muted-foreground">
                 إدارة كوبونات الخصم، العروض الترويجية، وحملات التسويق.
               </p>
@@ -70,7 +70,7 @@ function RouteComponent() {
         className="px-0!"
       />
 
-      <PromoCodesTable data={promos} isLoading={false} />
+      <PromoCodesTable />
     </div>
   );
 }

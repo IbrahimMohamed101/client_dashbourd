@@ -20,7 +20,7 @@ import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { usersColumns } from "./users-columns";
 import { useUsersListQuery } from "@/hooks/useUsersQuery";
 import { Link } from "@tanstack/react-router";
-import { buttonVariants } from "@/lib/button-variants";
+import { buttonVariants } from "@/components/custom/button-variants";
 import { cn } from "@/lib/utils";
 
 export function UsersTable() {
@@ -38,7 +38,6 @@ export function UsersTable() {
   const data = response?.data || [];
   const meta = response?.meta || { total: 0, totalPages: 1 };
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns: usersColumns,

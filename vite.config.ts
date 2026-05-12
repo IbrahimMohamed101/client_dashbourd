@@ -19,4 +19,31 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalizedId = id.replace(/\\/g, "/")
+          if (!normalizedId.includes("node_modules")) return
+          if (
+            normalizedId.includes("@radix-ui") ||
+            normalizedId.includes("radix-ui")
+          ) {
+            return "ui-vendor"
+          }
+          if (normalizedId.includes("lucide-react")) return "icons"
+          if (
+            normalizedId.includes("/react-dom/") ||
+            normalizedId.includes("/scheduler/")
+          ) {
+            return "react-dom"
+          }
+          if (normalizedId.includes("/react/")) return "react"
+          if (normalizedId.includes("@tanstack")) return "tanstack"
+          if (normalizedId.includes("zod")) return "zod"
+          if (normalizedId.includes("date-fns")) return "date-vendor"
+        },
+      },
+    },
+  },
 })

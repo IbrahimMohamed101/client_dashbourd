@@ -36,8 +36,8 @@ import type { PromoCodeDTO } from "@/types/financeTypes";
 
 const promoCodeSchema = z.object({
   code: z.string().min(1, "يرجى إدخال كود الخصم"),
-  type: z.enum(["percentage", "fixed"]),
-  value: z
+  discountType: z.enum(["percentage", "fixed_amount"]),
+  discountValue: z
     .string()
     .min(1, "يرجى إدخال قيمة صحيحة")
     .refine((v) => Number(v) > 0, "يرجى إدخال قيمة صحيحة"),
@@ -47,6 +47,11 @@ const promoCodeSchema = z.object({
 });
 
 type PromoCodeFormValues = z.infer<typeof promoCodeSchema>;
+
+function formatExpiryDate(date?: string): string {
+  if (!date || isNaN(new Date(date).getTime())) return "";
+  return new Date(date).toISOString().split("T")[0];
+}
 
 interface PromoCodeDialogProps {
   isOpen: boolean;
@@ -61,18 +66,17 @@ export function PromoCodeDialog({
 }: PromoCodeDialogProps) {
   const isEditing = !!editData;
 
+  // No useEffect needed — parent uses key={editData?.id ?? "new"}
+  // which remounts this component with fresh defaultValues
   const form = useForm<PromoCodeFormValues>({
     resolver: zodResolver(promoCodeSchema),
     defaultValues: {
       code: editData?.code ?? "",
-      type: (editData?.type as "percentage" | "fixed") ?? "percentage",
-      value: editData?.value?.toString() ?? "",
+      discountType: editData?.discountType ?? "percentage",
+      discountValue: editData?.discountValue?.toString() ?? "",
       maxUsage: editData?.maxUsage?.toString() ?? "",
-      expiryDate: editData?.expiryDate
-        ? new Date(editData.expiryDate).toISOString().split("T")[0]
-        : "",
-      status:
-        (editData?.status as "active" | "expired" | "disabled") ?? "active",
+      expiryDate: formatExpiryDate(editData?.expiryDate),
+      status: editData?.status ?? "active",
     },
   });
 
@@ -82,9 +86,9 @@ export function PromoCodeDialog({
   const onSubmit = async (data: PromoCodeFormValues) => {
     const payload: Record<string, unknown> = {
       code: data.code.trim().toUpperCase(),
-      type: data.type,
-      value: Number(data.value),
-      expiryDate: data.expiryDate,
+      discountType: data.discountType,
+      discountValue: Number(data.discountValue),
+      expiryDate: data.expiryDate ? new Date(data.expiryDate).toISOString() : null,
       status: data.status,
     };
 
@@ -141,6 +145,7 @@ export function PromoCodeDialog({
                     <Input
                       placeholder="مثال: SUMMER2024"
                       {...field}
+                      value={field.value ?? ""}
                       className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
                       dir="rtl"
                     />
@@ -153,7 +158,7 @@ export function PromoCodeDialog({
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="type"
+                name="discountType"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-bold">
@@ -161,7 +166,7 @@ export function PromoCodeDialog({
                     </FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       dir="rtl"
                     >
                       <FormControl>
@@ -173,7 +178,7 @@ export function PromoCodeDialog({
                         <SelectItem value="percentage" className="rounded-lg">
                           خصم مئوي %
                         </SelectItem>
-                        <SelectItem value="fixed" className="rounded-lg">
+                        <SelectItem value="fixed_amount" className="rounded-lg">
                           مبلغ ثابت ر.س
                         </SelectItem>
                       </SelectContent>
@@ -185,9 +190,9 @@ export function PromoCodeDialog({
 
               <FormField
                 control={form.control}
-                name="value"
+                name="discountValue"
                 render={({ field }) => {
-                  const type = form.watch("type");
+                  const discountType = form.watch("discountType");
                   return (
                     <FormItem>
                       <FormLabel className="text-sm font-bold">
@@ -197,11 +202,12 @@ export function PromoCodeDialog({
                         <Input
                           type="number"
                           min="0"
-                          step={type === "percentage" ? "1" : "0.01"}
+                          step={discountType === "percentage" ? "1" : "0.01"}
                           placeholder={
-                            type === "percentage" ? "مثال: 20" : "مثال: 50"
+                            discountType === "percentage" ? "مثال: 20" : "مثال: 50"
                           }
                           {...field}
+                          value={field.value ?? ""}
                           className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
                           dir="rtl"
                         />
@@ -228,6 +234,7 @@ export function PromoCodeDialog({
                         min="0"
                         placeholder="اتركه فارغاً = بلا حد"
                         {...field}
+                        value={field.value ?? ""}
                         className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
                         dir="rtl"
                       />
@@ -249,6 +256,7 @@ export function PromoCodeDialog({
                       <Input
                         type="date"
                         {...field}
+                        value={field.value ?? ""}
                         className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
                         dir="rtl"
                       />
@@ -268,7 +276,7 @@ export function PromoCodeDialog({
                     <FormLabel className="text-sm font-bold">الحالة</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       dir="rtl"
                     >
                       <FormControl>
@@ -280,10 +288,10 @@ export function PromoCodeDialog({
                         <SelectItem value="active" className="rounded-lg">
                           نشط
                         </SelectItem>
-                        <SelectItem value="expired" className="rounded-xl">
+                        <SelectItem value="expired" className="rounded-lg">
                           منتهي
                         </SelectItem>
-                        <SelectItem value="disabled" className="rounded-xl">
+                        <SelectItem value="disabled" className="rounded-lg">
                           معطل
                         </SelectItem>
                       </SelectContent>

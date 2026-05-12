@@ -167,7 +167,7 @@ export interface KitchenOperationsListResponse {
 
 // ── Bulk lock response ──
 export interface BulkLockResponse {
-  ok: boolean;
+  status: boolean;
   data: {
     date: string;
     totalDays: number;

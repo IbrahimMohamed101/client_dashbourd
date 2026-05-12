@@ -19,6 +19,7 @@ const SUPERADMIN_ROUTES = [
   "/zones",
   "/kitchen-board",
   "/courier-board",
+  "/menu",
 ];
 
 const ADMIN_ROUTES = [
@@ -38,6 +39,7 @@ const ADMIN_ROUTES = [
   "/promo-codes",
   "/zones",
   "/kitchen-board",
+  "/menu",
 ];
 
 const KITCHEN_ROUTES = [

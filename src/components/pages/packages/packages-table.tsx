@@ -28,7 +28,7 @@ import {
   restrictToParentElement,
 } from "@dnd-kit/modifiers";
 import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/lib/button-variants";
+import { buttonVariants } from "@/components/custom/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -86,7 +86,6 @@ export function PackagesTable({ data: initialData }: { data: Package[] }) {
     setData(initialData);
   }, [initialData]);
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns: packagesColumns,

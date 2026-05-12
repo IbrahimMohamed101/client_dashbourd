@@ -28,7 +28,7 @@ import { subscriptionsColumns } from "./subscriptions-columns";
 import { useSubscriptionsListQuery } from "@/hooks/useSubscriptionsQuery";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Link } from "@tanstack/react-router";
-import { buttonVariants } from "@/lib/button-variants";
+import { buttonVariants } from "@/components/custom/button-variants";
 import { cn } from "@/lib/utils";
 
 export function SubscriptionsTable() {
@@ -50,7 +50,6 @@ export function SubscriptionsTable() {
   const data = response?.data || [];
   const meta = response?.meta || { total: 0, totalPages: 1 };
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns: subscriptionsColumns,

@@ -16,4 +16,8 @@ export const routeTranslations: Record<string, string> = {
   edit: "تعديل",
   details: "التفاصيل",
   "create-subscription": "إنشاء اشتراك",
+  menu: "المنيو",
+  products: "المنتجات",
+  "option-groups": "مجموعات الخيارات",
+  options: "الخيارات",
 };

@@ -12,8 +12,8 @@ export interface PaymentDTO {
 export interface PromoCodeDTO {
   id: string;
   code: string;
-  type: "percentage" | "fixed";
-  value: number;
+  discountType: "percentage" | "fixed_amount";
+  discountValue: number;
   usageCount: number;
   maxUsage?: number;
   expiryDate: string;

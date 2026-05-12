@@ -1,4 +1,18 @@
-import { useState } from "react";
+import * as React from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -7,35 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  MoreHorizontal,
-  Plus,
-  Search,
-  Ticket,
-  Calendar as CalendarIcon,
-  Trash2,
-  Edit,
-  ArrowUpDown,
-  Filter,
-  CheckCircle2,
-  Clock,
-  Ban,
-} from "lucide-react";
-import { format } from "date-fns";
-import { ar } from "date-fns/locale";
-import { useDeletePromoCodeMutation } from "@/hooks/usePromoCodesQuery";
-import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,39 +32,61 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PlusIcon, SearchIcon, Ticket, Trash2 } from "lucide-react";
+import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { getPromoCodesColumns } from "./promo-codes-columns";
+import {
+  usePromoCodesListQuery,
+  useDeletePromoCodeMutation,
+} from "@/hooks/usePromoCodesQuery";
+import { useDebounce } from "@/hooks/useDebounce";
+import { toast } from "sonner";
 import type { PromoCodeDTO } from "@/types/financeTypes";
 import { PromoCodeDialog } from "./PromoCodeDialog";
 
-interface PromoCodesTableProps {
-  data: PromoCodeDTO[];
-  isLoading: boolean;
-}
+export function PromoCodesTable() {
+  const [statusFilter, setStatusFilter] = React.useState<string>("all");
+  const [globalFilter, setGlobalFilter] = React.useState("");
+  const debouncedSearch = useDebounce(globalFilter, 500);
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
-export function PromoCodesTable({ data, isLoading }: PromoCodesTableProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editData, setEditData] = useState<PromoCodeDTO | undefined>();
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  // Dialog state
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [editData, setEditData] = React.useState<PromoCodeDTO | undefined>();
 
+  // Delete state
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
   const deleteMutation = useDeletePromoCodeMutation();
 
-  const getFilteredData = () => {
-    return data.filter((item) =>
-      item.code.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const { data: response, isLoading } = usePromoCodesListQuery(
+    pagination.pageIndex + 1,
+    pagination.pageSize,
+    debouncedSearch
+  );
+
+  const data = response?.data || [];
+  const meta = response?.meta || {
+    total: 0,
+    totalPages: 1,
+    currentPage: 1,
+    lastPage: 1,
   };
 
-  const handleEdit = (promo: PromoCodeDTO) => {
+  const handleEdit = React.useCallback((promo: PromoCodeDTO) => {
     setEditData(promo);
     setIsDialogOpen(true);
-  };
+  }, []);
 
-  const handleAdd = () => {
+  const handleAdd = React.useCallback(() => {
     setEditData(undefined);
     setIsDialogOpen(true);
-  };
+  }, []);
 
-  const handleDelete = async () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteId) return;
     try {
       await deleteMutation.mutateAsync(deleteId);
@@ -89,226 +97,162 @@ export function PromoCodesTable({ data, isLoading }: PromoCodesTableProps) {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex animate-pulse flex-col gap-4 px-4 lg:px-6">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-16 w-full rounded-xl bg-muted/50" />
-        ))}
-      </div>
-    );
-  }
+  const handleSetDeleteId = React.useCallback((id: string) => {
+    setDeleteId(id);
+  }, []);
 
-  const getStatusBadge = (status: PromoCodeDTO["status"]) => {
-    switch (status) {
-      case "active":
-        return (
-          <Badge
-            variant="outline"
-            className="gap-1.5 rounded-full border-emerald-500/20 bg-emerald-500/10 px-3 py-1 font-bold text-emerald-500"
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            نشط
-          </Badge>
-        );
-      case "expired":
-        return (
-          <Badge
-            variant="outline"
-            className="gap-1.5 rounded-full border-orange-500/20 bg-orange-500/10 px-3 py-1 font-bold text-orange-500"
-          >
-            <Clock className="h-3.5 w-3.5" />
-            منتهي
-          </Badge>
-        );
-      case "disabled":
-        return (
-          <Badge
-            variant="outline"
-            className="gap-1.5 rounded-full border-rose-500/20 bg-rose-500/10 px-3 py-1 font-bold text-rose-500"
-          >
-            <Ban className="h-3.5 w-3.5" />
-            معطل
-          </Badge>
-        );
-    }
-  };
+  const columns = React.useMemo(
+    () => getPromoCodesColumns({ onEdit: handleEdit, onDelete: handleSetDeleteId }),
+    [handleEdit, handleSetDeleteId]
+  );
+
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      pagination,
+    },
+    pageCount: meta.lastPage ?? meta.totalPages,
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Header Actions */}
-      <div className="flex flex-col justify-between gap-4 rounded-3xl border border-muted-foreground/10 bg-background/50 p-4 backdrop-blur-md sm:flex-row sm:items-center">
-        <div className="group relative max-w-sm flex-1">
-          <Search className="absolute top-1/2 right-4 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
-          <Input
-            placeholder="البحث عن كود خصم..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-12 rounded-2xl border-muted-foreground/5 bg-muted/30 pr-11 ring-offset-background transition-all focus:bg-background"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="h-12 gap-2 rounded-2xl border-muted-foreground/10 px-5 transition-colors hover:bg-muted/50"
+    <div className="w-full flex-col justify-start gap-6" dir="rtl">
+      {/* Toolbar */}
+      <div className="flex flex-col gap-4 px-4 lg:px-6">
+        <div className="flex items-center gap-3">
+          {/* Status filter */}
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
           >
-            <Filter className="size-4" />
-            تصفية
-          </Button>
-          <Button
-            onClick={handleAdd}
-            className="h-12 gap-2 rounded-2xl px-6 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
-          >
-            <Plus className="size-4" />
+            <SelectTrigger className="w-40" size="sm">
+              <SelectValue placeholder="الحالة" />
+            </SelectTrigger>
+            <SelectContent dir="rtl">
+              <SelectGroup>
+                <SelectItem value="all">الكل</SelectItem>
+                <SelectItem value="active">نشط</SelectItem>
+                <SelectItem value="expired">منتهي</SelectItem>
+                <SelectItem value="disabled">معطل</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          {/* Search box */}
+          <div className="relative flex-1">
+            <SearchIcon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="البحث عن كود خصم..."
+              value={globalFilter}
+              onChange={(e) => {
+                setGlobalFilter(e.target.value);
+                setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+              }}
+              className="max-w-lg pr-9"
+            />
+          </div>
+
+          {/* Add button */}
+          <Button onClick={handleAdd} className="bg-primary">
+            <PlusIcon />
             إضافة كوبون جديد
           </Button>
+
+          {/* Column visibility */}
+          <DataTableViewOptions table={table} />
         </div>
       </div>
 
-      {/* Table Card */}
-      <div className="overflow-hidden rounded-[2.5rem] border border-muted-foreground/10 bg-card/30 shadow-xl shadow-foreground/5 backdrop-blur-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-muted-foreground/10 hover:bg-transparent">
-              <TableHead className="h-16 text-right font-black text-foreground/80">
-                الكود
-              </TableHead>
-              <TableHead className="h-16 text-right font-black text-foreground/80">
-                <div className="flex items-center gap-2">
-                  القيمة
-                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-              </TableHead>
-              <TableHead className="h-16 text-center text-right font-black text-foreground/80">
-                الاستخدامات
-              </TableHead>
-              <TableHead className="h-16 text-right font-black text-foreground/80">
-                تاريخ الانتهاء
-              </TableHead>
-              <TableHead className="h-16 text-right font-black text-foreground/80">
-                الحالة
-              </TableHead>
-              <TableHead className="h-16 text-center font-black text-foreground/80">
-                إجراءات
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {getFilteredData().map((promo: PromoCodeDTO) => (
-              <TableRow
-                key={promo.id}
-                className="group border-muted-foreground/5 transition-colors hover:bg-primary/[0.03]"
-              >
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
-                      <Ticket className="size-5" />
-                    </div>
-                    <span className="font-mono text-lg font-black tracking-wider text-foreground/90 uppercase">
-                      {promo.code}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="text-base font-bold">
-                      {promo.type === "percentage"
-                        ? `${promo.value}%`
-                        : `${promo.value} ر.س`}
-                    </span>
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase">
-                      {promo.type === "percentage" ? "خصم مئوي" : "مبلغ ثابت"}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <span className="text-base font-bold">
-                      {promo.usageCount}
-                    </span>
-                    <span className="text-xs text-muted-foreground">/</span>
-                    <span className="text-xs text-muted-foreground">
-                      {promo.maxUsage || "∞"}
-                    </span>
-                  </div>
-                  <div className="mx-auto mt-1.5 h-1.5 w-20 overflow-hidden rounded-full bg-muted/50">
-                    <div
-                      className="h-full bg-primary transition-all duration-500"
-                      style={{
-                        width: `${Math.min((promo.usageCount / (promo.maxUsage || promo.usageCount + 10)) * 100, 100)}%`,
-                      }}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2 font-medium text-muted-foreground">
-                    <CalendarIcon className="size-4 opacity-50" />
-                    {format(new Date(promo.expiryDate), "dd MMM yyyy", {
-                      locale: ar,
-                    })}
-                  </div>
-                </TableCell>
-                <TableCell>{getStatusBadge(promo.status)}</TableCell>
-                <TableCell className="text-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="size-10 rounded-xl p-0 transition-colors hover:bg-primary/10 hover:text-primary"
-                      >
-                        <MoreHorizontal className="size-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="w-48 rounded-2xl border-muted-foreground/10 p-2 shadow-2xl"
+      {/* Table */}
+      <div className="relative mt-4 flex flex-col gap-4 overflow-auto px-4 lg:px-6">
+        <div className="overflow-hidden rounded-lg border bg-card">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-muted">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow
+                  key={headerGroup.id}
+                  className="border-b hover:bg-transparent"
+                >
+                  {headerGroup.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="py-4 text-right font-medium"
                     >
-                      <DropdownMenuLabel className="px-3 pb-2 text-xs font-bold text-muted-foreground">
-                        خيارات التحكم
-                      </DropdownMenuLabel>
-                      <DropdownMenuItem
-                        onClick={() => handleEdit(promo)}
-                        className="cursor-pointer gap-2.5 rounded-xl px-3 py-2 transition-colors focus:bg-primary/10 focus:text-primary"
-                      >
-                        <Edit className="size-4" />
-                        تعديل الكوبون
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="my-1 bg-muted-foreground/10" />
-                      <DropdownMenuItem
-                        onClick={() => setDeleteId(promo.id)}
-                        className="cursor-pointer gap-2.5 rounded-xl px-3 py-2 text-rose-500 transition-colors focus:bg-rose-500/10 focus:text-rose-600"
-                      >
-                        <Trash2 className="size-4" />
-                        حذف الكوبون
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-            {getFilteredData().length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="h-64 text-center">
-                  <div className="flex flex-col items-center justify-center gap-4 opacity-50 grayscale">
-                    <div className="flex size-20 items-center justify-center rounded-full bg-muted">
-                      <Ticket className="size-10 text-muted-foreground" />
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    جاري التحميل...
+                  </TableCell>
+                </TableRow>
+              ) : table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-4 py-4 text-right">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-64 text-center"
+                  >
+                    <div className="flex flex-col items-center justify-center gap-4 opacity-50 grayscale">
+                      <div className="flex size-20 items-center justify-center rounded-full bg-muted">
+                        <Ticket className="size-10 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-black text-muted-foreground">
+                          لا توجد كوبونات خصم
+                        </p>
+                        <p className="mt-1 text-sm text-muted-foreground/60">
+                          جرب تغيير كلمة البحث أو أضف كوبوناً جديداً
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-lg font-black text-muted-foreground">
-                        لا توجد كوبونات خصم
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground/60">
-                        جرب تغيير كلمة البحث أو أضف كوبوناً جديداً
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination */}
+        <DataTablePagination
+          table={table}
+          totalItems={meta.total}
+          itemsLabel="الكوبونات"
+        />
       </div>
 
+      {/* Create/Edit Dialog */}
       <PromoCodeDialog
         key={editData?.id ?? "new"}
         isOpen={isDialogOpen}
@@ -316,6 +260,7 @@ export function PromoCodesTable({ data, isLoading }: PromoCodesTableProps) {
         editData={editData}
       />
 
+      {/* Delete Confirmation */}
       <AlertDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
@@ -334,7 +279,7 @@ export function PromoCodesTable({ data, isLoading }: PromoCodesTableProps) {
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4 flex-row-reverse gap-2">
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={handleDeleteConfirm}
               className="h-11 rounded-xl bg-rose-500 px-6 transition-all hover:bg-rose-600 active:scale-95"
             >
               نعم، احذف الكوبون

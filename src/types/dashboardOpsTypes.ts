@@ -39,7 +39,7 @@ export interface UnifiedOperationalDTO {
 // ── API response wrappers ──
 
 export interface DashboardOpsListResponse {
-  ok: boolean;
+  status: boolean;
   data: UnifiedOperationalDTO[];
   pagination?: {
     page: number;
@@ -63,7 +63,7 @@ export interface DashboardOpsActionRequest {
 }
 
 export interface DashboardOpsActionResponse {
-  ok: boolean;
+  status: boolean;
   data: UnifiedOperationalDTO;
 }
 

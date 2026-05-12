@@ -10,7 +10,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/lib/button-variants";
+import { buttonVariants } from "@/components/custom/button-variants";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
