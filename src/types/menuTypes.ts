@@ -330,6 +330,7 @@ export interface MenuValidationSummary {
 
 export interface MenuValidationResult {
   status: boolean;
+  ok: boolean;
   errors: MenuValidationError[];
   warnings: MenuValidationError[];
   summary?: MenuValidationSummary;
