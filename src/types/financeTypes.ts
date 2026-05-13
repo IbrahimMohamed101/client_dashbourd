@@ -1,4 +1,4 @@
-export interface PaymentDTO {
+interface PaymentDTO {
   id: string;
   customerName: string;
   amount: number;
@@ -9,13 +9,83 @@ export interface PaymentDTO {
   reference: string;
 }
 
-export interface PromoCodeDTO {
+interface LocalizedTextDTO {
+  ar?: string | null;
+  en?: string | null;
+}
+
+interface PromoCodeStateDTO {
+  isExpired: boolean;
+  isStarted: boolean;
+  isDeleted: boolean;
+  isCurrentlyValid: boolean;
+}
+
+type PromoCodeDiscountType = "percentage" | "fixed" | "fixed_amount";
+
+type PromoCodeDisplayStatus = "active" | "expired" | "inactive";
+
+interface PromoCodeDTO {
   id: string;
   code: string;
-  discountType: "percentage" | "fixed_amount";
+  name?: LocalizedTextDTO | null;
+  discountType: PromoCodeDiscountType;
   discountValue: number;
-  usageCount: number;
-  maxUsage?: number;
-  expiryDate: string;
-  status: "active" | "expired" | "disabled";
+  isActive: boolean;
+  appliesTo?: string | null;
+  appliesToList?: string[];
+  currency?: string | null;
+  startsAt?: string | null;
+  expiresAt?: string | null;
+  usageLimitTotal?: number | null;
+  usageLimitPerUser?: number | null;
+  currentUsageCount?: number | null;
+  usedCount?: number | null;
+  eligiblePlanIds?: string[];
+  firstPurchaseOnly?: boolean;
+  deletedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  state: PromoCodeStateDTO;
 }
+
+interface PromoCodesListMeta {
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  lastPage: number;
+}
+
+interface PromoCodesListResponse {
+  data: PromoCodeDTO[];
+  meta: PromoCodesListMeta;
+}
+
+interface PromoCodePayload {
+  code: string;
+  name?: LocalizedTextDTO;
+  discountType: PromoCodeDiscountType;
+  discountValue: number;
+  usageLimitTotal?: number | null;
+  usageLimit?: number | null;
+  usageLimitPerUser?: number | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  appliesTo?: string;
+  isActive?: boolean;
+}
+
+type StatusFilter = PromoCodeDisplayStatus | "all";
+
+export type {
+  PaymentDTO,
+  LocalizedTextDTO,
+  PromoCodeStateDTO,
+  PromoCodeDiscountType,
+  PromoCodeDisplayStatus,
+  PromoCodeDTO,
+  PromoCodesListMeta,
+  PromoCodesListResponse,
+  PromoCodePayload,
+  StatusFilter,
+};

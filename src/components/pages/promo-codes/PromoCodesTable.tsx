@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useMemo, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -35,40 +35,123 @@ import {
 import { PlusIcon, SearchIcon, Ticket, Trash2 } from "lucide-react";
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { getPromoCodesColumns } from "./promo-codes-columns";
 import {
-  usePromoCodesListQuery,
+  getPromoCodeName,
+  getPromoCodeStatus,
+  getPromoCodesColumns,
+  promoCodeText,
+} from "./promo-codes-columns";
+import {
   useDeletePromoCodeMutation,
+  usePromoCodesListQuery,
 } from "@/hooks/usePromoCodesQuery";
 import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
-import type { PromoCodeDTO } from "@/types/financeTypes";
+import type { PromoCodeDTO, StatusFilter } from "@/types/financeTypes";
 import { PromoCodeDialog } from "./PromoCodeDialog";
+import PromoCodeDetailDialog from "./PromoCodeDetailDialog";
+
+interface PromoCodesToolbarProps {
+  statusFilter: StatusFilter;
+  onStatusFilterChange: (value: StatusFilter) => void;
+  searchInput: string;
+  onSearchInputChange: (value: string) => void;
+  onAdd: () => void;
+  table: ReturnType<typeof useReactTable<PromoCodeDTO>>;
+}
+
+function PromoCodesToolbar({
+  statusFilter,
+  onStatusFilterChange,
+  searchInput,
+  onSearchInputChange,
+  onAdd,
+  table,
+}: PromoCodesToolbarProps) {
+  return (
+    <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex items-center gap-3">
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => onStatusFilterChange(value as StatusFilter)}
+        >
+          <SelectTrigger className="w-40" size="sm">
+            <SelectValue placeholder={promoCodeText.status} />
+          </SelectTrigger>
+          <SelectContent dir="rtl">
+            <SelectGroup>
+              <SelectItem value="all">الكل</SelectItem>
+              <SelectItem value="active">{promoCodeText.active}</SelectItem>
+              <SelectItem value="expired">{promoCodeText.expired}</SelectItem>
+              <SelectItem value="inactive">{promoCodeText.inactive}</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+
+        <div className="relative flex-1">
+          <SearchIcon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="البحث عن كود خصم..."
+            value={searchInput}
+            onChange={(event) => onSearchInputChange(event.target.value)}
+            className="max-w-lg pr-9"
+          />
+        </div>
+
+        <Button onClick={onAdd} className="bg-primary">
+          <PlusIcon />
+          إضافة كود جديد
+        </Button>
+
+        <DataTableViewOptions table={table} />
+      </div>
+    </div>
+  );
+}
 
 export function PromoCodesTable() {
-  const [statusFilter, setStatusFilter] = React.useState<string>("all");
-  const [globalFilter, setGlobalFilter] = React.useState("");
-  const debouncedSearch = useDebounce(globalFilter, 500);
-  const [pagination, setPagination] = React.useState({
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [searchInput, setSearchInput] = useState("");
+  const searchQuery = useDebounce(searchInput, 500);
+  const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
   });
-
-  // Dialog state
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [editData, setEditData] = React.useState<PromoCodeDTO | undefined>();
-
-  // Delete state
-  const [deleteId, setDeleteId] = React.useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editData, setEditData] = useState<PromoCodeDTO | undefined>();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const deleteMutation = useDeletePromoCodeMutation();
-
   const { data: response, isLoading } = usePromoCodesListQuery(
     pagination.pageIndex + 1,
     pagination.pageSize,
-    debouncedSearch
+    searchQuery
   );
 
-  const data = response?.data || [];
+  const data = useMemo(() => {
+    const serverData = response?.data || [];
+    const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+
+    const searchFilteredData = normalizedSearchQuery
+      ? serverData.filter((promo) => {
+          const promoName = getPromoCodeName(promo).toLowerCase();
+          const promoCode = promo.code.toLowerCase();
+          return (
+            promoCode.includes(normalizedSearchQuery) ||
+            promoName.includes(normalizedSearchQuery)
+          );
+        })
+      : serverData;
+
+    if (statusFilter === "all") {
+      return searchFilteredData;
+    }
+
+    return searchFilteredData.filter(
+      (promo) => getPromoCodeStatus(promo.state) === statusFilter
+    );
+  }, [response?.data, searchQuery, statusFilter]);
+
   const meta = response?.meta || {
     total: 0,
     totalPages: 1,
@@ -76,34 +159,18 @@ export function PromoCodesTable() {
     lastPage: 1,
   };
 
-  const handleEdit = React.useCallback((promo: PromoCodeDTO) => {
-    setEditData(promo);
-    setIsDialogOpen(true);
-  }, []);
-
-  const handleAdd = React.useCallback(() => {
-    setEditData(undefined);
-    setIsDialogOpen(true);
-  }, []);
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteId) return;
-    try {
-      await deleteMutation.mutateAsync(deleteId);
-      toast.success("تم حذف الكوبون بنجاح");
-      setDeleteId(null);
-    } catch {
-      toast.error("حدث خطأ أثناء الحذف");
-    }
-  };
-
-  const handleSetDeleteId = React.useCallback((id: string) => {
-    setDeleteId(id);
-  }, []);
-
-  const columns = React.useMemo(
-    () => getPromoCodesColumns({ onEdit: handleEdit, onDelete: handleSetDeleteId }),
-    [handleEdit, handleSetDeleteId]
+  // Stable column definitions avoid unnecessary react-table recalculation.
+  const columns = useMemo(
+    () =>
+      getPromoCodesColumns({
+        onEdit: (promo) => {
+          setEditData(promo);
+          setIsDialogOpen(true);
+        },
+        onDelete: setDeleteId,
+        onView: setDetailId,
+      }),
+    []
   );
 
   const table = useReactTable({
@@ -118,61 +185,50 @@ export function PromoCodesTable() {
     manualPagination: true,
   });
 
+  async function handleDeleteConfirm() {
+    if (!deleteId) return;
+
+    try {
+      await deleteMutation.mutateAsync(deleteId);
+      toast.success("تم حذف كود الخصم بنجاح");
+      setDeleteId(null);
+    } catch {
+      toast.error("حدث خطأ أثناء الحذف");
+    }
+  }
+
+  function handleAdd() {
+    setEditData(undefined);
+    setIsDialogOpen(true);
+  }
+
+  function handleStatusFilterChange(value: StatusFilter) {
+    setStatusFilter(value);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }
+
+  function handleSearchInputChange(value: string) {
+    setSearchInput(value);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }
+
   return (
     <div className="w-full flex-col justify-start gap-6" dir="rtl">
-      {/* Toolbar */}
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
-        <div className="flex items-center gap-3">
-          {/* Status filter */}
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => {
-              setStatusFilter(value);
-              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-            }}
-          >
-            <SelectTrigger className="w-40" size="sm">
-              <SelectValue placeholder="الحالة" />
-            </SelectTrigger>
-            <SelectContent dir="rtl">
-              <SelectGroup>
-                <SelectItem value="all">الكل</SelectItem>
-                <SelectItem value="active">نشط</SelectItem>
-                <SelectItem value="expired">منتهي</SelectItem>
-                <SelectItem value="disabled">معطل</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+      <PromoCodesToolbar
+        statusFilter={statusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
+        searchInput={searchInput}
+        onSearchInputChange={handleSearchInputChange}
+        onAdd={handleAdd}
+        table={table}
+      />
 
-          {/* Search box */}
-          <div className="relative flex-1">
-            <SearchIcon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="البحث عن كود خصم..."
-              value={globalFilter}
-              onChange={(e) => {
-                setGlobalFilter(e.target.value);
-                setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-              }}
-              className="max-w-lg pr-9"
-            />
-          </div>
-
-          {/* Add button */}
-          <Button onClick={handleAdd} className="bg-primary">
-            <PlusIcon />
-            إضافة كوبون جديد
-          </Button>
-
-          {/* Column visibility */}
-          <DataTableViewOptions table={table} />
-        </div>
-      </div>
-
-      {/* Table */}
       <div className="relative mt-4 flex flex-col gap-4 overflow-auto px-4 lg:px-6">
-        <div className="overflow-hidden rounded-lg border bg-card">
-          <Table>
+        <div
+          className="overflow-hidden rounded-lg border bg-card"
+          style={{ contain: "layout paint" }}
+        >
+          <Table className="table-fixed">
             <TableHeader className="sticky top-0 z-10 bg-muted">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow
@@ -230,10 +286,10 @@ export function PromoCodesTable() {
                       </div>
                       <div>
                         <p className="text-lg font-black text-muted-foreground">
-                          لا توجد كوبونات خصم
+                          لا توجد أكواد خصم
                         </p>
                         <p className="mt-1 text-sm text-muted-foreground/60">
-                          جرب تغيير كلمة البحث أو أضف كوبوناً جديداً
+                          جرّب تغيير كلمة البحث أو أضف كودًا جديدًا
                         </p>
                       </div>
                     </div>
@@ -244,15 +300,13 @@ export function PromoCodesTable() {
           </Table>
         </div>
 
-        {/* Pagination */}
         <DataTablePagination
           table={table}
           totalItems={meta.total}
-          itemsLabel="الكوبونات"
+          itemsLabel="أكواد الخصم"
         />
       </div>
 
-      {/* Create/Edit Dialog */}
       <PromoCodeDialog
         key={editData?.id ?? "new"}
         isOpen={isDialogOpen}
@@ -260,9 +314,13 @@ export function PromoCodesTable() {
         editData={editData}
       />
 
-      {/* Delete Confirmation */}
+      <PromoCodeDetailDialog
+        promoCodeId={detailId}
+        onClose={() => setDetailId(null)}
+      />
+
       <AlertDialog
-        open={!!deleteId}
+        open={Boolean(deleteId)}
         onOpenChange={(open) => !open && setDeleteId(null)}
       >
         <AlertDialogContent className="rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl">
@@ -274,7 +332,7 @@ export function PromoCodesTable() {
               هل أنت متأكد من الحذف؟
             </AlertDialogTitle>
             <AlertDialogDescription className="pt-2 text-right font-medium text-muted-foreground">
-              سيتم حذف كوبون الخصم بشكل نهائي. هذا الإجراء لا يمكن التراجع عنه.
+              سيتم حذف كود الخصم بشكل ناعم مع الحفاظ على سجل الاستخدامات.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4 flex-row-reverse gap-2">
@@ -282,7 +340,7 @@ export function PromoCodesTable() {
               onClick={handleDeleteConfirm}
               className="h-11 rounded-xl bg-rose-500 px-6 transition-all hover:bg-rose-600 active:scale-95"
             >
-              نعم، احذف الكوبون
+              نعم، احذف الكود
             </AlertDialogAction>
             <AlertDialogCancel className="mt-0 h-11 rounded-xl border-muted-foreground/10 px-6 hover:bg-muted/50">
               إلغاء

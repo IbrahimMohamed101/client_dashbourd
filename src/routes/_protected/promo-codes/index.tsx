@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { promoCodesListQueryOptions } from "@/hooks/usePromoCodesQuery";
-import { Loader } from "@/components/global/loader";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Loader } from "@/components/global/loader";
 import { PromoCodesTable } from "@/components/pages/promo-codes/PromoCodesTable";
+import { getPromoCodeStatus } from "@/components/pages/promo-codes/promo-codes-columns";
 import { getPromoCodesSectionCards } from "@/constants/SectionCardsData";
+import { promoCodesListQueryOptions } from "@/hooks/usePromoCodesQuery";
 import { Card, CardContent } from "@/components/ui/card";
 import { Ticket } from "lucide-react";
 import { SectionCards } from "@/components/custom/section-cards";
@@ -22,15 +23,14 @@ function RouteComponent() {
   const { data: promoResponse } = useSuspenseQuery(
     promoCodesListQueryOptions(1, 20)
   );
-
   const promos = promoResponse?.data || [];
-
   const promoSummary = {
     totalPromoCodes: promos.length,
-    activePromoCodes: promos.filter((p: PromoCodeDTO) => p.status === "active")
-      .length,
+    activePromoCodes: promos.filter(
+      (promo: PromoCodeDTO) => getPromoCodeStatus(promo.state) === "active"
+    ).length,
     totalUses: promos.reduce(
-      (acc: number, curr: PromoCodeDTO) => acc + (curr.usageCount || 0),
+      (acc: number, curr: PromoCodeDTO) => acc + (curr.usedCount || 0),
       0
     ),
   };
@@ -48,7 +48,7 @@ function RouteComponent() {
                 أكواد الخصم والعروض
               </h1>
               <p className="text-sm text-muted-foreground">
-                إدارة كوبونات الخصم، العروض الترويجية، وحملات التسويق.
+                إدارة كوبونات الخصم والعروض الترويجية وحدود الاستخدام.
               </p>
             </div>
           </div>

@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Form,
   FormControl,
@@ -32,25 +33,80 @@ import {
   useCreatePromoCodeMutation,
   useUpdatePromoCodeMutation,
 } from "@/hooks/usePromoCodesQuery";
-import type { PromoCodeDTO } from "@/types/financeTypes";
+import type { PromoCodeDTO, PromoCodePayload } from "@/types/financeTypes";
 
 const promoCodeSchema = z.object({
-  code: z.string().min(1, "يرجى إدخال كود الخصم"),
+  code: z.string().min(1, "مطلوب"),
+  nameAr: z.string().optional(),
+  nameEn: z.string().optional(),
   discountType: z.enum(["percentage", "fixed_amount"]),
   discountValue: z
     .string()
-    .min(1, "يرجى إدخال قيمة صحيحة")
-    .refine((v) => Number(v) > 0, "يرجى إدخال قيمة صحيحة"),
-  maxUsage: z.string().optional(),
-  expiryDate: z.string().min(1, "يرجى تحديد تاريخ الانتهاء"),
-  status: z.enum(["active", "expired", "disabled"]),
+    .min(1, "مطلوب")
+    .refine((value) => Number(value) > 0, "قيمة غير صحيحة"),
+  usageLimitTotal: z.string().optional(),
+  usageLimitPerUser: z.string().optional(),
+  startsAt: z.string().optional(),
+  expiresAt: z.string().optional(),
+  appliesTo: z.string().optional(),
+  isActive: z.boolean(),
 });
 
 type PromoCodeFormValues = z.infer<typeof promoCodeSchema>;
 
-function formatExpiryDate(date?: string): string {
-  if (!date || isNaN(new Date(date).getTime())) return "";
-  return new Date(date).toISOString().split("T")[0];
+function formatDateInputValue(value?: string | null): string {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toISOString().slice(0, 10);
+}
+
+function getDefaultValues(editData?: PromoCodeDTO): PromoCodeFormValues {
+  return {
+    code: editData?.code ?? "",
+    nameAr: editData?.name?.ar ?? "",
+    nameEn: editData?.name?.en ?? "",
+    discountType:
+      editData?.discountType === "fixed"
+        ? "fixed_amount"
+        : editData?.discountType ?? "percentage",
+    discountValue: editData?.discountValue?.toString() ?? "",
+    usageLimitTotal: editData?.usageLimitTotal?.toString() ?? "",
+    usageLimitPerUser: editData?.usageLimitPerUser?.toString() ?? "",
+    startsAt: formatDateInputValue(editData?.startsAt),
+    expiresAt: formatDateInputValue(editData?.expiresAt),
+    appliesTo: editData?.appliesTo ?? "subscriptions",
+    isActive: editData?.isActive ?? true,
+  };
+}
+
+function toPromoCodePayload(values: PromoCodeFormValues): PromoCodePayload {
+  const usageLimitTotal = values.usageLimitTotal
+    ? Number(values.usageLimitTotal)
+    : null;
+
+  return {
+    code: values.code.trim().toUpperCase(),
+    name: {
+      ar: values.nameAr?.trim() ?? "",
+      en: values.nameEn?.trim() ?? "",
+    },
+    discountType: values.discountType,
+    discountValue: Number(values.discountValue),
+    usageLimitTotal,
+    usageLimit: usageLimitTotal,
+    usageLimitPerUser: values.usageLimitPerUser
+      ? Number(values.usageLimitPerUser)
+      : null,
+    startsAt: values.startsAt ? new Date(values.startsAt).toISOString() : null,
+    endsAt: values.expiresAt
+      ? new Date(values.expiresAt).toISOString()
+      : null,
+    appliesTo: values.appliesTo?.trim() || "subscriptions",
+    isActive: values.isActive,
+  };
 }
 
 interface PromoCodeDialogProps {
@@ -64,123 +120,125 @@ export function PromoCodeDialog({
   onClose,
   editData,
 }: PromoCodeDialogProps) {
-  const isEditing = !!editData;
-
-  // No useEffect needed — parent uses key={editData?.id ?? "new"}
-  // which remounts this component with fresh defaultValues
+  const isEditing = Boolean(editData);
   const form = useForm<PromoCodeFormValues>({
     resolver: zodResolver(promoCodeSchema),
-    defaultValues: {
-      code: editData?.code ?? "",
-      discountType: editData?.discountType ?? "percentage",
-      discountValue: editData?.discountValue?.toString() ?? "",
-      maxUsage: editData?.maxUsage?.toString() ?? "",
-      expiryDate: formatExpiryDate(editData?.expiryDate),
-      status: editData?.status ?? "active",
-    },
+    defaultValues: getDefaultValues(editData),
   });
-
   const createMutation = useCreatePromoCodeMutation();
   const updateMutation = useUpdatePromoCodeMutation();
+  const discountType = form.watch("discountType");
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
-  const onSubmit = async (data: PromoCodeFormValues) => {
-    const payload: Record<string, unknown> = {
-      code: data.code.trim().toUpperCase(),
-      discountType: data.discountType,
-      discountValue: Number(data.discountValue),
-      expiryDate: data.expiryDate ? new Date(data.expiryDate).toISOString() : null,
-      status: data.status,
-    };
-
-    if (data.maxUsage) {
-      payload.maxUsage = Number(data.maxUsage);
-    }
-
+  async function onSubmit(values: PromoCodeFormValues) {
     try {
-      if (isEditing && editData) {
+      const payload = toPromoCodePayload(values);
+
+      if (editData) {
         await updateMutation.mutateAsync({ id: editData.id, data: payload });
-        toast.success("تم تحديث الكوبون بنجاح");
-      } else {
-        await createMutation.mutateAsync(payload);
-        toast.success("تم إنشاء الكوبون بنجاح");
+        toast.success("تم تحديث كود الخصم بنجاح");
+        onClose();
+        return;
       }
+
+      await createMutation.mutateAsync(payload);
+      toast.success("تم إنشاء كود الخصم بنجاح");
+      form.reset(getDefaultValues());
       onClose();
     } catch {
-      toast.error(
-        isEditing
-          ? "حدث خطأ أثناء تحديث الكوبون"
-          : "حدث خطأ أثناء إنشاء الكوبون"
-      );
+      toast.error("حدث خطأ أثناء حفظ كود الخصم");
     }
-  };
-
-  const isLoading = createMutation.isPending || updateMutation.isPending;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl font-black">
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Ticket className="size-5" />
             </div>
-            {isEditing ? "تعديل كوبون الخصم" : "إضافة كوبون جديد"}
+            {isEditing ? "تعديل كود الخصم" : "إضافة كود جديد"}
           </DialogTitle>
           <DialogDescription className="text-right font-medium text-muted-foreground">
-            {isEditing
-              ? "قم بتعديل بيانات كوبون الخصم"
-              : "أدخل بيانات كوبون الخصم الجديد"}
+            أدخل بيانات كود الخصم الأساسية فقط.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-bold">كود الخصم</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="مثال: SUMMER2024"
-                      {...field}
-                      value={field.value ?? ""}
-                      className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
-                      dir="rtl"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الكود</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} dir="ltr" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="appliesTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ينطبق على</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} dir="ltr" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="nameAr"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الاسم بالعربية</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="nameEn"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الاسم بالإنجليزية</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} dir="ltr" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="discountType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-bold">
-                      نوع الخصم
-                    </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      dir="rtl"
-                    >
+                    <FormLabel>نوع الخصم</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-12 w-full rounded-lg border-muted-foreground/10 bg-muted/30 transition-all focus:bg-background">
+                        <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="rounded-lg border-muted-foreground/10">
-                        <SelectItem value="percentage" className="rounded-lg">
-                          خصم مئوي %
-                        </SelectItem>
-                        <SelectItem value="fixed_amount" className="rounded-lg">
-                          مبلغ ثابت ر.س
-                        </SelectItem>
+                      <SelectContent>
+                        <SelectItem value="percentage">خصم مئوي</SelectItem>
+                        <SelectItem value="fixed_amount">مبلغ ثابت</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -191,52 +249,17 @@ export function PromoCodeDialog({
               <FormField
                 control={form.control}
                 name="discountValue"
-                render={({ field }) => {
-                  const discountType = form.watch("discountType");
-                  return (
-                    <FormItem>
-                      <FormLabel className="text-sm font-bold">
-                        القيمة
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step={discountType === "percentage" ? "1" : "0.01"}
-                          placeholder={
-                            discountType === "percentage" ? "مثال: 20" : "مثال: 50"
-                          }
-                          {...field}
-                          value={field.value ?? ""}
-                          className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
-                          dir="rtl"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="maxUsage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-bold">
-                      الحد الأقصى للاستخدام
-                    </FormLabel>
+                    <FormLabel>قيمة الخصم</FormLabel>
                     <FormControl>
                       <Input
+                        {...field}
+                        value={field.value ?? ""}
                         type="number"
                         min="0"
-                        placeholder="اتركه فارغاً = بلا حد"
-                        {...field}
-                        value={field.value ?? ""}
-                        className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
-                        dir="rtl"
+                        step={discountType === "percentage" ? "1" : "0.01"}
+                        dir="ltr"
                       />
                     </FormControl>
                     <FormMessage />
@@ -246,19 +269,75 @@ export function PromoCodeDialog({
 
               <FormField
                 control={form.control}
-                name="expiryDate"
+                name="usageLimitTotal"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-bold">
-                      تاريخ الانتهاء
-                    </FormLabel>
+                    <FormLabel>حد الاستخدام الكلي</FormLabel>
                     <FormControl>
                       <Input
-                        type="date"
                         {...field}
                         value={field.value ?? ""}
-                        className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
-                        dir="rtl"
+                        type="number"
+                        min="0"
+                        dir="ltr"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="usageLimitPerUser"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>حد الاستخدام لكل مستخدم</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ""}
+                        type="number"
+                        min="0"
+                        dir="ltr"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="startsAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>تاريخ البدء</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ""}
+                        type="date"
+                        dir="ltr"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="expiresAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>تاريخ الانتهاء</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ""}
+                        type="date"
+                        dir="ltr"
                       />
                     </FormControl>
                     <FormMessage />
@@ -267,59 +346,31 @@ export function PromoCodeDialog({
               />
             </div>
 
-            {isEditing && (
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-bold">الحالة</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      dir="rtl"
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-12 w-full rounded-lg border-muted-foreground/10 bg-muted/30 transition-all focus:bg-background">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="rounded-lg border-muted-foreground/10">
-                        <SelectItem value="active" className="rounded-lg">
-                          نشط
-                        </SelectItem>
-                        <SelectItem value="expired" className="rounded-lg">
-                          منتهي
-                        </SelectItem>
-                        <SelectItem value="disabled" className="rounded-lg">
-                          معطل
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border border-muted-foreground/10 p-3">
+                  <FormLabel>مفعّل</FormLabel>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <DialogFooter className="flex-row-reverse gap-2 pt-2">
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="h-12 gap-2 rounded-lg px-8 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
-              >
+              <Button type="submit" disabled={isLoading}>
                 {isLoading
                   ? "جاري الحفظ..."
                   : isEditing
-                    ? "تحديث الكوبون"
-                    : "إنشاء الكوبون"}
+                    ? "تحديث كود الخصم"
+                    : "إنشاء كود الخصم"}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="h-12 rounded-lg border-muted-foreground/10 px-6 hover:bg-muted/50"
-              >
+              <Button type="button" variant="outline" onClick={onClose}>
                 إلغاء
               </Button>
             </DialogFooter>
