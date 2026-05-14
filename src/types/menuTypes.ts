@@ -142,6 +142,8 @@ export interface CreateMenuProductPayload {
 }
 
 export interface UpdateMenuProductPayload {
+  categoryId?: string;
+  itemType?: ItemType;
   name?: LocalizedText;
   description?: LocalizedText;
   imageUrl?: string;

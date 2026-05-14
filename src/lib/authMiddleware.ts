@@ -7,6 +7,7 @@ import {
   ADMIN_ROUTES,
   AUTH_ROUTES,
   COURIER_ROUTES,
+  CASHIER_ROUTES,
   ROLE_DEFAULTS,
 } from "../../routes";
 
@@ -20,6 +21,7 @@ const ROLE_ROUTES: Record<UserRole, string[]> = {
   [UserRoles.ADMIN]: ADMIN_ROUTES,
   [UserRoles.KITCHEN]: KITCHEN_ROUTES,
   [UserRoles.COURIER]: COURIER_ROUTES,
+  [UserRoles.CASHIER]: CASHIER_ROUTES,
 };
 
 export const authMiddleware = (

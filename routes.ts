@@ -52,6 +52,8 @@ const KITCHEN_ROUTES = [
 
 const COURIER_ROUTES = ["/courier-board", "/delivery"];
 
+const CASHIER_ROUTES = ["/dashboard", "/one-time-orders", "/pickup-board"];
+
 const AUTH_ROUTES = ["/"];
 
 const ROLE_DEFAULTS: Record<UserRole, string> = {
@@ -59,6 +61,7 @@ const ROLE_DEFAULTS: Record<UserRole, string> = {
   [UserRoles.ADMIN]: "/dashboard",
   [UserRoles.KITCHEN]: "/kitchen-board",
   [UserRoles.COURIER]: "/courier-board",
+  [UserRoles.CASHIER]: "/dashboard",
 };
 
 export {
@@ -66,6 +69,7 @@ export {
   ADMIN_ROUTES,
   KITCHEN_ROUTES,
   COURIER_ROUTES,
+  CASHIER_ROUTES,
   AUTH_ROUTES,
   ROLE_DEFAULTS,
 };

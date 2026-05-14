@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { login, sessionQueryOptions } from "@/lib/authApi";
+import { login, logout, sessionQueryOptions } from "@/lib/authApi";
 import type { LoginCredentials, AuthResponse } from "@/types/auth";
 import { useRouter } from "@tanstack/react-router";
 import { ROLE_DEFAULTS } from "../../routes";
 import type { UserRole } from "@/types/auth";
 import { ToastMessage } from "@/components/global/ToastMessage";
 import Cookies from "js-cookie";
-import api from "@/lib/apis";
 
 export const useAuth = () => {
   const queryClient = useQueryClient();
@@ -42,7 +41,7 @@ export const useAuth = () => {
   const logoutMutation = useMutation({
     mutationFn: async () => {
       try {
-        await api.post("/api/dashboard/auth/logout");
+        await logout();
       } catch {
         // Even if backend logout fails, clear local session
       }

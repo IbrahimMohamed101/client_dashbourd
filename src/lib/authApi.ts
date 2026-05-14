@@ -17,6 +17,10 @@ export const getSession = async (): Promise<AuthResponse> => {
   return response.data;
 };
 
+export const logout = async (): Promise<void> => {
+  await api.post("/api/dashboard/auth/logout");
+};
+
 export const sessionQueryOptions = queryOptions({
   queryKey: ["session"],
   queryFn: getSession,

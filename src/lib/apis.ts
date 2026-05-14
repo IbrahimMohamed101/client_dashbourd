@@ -28,7 +28,25 @@ api.interceptors.response.use(
       Cookies.remove("dashboardToken");
       window.location.href = "/";
     }
-    console.error("API Error:", error.response?.data || error.message);
+
+    const data = error.response?.data;
+    let message = "An unexpected error occurred";
+
+    if (data) {
+      if (typeof data.message === "string") {
+        // Shape 1: { status: false, message: "..." }
+        message = data.message;
+      } else if (data.ok === false && data.error?.message) {
+        // Shape 2: { ok: false, error: { code, message } }
+        message = data.error.message;
+      } else if (typeof data.error === "string") {
+        message = data.error;
+      }
+    }
+
+    // Attach normalized message so callers can use it consistently
+    (error as Error & { normalizedMessage?: string }).normalizedMessage = message;
+    console.error("API Error:", message);
     return Promise.reject(error);
   }
 );

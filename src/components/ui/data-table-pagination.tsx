@@ -37,8 +37,6 @@ export function DataTablePagination<TData>({
             value={`${table.getState().pagination.pageSize}`}
             onValueChange={(value) => {
               table.setPageSize(Number(value))
-              // If server-side, you might want it to reset page.
-              table.setPageIndex(0) 
             }}
           >
             <SelectTrigger size="sm" className="w-20" id="rows-per-page">

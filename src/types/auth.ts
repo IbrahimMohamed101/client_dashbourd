@@ -2,6 +2,7 @@ import type { LoginSchemaType } from "@/lib/validations/loginSchema";
 
 export interface User {
   id: string;
+  name: string;
   email: string;
   role: string;
   isActive: boolean;
@@ -19,8 +20,9 @@ export interface AuthResponse {
 export const UserRoles = {
   SUPERADMIN: "superadmin",
   ADMIN: "admin",
-  COURIER: "courier",
   KITCHEN: "kitchen",
+  COURIER: "courier",
+  CASHIER: "cashier",
 } as const;
 
 export type UserRole = (typeof UserRoles)[keyof typeof UserRoles];

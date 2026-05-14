@@ -5,6 +5,7 @@ import type {
   CreateMenuOptionGroupPayload,
   UpdateMenuOptionGroupPayload,
   MenuListParams,
+  ReorderItem,
 } from "@/types/menuTypes";
 
 // ── List Option Groups ──
@@ -65,4 +66,34 @@ export const fetchDeleteMenuOptionGroup = async (
   id: string
 ): Promise<void> => {
   await api.delete(`/api/dashboard/menu/option-groups/${id}`);
+};
+
+// ── Reorder Option Groups ──
+// PATCH /api/dashboard/menu/option-groups/reorder
+
+export const fetchReorderMenuOptionGroups = async (
+  items: ReorderItem[]
+): Promise<void> => {
+  await api.patch("/api/dashboard/menu/option-groups/reorder", { items });
+};
+
+// ── Update Option Group Availability ──
+// PATCH /api/dashboard/menu/option-groups/:id/availability
+
+export const fetchUpdateMenuOptionGroupAvailability = async (
+  id: string,
+  isAvailable: boolean
+): Promise<void> => {
+  await api.patch(`/api/dashboard/menu/option-groups/${id}/availability`, {
+    isAvailable,
+  });
+};
+
+// ── Toggle Option Group Active ──
+// PATCH /api/dashboard/menu/option-groups/:id/toggle-active
+
+export const fetchToggleMenuOptionGroupActive = async (
+  id: string
+): Promise<void> => {
+  await api.patch(`/api/dashboard/menu/option-groups/${id}/toggle-active`);
 };

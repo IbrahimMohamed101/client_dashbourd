@@ -7,11 +7,7 @@ import {
   BookOpen,
   CheckCircle2,
   FileText,
-  FolderOpen,
   Layers,
-  Link2,
-  Package,
-  Settings2,
 } from "lucide-react";
 import { MenuCategoriesTab } from "@/components/pages/menu/categories/MenuCategoriesTab";
 import { MenuProductsTab } from "@/components/pages/menu/products/MenuProductsTab";
@@ -21,6 +17,7 @@ import { MenuAuditLogTab } from "@/components/pages/menu/audit/MenuAuditLogTab";
 import { MenuValidationDialog } from "@/components/pages/menu/MenuValidationDialog";
 import { MenuPublishDialog } from "@/components/pages/menu/MenuPublishDialog";
 import { MenuProductRelationsTab } from "@/components/pages/menu/relations/MenuProductRelationsTab";
+import { workflowSteps } from "@/constants/menuData";
 
 export const Route = createFileRoute("/_protected/menu/")({
   component: MenuPage,
@@ -28,44 +25,7 @@ export const Route = createFileRoute("/_protected/menu/")({
 
 function MenuPage() {
   const [activeTab, setActiveTab] = useState("categories");
-  const workflowSteps = [
-    {
-      value: "categories",
-      label: "التصنيفات",
-      description: "تنظيم أقسام المنيو",
-      icon: FolderOpen,
-    },
-    {
-      value: "products",
-      label: "المنتجات",
-      description: "الأطباق والأسعار",
-      icon: Package,
-    },
-    {
-      value: "option-groups",
-      label: "المجموعات",
-      description: "قواعد الإضافات",
-      icon: Layers,
-    },
-    {
-      value: "options",
-      label: "الخيارات",
-      description: "الإضافات والبدائل",
-      icon: Settings2,
-    },
-    {
-      value: "relations",
-      label: "الربط",
-      description: "قواعد المنتج وخياراته",
-      icon: Link2,
-    },
-    {
-      value: "audit",
-      label: "السجل",
-      description: "آخر التغييرات",
-      icon: FileText,
-    },
-  ];
+
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 lg:px-6" dir="rtl">
@@ -98,7 +58,7 @@ function MenuPage() {
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="flex items-center gap-3 rounded-lg bg-muted/40 p-3">
             <CheckCircle2 className="size-4 text-primary" />
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-2">
               <span className="text-sm font-medium">جاهزة للمراجعة</span>
               <span className="text-xs text-muted-foreground">
                 تحقق من العلاقات قبل النشر
@@ -107,7 +67,7 @@ function MenuPage() {
           </div>
           <div className="flex items-center gap-3 rounded-lg bg-muted/40 p-3">
             <Layers className="size-4 text-primary" />
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-2">
               <span className="text-sm font-medium">دورة مترابطة</span>
               <span className="text-xs text-muted-foreground">
                 التصنيفات والمنتجات والخيارات في مكان واحد
@@ -116,7 +76,7 @@ function MenuPage() {
           </div>
           <div className="flex items-center gap-3 rounded-lg bg-muted/40 p-3">
             <FileText className="size-4 text-primary" />
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-2">
               <span className="text-sm font-medium">تتبع التغييرات</span>
               <span className="text-xs text-muted-foreground">
                 السجل يعرض آخر عمليات الإدارة
@@ -128,7 +88,7 @@ function MenuPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
         <div className="overflow-x-auto pb-1">
-          <TabsList className="grid h-auto min-w-[900px] grid-cols-6 gap-1 bg-muted/70 p-1">
+          <TabsList className="min-h-25 w-full flex flex-wrap justify-between items-center p-3 bg-muted/70">
             {workflowSteps.map((step, index) => {
               const Icon = step.icon;
               return (

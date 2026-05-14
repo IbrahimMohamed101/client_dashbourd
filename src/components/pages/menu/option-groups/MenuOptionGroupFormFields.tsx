@@ -106,7 +106,7 @@ export function MenuOptionGroupFormFields({ form, isEdit }: Props) {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>ترتيب العرض</Label>
               <Input
@@ -114,65 +114,80 @@ export function MenuOptionGroupFormFields({ form, isEdit }: Props) {
                 min="0"
                 placeholder="0"
                 {...form.register("sortOrder")}
+                aria-invalid={!!form.formState.errors.sortOrder}
               />
             </div>
-            <div className="flex items-end pb-2">
-              <div className="flex items-center gap-3">
-                <Controller
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <Switch
-                      type="button"
-                      checked={field.value ?? true}
-                      className="cursor-pointer data-[state=checked]:bg-green-500"
-                      onCheckedChange={field.onChange}
-                    />
-                  )}
-                />
-                <span className="text-sm font-bold">
-                  {isActive ? "نشط" : "غير نشط"}
-                </span>
-              </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>إعدادات الحالة والظهور</CardTitle>
+          <CardDescription>تحكم في تفعيل وظهور مجموعة الخيارات في التطبيق</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+            <div className="space-y-0.5">
+              <Label className="text-base font-bold">نشط</Label>
+              <p className="text-xs text-muted-foreground">
+                {isActive ? "مجموعة الخيارات مفعلة" : "مجموعة الخيارات معطلة"}
+              </p>
             </div>
-            <div className="flex items-end pb-2">
-              <div className="flex items-center gap-3">
-                <Controller
-                  control={form.control}
-                  name="isAvailable"
-                  render={({ field }) => (
-                    <Switch
-                      type="button"
-                      checked={field.value ?? true}
-                      className="cursor-pointer data-[state=checked]:bg-emerald-500"
-                      onCheckedChange={field.onChange}
-                    />
-                  )}
+            <Controller
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <Switch
+                  type="button"
+                  checked={field.value ?? true}
+                  className="data-[state=checked]:bg-green-500"
+                  onCheckedChange={field.onChange}
                 />
-                <span className="text-sm font-bold">
-                  {isAvailable ? "متوفر" : "غير متوفر"}
-                </span>
-              </div>
+              )}
+            />
+          </div>
+
+          <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+            <div className="space-y-0.5">
+              <Label className="text-base font-bold">متوفر</Label>
+              <p className="text-xs text-muted-foreground">
+                {isAvailable ? "متاح للطلب" : "غير متوفر حالياً"}
+              </p>
             </div>
-            <div className="flex items-end pb-2">
-              <div className="flex items-center gap-3">
-                <Controller
-                  control={form.control}
-                  name="isVisible"
-                  render={({ field }) => (
-                    <Switch
-                      type="button"
-                      checked={field.value ?? true}
-                      className="cursor-pointer data-[state=checked]:bg-blue-500"
-                      onCheckedChange={field.onChange}
-                    />
-                  )}
+            <Controller
+              control={form.control}
+              name="isAvailable"
+              render={({ field }) => (
+                <Switch
+                  type="button"
+                  checked={field.value ?? true}
+                  className="data-[state=checked]:bg-emerald-500"
+                  onCheckedChange={field.onChange}
                 />
-                <span className="text-sm font-bold">
-                  {isVisible ? "مرئي للعملاء" : "مخفي"}
-                </span>
-              </div>
+              )}
+            />
+          </div>
+
+          <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+            <div className="space-y-0.5">
+              <Label className="text-base font-bold">الظهور</Label>
+              <p className="text-xs text-muted-foreground">
+                {isVisible ? "مرئي للعملاء" : "مخفي عن العملاء"}
+              </p>
             </div>
+            <Controller
+              control={form.control}
+              name="isVisible"
+              render={({ field }) => (
+                <Switch
+                  type="button"
+                  checked={field.value ?? true}
+                  className="data-[state=checked]:bg-blue-500"
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
           </div>
         </CardContent>
       </Card>

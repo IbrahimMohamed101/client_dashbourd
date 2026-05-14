@@ -7,6 +7,11 @@ import type {
   ReorderItem,
   MenuProductListParams,
 } from "@/types/menuTypes";
+import {
+  normalizeProductsResponse,
+  normalizeProductDetailResponse,
+  toBackendProductPayload,
+} from "@/utils/menuResponseNormalizers";
 
 // ── List Products ──
 // GET /api/dashboard/menu/products
@@ -31,7 +36,7 @@ export const fetchMenuProducts = async (
   const response = await api.get(
     `/api/dashboard/menu/products${query ? `?${query}` : ""}`
   );
-  return response.data;
+  return normalizeProductsResponse(response.data);
 };
 
 // ── Get Product by ID ──
@@ -40,7 +45,7 @@ export const fetchMenuProductById = async (
   id: string
 ): Promise<MenuProductDetailResponse> => {
   const response = await api.get(`/api/dashboard/menu/products/${id}`);
-  return response.data;
+  return normalizeProductDetailResponse(response.data);
 };
 
 // ── Create Product ──
@@ -49,7 +54,7 @@ export const fetchMenuProductById = async (
 export const fetchCreateMenuProduct = async (
   data: CreateMenuProductPayload
 ): Promise<void> => {
-  await api.post("/api/dashboard/menu/products", data);
+  await api.post("/api/dashboard/menu/products", toBackendProductPayload(data));
 };
 
 // ── Update Product ──
@@ -59,7 +64,7 @@ export const fetchUpdateMenuProduct = async (
   id: string,
   data: UpdateMenuProductPayload
 ): Promise<void> => {
-  await api.patch(`/api/dashboard/menu/products/${id}`, data);
+  await api.patch(`/api/dashboard/menu/products/${id}`, toBackendProductPayload(data));
 };
 
 // ── Update Product Availability ──

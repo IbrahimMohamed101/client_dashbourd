@@ -1,6 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 
 import {
   useDeleteMenuOptionMutation,
@@ -18,7 +24,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -36,38 +41,79 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 import {
-  MenuEmptyState,
-  MenuKeyBadge,
-  MenuLoadingTable,
   MenuSearchInput,
   MenuSectionCard,
-  MenuStatusBadge,
-  MenuTableFrame,
-  MenuToolbar,
 } from "@/components/pages/menu/MenuTabScaffold";
-import type { MenuOption } from "@/types/menuTypes";
+import { getOptionColumns } from "../menu-columns";
 
 export function MenuOptionsTab() {
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const debouncedSearch = useDebounce(search, 300);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: groupsData } = useMenuOptionGroupsQuery({});
-  const optionGroups = groupsData?.data?.items || [];
+  const groups = groupsData?.data?.items || [];
 
-  const { data, isLoading } = useMenuOptionsQuery({
+  const { data: response, isLoading } = useMenuOptionsQuery({
     q: debouncedSearch || undefined,
     groupId: groupFilter !== "all" ? groupFilter : undefined,
+    page: pagination.pageIndex + 1,
+    limit: pagination.pageSize,
   });
+
   const deleteMutation = useDeleteMenuOptionMutation();
-  const options = data?.data?.items || [];
-  const formatPrice = (halala: number) => (halala / 100).toFixed(2);
+  const options = response?.data?.items || [];
+  
+  const meta = response?.data?.pagination || {
+    total: options.length,
+    pages: 1,
+    page: 1,
+    limit: 10,
+  };
+
+  const columns = useMemo(
+    () =>
+      getOptionColumns({
+        onDelete: setDeleteId,
+      }),
+    []
+  );
+
+  const table = useReactTable({
+    data: options,
+    columns,
+    state: {
+      pagination,
+    },
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
+  });
+
+  async function handleDeleteConfirm() {
+    if (!deleteId) return;
+    try {
+      await deleteMutation.mutateAsync(deleteId);
+      setDeleteId(null);
+    } catch {
+      // Error handled by mutation defaults
+    }
+  }
 
   return (
     <MenuSectionCard
       title="الخيارات"
-      description="أضف الخيارات الفعلية داخل كل مجموعة، مع السعر الإضافي والترتيب."
+      description="أضف الخيارات الفردية داخل المجموعات مثل خيار دجاج أو خيار كبير."
       action={
         <Button asChild>
           <Link to="/menu/options/create">
@@ -77,135 +123,145 @@ export function MenuOptionsTab() {
         </Button>
       }
     >
-      <MenuToolbar>
+      <div className="flex flex-col gap-4">
+        {/* Toolbar */}
         <div className="flex w-full flex-col gap-3 md:flex-row md:items-center">
           <MenuSearchInput
             placeholder="بحث في الخيارات..."
             value={search}
-            onChange={setSearch}
+            onChange={(v) => {
+              setSearch(v);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
           />
-          <Select value={groupFilter} onValueChange={setGroupFilter}>
-            <SelectTrigger className="w-full md:w-56">
-              <SelectValue placeholder="فلترة حسب المجموعة" />
+          <Select
+            value={groupFilter}
+            onValueChange={(v) => {
+              setGroupFilter(v);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+          >
+            <SelectTrigger className="w-full md:w-44">
+              <SelectValue placeholder="تصفية بالمجموعة" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="all">كل المجموعات</SelectItem>
-                {optionGroups.map((group) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {group.name.ar}
+                {groups.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>
+                    {g.name.ar}
                   </SelectItem>
                 ))}
               </SelectGroup>
             </SelectContent>
           </Select>
+          <DataTableViewOptions table={table} />
         </div>
-        <p className="text-sm text-muted-foreground">
-          {options.length} خيار في النتائج
-        </p>
-      </MenuToolbar>
 
-      {isLoading ? (
-        <MenuLoadingTable columns={7} />
-      ) : options.length === 0 ? (
-        <MenuEmptyState
-          title="لا توجد خيارات بعد"
-          description="أضف خيارات مثل الأحجام أو الإضافات بعد إنشاء مجموعاتها حتى يمكن ربطها بالمنتجات."
-        />
-      ) : (
-        <MenuTableFrame>
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="w-12 text-center">#</TableHead>
-                <TableHead>المفتاح</TableHead>
-                <TableHead>الخيار</TableHead>
-                <TableHead className="text-center">السعر الإضافي</TableHead>
-                <TableHead className="text-center">التوفر</TableHead>
-                <TableHead className="text-center">الترتيب</TableHead>
-                <TableHead className="text-center">الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {options.map((option: MenuOption, index: number) => (
-                <TableRow key={option.id}>
-                  <TableCell className="text-center text-muted-foreground">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell>
-                    <MenuKeyBadge value={option.key} />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex min-w-44 flex-col gap-1">
-                      <span className="font-medium">{option.name.ar}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {option.name.en}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center font-medium">
-                    {option.extraPriceHalala > 0
-                      ? `+${formatPrice(option.extraPriceHalala)} ر.س`
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <MenuStatusBadge
-                      active={option.isAvailable}
-                      activeLabel="متوفر"
-                      inactiveLabel="غير متوفر"
-                    />
-                  </TableCell>
-                  <TableCell className="text-center text-muted-foreground">
-                    {option.sortOrder}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link
-                          to="/menu/options/$optionId/update"
-                          params={{ optionId: option.id }}
-                        >
-                          <Pencil data-icon="inline-start" />
-                          تعديل
-                        </Link>
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="حذف الخيار"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>حذف الخيار</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              هل أنت متأكد من حذف "{option.name.ar}"؟
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteMutation.mutate(option.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              حذف
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </MenuTableFrame>
-      )}
+        {/* Table Area */}
+        <div className="relative flex flex-col gap-4 overflow-auto">
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-muted/50">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="border-b hover:bg-transparent"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className="py-4 text-right font-medium"
+                        style={{
+                          width:
+                            header.getSize() !== 150
+                              ? header.getSize()
+                              : undefined,
+                        }}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      جاري التحميل...
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="py-4 text-right">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      لا توجد خيارات بعد. أضف الخيارات داخل المجموعات المتاحة.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DataTablePagination
+            table={table}
+            totalItems={meta.total}
+            itemsLabel="خيارات"
+          />
+        </div>
+      </div>
+
+      <AlertDialog
+        open={Boolean(deleteId)}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
+        <AlertDialogContent className="rounded-[2rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
+                <Trash2 className="size-5" />
+              </div>
+              حذف الخيار
+            </AlertDialogTitle>
+            <AlertDialogDescription className="pt-2 text-right">
+              هل أنت متأكد من حذف هذا الخيار؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 flex-row-reverse gap-2">
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              نعم، احذف
+            </AlertDialogAction>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MenuSectionCard>
   );
 }

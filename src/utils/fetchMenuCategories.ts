@@ -7,6 +7,11 @@ import type {
   ReorderItem,
   MenuListParams,
 } from "@/types/menuTypes";
+import {
+  normalizeCategoriesResponse,
+  normalizeCategoryDetailResponse,
+  toBackendCategoryPayload,
+} from "@/utils/menuResponseNormalizers";
 
 // ── List Categories ──
 // GET /api/dashboard/menu/categories
@@ -27,7 +32,7 @@ export const fetchMenuCategories = async (
   const response = await api.get(
     `/api/dashboard/menu/categories${query ? `?${query}` : ""}`
   );
-  return response.data;
+  return normalizeCategoriesResponse(response.data);
 };
 
 // ── Get Category by ID ──
@@ -36,7 +41,7 @@ export const fetchMenuCategoryById = async (
   id: string
 ): Promise<MenuCategoryDetailResponse> => {
   const response = await api.get(`/api/dashboard/menu/categories/${id}`);
-  return response.data;
+  return normalizeCategoryDetailResponse(response.data);
 };
 
 // ── Create Category ──
@@ -45,7 +50,7 @@ export const fetchMenuCategoryById = async (
 export const fetchCreateMenuCategory = async (
   data: CreateMenuCategoryPayload
 ): Promise<void> => {
-  await api.post("/api/dashboard/menu/categories", data);
+  await api.post("/api/dashboard/menu/categories", toBackendCategoryPayload(data));
 };
 
 // ── Update Category ──
@@ -55,7 +60,7 @@ export const fetchUpdateMenuCategory = async (
   id: string,
   data: UpdateMenuCategoryPayload
 ): Promise<void> => {
-  await api.patch(`/api/dashboard/menu/categories/${id}`, data);
+  await api.patch(`/api/dashboard/menu/categories/${id}`, toBackendCategoryPayload(data));
 };
 
 // ── Soft Delete Category ──

@@ -68,6 +68,8 @@ export const toCreateMenuProductPayload = (
 export const toUpdateMenuProductPayload = (
   data: MenuProductSchemaType
 ): UpdateMenuProductPayload => ({
+  categoryId: data.categoryId,
+  itemType: data.itemType,
   name: data.name,
   description: data.description,
   imageUrl: data.imageUrl,

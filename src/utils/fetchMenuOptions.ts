@@ -5,7 +5,13 @@ import type {
   CreateMenuOptionPayload,
   UpdateMenuOptionPayload,
   MenuOptionListParams,
+  ReorderItem,
 } from "@/types/menuTypes";
+import {
+  normalizeOptionsResponse,
+  normalizeOptionDetailResponse,
+  toBackendOptionPayload,
+} from "@/utils/menuResponseNormalizers";
 
 // ── List Options ──
 // GET /api/dashboard/menu/options
@@ -27,7 +33,7 @@ export const fetchMenuOptions = async (
   const response = await api.get(
     `/api/dashboard/menu/options${query ? `?${query}` : ""}`
   );
-  return response.data;
+  return normalizeOptionsResponse(response.data);
 };
 
 // ── Get Option by ID ──
@@ -37,7 +43,7 @@ export const fetchMenuOptionById = async (
   id: string
 ): Promise<MenuOptionDetailResponse> => {
   const response = await api.get(`/api/dashboard/menu/options/${id}`);
-  return response.data;
+  return normalizeOptionDetailResponse(response.data);
 };
 
 // ── Create Option ──
@@ -46,7 +52,7 @@ export const fetchMenuOptionById = async (
 export const fetchCreateMenuOption = async (
   data: CreateMenuOptionPayload
 ): Promise<void> => {
-  await api.post("/api/dashboard/menu/options", data);
+  await api.post("/api/dashboard/menu/options", toBackendOptionPayload(data));
 };
 
 // ── Update Option ──
@@ -56,7 +62,7 @@ export const fetchUpdateMenuOption = async (
   id: string,
   data: UpdateMenuOptionPayload
 ): Promise<void> => {
-  await api.patch(`/api/dashboard/menu/options/${id}`, data);
+  await api.patch(`/api/dashboard/menu/options/${id}`, toBackendOptionPayload(data));
 };
 
 // ── Soft Delete Option ──
@@ -64,4 +70,32 @@ export const fetchUpdateMenuOption = async (
 
 export const fetchDeleteMenuOption = async (id: string): Promise<void> => {
   await api.delete(`/api/dashboard/menu/options/${id}`);
+};
+
+// ── Reorder Options ──
+// PATCH /api/dashboard/menu/options/reorder
+
+export const fetchReorderMenuOptions = async (
+  items: ReorderItem[]
+): Promise<void> => {
+  await api.patch("/api/dashboard/menu/options/reorder", { items });
+};
+
+// ── Update Option Availability ──
+// PATCH /api/dashboard/menu/options/:id/availability
+
+export const fetchUpdateMenuOptionAvailability = async (
+  id: string,
+  isAvailable: boolean
+): Promise<void> => {
+  await api.patch(`/api/dashboard/menu/options/${id}/availability`, {
+    isAvailable,
+  });
+};
+
+// ── Toggle Option Active ──
+// PATCH /api/dashboard/menu/options/:id/toggle-active
+
+export const fetchToggleMenuOptionActive = async (id: string): Promise<void> => {
+  await api.patch(`/api/dashboard/menu/options/${id}/toggle-active`);
 };

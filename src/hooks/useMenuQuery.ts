@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import {
   fetchMenuCategories,
+  fetchMenuCategoryById,
   fetchCreateMenuCategory,
   fetchUpdateMenuCategory,
   fetchDeleteMenuCategory,
@@ -23,15 +24,23 @@ import {
 } from "@/utils/fetchMenuProducts";
 import {
   fetchMenuOptionGroups,
+  fetchMenuOptionGroupById,
   fetchCreateMenuOptionGroup,
   fetchUpdateMenuOptionGroup,
   fetchDeleteMenuOptionGroup,
+  fetchReorderMenuOptionGroups,
+  fetchUpdateMenuOptionGroupAvailability,
+  fetchToggleMenuOptionGroupActive,
 } from "@/utils/fetchMenuOptionGroups";
 import {
   fetchMenuOptions,
+  fetchMenuOptionById,
   fetchCreateMenuOption,
   fetchUpdateMenuOption,
   fetchDeleteMenuOption,
+  fetchReorderMenuOptions,
+  fetchUpdateMenuOptionAvailability,
+  fetchToggleMenuOptionActive,
 } from "@/utils/fetchMenuOptions";
 import {
   fetchValidateMenu,
@@ -153,6 +162,16 @@ export const useReorderMenuCategoriesMutation = () => {
     },
   });
 };
+
+export const menuCategoryDetailQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["menu", "categories", "detail", id] as const,
+    queryFn: () => fetchMenuCategoryById(id),
+    enabled: !!id,
+  });
+
+export const useMenuCategoryDetailQuery = (id: string) =>
+  useQuery(menuCategoryDetailQueryOptions(id));
 
 // ══════════════════════════════════════
 // ── Products ──
@@ -459,6 +478,59 @@ export const useDeleteMenuOptionGroupMutation = () => {
   });
 };
 
+export const menuOptionGroupDetailQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["menu", "optionGroups", "detail", id] as const,
+    queryFn: () => fetchMenuOptionGroupById(id),
+    enabled: !!id,
+  });
+
+export const useMenuOptionGroupDetailQuery = (id: string) =>
+  useQuery(menuOptionGroupDetailQueryOptions(id));
+
+export const useReorderMenuOptionGroupsMutation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (items: ReorderItem[]) => fetchReorderMenuOptionGroups(items),
+    onSuccess: () => {
+      toast.success("تم إعادة ترتيب مجموعات الخيارات");
+      qc.invalidateQueries({ queryKey: ["menu", "optionGroups"] });
+    },
+    onError: () => {
+      toast.error("حدث خطأ أثناء إعادة الترتيب");
+    },
+  });
+};
+
+export const useToggleMenuOptionGroupAvailabilityMutation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isAvailable }: { id: string; isAvailable: boolean }) =>
+      fetchUpdateMenuOptionGroupAvailability(id, isAvailable),
+    onSuccess: () => {
+      toast.success("تم تحديث حالة توفر مجموعة الخيارات");
+      qc.invalidateQueries({ queryKey: ["menu", "optionGroups"] });
+    },
+    onError: () => {
+      toast.error("حدث خطأ أثناء تحديث حالة التوفر");
+    },
+  });
+};
+
+export const useToggleMenuOptionGroupActiveMutation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchToggleMenuOptionGroupActive(id),
+    onSuccess: () => {
+      toast.success("تم تحديث حالة تفعيل مجموعة الخيارات");
+      qc.invalidateQueries({ queryKey: ["menu", "optionGroups"] });
+    },
+    onError: () => {
+      toast.error("حدث خطأ أثناء تحديث حالة التفعيل");
+    },
+  });
+};
+
 // ══════════════════════════════════════
 // ── Options ──
 // ══════════════════════════════════════
@@ -512,6 +584,59 @@ export const useDeleteMenuOptionMutation = () => {
     },
     onError: (err: Error & { response?: { data?: { message?: string } } }) => {
       toast.error(err?.response?.data?.message || "حدث خطأ أثناء حذف الخيار");
+    },
+  });
+};
+
+export const menuOptionDetailQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["menu", "options", "detail", id] as const,
+    queryFn: () => fetchMenuOptionById(id),
+    enabled: !!id,
+  });
+
+export const useMenuOptionDetailQuery = (id: string) =>
+  useQuery(menuOptionDetailQueryOptions(id));
+
+export const useReorderMenuOptionsMutation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (items: ReorderItem[]) => fetchReorderMenuOptions(items),
+    onSuccess: () => {
+      toast.success("تم إعادة ترتيب الخيارات");
+      qc.invalidateQueries({ queryKey: ["menu", "options"] });
+    },
+    onError: () => {
+      toast.error("حدث خطأ أثناء إعادة الترتيب");
+    },
+  });
+};
+
+export const useToggleMenuOptionAvailabilityMutation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isAvailable }: { id: string; isAvailable: boolean }) =>
+      fetchUpdateMenuOptionAvailability(id, isAvailable),
+    onSuccess: () => {
+      toast.success("تم تحديث حالة توفر الخيار");
+      qc.invalidateQueries({ queryKey: ["menu", "options"] });
+    },
+    onError: () => {
+      toast.error("حدث خطأ أثناء تحديث حالة التوفر");
+    },
+  });
+};
+
+export const useToggleMenuOptionActiveMutation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => fetchToggleMenuOptionActive(id),
+    onSuccess: () => {
+      toast.success("تم تحديث حالة تفعيل الخيار");
+      qc.invalidateQueries({ queryKey: ["menu", "options"] });
+    },
+    onError: () => {
+      toast.error("حدث خطأ أثناء تحديث حالة التفعيل");
     },
   });
 };

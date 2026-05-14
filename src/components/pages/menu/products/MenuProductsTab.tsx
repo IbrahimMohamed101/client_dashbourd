@@ -1,6 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 
 import {
   useDeleteMenuProductMutation,
@@ -8,7 +14,6 @@ import {
   useToggleMenuProductAvailabilityMutation,
 } from "@/hooks/useMenuQuery";
 import { useDebounce } from "@/hooks/useDebounce";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -19,7 +24,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -37,33 +41,77 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 import {
-  MenuEmptyState,
-  MenuKeyBadge,
-  MenuLoadingTable,
   MenuSearchInput,
   MenuSectionCard,
-  MenuTableFrame,
-  MenuToolbar,
 } from "@/components/pages/menu/MenuTabScaffold";
-import type { MenuProduct } from "@/types/menuTypes";
+import { getProductColumns } from "../menu-columns";
 
 export function MenuProductsTab() {
   const [search, setSearch] = useState("");
   const [pricingFilter, setPricingFilter] = useState<string>("all");
   const debouncedSearch = useDebounce(search, 300);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
-  const { data, isLoading } = useMenuProductsQuery({
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const { data: response, isLoading } = useMenuProductsQuery({
     q: debouncedSearch || undefined,
     pricingModel:
       pricingFilter !== "all"
         ? (pricingFilter as "fixed" | "per_100g")
         : undefined,
+    page: pagination.pageIndex + 1,
+    limit: pagination.pageSize,
   });
+  
   const deleteMutation = useDeleteMenuProductMutation();
   const toggleAvailability = useToggleMenuProductAvailabilityMutation();
-  const products = data?.data?.items || [];
-  const formatPrice = (halala: number) => (halala / 100).toFixed(2);
+  const products = response?.data?.items || [];
+  
+  const meta = response?.data?.pagination || {
+    total: products.length,
+    pages: 1,
+    page: 1,
+    limit: 10,
+  };
+
+  const columns = useMemo(
+    () =>
+      getProductColumns({
+        onToggleAvailability: (id, isAvailable) =>
+          toggleAvailability.mutate({ id, isAvailable }),
+        onDelete: setDeleteId,
+      }),
+    [toggleAvailability]
+  );
+
+  const table = useReactTable({
+    data: products,
+    columns,
+    state: {
+      pagination,
+    },
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    autoResetPageIndex: false,
+  });
+
+  async function handleDeleteConfirm() {
+    if (!deleteId) return;
+    try {
+      await deleteMutation.mutateAsync(deleteId);
+      setDeleteId(null);
+    } catch {
+      // Error handled by mutation defaults
+    }
+  }
 
   return (
     <MenuSectionCard
@@ -78,14 +126,24 @@ export function MenuProductsTab() {
         </Button>
       }
     >
-      <MenuToolbar>
+      <div className="flex flex-col gap-4">
+        {/* Toolbar */}
         <div className="flex w-full flex-col gap-3 md:flex-row md:items-center">
           <MenuSearchInput
             placeholder="بحث في المنتجات..."
             value={search}
-            onChange={setSearch}
+            onChange={(v) => {
+              setSearch(v);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
           />
-          <Select value={pricingFilter} onValueChange={setPricingFilter}>
+          <Select
+            value={pricingFilter}
+            onValueChange={(v) => {
+              setPricingFilter(v);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+          >
             <SelectTrigger className="w-full md:w-44">
               <SelectValue placeholder="نوع التسعير" />
             </SelectTrigger>
@@ -97,142 +155,113 @@ export function MenuProductsTab() {
               </SelectGroup>
             </SelectContent>
           </Select>
+          <DataTableViewOptions table={table} />
         </div>
-        <p className="text-sm text-muted-foreground">
-          {products.length} منتج في النتائج
-        </p>
-      </MenuToolbar>
 
-      {isLoading ? (
-        <MenuLoadingTable columns={8} />
-      ) : products.length === 0 ? (
-        <MenuEmptyState
-          title="لا توجد منتجات بعد"
-          description="أضف المنتجات الأساسية وحدد التسعير والتوفر حتى تصبح جاهزة للظهور في قائمة الطلبات."
-        />
-      ) : (
-        <MenuTableFrame>
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="w-12 text-center">#</TableHead>
-                <TableHead>المفتاح</TableHead>
-                <TableHead>المنتج</TableHead>
-                <TableHead>النوع</TableHead>
-                <TableHead>التسعير</TableHead>
-                <TableHead className="text-center">السعر</TableHead>
-                <TableHead className="text-center">التوفر</TableHead>
-                <TableHead className="text-center">الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product: MenuProduct, index: number) => (
-                <TableRow key={product.id}>
-                  <TableCell className="text-center text-muted-foreground">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell>
-                    <MenuKeyBadge value={product.key} />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex min-w-44 flex-col gap-1">
-                      <span className="font-medium">{product.name.ar}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {product.name.en}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{product.itemType}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        product.pricingModel === "fixed"
-                          ? "secondary"
-                          : "default"
-                      }
+        {/* Table Area */}
+        <div className="relative flex flex-col gap-4 overflow-auto">
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-muted/50">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="border-b hover:bg-transparent"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className="py-4 text-right font-medium"
+                        style={{
+                          width:
+                            header.getSize() !== 150
+                              ? header.getSize()
+                              : undefined,
+                        }}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
                     >
-                      {product.pricingModel === "fixed" ? "ثابت" : "بالوزن"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center font-medium">
-                    {formatPrice(product.priceHalala)} ر.س
-                    {product.pricingModel === "per_100g" ? (
-                      <span className="block text-xs text-muted-foreground">
-                        لكل {product.baseUnitGrams || 100}غ
-                      </span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        toggleAvailability.mutate({
-                          id: product.id,
-                          isAvailable: !product.isAvailable,
-                        })
-                      }
+                      جاري التحميل...
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="py-4 text-right">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-muted-foreground"
                     >
-                      {product.isAvailable ? (
-                        <Eye data-icon="inline-start" />
-                      ) : (
-                        <EyeOff data-icon="inline-start" />
-                      )}
-                      {product.isAvailable ? "متوفر" : "مخفي"}
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-center gap-1">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link
-                          to="/menu/products/$productId/update"
-                          params={{ productId: product.id }}
-                        >
-                          <Pencil data-icon="inline-start" />
-                          تعديل
-                        </Link>
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="حذف المنتج"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>حذف المنتج</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              هل أنت متأكد من حذف "{product.name.ar}"؟
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() =>
-                                deleteMutation.mutate(product.id)
-                              }
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              حذف
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </MenuTableFrame>
-      )}
+                      لا توجد منتجات بعد. أضف المنتجات الأساسية لتظهر هنا.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DataTablePagination
+            table={table}
+            totalItems={meta.total}
+            itemsLabel="منتجات"
+          />
+        </div>
+      </div>
+
+      <AlertDialog
+        open={Boolean(deleteId)}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
+        <AlertDialogContent className="rounded-[2rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
+                <Trash2 className="size-5" />
+              </div>
+              حذف المنتج
+            </AlertDialogTitle>
+            <AlertDialogDescription className="pt-2 text-right">
+              هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 flex-row-reverse gap-2">
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              نعم، احذف
+            </AlertDialogAction>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MenuSectionCard>
   );
 }
