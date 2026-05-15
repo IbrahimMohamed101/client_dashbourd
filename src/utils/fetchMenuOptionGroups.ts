@@ -4,9 +4,13 @@ import type {
   MenuOptionGroupDetailResponse,
   CreateMenuOptionGroupPayload,
   UpdateMenuOptionGroupPayload,
-  MenuListParams,
   ReorderItem,
+  MenuListParams,
 } from "@/types/menuTypes";
+import {
+  normalizeOptionGroupsResponse,
+  normalizeOptionGroupDetailResponse,
+} from "@/utils/menuResponseNormalizers";
 
 // ── List Option Groups ──
 // GET /api/dashboard/menu/option-groups
@@ -27,17 +31,16 @@ export const fetchMenuOptionGroups = async (
   const response = await api.get(
     `/api/dashboard/menu/option-groups${query ? `?${query}` : ""}`
   );
-  return response.data;
+  return normalizeOptionGroupsResponse(response.data);
 };
 
 // ── Get Option Group by ID ──
-// GET /api/dashboard/menu/option-groups/:id
 
 export const fetchMenuOptionGroupById = async (
   id: string
 ): Promise<MenuOptionGroupDetailResponse> => {
   const response = await api.get(`/api/dashboard/menu/option-groups/${id}`);
-  return response.data;
+  return normalizeOptionGroupDetailResponse(response.data);
 };
 
 // ── Create Option Group ──
@@ -62,9 +65,7 @@ export const fetchUpdateMenuOptionGroup = async (
 // ── Soft Delete Option Group ──
 // DELETE /api/dashboard/menu/option-groups/:id
 
-export const fetchDeleteMenuOptionGroup = async (
-  id: string
-): Promise<void> => {
+export const fetchDeleteMenuOptionGroup = async (id: string): Promise<void> => {
   await api.delete(`/api/dashboard/menu/option-groups/${id}`);
 };
 

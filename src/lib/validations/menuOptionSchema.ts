@@ -26,6 +26,7 @@ const menuOptionSchema = z.object({
     ar: z.string().default(""),
     en: z.string().default(""),
   }),
+  imageFile: z.any().optional(),
   imageUrl: z.string().trim().optional(),
   // User enters in SAR, we convert to halala on submit
   extraPriceSar: z.coerce

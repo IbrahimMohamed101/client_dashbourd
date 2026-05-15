@@ -14,6 +14,8 @@ import { Loader } from "@/components/global/loader";
 import { MenuCategoryFormFields } from "@/components/pages/menu/categories/MenuCategoryFormFields";
 import { useQuery } from "@tanstack/react-query";
 import { toUpdateMenuCategoryPayload } from "@/utils/menuPayloadMappers";
+import { fetchUploadImage } from "@/utils/fetchUploadImage";
+import { ToastMessage } from "@/components/global/ToastMessage";
 
 export const Route = createFileRoute(
   "/_protected/menu/categories/$categoryId/update"
@@ -58,11 +60,27 @@ function UpdateMenuCategoryPage() {
   });
 
   const onSubmit = async (data: MenuCategorySchemaType) => {
-    await mutation.mutateAsync({
-      id: categoryId,
-      data: toUpdateMenuCategoryPayload(data),
-    });
-    router.navigate({ to: "/menu" });
+    try {
+      let imageUrl = data.imageUrl;
+      if (data.imageFile instanceof File) {
+        const uploadRes = await fetchUploadImage(data.imageFile);
+        imageUrl = uploadRes.data.url;
+      }
+      await mutation.mutateAsync({
+        id: categoryId,
+        data: toUpdateMenuCategoryPayload({ ...data, imageUrl }),
+      });
+      ToastMessage("تم تحديث التصنيف بنجاح", "success");
+      router.navigate({
+        to: "/menu",
+        search: { tab: "categories" }
+      });
+    } catch (error: any) {
+      ToastMessage(
+        error?.response?.data?.message || "حدث خطأ أثناء الحفظ",
+        "error"
+      );
+    }
   };
 
   if (isLoading)

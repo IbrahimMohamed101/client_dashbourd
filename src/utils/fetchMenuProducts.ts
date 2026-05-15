@@ -10,7 +10,6 @@ import type {
 import {
   normalizeProductsResponse,
   normalizeProductDetailResponse,
-  toBackendProductPayload,
 } from "@/utils/menuResponseNormalizers";
 
 // ── List Products ──
@@ -54,7 +53,7 @@ export const fetchMenuProductById = async (
 export const fetchCreateMenuProduct = async (
   data: CreateMenuProductPayload
 ): Promise<void> => {
-  await api.post("/api/dashboard/menu/products", toBackendProductPayload(data));
+  await api.post("/api/dashboard/menu/products", data);
 };
 
 // ── Update Product ──
@@ -64,7 +63,7 @@ export const fetchUpdateMenuProduct = async (
   id: string,
   data: UpdateMenuProductPayload
 ): Promise<void> => {
-  await api.patch(`/api/dashboard/menu/products/${id}`, toBackendProductPayload(data));
+  await api.patch(`/api/dashboard/menu/products/${id}`, data);
 };
 
 // ── Update Product Availability ──

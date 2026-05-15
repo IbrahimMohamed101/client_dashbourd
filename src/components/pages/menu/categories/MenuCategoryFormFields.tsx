@@ -114,13 +114,50 @@ export function MenuCategoryFormFields({ form, isEdit }: Props) {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>رابط الصورة</Label>
-            <Input
-              dir="ltr"
-              placeholder="https://..."
-              {...form.register("imageUrl")}
-            />
+          <div className="flex flex-col justify-end space-y-1.5">
+            <Label className="text-sm font-medium">صورة التصنيف (Image)</Label>
+            <div className="flex items-center gap-3">
+              {(form.watch("imageFile") || form.watch("imageUrl")) && (
+                <div className="relative size-10 shrink-0 overflow-hidden rounded-md border bg-muted">
+                  <img
+                    src={
+                      form.watch("imageFile")
+                        ? URL.createObjectURL(
+                            form.watch("imageFile") as unknown as File
+                          )
+                        : form.watch("imageUrl")!
+                    }
+                    alt="Preview"
+                    className="size-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  dir="ltr"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      form.setValue("imageFile", file, {
+                        shouldValidate: true,
+                      });
+                    } else {
+                      form.setValue("imageFile", undefined, {
+                        shouldValidate: true,
+                      });
+                    }
+                  }}
+                  aria-invalid={!!form.formState.errors.imageFile}
+                />
+              </div>
+            </div>
+            {form.formState.errors.imageFile && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.imageFile.message as string}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

@@ -10,7 +10,35 @@ import type {
   MenuProduct,
   MenuOptionGroup,
   MenuOption,
+  MenuAuditLog,
 } from "@/types/menuTypes";
+
+const ACTION_LABELS: Record<string, string> = {
+  create: "إنشاء",
+  update: "تحديث",
+  delete: "حذف",
+  publish: "نشر",
+  validate: "تحقق",
+};
+
+const ENTITY_LABELS: Record<string, string> = {
+  category: "تصنيف",
+  product: "منتج",
+  option_group: "مجموعة خيارات",
+  option: "خيار",
+  menu: "القائمة",
+};
+
+const formatDate = (dateStr: string) => {
+  try {
+    return new Intl.DateTimeFormat("ar-SA", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(dateStr));
+  } catch {
+    return dateStr;
+  }
+};
 
 const formatPrice = (halala: number) => (halala / 100).toFixed(2);
 
@@ -201,6 +229,7 @@ export const getProductColumns = ({
           <Button
             variant="ghost"
             size="sm"
+            className="cursor-pointer"
             onClick={() => onToggleAvailability(product.id, !product.isAvailable)}
           >
             {product.isAvailable ? (
@@ -447,6 +476,60 @@ export const getOptionColumns = ({
         </div>
       );
     },
-    size: 150,
+  },
+];
+
+export const getAuditLogColumns = (): ColumnDef<MenuAuditLog>[] => [
+  {
+    id: "index",
+    header: "#",
+    cell: ({ row }) => (
+      <div className="text-center text-muted-foreground">{row.index + 1}</div>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+    size: 50,
+  },
+  {
+    accessorKey: "action",
+    header: "الإجراء",
+    cell: ({ row }) => (
+      <Badge
+        variant={
+          row.original.action === "delete"
+            ? "destructive"
+            : row.original.action === "create"
+              ? "default"
+              : "secondary"
+        }
+      >
+        {ACTION_LABELS[row.original.action] || row.original.action}
+      </Badge>
+    ),
+  },
+  {
+    accessorKey: "entityType",
+    header: "النوع",
+    cell: ({ row }) => (
+      <span>
+        {ENTITY_LABELS[row.original.entityType] || row.original.entityType}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "entityId",
+    header: "المعرف",
+    cell: ({ row }) => (
+      <MenuKeyBadge value={`${row.original.entityId.slice(0, 8)}...`} />
+    ),
+  },
+  {
+    accessorKey: "createdAt",
+    header: "التاريخ",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {formatDate(row.original.createdAt)}
+      </span>
+    ),
   },
 ];

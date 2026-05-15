@@ -23,6 +23,7 @@ const menuCategorySchema = z.object({
     ar: z.string().default(""),
     en: z.string().default(""),
   }),
+  imageFile: z.any().optional(),
   imageUrl: z.string().trim().optional(),
   isActive: z.boolean().default(true),
   isAvailable: z.boolean().default(true),

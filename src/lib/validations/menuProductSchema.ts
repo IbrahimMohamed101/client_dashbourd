@@ -28,6 +28,7 @@ const menuProductSchema = z
       ar: z.string().default(""),
       en: z.string().default(""),
     }),
+    imageFile: z.any().optional(),
     imageUrl: z.string().trim().optional(),
     pricingModel: z.enum(["fixed", "per_100g"], {
       message: "نوع التسعير مطلوب",

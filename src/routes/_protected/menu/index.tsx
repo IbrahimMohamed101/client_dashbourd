@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,11 +19,22 @@ import { MenuProductRelationsTab } from "@/components/pages/menu/relations/MenuP
 import { workflowSteps } from "@/constants/menuData";
 
 export const Route = createFileRoute("/_protected/menu/")({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      tab: (search.tab as string) || "categories",
+    };
+  },
   component: MenuPage,
 });
 
+
 function MenuPage() {
-  const [activeTab, setActiveTab] = useState("categories");
+  const { tab: activeTab } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+
+  const setActiveTab = (value: string) => {
+    navigate({ search: (prev) => ({ ...prev, tab: value }) });
+  };
 
 
   return (

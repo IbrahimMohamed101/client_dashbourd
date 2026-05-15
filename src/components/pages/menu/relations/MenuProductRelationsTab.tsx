@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link2, SlidersHorizontal, ToggleLeft } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Link2, SlidersHorizontal, ToggleLeft, Unlink2 } from "lucide-react";
 
 import {
   useLinkGroupsToProductMutation,
@@ -34,6 +34,9 @@ import type {
   MenuProductLinkedGroup,
   ProductGroupOptionOverride,
   ProductGroupRule,
+  MenuProduct,
+  MenuOptionGroup,
+  MenuOption,
 } from "@/types/menuTypes";
 
 const toHalala = (sar: string) => Math.round((Number(sar) || 0) * 100);
@@ -97,9 +100,20 @@ export function MenuProductRelationsTab() {
   const updateOverride = useUpdateOptionOverrideMutation();
   const updateAvailability = useUpdateOptionAvailabilityInProductMutation();
 
-  const products = productsData?.data?.items || [];
-  const groups = groupsData?.data?.items || [];
-  const options = optionsData?.data?.items || [];
+  const productsRaw = productsData?.data;
+  const products = (
+    Array.isArray(productsRaw) ? productsRaw : productsRaw?.items || []
+  ) as MenuProduct[];
+  
+  const groupsRaw = groupsData?.data;
+  const groups = (
+    Array.isArray(groupsRaw) ? groupsRaw : groupsRaw?.items || []
+  ) as MenuOptionGroup[];
+  
+  const optionsRaw = optionsData?.data;
+  const options = (
+    Array.isArray(optionsRaw) ? optionsRaw : optionsRaw?.items || []
+  ) as MenuOption[];
   const product = productData?.data;
   const linkedGroups = useMemo(
     () => getLinkedGroups(product?.groups, product?.optionGroups),
@@ -151,6 +165,52 @@ export function MenuProductRelationsTab() {
       .filter((option) => option.optionId && option.optionId !== optionId);
     return { options: [...existing, nextOption] };
   };
+
+  const isGroupAlreadyLinked = Boolean(selectedLinkedGroup);
+  const selectedLinkedOption = linkedOptions.find(
+    (opt) => (opt.optionId || opt.option?.id) === optionId
+  );
+  const isOptionAlreadyLinked = Boolean(selectedLinkedOption);
+
+  // Hydrate Group Form when a group is selected
+  useEffect(() => {
+    if (selectedLinkedGroup) {
+      setMinSelections(String(selectedLinkedGroup.minSelections ?? 0));
+      setMaxSelections(String(selectedLinkedGroup.maxSelections ?? 1));
+      setGroupSortOrder(String(selectedLinkedGroup.sortOrder ?? 0));
+      setIsRequired(selectedLinkedGroup.isRequired ?? false);
+    } else {
+      setMinSelections("0");
+      setMaxSelections("1");
+      setGroupSortOrder("0");
+      setIsRequired(false);
+    }
+  }, [selectedLinkedGroup, groupId]);
+
+  // Hydrate Option Form when an option is selected
+  useEffect(() => {
+    if (selectedLinkedOption) {
+      setExtraPriceSar(String((selectedLinkedOption.extraPriceHalala ?? 0) / 100));
+      setExtraWeightUnitGrams(
+        selectedLinkedOption.extraWeightUnitGrams !== undefined
+          ? String(selectedLinkedOption.extraWeightUnitGrams)
+          : ""
+      );
+      setExtraWeightPriceSar(
+        selectedLinkedOption.extraWeightPriceHalala !== undefined
+          ? String(selectedLinkedOption.extraWeightPriceHalala / 100)
+          : ""
+      );
+      setOptionSortOrder(String(selectedLinkedOption.sortOrder ?? 0));
+      setOptionAvailable(selectedLinkedOption.isAvailable ?? true);
+    } else {
+      setExtraPriceSar("0");
+      setExtraWeightUnitGrams("");
+      setExtraWeightPriceSar("");
+      setOptionSortOrder("0");
+      setOptionAvailable(true);
+    }
+  }, [selectedLinkedOption, optionId]);
 
   const canSaveGroup = Boolean(productId && groupId);
   const canSaveOption = Boolean(productId && groupId && optionId);
@@ -260,11 +320,11 @@ export function MenuProductRelationsTab() {
               }
             >
               <Link2 data-icon="inline-start" />
-              ربط المجموعة
+              {isGroupAlreadyLinked ? "تحديث الربط" : "ربط المجموعة"}
             </Button>
             <Button
               variant="outline"
-              disabled={!canSaveGroup || updateRules.isPending}
+              disabled={!isGroupAlreadyLinked || updateRules.isPending}
               onClick={() =>
                 updateRules.mutate({
                   productId,
@@ -280,6 +340,25 @@ export function MenuProductRelationsTab() {
               <SlidersHorizontal data-icon="inline-start" />
               تحديث القواعد
             </Button>
+            {isGroupAlreadyLinked && (
+              <Button
+                variant="destructive"
+                disabled={linkGroups.isPending}
+                onClick={() => {
+                  const existing = linkedGroups
+                    .map(normalizeGroupRule)
+                    .filter((group) => group.groupId && group.groupId !== groupId);
+                  linkGroups.mutate({
+                    productId,
+                    data: { groups: existing },
+                  });
+                  setGroupId("");
+                }}
+              >
+                <Unlink2 data-icon="inline-start" />
+                إلغاء الربط
+              </Button>
+            )}
           </div>
         </div>
 
@@ -374,11 +453,11 @@ export function MenuProductRelationsTab() {
               }
             >
               <Link2 data-icon="inline-start" />
-              ربط الخيار
+              {isOptionAlreadyLinked ? "تحديث ربط الخيار" : "ربط الخيار"}
             </Button>
             <Button
               variant="outline"
-              disabled={!canSaveOption || updateOverride.isPending}
+              disabled={!isOptionAlreadyLinked || updateOverride.isPending}
               onClick={() =>
                 updateOverride.mutate({
                   productId,
@@ -393,7 +472,7 @@ export function MenuProductRelationsTab() {
             </Button>
             <Button
               variant="outline"
-              disabled={!canSaveOption || updateAvailability.isPending}
+              disabled={!isOptionAlreadyLinked || updateAvailability.isPending}
               onClick={() =>
                 updateAvailability.mutate({
                   productId,
@@ -406,6 +485,31 @@ export function MenuProductRelationsTab() {
               <ToggleLeft data-icon="inline-start" />
               تحديث التوفر
             </Button>
+            {isOptionAlreadyLinked && (
+              <Button
+                variant="destructive"
+                disabled={linkOptions.isPending}
+                onClick={() => {
+                  const existing = linkedOptions
+                    .map((option) =>
+                      normalizeOption({
+                        ...option,
+                        optionId: option.optionId || option.option?.id || "",
+                      })
+                    )
+                    .filter((option) => option.optionId && option.optionId !== optionId);
+                  linkOptions.mutate({
+                    productId,
+                    groupId,
+                    data: { options: existing },
+                  });
+                  setOptionId("");
+                }}
+              >
+                <Unlink2 data-icon="inline-start" />
+                إلغاء الربط
+              </Button>
+            )}
           </div>
         </div>
       </div>

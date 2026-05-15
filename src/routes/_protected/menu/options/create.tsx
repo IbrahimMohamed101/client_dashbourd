@@ -12,6 +12,8 @@ import { Settings2, Save, Loader2 } from "lucide-react";
 import { MenuOptionFormFields } from "@/components/pages/menu/options/MenuOptionFormFields";
 import { toCreateMenuOptionPayload } from "@/utils/menuPayloadMappers";
 
+import { ToastMessage } from "@/components/global/ToastMessage";
+
 export const Route = createFileRoute("/_protected/menu/options/create")({
   component: CreateOptionPage,
 });
@@ -37,8 +39,19 @@ function CreateOptionPage() {
   });
 
   const onSubmit = async (data: MenuOptionSchemaType) => {
-    await mutation.mutateAsync(toCreateMenuOptionPayload(data));
-    router.navigate({ to: "/menu" });
+    try {
+      await mutation.mutateAsync(toCreateMenuOptionPayload(data));
+      ToastMessage("تم إنشاء الخيار بنجاح", "success");
+      router.navigate({
+        to: "/menu",
+        search: { tab: "options" }
+      });
+    } catch (error: any) {
+      ToastMessage(
+        error?.response?.data?.message || "حدث خطأ أثناء الحفظ",
+        "error"
+      );
+    }
   };
 
   return (

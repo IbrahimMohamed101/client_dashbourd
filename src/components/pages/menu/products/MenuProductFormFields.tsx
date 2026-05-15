@@ -65,7 +65,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
         <CardContent className="space-y-6">
           {/* Key + Category + ItemType */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>المفتاح (Key)</Label>
               <Input
                 dir="ltr"
@@ -79,17 +79,17 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                 </p>
               )}
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>التصنيف</Label>
               <Controller
                 control={form.control}
                 name="categoryId"
                 render={({ field }) => (
                   <Select
-                    value={field.value}
+                    value={field.value ?? ""}
                     onValueChange={field.onChange}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="min-w-full" dir="rlt">
                       <SelectValue placeholder="اختر التصنيف" />
                     </SelectTrigger>
                     <SelectContent>
@@ -108,17 +108,17 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                 </p>
               )}
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>نوع العنصر</Label>
               <Controller
                 control={form.control}
                 name="itemType"
                 render={({ field }) => (
                   <Select
-                    value={field.value}
+                    value={field.value ?? ""}
                     onValueChange={field.onChange}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="min-w-full" dir="rtl">
                       <SelectValue placeholder="اختر النوع" />
                     </SelectTrigger>
                     <SelectContent>
@@ -141,7 +141,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
 
           {/* Names */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>الاسم (عربي)</Label>
               <Input
                 placeholder="مثال: دجاج مشوي"
@@ -153,7 +153,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                 </p>
               )}
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>الاسم (إنجليزي)</Label>
               <Input
                 dir="ltr"
@@ -170,7 +170,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
 
           {/* Descriptions */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>الوصف (عربي)</Label>
               <Textarea
                 placeholder="وصف المنتج..."
@@ -178,7 +178,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                 {...form.register("description.ar")}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>الوصف (إنجليزي)</Label>
               <Textarea
                 dir="ltr"
@@ -188,13 +188,50 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
               />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>رابط الصورة</Label>
-            <Input
-              dir="ltr"
-              placeholder="https://..."
-              {...form.register("imageUrl")}
-            />
+          <div className="flex flex-col justify-end space-y-1.5">
+            <Label className="text-sm font-medium">صورة المنتج (Image)</Label>
+            <div className="flex items-center gap-3">
+              {(form.watch("imageFile") || form.watch("imageUrl")) && (
+                <div className="relative size-10 shrink-0 overflow-hidden rounded-md border bg-muted">
+                  <img
+                    src={
+                      form.watch("imageFile")
+                        ? URL.createObjectURL(
+                            form.watch("imageFile") as unknown as File
+                          )
+                        : form.watch("imageUrl")!
+                    }
+                    alt="Preview"
+                    className="size-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  dir="ltr"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      form.setValue("imageFile", file, {
+                        shouldValidate: true,
+                      });
+                    } else {
+                      form.setValue("imageFile", undefined, {
+                        shouldValidate: true,
+                      });
+                    }
+                  }}
+                  aria-invalid={!!form.formState.errors.imageFile}
+                />
+              </div>
+            </div>
+            {form.formState.errors.imageFile && (
+              <p className="text-xs text-destructive">
+                {form.formState.errors.imageFile.message as string}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -207,14 +244,14 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>نوع التسعير</Label>
               <Controller
                 control={form.control}
                 name="pricingModel"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger>
+                  <Select value={field.value ?? "fixed"} onValueChange={field.onChange}>
+                    <SelectTrigger dir="rlt" className="min-w-full">
                       <SelectValue placeholder="اختر نوع التسعير" />
                     </SelectTrigger>
                     <SelectContent>
@@ -227,7 +264,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                 )}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>السعر (ر.س)</Label>
               <Input
                 type="number"
@@ -249,7 +286,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
 
           {pricingModel === "per_100g" && (
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-5">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label>وحدة الوزن (غ)</Label>
                 <Input
                   type="number"
@@ -263,7 +300,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                   </p>
                 )}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label>الوزن الافتراضي</Label>
                 <Input
                   type="number"
@@ -271,7 +308,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                   {...form.register("defaultWeightGrams")}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label>الحد الأدنى</Label>
                 <Input
                   type="number"
@@ -279,7 +316,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                   {...form.register("minWeightGrams")}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label>الحد الأقصى</Label>
                 <Input
                   type="number"
@@ -287,7 +324,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                   {...form.register("maxWeightGrams")}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label>خطوة الوزن</Label>
                 <Input
                   type="number"
@@ -308,7 +345,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>ترتيب العرض</Label>
               <Input
                 type="number"

@@ -48,6 +48,7 @@ import {
   MenuSectionCard,
 } from "@/components/pages/menu/MenuTabScaffold";
 import { getOptionColumns } from "../menu-columns";
+import type { MenuOption, MenuOptionGroup } from "@/types/menuTypes";
 
 export function MenuOptionsTab() {
   const [search, setSearch] = useState("");
@@ -61,7 +62,10 @@ export function MenuOptionsTab() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data: groupsData } = useMenuOptionGroupsQuery({});
-  const groups = groupsData?.data?.items || [];
+  const groupsRawData = groupsData?.data;
+  const groups = (
+    Array.isArray(groupsRawData) ? groupsRawData : groupsRawData?.items || []
+  ) as MenuOptionGroup[];
 
   const { data: response, isLoading } = useMenuOptionsQuery({
     q: debouncedSearch || undefined,
@@ -71,13 +75,16 @@ export function MenuOptionsTab() {
   });
 
   const deleteMutation = useDeleteMenuOptionMutation();
-  const options = response?.data?.items || [];
+  const responseData = response?.data;
+  const options = (
+    Array.isArray(responseData) ? responseData : responseData?.items || []
+  ) as MenuOption[];
   
-  const meta = response?.data?.pagination || {
+  const meta = (responseData as any)?.pagination || {
     total: options.length,
     pages: 1,
     page: 1,
-    limit: 10,
+    limit: pagination.pageSize,
   };
 
   const columns = useMemo(
@@ -96,7 +103,8 @@ export function MenuOptionsTab() {
     },
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    pageCount: meta.pages,
     autoResetPageIndex: false,
   });
 

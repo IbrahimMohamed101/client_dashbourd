@@ -24,6 +24,7 @@ import type {
   MenuOptionSchemaType,
 } from "@/lib/validations/menuOptionSchema";
 import { useMenuOptionGroupsQuery } from "@/hooks/useMenuQuery";
+import type { MenuOptionGroup } from "@/types/menuTypes";
 
 interface Props {
   form: UseFormReturn<MenuOptionSchemaInput, unknown, MenuOptionSchemaType>;
@@ -35,7 +36,10 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
   const isAvailable = form.watch("isAvailable") ?? true;
   const isVisible = form.watch("isVisible") ?? true;
   const { data: groupsData } = useMenuOptionGroupsQuery({});
-  const groups = groupsData?.data?.items || [];
+  const responseData = groupsData?.data;
+  const groups = (
+    Array.isArray(responseData) ? responseData : responseData?.items || []
+  ) as MenuOptionGroup[];
 
   return (
     <div className="space-y-6">
@@ -73,22 +77,21 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
                 control={form.control}
                 name="groupId"
                 render={({ field }) => (
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={isEdit}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر المجموعة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groups.map((g) => (
-                        <SelectItem key={g.id} value={g.id}>
-                          {g.name.ar}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر المجموعة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groups.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            {g.name.ar}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                 )}
               />
               {form.formState.errors.groupId && (
@@ -142,14 +145,7 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
               />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>رابط الصورة</Label>
-            <Input
-              dir="ltr"
-              placeholder="https://..."
-              {...form.register("imageUrl")}
-            />
-          </div>
+
         </CardContent>
       </Card>
 

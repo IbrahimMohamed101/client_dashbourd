@@ -61,7 +61,10 @@ function UpdateOptionGroupPage() {
       id: groupId,
       data: toUpdateMenuOptionGroupPayload(data),
     });
-    router.navigate({ to: "/menu" });
+    router.navigate({
+      to: "/menu",
+      search: { tab: "option-groups" }
+    });
   };
 
   if (isLoading)

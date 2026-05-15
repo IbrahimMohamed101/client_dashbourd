@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Package, Save, Loader2 } from "lucide-react";
 import { MenuProductFormFields } from "@/components/pages/menu/products/MenuProductFormFields";
 import { toCreateMenuProductPayload } from "@/utils/menuPayloadMappers";
+import { fetchUploadImage } from "@/utils/fetchUploadImage";
+import { ToastMessage } from "@/components/global/ToastMessage";
 
 export const Route = createFileRoute("/_protected/menu/products/create")({
   component: CreateMenuProductPage,
@@ -39,8 +41,24 @@ function CreateMenuProductPage() {
   });
 
   const onSubmit = async (data: MenuProductSchemaType) => {
-    await mutation.mutateAsync(toCreateMenuProductPayload(data));
-    router.navigate({ to: "/menu" });
+    try {
+      let imageUrl = data.imageUrl;
+      if (data.imageFile instanceof File) {
+        const uploadRes = await fetchUploadImage(data.imageFile);
+        imageUrl = uploadRes.data.url;
+      }
+      await mutation.mutateAsync(toCreateMenuProductPayload({ ...data, imageUrl }));
+      ToastMessage("تم إنشاء المنتج بنجاح", "success");
+      router.navigate({
+        to: "/menu",
+        search: { tab: "products" }
+      });
+    } catch (error: any) {
+      ToastMessage(
+        error?.response?.data?.message || "حدث خطأ أثناء الحفظ",
+        "error"
+      );
+    }
   };
 
   return (

@@ -39,7 +39,10 @@ function CreateOptionGroupPage() {
 
   const onSubmit = async (data: MenuOptionGroupSchemaType) => {
     await mutation.mutateAsync(toCreateMenuOptionGroupPayload(data));
-    router.navigate({ to: "/menu" });
+    router.navigate({
+      to: "/menu",
+      search: { tab: "option-groups" },
+    });
   };
 
   return (

@@ -1,4 +1,13 @@
-import { Badge } from "@/components/ui/badge";
+import { useMemo, useState } from "react";
+import {
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+
+import { useMenuAuditLogsQuery } from "@/hooks/useMenuQuery";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   Table,
   TableBody,
@@ -7,105 +16,148 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useMenuAuditLogsQuery } from "@/hooks/useMenuQuery";
+import { DataTablePagination } from "@/components/ui/data-table-pagination";
+import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 import {
   MenuEmptyState,
-  MenuKeyBadge,
-  MenuLoadingTable,
+  MenuSearchInput,
   MenuSectionCard,
-  MenuTableFrame,
 } from "@/components/pages/menu/MenuTabScaffold";
+import { getAuditLogColumns } from "../menu-columns";
 import type { MenuAuditLog } from "@/types/menuTypes";
 
-const ACTION_LABELS: Record<string, string> = {
-  create: "إنشاء",
-  update: "تحديث",
-  delete: "حذف",
-  publish: "نشر",
-  validate: "تحقق",
-};
-
-const ENTITY_LABELS: Record<string, string> = {
-  category: "تصنيف",
-  product: "منتج",
-  option_group: "مجموعة خيارات",
-  option: "خيار",
-  menu: "القائمة",
-};
-
 export function MenuAuditLogTab() {
-  const { data, isLoading } = useMenuAuditLogsQuery({ limit: 50 });
-  const logs = data?.data?.items || [];
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Intl.DateTimeFormat("ar-SA", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(new Date(dateStr));
-    } catch {
-      return dateStr;
-    }
+  const { data: response, isLoading } = useMenuAuditLogsQuery({
+    page: pagination.pageIndex + 1,
+    limit: pagination.pageSize,
+  });
+
+  const responseData = response?.data;
+  const logs = (
+    Array.isArray(responseData) ? responseData : responseData?.items || []
+  ) as MenuAuditLog[];
+
+  const meta = (responseData as any)?.pagination || {
+    total: logs.length,
+    pages: 1,
+    page: 1,
+    limit: pagination.pageSize,
   };
+
+  const columns = useMemo(() => getAuditLogColumns(), []);
+
+  const table = useReactTable({
+    data: logs,
+    columns,
+    state: {
+      pagination,
+    },
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    pageCount: meta.pages,
+    autoResetPageIndex: false,
+  });
 
   return (
     <MenuSectionCard
       title="سجل التغييرات"
       description="راجع آخر عمليات الإنشاء والتعديل والحذف والنشر داخل دورة القائمة."
     >
-      {isLoading ? (
-        <MenuLoadingTable columns={5} />
-      ) : logs.length === 0 ? (
-        <MenuEmptyState
-          title="لا توجد سجلات بعد"
-          description="ستظهر هنا العمليات التي تتم على التصنيفات والمنتجات والخيارات عند بدء إدارة القائمة."
-        />
-      ) : (
-        <MenuTableFrame>
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="w-12 text-center">#</TableHead>
-                <TableHead>الإجراء</TableHead>
-                <TableHead>النوع</TableHead>
-                <TableHead>المعرف</TableHead>
-                <TableHead>التاريخ</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {logs.map((log: MenuAuditLog, index: number) => (
-                <TableRow key={log.id}>
-                  <TableCell className="text-center text-muted-foreground">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        log.action === "delete"
-                          ? "destructive"
-                          : log.action === "create"
-                            ? "default"
-                            : "secondary"
-                      }
+      <div className="flex flex-col gap-4">
+        {/* Toolbar */}
+        <div className="flex items-center gap-3">
+          <MenuSearchInput
+            placeholder="بحث في السجلات..."
+            value={search}
+            onChange={(v) => {
+              setSearch(v);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+          />
+          <DataTableViewOptions table={table} />
+        </div>
+
+        {/* Table Area */}
+        <div className="relative flex flex-col gap-4 overflow-auto">
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <Table>
+              <TableHeader className="sticky top-0 z-10 bg-muted/50">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="border-b hover:bg-transparent"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className="py-4 text-right font-medium"
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
                     >
-                      {ACTION_LABELS[log.action] || log.action}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {ENTITY_LABELS[log.entityType] || log.entityType}
-                  </TableCell>
-                  <TableCell>
-                    <MenuKeyBadge value={`${log.entityId.slice(0, 8)}...`} />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(log.createdAt)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </MenuTableFrame>
-      )}
+                      جاري التحميل...
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="py-4 text-right">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      <MenuEmptyState
+                        title="لا توجد سجلات بعد"
+                        description="ستظهر هنا العمليات التي تتم على التصنيفات والمنتجات والخيارات."
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DataTablePagination
+            table={table}
+            totalItems={meta.total}
+            itemsLabel="سجلات"
+          />
+        </div>
+      </div>
     </MenuSectionCard>
   );
 }

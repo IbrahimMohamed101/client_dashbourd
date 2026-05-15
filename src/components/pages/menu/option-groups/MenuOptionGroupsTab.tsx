@@ -39,6 +39,7 @@ import {
   MenuSectionCard,
 } from "@/components/pages/menu/MenuTabScaffold";
 import { getOptionGroupColumns } from "../menu-columns";
+import type { MenuOptionGroup } from "@/types/menuTypes";
 
 export function MenuOptionGroupsTab() {
   const [search, setSearch] = useState("");
@@ -57,13 +58,17 @@ export function MenuOptionGroupsTab() {
   });
   
   const deleteMutation = useDeleteMenuOptionGroupMutation();
-  const groups = response?.data?.items || [];
-  
-  const meta = response?.data?.pagination || {
+  const responseData = response?.data;
+  const groups = (
+    Array.isArray(responseData) ? responseData : responseData?.items || []
+  ) as MenuOptionGroup[];
+    
+
+  const meta = (responseData as any)?.pagination || {
     total: groups.length,
     pages: 1,
     page: 1,
-    limit: 10,
+    limit: pagination.pageSize,
   };
 
   const columns = useMemo(
@@ -82,7 +87,8 @@ export function MenuOptionGroupsTab() {
     },
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    pageCount: meta.pages,
     autoResetPageIndex: false,
   });
 

@@ -48,6 +48,7 @@ import {
   MenuSectionCard,
 } from "@/components/pages/menu/MenuTabScaffold";
 import { getProductColumns } from "../menu-columns";
+import type { MenuProduct } from "@/types/menuTypes";
 
 export function MenuProductsTab() {
   const [search, setSearch] = useState("");
@@ -72,13 +73,16 @@ export function MenuProductsTab() {
   
   const deleteMutation = useDeleteMenuProductMutation();
   const toggleAvailability = useToggleMenuProductAvailabilityMutation();
-  const products = response?.data?.items || [];
+  const responseData = response?.data;
+  const products = (
+    Array.isArray(responseData) ? responseData : responseData?.items || []
+  ) as MenuProduct[];
   
-  const meta = response?.data?.pagination || {
+  const meta = (responseData as any)?.pagination || {
     total: products.length,
     pages: 1,
     page: 1,
-    limit: 10,
+    limit: pagination.pageSize,
   };
 
   const columns = useMemo(
@@ -99,7 +103,8 @@ export function MenuProductsTab() {
     },
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    pageCount: meta.pages,
     autoResetPageIndex: false,
   });
 

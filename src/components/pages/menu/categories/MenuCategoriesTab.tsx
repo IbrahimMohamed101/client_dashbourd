@@ -39,6 +39,7 @@ import {
   MenuSectionCard,
 } from "@/components/pages/menu/MenuTabScaffold";
 import { getCategoryColumns } from "../menu-columns";
+import type { MenuCategory } from "@/types/menuTypes";
 
 export function MenuCategoriesTab() {
   const [search, setSearch] = useState("");
@@ -57,13 +58,16 @@ export function MenuCategoriesTab() {
   });
   
   const deleteMutation = useDeleteMenuCategoryMutation();
-  const categories = response?.data?.items || [];
+  const responseData = response?.data;
+  const categories = (
+    Array.isArray(responseData) ? responseData : responseData?.items || []
+  ) as MenuCategory[];
   
-  const meta = response?.data?.pagination || {
+  const meta = (responseData as any)?.pagination || {
     total: categories.length,
     pages: 1,
     page: 1,
-    limit: 10,
+    limit: pagination.pageSize,
   };
 
   const columns = useMemo(
@@ -82,7 +86,8 @@ export function MenuCategoriesTab() {
     },
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    pageCount: meta.pages,
     autoResetPageIndex: false,
   });
 

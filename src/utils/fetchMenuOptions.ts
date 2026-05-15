@@ -10,7 +10,6 @@ import type {
 import {
   normalizeOptionsResponse,
   normalizeOptionDetailResponse,
-  toBackendOptionPayload,
 } from "@/utils/menuResponseNormalizers";
 
 // ── List Options ──
@@ -52,7 +51,7 @@ export const fetchMenuOptionById = async (
 export const fetchCreateMenuOption = async (
   data: CreateMenuOptionPayload
 ): Promise<void> => {
-  await api.post("/api/dashboard/menu/options", toBackendOptionPayload(data));
+  await api.post("/api/dashboard/menu/options", data);
 };
 
 // ── Update Option ──
@@ -62,7 +61,7 @@ export const fetchUpdateMenuOption = async (
   id: string,
   data: UpdateMenuOptionPayload
 ): Promise<void> => {
-  await api.patch(`/api/dashboard/menu/options/${id}`, toBackendOptionPayload(data));
+  await api.patch(`/api/dashboard/menu/options/${id}`, data);
 };
 
 // ── Soft Delete Option ──

@@ -10,7 +10,6 @@ import type {
 import {
   normalizeCategoriesResponse,
   normalizeCategoryDetailResponse,
-  toBackendCategoryPayload,
 } from "@/utils/menuResponseNormalizers";
 
 // ── List Categories ──
@@ -50,7 +49,7 @@ export const fetchMenuCategoryById = async (
 export const fetchCreateMenuCategory = async (
   data: CreateMenuCategoryPayload
 ): Promise<void> => {
-  await api.post("/api/dashboard/menu/categories", toBackendCategoryPayload(data));
+  await api.post("/api/dashboard/menu/categories", data);
 };
 
 // ── Update Category ──
@@ -60,7 +59,7 @@ export const fetchUpdateMenuCategory = async (
   id: string,
   data: UpdateMenuCategoryPayload
 ): Promise<void> => {
-  await api.patch(`/api/dashboard/menu/categories/${id}`, toBackendCategoryPayload(data));
+  await api.patch(`/api/dashboard/menu/categories/${id}`, data);
 };
 
 // ── Soft Delete Category ──

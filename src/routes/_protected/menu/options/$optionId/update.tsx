@@ -15,6 +15,8 @@ import { MenuOptionFormFields } from "@/components/pages/menu/options/MenuOption
 import { useQuery } from "@tanstack/react-query";
 import { toUpdateMenuOptionPayload } from "@/utils/menuPayloadMappers";
 
+import { ToastMessage } from "@/components/global/ToastMessage";
+
 export const Route = createFileRoute(
   "/_protected/menu/options/$optionId/update"
 )({
@@ -41,7 +43,7 @@ function UpdateOptionPage() {
     resolver: zodResolver(menuOptionSchema),
     values: option
       ? {
-          groupId: option.groupId,
+          groupId: option.groupId || "",
           key: option.key,
           name: option.name,
           description: option.description || { ar: "", en: "" },
@@ -60,11 +62,22 @@ function UpdateOptionPage() {
   });
 
   const onSubmit = async (data: MenuOptionSchemaType) => {
-    await mutation.mutateAsync({
-      id: optionId,
-      data: toUpdateMenuOptionPayload(data),
-    });
-    router.navigate({ to: "/menu" });
+    try {
+      await mutation.mutateAsync({
+        id: optionId,
+        data: toUpdateMenuOptionPayload(data),
+      });
+      ToastMessage("تم تحديث الخيار بنجاح", "success");
+      router.navigate({
+        to: "/menu",
+        search: { tab: "options" }
+      });
+    } catch (error: any) {
+      ToastMessage(
+        error?.response?.data?.message || "حدث خطأ أثناء الحفظ",
+        "error"
+      );
+    }
   };
 
   if (isLoading)

@@ -14,6 +14,8 @@ import { Loader } from "@/components/global/loader";
 import { MenuProductFormFields } from "@/components/pages/menu/products/MenuProductFormFields";
 import { useQuery } from "@tanstack/react-query";
 import { toUpdateMenuProductPayload } from "@/utils/menuPayloadMappers";
+import { fetchUploadImage } from "@/utils/fetchUploadImage";
+import { ToastMessage } from "@/components/global/ToastMessage";
 
 export const Route = createFileRoute(
   "/_protected/menu/products/$productId/update"
@@ -43,7 +45,7 @@ function UpdateMenuProductPage() {
       ? {
           categoryId: product.categoryId || "",
           key: product.key,
-          itemType: product.itemType,
+          itemType: product.itemType || "",
           name: product.name,
           description: product.description || { ar: "", en: "" },
           imageUrl: product.imageUrl || "",
@@ -63,11 +65,27 @@ function UpdateMenuProductPage() {
   });
 
   const onSubmit = async (data: MenuProductSchemaType) => {
-    await mutation.mutateAsync({
-      id: productId,
-      data: toUpdateMenuProductPayload(data),
-    });
-    router.navigate({ to: "/menu" });
+    try {
+      let imageUrl = data.imageUrl;
+      if (data.imageFile instanceof File) {
+        const uploadRes = await fetchUploadImage(data.imageFile);
+        imageUrl = uploadRes.data.url;
+      }
+      await mutation.mutateAsync({
+        id: productId,
+        data: toUpdateMenuProductPayload({ ...data, imageUrl }),
+      });
+      ToastMessage("تم تحديث المنتج بنجاح", "success");
+      router.navigate({
+        to: "/menu",
+        search: { tab: "products" }
+      });
+    } catch (error: any) {
+      ToastMessage(
+        error?.response?.data?.message || "حدث خطأ أثناء الحفظ",
+        "error"
+      );
+    }
   };
 
   if (isLoading)
