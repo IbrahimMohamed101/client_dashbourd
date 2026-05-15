@@ -1,13 +1,10 @@
 import { useMemo, useState } from "react";
 import {
   flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
+  getCoreRowModel, useReactTable
 } from "@tanstack/react-table";
 
 import { useMenuAuditLogsQuery } from "@/hooks/useMenuQuery";
-import { useDebounce } from "@/hooks/useDebounce";
 import {
   Table,
   TableBody,
@@ -28,7 +25,6 @@ import type { MenuAuditLog } from "@/types/menuTypes";
 
 export function MenuAuditLogTab() {
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 300);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,

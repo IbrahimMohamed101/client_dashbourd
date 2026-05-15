@@ -3,9 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import {
   flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
+  getCoreRowModel, useReactTable
 } from "@tanstack/react-table";
 
 import {
