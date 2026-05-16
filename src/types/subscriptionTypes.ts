@@ -132,6 +132,7 @@ export interface Subscription {
   contractMeta: ContractMeta;
   user: SubscriptionUser;
   userName: string;
+  hasDeliveryDeductionToday?: boolean;
 }
 
 export interface SubscriptionsMeta {

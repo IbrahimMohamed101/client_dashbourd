@@ -19,6 +19,7 @@ const SUPERADMIN_ROUTES = [
   "/zones",
   "/kitchen-board",
   "/courier-board",
+  "/manual-deduction",
   "/menu",
 ];
 
@@ -39,6 +40,7 @@ const ADMIN_ROUTES = [
   "/promo-codes",
   "/zones",
   "/kitchen-board",
+  "/manual-deduction",
   "/menu",
 ];
 
@@ -48,11 +50,12 @@ const KITCHEN_ROUTES = [
   "/pickup-board",
   "/meals",
   "/categories",
+  "/manual-deduction",
 ];
 
 const COURIER_ROUTES = ["/courier-board", "/delivery"];
 
-const CASHIER_ROUTES = ["/dashboard", "/one-time-orders", "/pickup-board"];
+const CASHIER_ROUTES = ["/dashboard", "/one-time-orders", "/pickup-board", "/manual-deduction",];
 
 const AUTH_ROUTES = ["/"];
 

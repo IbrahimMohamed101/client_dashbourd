@@ -50,8 +50,6 @@ export const freezeSubscription = async ({
   id: string;
   data: { startDate: string; days: number };
 }) => {
-  console.log(data);
-
   const response = await api.post(
     `/api/dashboard/subscriptions/${id}/freeze`,
     data
@@ -143,5 +141,27 @@ export const createSubscriptionAddonEntitlement = async (subscriptionId: string,
 
 export const deleteSubscriptionAddonEntitlement = async (subscriptionId: string, entitlementId: string) => {
   const response = await api.delete(`/api/dashboard/subscriptions/${subscriptionId}/addon-entitlements/${entitlementId}`);
+  return response.data;
+};
+
+// ----- Manual Deduction -----
+export const searchSubscriptionsByPhone = async (phone: string) => {
+  const response = await api.get(`/api/dashboard/subscriptions/search?phone=${encodeURIComponent(phone)}`);
+  return response.data;
+};
+
+export const manualDeductSubscription = async ({
+  id,
+  data,
+}: {
+  id: string;
+  data: {
+    regularMeals: number;
+    premiumMeals: number;
+    reason: string;
+    notes?: string;
+  };
+}) => {
+  const response = await api.post(`/api/dashboard/subscriptions/${id}/manual-deduction`, data);
   return response.data;
 };

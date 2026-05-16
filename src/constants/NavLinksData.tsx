@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   Store,
   BookOpen,
+  MinusCircle,
 } from "lucide-react";
 
 export const NavLinksData = {
@@ -75,6 +76,11 @@ export const NavLinksData = {
       title: "طلبات لمرة واحدة",
       url: "/one-time-orders",
       icon: <ShoppingBag />,
+    },
+    {
+      title: "خصم يدوي",
+      url: "/manual-deduction",
+      icon: <MinusCircle />,
     },
     {
       title: "المنيو",

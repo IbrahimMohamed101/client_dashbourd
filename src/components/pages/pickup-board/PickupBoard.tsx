@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -15,6 +14,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   CheckCircle2,
   Clock,
@@ -92,12 +102,22 @@ interface ReasonDialogState {
   isDangerous: boolean;
 }
 
+const fulfillSchema = z.object({
+  pickupCode: z.string().optional()
+});
+type FulfillFormValues = z.infer<typeof fulfillSchema>;
+
+const reasonSchema = z.object({
+  reason: z.string().min(1, "السبب مطلوب"),
+  notes: z.string().optional(),
+});
+type ReasonFormValues = z.infer<typeof reasonSchema>;
+
 export const PickupBoard: React.FC = () => {
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [fulfillDialog, setFulfillDialog] = useState<PickupQueueItem | null>(
     null
   );
-  const [pickupCode, setPickupCode] = useState("");
   const [reasonDialog, setReasonDialog] = useState<ReasonDialogState>({
     open: false,
     item: null,
@@ -105,8 +125,16 @@ export const PickupBoard: React.FC = () => {
     actionLabel: "",
     isDangerous: false,
   });
-  const [reason, setReason] = useState("");
-  const [reasonNotes, setReasonNotes] = useState("");
+
+  const fulfillForm = useForm<FulfillFormValues>({
+    resolver: zodResolver(fulfillSchema),
+    defaultValues: { pickupCode: "" },
+  });
+
+  const reasonForm = useForm<ReasonFormValues>({
+    resolver: zodResolver(reasonSchema),
+    defaultValues: { reason: "", notes: "" },
+  });
 
   const { data: queueData, isLoading } = usePickupQueueQuery({ date });
   const otoActionMutation = useOneTimeOrderActionMutation();
@@ -136,7 +164,7 @@ export const PickupBoard: React.FC = () => {
       const body: OneTimeOrderActionRequest = {};
       if (actionReason) body.reason = actionReason;
       if (actionNotes) body.notes = actionNotes;
-      if (actionPickupCode) body.pickupCode = actionPickupCode;
+      if (actionPickupCode && !isOneTimeOrder(item)) body.pickupCode = actionPickupCode;
 
       otoActionMutation.mutate({
         orderId,
@@ -159,19 +187,19 @@ export const PickupBoard: React.FC = () => {
   };
 
   const handleFulfill = (item: PickupQueueItem) => {
+    fulfillForm.reset({ pickupCode: "" });
     setFulfillDialog(item);
   };
 
-  const handleConfirmFulfill = () => {
+  const onConfirmFulfill = (values: FulfillFormValues) => {
     if (!fulfillDialog) return;
     executeAction({
       item: fulfillDialog,
       action: "fulfill",
       reason: "Customer picked up the order from branch",
-      pickupCode: pickupCode || undefined,
+      pickupCode: values.pickupCode || undefined,
     });
     setFulfillDialog(null);
-    setPickupCode("");
   };
 
   const requestAction = (
@@ -180,18 +208,17 @@ export const PickupBoard: React.FC = () => {
     actionLabel: string,
     isDangerous: boolean = false
   ) => {
-    setReason("");
-    setReasonNotes("");
+    reasonForm.reset({ reason: "", notes: "" });
     setReasonDialog({ open: true, item, action, actionLabel, isDangerous });
   };
 
-  const confirmReasonAction = () => {
+  const onConfirmReason = (values: ReasonFormValues) => {
     if (!reasonDialog.item) return;
     executeAction({
       item: reasonDialog.item,
       action: reasonDialog.action,
-      reason: reason || undefined,
-      notes: reasonNotes || undefined,
+      reason: values.reason.trim(),
+      notes: values.notes?.trim() || undefined,
     });
     setReasonDialog({
       open: false,
@@ -271,19 +298,19 @@ export const PickupBoard: React.FC = () => {
                 };
             const canFulfill =
               order.allowedActions?.includes("fulfill") &&
-              !isUnsupportedOneTimeOrderAction("fulfill");
+              (!isOTO || !isUnsupportedOneTimeOrderAction("fulfill"));
             const canReadyForPickup =
               order.allowedActions?.includes("ready_for_pickup") &&
-              !isUnsupportedOneTimeOrderAction("ready_for_pickup");
+              (!isOTO || !isUnsupportedOneTimeOrderAction("ready_for_pickup"));
             const canCancel =
               order.allowedActions?.includes("cancel") &&
-              !isUnsupportedOneTimeOrderAction("cancel");
+              (!isOTO || !isUnsupportedOneTimeOrderAction("cancel"));
             const canNoShow =
               order.allowedActions?.includes("no_show") &&
-              !isUnsupportedOneTimeOrderAction("no_show");
+              (!isOTO || !isUnsupportedOneTimeOrderAction("no_show"));
             const canReopen =
               order.allowedActions?.includes("reopen") &&
-              !isUnsupportedOneTimeOrderAction("reopen");
+              (!isOTO || !isUnsupportedOneTimeOrderAction("reopen"));
 
             const displayName = isOTO
               ? order.customer?.name || order.orderNumber || order.entityId
@@ -485,49 +512,63 @@ export const PickupBoard: React.FC = () => {
         onOpenChange={(open) => {
           if (!open) {
             setFulfillDialog(null);
-            setPickupCode("");
           }
         }}
       >
         <AlertDialogContent className="sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-xl">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-              تأكيد استلام العميل للطلب
-            </AlertDialogTitle>
-            <AlertDialogDescription className="pt-2 text-base">
-              يرجى التأكد من أن العميل قد استلم الطلب فعلاً من الفرع.
-              {fulfillDialog?.pickup?.pickupCode && (
-                <span className="mt-2 block text-sm">
-                  رمز الاستلام المتوقع:{" "}
-                  <strong dir="ltr">{fulfillDialog.pickup.pickupCode}</strong>
-                </span>
-              )}
-            </AlertDialogDescription>
-            <div className="mt-4 space-y-2">
-              <label className="text-sm font-semibold text-foreground/80">
-                رمز الاستلام
-              </label>
-              <Input
-                placeholder="000000"
-                value={pickupCode}
-                onChange={(e) => setPickupCode(e.target.value)}
-                className="h-12 border-2 text-center text-2xl font-bold tracking-[0.5em] focus-visible:ring-primary"
-                dir="ltr"
-                autoFocus
-              />
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-6 gap-2 sm:gap-4">
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmFulfill}
-              disabled={otoActionMutation.isPending}
-              className="bg-emerald-600 px-8 font-bold hover:bg-emerald-700"
-            >
-              تأكيد الاستلام
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          <Form {...fulfillForm}>
+            <form onSubmit={fulfillForm.handleSubmit(onConfirmFulfill)}>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-xl">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  تأكيد استلام العميل للطلب
+                </AlertDialogTitle>
+                <AlertDialogDescription className="pt-2 text-base">
+                  يرجى التأكد من أن العميل قد استلم الطلب فعلاً من الفرع.
+                  {fulfillDialog?.pickup?.pickupCode && (
+                    <span className="mt-2 block text-sm">
+                      رمز الاستلام المتوقع:{" "}
+                      <strong dir="ltr">{fulfillDialog.pickup.pickupCode}</strong>
+                    </span>
+                  )}
+                </AlertDialogDescription>
+                {/* Render input field ONLY if it is NOT a one-time order */}
+                {!isOneTimeOrder(fulfillDialog!) && (
+                  <div className="mt-4 space-y-2">
+                    <FormField
+                      control={fulfillForm.control}
+                      name="pickupCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>رمز الاستلام</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="000000"
+                              {...field}
+                              className="h-12 border-2 text-center text-2xl font-bold tracking-[0.5em] focus-visible:ring-primary"
+                              dir="ltr"
+                              autoFocus
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-6 gap-2 sm:gap-4">
+                <AlertDialogCancel type="button">إلغاء</AlertDialogCancel>
+                <Button
+                  type="submit"
+                  disabled={otoActionMutation.isPending}
+                  className="bg-emerald-600 px-8 font-bold hover:bg-emerald-700"
+                >
+                  تأكيد الاستلام
+                </Button>
+              </AlertDialogFooter>
+            </form>
+          </Form>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -547,58 +588,65 @@ export const PickupBoard: React.FC = () => {
         }}
       >
         <AlertDialogContent className="sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-xl">
-              {reasonDialog.isDangerous ? (
-                <XCircle className="h-5 w-5 text-red-500" />
-              ) : (
-                <ChefHat className="h-5 w-5 text-primary" />
-              )}
-              تأكيد: {reasonDialog.actionLabel}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="pt-2 text-base">
-              يرجى إدخال سبب هذا الإجراء للحفاظ على سجل التدقيق.
-            </AlertDialogDescription>
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="text-sm font-semibold text-foreground/80">
-                  السبب <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  placeholder="أدخل سبب الإجراء..."
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="mt-1"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-foreground/80">
-                  ملاحظات
-                </label>
-                <Input
-                  placeholder="ملاحظات إضافية (اختياري)"
-                  value={reasonNotes}
-                  onChange={(e) => setReasonNotes(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-4 gap-2 sm:gap-4">
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmReasonAction}
-              disabled={otoActionMutation.isPending || !reason.trim()}
-              className={
-                reasonDialog.isDangerous
-                  ? "bg-red-600 px-8 font-bold hover:bg-red-700"
-                  : "bg-primary px-8 font-bold"
-              }
-            >
-              تأكيد {reasonDialog.actionLabel}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          <Form {...reasonForm}>
+            <form onSubmit={reasonForm.handleSubmit(onConfirmReason)}>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-xl">
+                  {reasonDialog.isDangerous ? (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  ) : (
+                    <ChefHat className="h-5 w-5 text-primary" />
+                  )}
+                  تأكيد: {reasonDialog.actionLabel}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="pt-2 text-base">
+                  يرجى إدخال سبب هذا الإجراء للحفاظ على سجل التدقيق.
+                </AlertDialogDescription>
+                <div className="mt-4 space-y-3">
+                  <FormField
+                    control={reasonForm.control}
+                    name="reason"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>السبب <span className="text-red-500">*</span></FormLabel>
+                        <FormControl>
+                          <Input placeholder="أدخل سبب الإجراء..." {...field} autoFocus />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={reasonForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ملاحظات (اختياري)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ملاحظات إضافية..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-4 gap-2 sm:gap-4">
+                <AlertDialogCancel type="button">إلغاء</AlertDialogCancel>
+                <Button
+                  type="submit"
+                  disabled={otoActionMutation.isPending}
+                  className={
+                    reasonDialog.isDangerous
+                      ? "bg-red-600 px-8 font-bold hover:bg-red-700"
+                      : "bg-primary px-8 font-bold"
+                  }
+                >
+                  تأكيد {reasonDialog.actionLabel}
+                </Button>
+              </AlertDialogFooter>
+            </form>
+          </Form>
         </AlertDialogContent>
       </AlertDialog>
     </div>

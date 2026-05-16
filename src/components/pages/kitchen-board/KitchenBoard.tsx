@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -16,6 +15,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   ChefHat,
   Clock,
@@ -86,6 +96,13 @@ interface ReasonDialogState {
   isDangerous: boolean;
 }
 
+const reasonSchema = z.object({
+  reason: z.string().min(1, "السبب مطلوب"),
+  notes: z.string().optional(),
+});
+
+type ReasonFormValues = z.infer<typeof reasonSchema>;
+
 export const KitchenBoard: React.FC = () => {
   const queryClient = useQueryClient();
   const [reasonDialog, setReasonDialog] = useState<ReasonDialogState>({
@@ -95,8 +112,11 @@ export const KitchenBoard: React.FC = () => {
     actionLabel: "",
     isDangerous: false,
   });
-  const [reason, setReason] = useState("");
-  const [reasonNotes, setReasonNotes] = useState("");
+
+  const form = useForm<ReasonFormValues>({
+    resolver: zodResolver(reasonSchema),
+    defaultValues: { reason: "", notes: "" },
+  });
 
   const { data: queueData, isLoading } = useQuery<KitchenQueueResponse>({
     queryKey: ["kitchen-orders"],
@@ -197,8 +217,7 @@ export const KitchenBoard: React.FC = () => {
     actionLabel: string,
     isDangerous: boolean = false
   ) => {
-    setReason("");
-    setReasonNotes("");
+    form.reset({ reason: "", notes: "" });
     setReasonDialog({
       open: true,
       item,
@@ -208,13 +227,13 @@ export const KitchenBoard: React.FC = () => {
     });
   };
 
-  const confirmAction = () => {
+  const onConfirmSubmit = (values: ReasonFormValues) => {
     if (!reasonDialog.item) return;
     updateStatus.mutate({
       item: reasonDialog.item,
       action: reasonDialog.action,
-      reason: reason || undefined,
-      notes: reasonNotes || undefined,
+      reason: values.reason.trim(),
+      notes: values.notes?.trim() || undefined,
     });
     setReasonDialog({
       open: false,
@@ -252,6 +271,8 @@ export const KitchenBoard: React.FC = () => {
       label: "جاهز للتسليم",
       icon: <CheckCircle2 className="h-5 w-5" />,
       color: "bg-green-500/10 text-green-600 border-green-200",
+      primaryAction: "dispatch" as const,
+      primaryActionLabel: "إرسال للمندوب",
     },
   ];
 
@@ -314,16 +335,16 @@ export const KitchenBoard: React.FC = () => {
                       !isNonOperational;
                     const canCancel =
                       order.allowedActions?.includes("cancel") &&
-                      !isUnsupportedOneTimeOrderAction("cancel");
+                      (!isOTO || !isUnsupportedOneTimeOrderAction("cancel"));
                     const canReopen =
                       order.allowedActions?.includes("reopen") &&
-                      !isUnsupportedOneTimeOrderAction("reopen");
+                      (!isOTO || !isUnsupportedOneTimeOrderAction("reopen"));
                     const canDispatch =
                       order.allowedActions?.includes("dispatch") &&
-                      !isUnsupportedOneTimeOrderAction("dispatch");
+                      (!isOTO || !isUnsupportedOneTimeOrderAction("dispatch"));
                     const canNotifyArrival =
                       order.allowedActions?.includes("notify_arrival") &&
-                      !isUnsupportedOneTimeOrderAction("notify_arrival");
+                      (!isOTO || !isUnsupportedOneTimeOrderAction("notify_arrival"));
 
                     return (
                       <Card
@@ -564,58 +585,65 @@ export const KitchenBoard: React.FC = () => {
         }}
       >
         <AlertDialogContent className="sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-xl">
-              {reasonDialog.isDangerous ? (
-                <XCircle className="h-5 w-5 text-red-500" />
-              ) : (
-                <ChefHat className="h-5 w-5 text-primary" />
-              )}
-              تأكيد: {reasonDialog.actionLabel}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="pt-2 text-base">
-              يرجى إدخال سبب هذا الإجراء للحفاظ على سجل التدقيق.
-            </AlertDialogDescription>
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="text-sm font-semibold text-foreground/80">
-                  السبب <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  placeholder="أدخل سبب الإجراء..."
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="mt-1"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-foreground/80">
-                  ملاحظات
-                </label>
-                <Input
-                  placeholder="ملاحظات إضافية (اختياري)"
-                  value={reasonNotes}
-                  onChange={(e) => setReasonNotes(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-4 gap-2 sm:gap-4">
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmAction}
-              disabled={updateStatus.isPending || !reason.trim()}
-              className={
-                reasonDialog.isDangerous
-                  ? "bg-red-600 px-8 font-bold hover:bg-red-700"
-                  : "bg-primary px-8 font-bold"
-              }
-            >
-              تأكيد {reasonDialog.actionLabel}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onConfirmSubmit)}>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-xl">
+                  {reasonDialog.isDangerous ? (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  ) : (
+                    <ChefHat className="h-5 w-5 text-primary" />
+                  )}
+                  تأكيد: {reasonDialog.actionLabel}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="pt-2 text-base">
+                  يرجى إدخال سبب هذا الإجراء للحفاظ على سجل التدقيق.
+                </AlertDialogDescription>
+                <div className="mt-4 space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="reason"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>السبب <span className="text-red-500">*</span></FormLabel>
+                        <FormControl>
+                          <Input placeholder="أدخل سبب الإجراء..." {...field} autoFocus />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ملاحظات (اختياري)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ملاحظات إضافية..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-4 gap-2 sm:gap-4">
+                <AlertDialogCancel type="button">إلغاء</AlertDialogCancel>
+                <Button
+                  type="submit"
+                  disabled={updateStatus.isPending}
+                  className={
+                    reasonDialog.isDangerous
+                      ? "bg-red-600 px-8 font-bold hover:bg-red-700"
+                      : "bg-primary px-8 font-bold"
+                  }
+                >
+                  تأكيد {reasonDialog.actionLabel}
+                </Button>
+              </AlertDialogFooter>
+            </form>
+          </Form>
         </AlertDialogContent>
       </AlertDialog>
     </div>

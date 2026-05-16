@@ -53,7 +53,9 @@ export const CourierBoard: React.FC = () => {
       const { data } = await api.post(`/api/dashboard/courier/actions/${action}`, {
         entityType: "subscription_day",
         entityId: id,
-        payload: {}
+        payload: {
+          reason: `Courier action: ${action}`
+        }
       });
       return data;
     },

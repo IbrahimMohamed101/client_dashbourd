@@ -7,6 +7,8 @@ import {
   extendSubscription,
   cancelSubscription,
   createSubscription,
+  searchSubscriptionsByPhone,
+  manualDeductSubscription,
 } from "@/utils/fetchSubscriptionsData";
 import { queryOptions, useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 
@@ -106,6 +108,27 @@ export const useCreateSubscriptionMutation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] });
       queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+};
+
+export const useSearchSubscriptionsByPhoneQuery = (phone: string) => {
+  return useQuery({
+    queryKey: ["subscriptions-search", phone],
+    queryFn: () => searchSubscriptionsByPhone(phone),
+    enabled: !!phone && phone.length >= 8,
+    staleTime: 1000 * 60 * 2,
+  });
+};
+
+export const useManualDeductSubscriptionMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: manualDeductSubscription,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["subscription-details", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions-search"] });
     },
   });
 };
