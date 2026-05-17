@@ -132,9 +132,9 @@ export interface KitchenOperationsRow {
   progress: KitchenRowProgress;
   actions: KitchenRowAction[];
   badges: KitchenRowBadges;
-  verification: unknown;
-  ui: { layout: string };
-  timing: {
+  verification?: unknown;
+  ui?: { layout: string };
+  timing?: {
     createdAt: string;
     createdAtLabel: string;
   };

@@ -1,654 +1,143 @@
-import React, { useState } from "react";
+import  { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { getPickupQueue, executePickupAction } from "@/utils/fetchDashboardOpsData";
+import { isOneTimeOrder, type UnifiedQueueItem } from "@/types/dashboardOpsTypes";
+import { isUnsupportedOneTimeOrderAction } from "@/types/oneTimeOrderTypes";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  CheckCircle2,
-  Clock,
-  PackageCheck,
-  ShoppingBag,
-  Store,
-  XCircle,
-  RotateCcw,
-  ChefHat,
-  EyeOff,
-} from "lucide-react";
-import { Loader } from "@/components/global/loader";
-import {
-  usePickupQueueQuery,
-  useOneTimeOrderActionMutation,
-} from "@/hooks/useOneTimeOrdersQuery";
-import type {
-  OneTimeOrderActionRequest,
-  OneTimeOrderAction,
-  OneTimeOrderStatus,
-  PickupQueueOneTimeOrder,
-} from "@/types/oneTimeOrderTypes";
-import {
-  getOneTimeOrderStatusColor,
-  isUnsupportedOneTimeOrderAction,
-} from "@/types/oneTimeOrderTypes";
-import api from "@/lib/apis";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-// ── Unified pickup queue item for both subscription days and one-time orders ──
-interface PickupQueueItem {
-  id: string;
-  status: string;
-  method: "delivery" | "pickup";
-  allowedActions: string[];
-  notes?: string;
+export default function PickupBoard() {
+  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const queryClient = useQueryClient();
+  const [fulfillItem, setFulfillItem] = useState<UnifiedQueueItem | null>(null);
+  const [pickupCode, setPickupCode] = useState("");
 
-  // Discriminator fields
-  source?: "subscription" | "one_time_order";
-  entityType?: "subscription_day" | "order";
-  entityId?: string;
-  subscriptionDayId?: string;
-
-  // One-time order fields
-  orderNumber?: string;
-  items?: { id: string; name: string; quantity: number; notes?: string }[];
-  paymentStatus?: string;
-  fulfillmentMethod?: "pickup" | "delivery";
-  pickup?: {
-    branchId: string;
-    branchName?: string;
-    window?: string;
-    pickupCode?: string;
-  };
-  customer?: {
-    id?: string;
-    name?: string;
-    phone?: string;
-  };
-
-  // Subscription day fields
-  userName?: string;
-  userPhone?: string;
-  mealSlots?: {
-    slot: string;
-    items: { name: string; quantity: number; notes?: string }[];
-  }[];
-}
-
-// ── Reason dialog state ──
-interface ReasonDialogState {
-  open: boolean;
-  item: PickupQueueItem | null;
-  action: string;
-  actionLabel: string;
-  isDangerous: boolean;
-}
-
-const fulfillSchema = z.object({
-  pickupCode: z.string().optional()
-});
-type FulfillFormValues = z.infer<typeof fulfillSchema>;
-
-const reasonSchema = z.object({
-  reason: z.string().min(1, "السبب مطلوب"),
-  notes: z.string().optional(),
-});
-type ReasonFormValues = z.infer<typeof reasonSchema>;
-
-export const PickupBoard: React.FC = () => {
-  const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const [fulfillDialog, setFulfillDialog] = useState<PickupQueueItem | null>(
-    null
-  );
-  const [reasonDialog, setReasonDialog] = useState<ReasonDialogState>({
-    open: false,
-    item: null,
-    action: "",
-    actionLabel: "",
-    isDangerous: false,
+  const { data: queue = [], isLoading } = useQuery({
+    queryKey: ["pickup-queue", date],
+    queryFn: () => getPickupQueue({ date }),
   });
 
-  const fulfillForm = useForm<FulfillFormValues>({
-    resolver: zodResolver(fulfillSchema),
-    defaultValues: { pickupCode: "" },
+  const actionMutation = useMutation({
+    mutationFn: executePickupAction,
+    onSuccess: () => {
+      toast.success("تم تنفيذ الإجراء بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["pickup-queue"] });
+      setFulfillItem(null);
+      setPickupCode("");
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || error.message || "حدث خطأ أثناء تنفيذ الإجراء";
+      toast.error(msg);
+      queryClient.invalidateQueries({ queryKey: ["pickup-queue"] });
+    },
   });
 
-  const reasonForm = useForm<ReasonFormValues>({
-    resolver: zodResolver(reasonSchema),
-    defaultValues: { reason: "", notes: "" },
-  });
-
-  const { data: queueData, isLoading } = usePickupQueueQuery({ date });
-  const otoActionMutation = useOneTimeOrderActionMutation();
-
-  // ── Helper: check if this is a one-time order ──
-  const isOneTimeOrder = (item: PickupQueueItem): boolean => {
-    return item.source === "one_time_order" || item.entityType === "order";
-  };
-
-  // ── Unified action handler ──
-  const executeAction = async ({
-    item,
-    action,
-    reason: actionReason,
-    notes: actionNotes,
-    pickupCode: actionPickupCode,
-  }: {
-    item: PickupQueueItem;
-    action: string;
-    reason?: string;
-    notes?: string;
-    pickupCode?: string;
-  }) => {
-    if (isOneTimeOrder(item)) {
-      // One-Time Order: use order-specific action endpoint
-      const orderId = item.entityId || item.id;
-      const body: OneTimeOrderActionRequest = {};
-      if (actionReason) body.reason = actionReason;
-      if (actionNotes) body.notes = actionNotes;
-      if (actionPickupCode && !isOneTimeOrder(item)) body.pickupCode = actionPickupCode;
-
-      otoActionMutation.mutate({
-        orderId,
-        action: action as OneTimeOrderAction,
-        body,
-      });
+  const handleAction = (item: UnifiedQueueItem, action: string) => {
+    if (action === "fulfill") {
+      setFulfillItem(item);
     } else {
-      // Subscription Day: use unified pickup action endpoint
-      // POST /api/dashboard/pickup/actions/:action
-      await api.post(`/api/dashboard/pickup/actions/${action}`, {
-        entityId: item.subscriptionDayId || item.id,
-        entityType: "subscription_day",
-        payload: {
-          reason: actionReason || `Pickup action: ${action}`,
-          notes: actionNotes || item.notes,
-          ...(actionPickupCode ? { pickupCode: actionPickupCode } : {}),
-        },
+      actionMutation.mutate({ item, action });
+    }
+  };
+
+  const handleFulfillSubmit = () => {
+    if (fulfillItem) {
+      const isOTO = isOneTimeOrder(fulfillItem);
+      actionMutation.mutate({
+        item: fulfillItem,
+        action: "fulfill",
+        pickupCode: isOTO ? undefined : pickupCode,
       });
     }
   };
 
-  const handleFulfill = (item: PickupQueueItem) => {
-    fulfillForm.reset({ pickupCode: "" });
-    setFulfillDialog(item);
-  };
-
-  const onConfirmFulfill = (values: FulfillFormValues) => {
-    if (!fulfillDialog) return;
-    executeAction({
-      item: fulfillDialog,
-      action: "fulfill",
-      reason: "Customer picked up the order from branch",
-      pickupCode: values.pickupCode || undefined,
-    });
-    setFulfillDialog(null);
-  };
-
-  const requestAction = (
-    item: PickupQueueItem,
-    action: string,
-    actionLabel: string,
-    isDangerous: boolean = false
-  ) => {
-    reasonForm.reset({ reason: "", notes: "" });
-    setReasonDialog({ open: true, item, action, actionLabel, isDangerous });
-  };
-
-  const onConfirmReason = (values: ReasonFormValues) => {
-    if (!reasonDialog.item) return;
-    executeAction({
-      item: reasonDialog.item,
-      action: reasonDialog.action,
-      reason: values.reason.trim(),
-      notes: values.notes?.trim() || undefined,
-    });
-    setReasonDialog({
-      open: false,
-      item: null,
-      action: "",
-      actionLabel: "",
-      isDangerous: false,
-    });
-  };
-
-  if (isLoading) return <Loader label="جاري تحميل طلبات الاستلام..." />;
-
-  const orders: PickupQueueItem[] = (queueData?.data?.items ?? []).map(
-    (item: PickupQueueOneTimeOrder) => ({
-      ...item,
-      id: item.entityId || "",
-      method: item.fulfillmentMethod || "pickup",
-    })
-  );
-
   return (
-    <div className="flex h-[calc(100vh-120px)] flex-col gap-6 p-6" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold text-foreground">
-            <Store className="h-8 w-8 text-teal-500" />
-            لوحة الاستلام من الفرع
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            طلبات جاهزة للاستلام – تشمل الاشتراكات والطلبات لمرة واحدة
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <CalendarIcon className="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-44 pr-10 text-right"
-            />
-          </div>
-          <Badge variant="outline" className="flex gap-2 px-3 py-1">
-            <Clock className="h-4 w-4" />
-            {new Date().toLocaleTimeString("ar-EG", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Badge>
-        </div>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">لوحة الاستلام</h1>
+        <Input 
+          type="date" 
+          value={date} 
+          onChange={(e) => setDate(e.target.value)} 
+          className="w-48"
+        />
       </div>
 
-      {/* Orders grid */}
-      {orders.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-muted-foreground/20 bg-muted/10 py-16 text-center">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
-            <PackageCheck className="h-8 w-8 opacity-50" />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground">
-            لا توجد طلبات جاهزة للاستلام
-          </h3>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            لا توجد طلبات بحالة جاهز للاستلام في هذا اليوم.
-          </p>
-        </div>
+      {isLoading ? (
+        <div className="text-center p-8 text-gray-500">جاري التحميل...</div>
       ) : (
-        <div className="grid flex-1 grid-cols-1 gap-4 overflow-y-auto md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {orders.map((order) => {
-            const isOTO = isOneTimeOrder(order);
-            const statusColor = isOTO
-              ? getOneTimeOrderStatusColor(order.status as OneTimeOrderStatus)
-              : {
-                  bg: "bg-primary/5",
-                  text: "text-primary",
-                  border: "border-primary/20",
-                };
-            const canFulfill =
-              order.allowedActions?.includes("fulfill") &&
-              (!isOTO || !isUnsupportedOneTimeOrderAction("fulfill"));
-            const canReadyForPickup =
-              order.allowedActions?.includes("ready_for_pickup") &&
-              (!isOTO || !isUnsupportedOneTimeOrderAction("ready_for_pickup"));
-            const canCancel =
-              order.allowedActions?.includes("cancel") &&
-              (!isOTO || !isUnsupportedOneTimeOrderAction("cancel"));
-            const canNoShow =
-              order.allowedActions?.includes("no_show") &&
-              (!isOTO || !isUnsupportedOneTimeOrderAction("no_show"));
-            const canReopen =
-              order.allowedActions?.includes("reopen") &&
-              (!isOTO || !isUnsupportedOneTimeOrderAction("reopen"));
-
-            const displayName = isOTO
-              ? order.customer?.name || order.orderNumber || order.entityId
-              : order.userName || order.id;
-            const displayPhone = isOTO
-              ? order.customer?.phone || ""
-              : order.userPhone || "";
-
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {queue.map((item) => {
+            const isOTO = isOneTimeOrder(item);
             return (
-              <Card
-                key={order.entityId || order.subscriptionDayId || order.id}
-                className={`group transition-all duration-200 hover:shadow-md ${
-                  isOTO
-                    ? "border-purple-500/20 bg-purple-500/5"
-                    : "border-teal-500/20 bg-teal-500/5"
-                }`}
-              >
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="flex items-center gap-2 text-base font-bold">
-                        {isOTO && (
-                          <ShoppingBag className="h-4 w-4 text-purple-500" />
-                        )}
-                        {displayName}
-                      </CardTitle>
-                      {displayPhone && (
-                        <p className="text-xs text-muted-foreground" dir="ltr">
-                          {displayPhone}
-                        </p>
-                      )}
-                      {isOTO && order.orderNumber && (
-                        <p className="font-mono text-xs text-purple-500">
-                          {order.orderNumber}
-                        </p>
-                      )}
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={`${statusColor.bg} ${statusColor.text} ${statusColor.border} text-xs`}
-                    >
-                      <Store className="ml-1 h-3 w-3" />
-                      استلام
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3 p-4 pt-0">
-                  {/* Pickup info */}
-                  {order.pickup && (
-                    <div className="space-y-1 rounded-md bg-muted/50 p-2">
-                      {order.pickup.branchName && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">الفرع</span>
-                          <span className="font-medium">
-                            {order.pickup.branchName}
-                          </span>
-                        </div>
-                      )}
-                      {order.pickup.window && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">النافذة</span>
-                          <span className="font-medium">
-                            {order.pickup.window}
-                          </span>
-                        </div>
-                      )}
-                      {order.pickup.pickupCode && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            رمز الاستلام
-                          </span>
-                          <span
-                            className="rounded bg-primary/10 px-1.5 py-0.5 font-mono font-bold text-primary"
-                            dir="ltr"
-                          >
-                            {order.pickup.pickupCode}
-                          </span>
-                        </div>
-                      )}
+              <div key={item.id} className="bg-white p-4 rounded-xl shadow border border-gray-100">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-bold">{item.userName}</h3>
+                  <div className="text-sm text-gray-500">{item.status}</div>
+                </div>
+                <div className="text-sm text-gray-600 mb-2">
+                  {item.userPhone && <div>📞 {item.userPhone}</div>}
+                  {item.pickup?.pickupCode && (
+                    <div className="mt-1 font-mono bg-gray-100 px-2 py-1 rounded inline-block">
+                      رمز الاستلام: {item.pickup.pickupCode}
                     </div>
                   )}
-
-                  {/* Items: one-time orders use items[], subscriptions use mealSlots */}
-                  {isOTO && order.items && order.items.length > 0 && (
-                    <div className="space-y-1 rounded-md bg-muted/50 p-2">
-                      {order.items.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex justify-between text-sm"
-                        >
-                          <span className="font-medium">{item.name}</span>
-                          <span className="text-muted-foreground">
-                            x{item.quantity}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {!isOTO && order.mealSlots && order.mealSlots.length > 0 && (
-                    <div className="space-y-1 rounded-md bg-muted/50 p-2">
-                      {order.mealSlots.map((slot) =>
-                        slot.items.map((item) => (
-                          <div
-                            key={`${slot.slot}-${item.name}`}
-                            className="flex justify-between text-sm"
-                          >
-                            <span className="font-medium">{item.name}</span>
-                            <span className="text-muted-foreground">
-                              x{item.quantity}
-                            </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex flex-wrap gap-2">
-                    {canFulfill && (
+                </div>
+                <div className="flex gap-2 flex-wrap mt-4">
+                  {item.allowedActions
+                    .filter(action => !(isOTO && isUnsupportedOneTimeOrderAction(action)))
+                    .map(action => (
                       <Button
-                        className="h-9 flex-1 bg-emerald-600 text-xs font-semibold hover:bg-emerald-700"
-                        onClick={() => handleFulfill(order)}
-                        disabled={otoActionMutation.isPending}
-                      >
-                        <CheckCircle2 className="ml-1.5 h-4 w-4" />
-                        تم الاستلام
-                      </Button>
-                    )}
-                    {canReadyForPickup && (
-                      <Button
-                        className="h-9 flex-1 bg-teal-600 text-xs font-semibold hover:bg-teal-700"
-                        onClick={() =>
-                          requestAction(
-                            order,
-                            "ready_for_pickup",
-                            "جاهز للاستلام",
-                            false
-                          )
-                        }
-                        disabled={otoActionMutation.isPending}
-                      >
-                        <Store className="ml-1.5 h-4 w-4" />
-                        جاهز للاستلام
-                      </Button>
-                    )}
-                    {canNoShow && (
-                      <Button
-                        variant="outline"
+                        key={action}
+                        variant={action === "fulfill" ? "default" : "outline"}
                         size="sm"
-                        className="h-9 border-orange-300 text-xs text-orange-600 hover:bg-orange-50"
-                        onClick={() =>
-                          requestAction(order, "no_show", "لم يحضر", false)
-                        }
-                        disabled={otoActionMutation.isPending}
+                        onClick={() => handleAction(item, action)}
+                        disabled={actionMutation.isPending}
                       >
-                        <EyeOff className="ml-1 h-3.5 w-3.5" />
-                        لم يحضر
+                        {action === "fulfill" ? "تسليم" : action}
                       </Button>
-                    )}
-                    {canCancel && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="h-9 text-xs"
-                        onClick={() =>
-                          requestAction(order, "cancel", "إلغاء", true)
-                        }
-                        disabled={otoActionMutation.isPending}
-                      >
-                        <XCircle className="ml-1 h-3.5 w-3.5" />
-                        إلغاء
-                      </Button>
-                    )}
-                    {canReopen && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-9 text-xs"
-                        onClick={() =>
-                          requestAction(order, "reopen", "إعادة فتح", false)
-                        }
-                        disabled={otoActionMutation.isPending}
-                      >
-                        <RotateCcw className="ml-1 h-3.5 w-3.5" />
-                        إعادة فتح
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+              </div>
             );
           })}
         </div>
       )}
 
-      {/* Fulfill confirmation dialog with pickup code */}
-      <AlertDialog
-        open={!!fulfillDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            setFulfillDialog(null);
-          }
-        }}
-      >
-        <AlertDialogContent className="sm:max-w-md">
-          <Form {...fulfillForm}>
-            <form onSubmit={fulfillForm.handleSubmit(onConfirmFulfill)}>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2 text-xl">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                  تأكيد استلام العميل للطلب
-                </AlertDialogTitle>
-                <AlertDialogDescription className="pt-2 text-base">
-                  يرجى التأكد من أن العميل قد استلم الطلب فعلاً من الفرع.
-                  {fulfillDialog?.pickup?.pickupCode && (
-                    <span className="mt-2 block text-sm">
-                      رمز الاستلام المتوقع:{" "}
-                      <strong dir="ltr">{fulfillDialog.pickup.pickupCode}</strong>
-                    </span>
-                  )}
-                </AlertDialogDescription>
-                {/* Render input field ONLY if it is NOT a one-time order */}
-                {!isOneTimeOrder(fulfillDialog!) && (
-                  <div className="mt-4 space-y-2">
-                    <FormField
-                      control={fulfillForm.control}
-                      name="pickupCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>رمز الاستلام</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="000000"
-                              {...field}
-                              className="h-12 border-2 text-center text-2xl font-bold tracking-[0.5em] focus-visible:ring-primary"
-                              dir="ltr"
-                              autoFocus
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-              </AlertDialogHeader>
-              <AlertDialogFooter className="mt-6 gap-2 sm:gap-4">
-                <AlertDialogCancel type="button">إلغاء</AlertDialogCancel>
-                <Button
-                  type="submit"
-                  disabled={otoActionMutation.isPending}
-                  className="bg-emerald-600 px-8 font-bold hover:bg-emerald-700"
-                >
-                  تأكيد الاستلام
-                </Button>
-              </AlertDialogFooter>
-            </form>
-          </Form>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Dialog open={!!fulfillItem} onOpenChange={(open) => !open && setFulfillItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تأكيد تسليم الطلب</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="mb-4">تأكيد تسليم الطلب للعميل {fulfillItem?.userName}؟</p>
+            
+            {fulfillItem && !isOneTimeOrder(fulfillItem) && (
+              <div>
+                <label className="block text-sm mb-1">رمز التحقق (اختياري)</label>
+                <Input 
+                  value={pickupCode} 
+                  onChange={(e) => setPickupCode(e.target.value)} 
+                  placeholder="أدخل الرمز إن وجد" 
+                />
+              </div>
+            )}
 
-      {/* Reason confirmation dialog for cancel/reopen/ready_for_pickup */}
-      <AlertDialog
-        open={reasonDialog.open}
-        onOpenChange={(open) => {
-          if (!open) {
-            setReasonDialog({
-              open: false,
-              item: null,
-              action: "",
-              actionLabel: "",
-              isDangerous: false,
-            });
-          }
-        }}
-      >
-        <AlertDialogContent className="sm:max-w-md">
-          <Form {...reasonForm}>
-            <form onSubmit={reasonForm.handleSubmit(onConfirmReason)}>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2 text-xl">
-                  {reasonDialog.isDangerous ? (
-                    <XCircle className="h-5 w-5 text-red-500" />
-                  ) : (
-                    <ChefHat className="h-5 w-5 text-primary" />
-                  )}
-                  تأكيد: {reasonDialog.actionLabel}
-                </AlertDialogTitle>
-                <AlertDialogDescription className="pt-2 text-base">
-                  يرجى إدخال سبب هذا الإجراء للحفاظ على سجل التدقيق.
-                </AlertDialogDescription>
-                <div className="mt-4 space-y-3">
-                  <FormField
-                    control={reasonForm.control}
-                    name="reason"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>السبب <span className="text-red-500">*</span></FormLabel>
-                        <FormControl>
-                          <Input placeholder="أدخل سبب الإجراء..." {...field} autoFocus />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={reasonForm.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ملاحظات (اختياري)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ملاحظات إضافية..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="mt-4 gap-2 sm:gap-4">
-                <AlertDialogCancel type="button">إلغاء</AlertDialogCancel>
-                <Button
-                  type="submit"
-                  disabled={otoActionMutation.isPending}
-                  className={
-                    reasonDialog.isDangerous
-                      ? "bg-red-600 px-8 font-bold hover:bg-red-700"
-                      : "bg-primary px-8 font-bold"
-                  }
-                >
-                  تأكيد {reasonDialog.actionLabel}
-                </Button>
-              </AlertDialogFooter>
-            </form>
-          </Form>
-        </AlertDialogContent>
-      </AlertDialog>
+            {fulfillItem && isOneTimeOrder(fulfillItem) && fulfillItem.pickup?.pickupCode && (
+              <div className="bg-purple-50 p-3 rounded-md text-purple-800 text-sm">
+                الرجاء التأكد من أن رمز الاستلام لدى العميل مطابق لـ: <strong className="font-mono text-lg">{fulfillItem.pickup.pickupCode}</strong>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFulfillItem(null)}>إلغاء</Button>
+            <Button onClick={handleFulfillSubmit} disabled={actionMutation.isPending}>تأكيد التسليم</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
+}

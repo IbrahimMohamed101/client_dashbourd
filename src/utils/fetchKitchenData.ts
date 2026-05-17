@@ -7,9 +7,28 @@ import type {
   KitchenUiStatus,
   KitchenOperationsMode,
   BulkLockResponse,
+  KitchenOperationsRow,
 } from "@/types/kitchenTypes";
+import { isOneTimeOrder } from "@/types/dashboardOpsTypes";
+import { isUnsupportedOneTimeOrderAction } from "@/types/oneTimeOrderTypes";
 
-// ----- Queries -----
+// ----- New Operational Queue -----
+
+export interface GetKitchenQueueParams {
+  date: string;
+  status?: string;
+  method?: "all" | "pickup" | "delivery";
+  q?: string;
+  zoneId?: string;
+  branchId?: string;
+}
+
+export const getKitchenQueue = async (params: GetKitchenQueueParams): Promise<KitchenOperationsRow[]> => {
+  const { data } = await api.get("/api/dashboard/kitchen/queue", { params });
+  return data.items || data;
+};
+
+// ----- Original Queries -----
 
 export const fetchKitchenOperationsSummary = async (
   date: string,
@@ -63,22 +82,59 @@ export const fetchKitchenOperationsList = async ({
   return response.data;
 };
 
-// ----- Generic action executor (uses the endpoint from the row action) -----
-export const executeKitchenAction = async (
+// ----- Overloaded Action Executor -----
+
+export async function executeKitchenAction(
   endpoint: string,
-  method: string = "POST",
+  method?: string,
   body?: any
-) => {
-  const response =
-    method === "POST"
-      ? await api.post(endpoint, body)
-      : await api.put(endpoint, body);
-  return response.data;
-};
+): Promise<any>;
+
+export async function executeKitchenAction(args: {
+  item: KitchenOperationsRow;
+  action: string;
+  reason?: string;
+  notes?: string;
+}): Promise<any>;
+
+export async function executeKitchenAction(
+  arg1: any,
+  arg2?: any,
+  arg3?: any
+): Promise<any> {
+  if (typeof arg1 === "string") {
+    // Old signature: executeKitchenAction(endpoint, method, body)
+    const endpoint = arg1;
+    const method = arg2 || "POST";
+    const body = arg3;
+    const response =
+      method === "POST"
+        ? await api.post(endpoint, body)
+        : await api.put(endpoint, body);
+    return response.data;
+  } else {
+    // New signature: executeKitchenAction({ item, action, reason, notes })
+    const { item, action, reason, notes } = arg1;
+    if (isOneTimeOrder(item) && isUnsupportedOneTimeOrderAction(action)) {
+      throw new Error(`الإجراء "${action}" غير مدعوم لطلبات الاستلام لمرة واحدة`);
+    }
+
+    if (isOneTimeOrder(item)) {
+      const orderId = item.meta?.orderId || item.id;
+      const { data } = await api.post(`/api/dashboard/orders/${orderId}/actions/${action}`, { reason, notes });
+      return data;
+    } else {
+      const { data } = await api.post(`/api/dashboard/kitchen/actions/${action}`, {
+        entityId: item.meta?.dayId || item.id,
+        entityType: "subscription_day",
+        payload: { reason, notes },
+      });
+      return data;
+    }
+  }
+}
 
 // ----- Unified Kitchen Board Actions -----
-// POST /api/dashboard/kitchen/actions/:action
-// Body: { entityId, entityType: "subscription_day", payload: { reason, notes } }
 
 export interface KitchenActionPayload {
   entityId: string;
@@ -103,8 +159,6 @@ export const executeKitchenBoardAction = async (
 };
 
 // ----- Unified Pickup Board Actions -----
-// POST /api/dashboard/pickup/actions/:action
-// Body: { entityId, entityType: "subscription_day" | "order", payload: { reason, notes } }
 
 export interface PickupActionPayload {
   entityId: string;
@@ -129,8 +183,6 @@ export const executePickupBoardAction = async (
 };
 
 // ----- Unified Courier Board Actions -----
-// POST /api/dashboard/courier/actions/:action
-// Body: { entityId, entityType: "subscription_day", payload: { reason, notes, courierId? } }
 
 export interface CourierActionPayload {
   entityId: string;

@@ -1,238 +1,88 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "@/lib/apis";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { MapPin } from "lucide-react";
+import { getCourierQueue, executeCourierAction } from "@/utils/fetchDashboardOpsData";
 import { Button } from "@/components/ui/button";
-import {
-  Truck,
-  MapPin,
-  Phone,
-  CheckCircle2,
-  Navigation,
-  AlertCircle,
-  FileText,
-} from "lucide-react";
-import { Loader } from "@/components/global/loader";
 
-interface CourierQueueItem {
-  subscriptionDayId: string;
-  userId: string;
-  userName: string;
-  userPhone: string;
-  status: string;
-  method: "delivery" | "pickup";
-  address: {
-    zone: string;
-    street: string;
-    city: string;
-  };
-  deliveryWindow?: string;
-  notes?: string;
-  allowedActions: string[];
-}
-
-interface CourierQueueResponse {
-  data: CourierQueueItem[];
-}
-
-export const CourierBoard: React.FC = () => {
+export default function CourierBoard() {
+  const [date] = useState(format(new Date(), "yyyy-MM-dd"));
   const queryClient = useQueryClient();
-  const { data: queueData, isLoading } = useQuery<CourierQueueResponse>({
-    queryKey: ["courier-tasks"],
-    queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const { data } = await api.get(`/api/dashboard/courier/queue?date=${today}&status=in_preparation,out_for_delivery,fulfilled,delivery_canceled&method=delivery`);
-      return data;
-    },
-    refetchInterval: 30000,
+
+  const { data: queue = [], isLoading } = useQuery({
+    queryKey: ["courier-queue", date],
+    queryFn: () => getCourierQueue({ date, method: "delivery" }),
   });
 
-  const updateStatus = useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: string }) => {
-      const { data } = await api.post(`/api/dashboard/courier/actions/${action}`, {
-        entityType: "subscription_day",
-        entityId: id,
-        payload: {
-          reason: `Courier action: ${action}`
-        }
-      });
-      return data;
-    },
+  const actionMutation = useMutation({
+    mutationFn: executeCourierAction,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["courier-tasks"] });
+      toast.success("تم تنفيذ الإجراء بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["courier-queue"] });
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message || error.message || "حدث خطأ أثناء تنفيذ الإجراء";
+      toast.error(msg);
+      queryClient.invalidateQueries({ queryKey: ["courier-queue"] });
     },
   });
 
-  if (isLoading) return <Loader label="جاري تحميل مهام التوصيل..." />;
-
-  const tasks = queueData?.data || [];
-
-  const statusColors: Record<string, string> = {
-    in_preparation: "bg-yellow-500/10 text-yellow-600 border-yellow-200",
-    out_for_delivery: "bg-blue-500/10 text-blue-600 border-blue-200",
-    fulfilled: "bg-green-500/10 text-green-600 border-green-200",
-    delivery_canceled: "bg-red-500/10 text-red-600 border-red-200",
-  };
-
-  const statusLabels: Record<string, string> = {
-    in_preparation: "قيد التحضير",
-    out_for_delivery: "قيد التوصيل",
-    fulfilled: "تم التوصيل",
-    delivery_canceled: "ملغى",
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "in_preparation": return "border-t-yellow-400";
+      case "out_for_delivery": return "border-t-blue-500";
+      case "fulfilled": return "border-t-green-500";
+      default: return "border-t-gray-300";
+    }
   };
 
   return (
-    <div
-      className="flex min-h-[calc(100vh-120px)] flex-col gap-6 p-6"
-      dir="rtl"
-    >
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">
-          لوحة مناديب التوصيل
-        </h1>
-        <div className="flex gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 animate-pulse rounded-full bg-green-500"></div>
-            <span className="text-sm font-medium">متصل</span>
-          </div>
-        </div>
-      </div>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">لوحة التوصيل</h1>
+      
+      {isLoading ? (
+        <div className="text-center p-8 text-gray-500">جاري التحميل...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {queue.map((item) => (
+            <div key={item.id} className={`bg-white p-4 rounded-xl shadow border-t-4 ${getStatusColor(item.status)}`}>
+              <div className="flex justify-between items-start mb-3">
+                <h3 className="font-bold text-lg">{item.userName}</h3>
+                <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">{item.status}</span>
+              </div>
+              
+              <div className="text-sm text-gray-600 space-y-2 mb-4">
+                <div>📞 {item.userPhone}</div>
+                {item.notes && <div>📝 {item.notes}</div>}
+              </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-        {tasks.length === 0 ? (
-          <p className="col-span-full py-8 text-center text-muted-foreground">
-            لا توجد مهام توصيل حالياً
-          </p>
-        ) : (
-          tasks.map((task) => (
-            <Card
-              key={task.subscriptionDayId}
-              className="overflow-hidden border-border transition-shadow hover:shadow-lg"
-            >
-              <div
-                className={`h-1.5 w-full ${(statusColors[task.status] || "bg-gray-500/10").split(" ")[0]}`}
-              />
-              <CardHeader className="p-5 pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg font-bold">
-                        {task.userName}
-                      </CardTitle>
-                      <Badge className={statusColors[task.status] || "bg-gray-500/10 text-gray-600 border-gray-200"}>
-                        {statusLabels[task.status] || task.status}
-                      </Badge>
-                    </div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {task.userPhone}
-                    </p>
-                  </div>
-                  {task.deliveryWindow && (
-                    <div className="text-left">
-                      <p className="text-xs text-muted-foreground">موعد التوصيل</p>
-                      <p className="text-sm font-bold">{task.deliveryWindow}</p>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4 p-5 pt-3">
-                <div className="space-y-3">
-                  {task.address && (
-                    <div className="flex items-start gap-3">
-                      <div className="mt-1 rounded-md bg-primary/10 p-1.5 text-primary">
-                        <MapPin className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold">{task.address.zone}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {task.address.street}، {task.address.city}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-md bg-primary/10 p-1.5 text-primary">
-                      <Phone className="h-4 w-4" />
-                    </div>
-                    <p className="font-mono text-sm tracking-wider">
-                      {task.userPhone}
-                    </p>
-                  </div>
-                  {task.notes && (
-                    <div className="flex items-start gap-3 rounded-md border border-border/50 bg-muted/50 p-3">
-                      <div className="mt-0.5 text-muted-foreground">
-                        <FileText className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="mb-1 text-xs font-bold">ملاحظات التوصيل</p>
-                        <p className="text-sm text-muted-foreground">
-                          {task.notes}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  {task.status === "in_preparation" && task.allowedActions?.includes("dispatch") && (
-                    <Button
-                      className="col-span-2 gap-2"
-                      onClick={() =>
-                        updateStatus.mutate({
-                          id: task.subscriptionDayId,
-                          action: "dispatch",
-                        })
-                      }
-                    >
-                      <Truck className="h-4 w-4" />
-                      استلام الشحنة
-                    </Button>
-                  )}
-                  {task.status === "out_for_delivery" && (
-                    <>
-                      {task.allowedActions?.includes("fulfill") && (
-                        <Button
-                          variant="outline"
-                          className="gap-2 border-green-200 text-green-700 hover:bg-green-50"
-                          onClick={() =>
-                            updateStatus.mutate({
-                              id: task.subscriptionDayId,
-                              action: "fulfill",
-                            })
-                          }
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          تم التوصيل
-                        </Button>
-                      )}
-                      {task.allowedActions?.includes("cancel") && (
-                        <Button
-                          variant="outline"
-                          className="gap-2 border-red-200 text-red-700 hover:bg-red-50"
-                          onClick={() =>
-                            updateStatus.mutate({
-                              id: task.subscriptionDayId,
-                              action: "cancel",
-                            })
-                          }
-                        >
-                          <AlertCircle className="h-4 w-4" />
-                          فشل التوصيل
-                        </Button>
-                      )}
-                    </>
-                  )}
-                  <Button variant="secondary" className="col-span-2 gap-2">
-                    <Navigation className="h-4 w-4" />
-                    عرض الموقع على الخريطة
+              <div className="flex gap-2 mt-4">
+                {item.allowedActions.includes("dispatch") && (
+                  <Button size="sm" onClick={() => actionMutation.mutate({ item, action: "dispatch" })} disabled={actionMutation.isPending}>
+                    إرسال مع المندوب
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+                )}
+                {item.allowedActions.includes("fulfill") && (
+                  <Button size="sm" variant="default" onClick={() => actionMutation.mutate({ item, action: "fulfill" })} disabled={actionMutation.isPending}>
+                    تأكيد التوصيل
+                  </Button>
+                )}
+                {item.allowedActions.includes("cancel") && (
+                  <Button size="sm" variant="destructive" onClick={() => actionMutation.mutate({ item, action: "cancel" })} disabled={actionMutation.isPending}>
+                    إلغاء التوصيل
+                  </Button>
+                )}
+                
+                <Button size="sm" variant="outline" className="mr-auto text-blue-600" onClick={() => toast.info("سيتم تفعيل الخريطة قريباً")}>
+                  <MapPin className="w-4 h-4 ml-1" />
+                  الموقع
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
-};
+}
