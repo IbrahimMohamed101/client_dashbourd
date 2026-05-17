@@ -1,28 +1,15 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Search, Minus, User, Phone, Calendar, Package, AlertCircle } from "lucide-react";
+import { User, Phone, Package, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   useSearchSubscriptionsByPhoneQuery,
   useManualDeductSubscriptionMutation,
 } from "@/hooks/useSubscriptionsQuery";
 import type { Subscription } from "@/types/subscriptionTypes";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import {
   Table,
   TableBody,
@@ -33,19 +20,9 @@ import {
 } from "@/components/ui/table";
 import { flexRender, getCoreRowModel, useReactTable, createColumnHelper } from "@tanstack/react-table";
 
-const searchSchema = z.object({
-  phone: z.string().min(8, "الرجاء إدخال رقم هاتف صحيح (8 أرقام على الأقل)"),
-});
-
-const deductionSchema = z.object({
-  regularMeals: z.coerce.number().min(0, "الرقم غير صحيح"),
-  premiumMeals: z.coerce.number().min(0, "الرقم غير صحيح"),
-  reason: z.string().min(1, "الرجاء إدخال سبب الخصم"),
-  notes: z.string().optional(),
-});
-
-type SearchFormValues = z.infer<typeof searchSchema>;
-type DeductionFormValues = z.infer<typeof deductionSchema>;
+import { CustomerSearch } from "./CustomerSearch";
+import { DeductionForm } from "./DeductionForm";
+import type { DeductionFormValues } from "./DeductionForm";
 
 const columnHelper = createColumnHelper<Subscription>();
 
@@ -62,28 +39,20 @@ export default function ManualDeductionPage() {
   const deductMutation = useManualDeductSubscriptionMutation();
   const subscriptions: Subscription[] = searchResponse?.data ?? [];
 
-  const searchForm = useForm<SearchFormValues>({
-    resolver: zodResolver(searchSchema),
-    defaultValues: { phone: "" },
-  });
-
-  const deductionForm = useForm<DeductionFormValues>({
-    resolver: zodResolver(deductionSchema) as any,
-    defaultValues: { regularMeals: 0, premiumMeals: 0, reason: "", notes: "" },
-  });
-
-  const onSearchSubmit = (values: SearchFormValues) => {
-    setSearchPhone(values.phone.trim());
+  const handleSearch = (phone: string) => {
+    setSearchPhone(phone);
     setSelectedSubscription(null);
-    deductionForm.reset();
   };
 
   const handleSelectSubscription = (sub: Subscription) => {
     setSelectedSubscription(sub);
-    deductionForm.reset();
   };
 
-  const onDeductionSubmit = async (values: DeductionFormValues) => {
+  const handleCancelDeduction = () => {
+    setSelectedSubscription(null);
+  };
+
+  const onDeductionSubmit = async (values: DeductionFormValues, form: any) => {
     if (!selectedSubscription) return;
 
     if (
@@ -95,7 +64,7 @@ export default function ManualDeductionPage() {
     }
 
     if (values.regularMeals === 0 && values.premiumMeals === 0) {
-      deductionForm.setError("regularMeals", {
+      form.setError("regularMeals", {
         type: "manual",
         message: "الرجاء إدخال عدد الوجبات المراد خصمها",
       });
@@ -124,15 +93,14 @@ export default function ManualDeductionPage() {
       });
 
       toast.success("تم خصم الوجبات بنجاح");
-      deductionForm.reset();
+      form.reset();
       
       // Refresh search
       const currentPhone = searchPhone;
       setSearchPhone("");
       setTimeout(() => setSearchPhone(currentPhone), 50);
-    } catch (err) {
-      const errorObj = err as { response?: { data?: { message?: string } }; message?: string };
-      const message = errorObj?.response?.data?.message || errorObj?.message || "حدث خطأ أثناء الخصم";
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || "حدث خطأ أثناء الخصم";
       toast.error(message);
     }
   };
@@ -202,49 +170,11 @@ export default function ManualDeductionPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Search className="h-5 w-5" />
-            البحث بالهاتف
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...searchForm}>
-            <form onSubmit={searchForm.handleSubmit(onSearchSubmit)} className="flex items-start gap-3">
-              <FormField
-                control={searchForm.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem className="flex-1 space-y-0">
-                    <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder="أدخل رقم الهاتف..."
-                        {...field}
-                        dir="ltr"
-                      />
-                    </FormControl>
-                    <FormMessage className="pt-2" />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isSearching}>
-                {isSearching ? "جاري البحث..." : "بحث"}
-              </Button>
-            </form>
-          </Form>
-
-          {searchError && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                حدث خطأ أثناء البحث. تأكد من الرقم وأعد المحاولة.
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+      <CustomerSearch 
+        onSearch={handleSearch} 
+        isSearching={isSearching} 
+        error={searchError} 
+      />
 
       {searchPhone && !isSearching && subscriptions.length > 0 && !selectedSubscription && (
         <Card>
@@ -299,154 +229,13 @@ export default function ManualDeductionPage() {
       )}
 
       {selectedSubscription && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Minus className="h-5 w-5" />
-              تفاصيل الخصم
-            </CardTitle>
-            <CardDescription>
-              {selectedSubscription.userName} — {selectedSubscription.planName || selectedSubscription.plan?.name}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <BalanceCard
-                label="الوجبات العادية"
-                value={selectedSubscription.remainingMeals}
-                icon={<Package className="h-4 w-4" />}
-              />
-              <BalanceCard
-                label="الوجبات المميزة"
-                value={selectedSubscription.premiumRemaining || 0}
-                icon={<Package className="h-4 w-4" />}
-              />
-              <BalanceCard
-                label="تاريخ البداية"
-                value={new Date(selectedSubscription.startDate).toLocaleDateString("ar-EG")}
-                icon={<Calendar className="h-4 w-4" />}
-              />
-              <BalanceCard
-                label="تاريخ النهاية"
-                value={new Date(selectedSubscription.endDate).toLocaleDateString("ar-EG")}
-                icon={<Calendar className="h-4 w-4" />}
-              />
-            </div>
-
-            <Separator />
-
-            <Form {...deductionForm}>
-              <form onSubmit={deductionForm.handleSubmit(onDeductionSubmit as any)} className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={deductionForm.control as any}
-                    name="regularMeals"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>الوجبات العادية المراد خصمها</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} max={selectedSubscription.remainingMeals} {...field} />
-                        </FormControl>
-                        <p className="text-xs text-muted-foreground">
-                          الرصيد المتاح: {selectedSubscription.remainingMeals}
-                        </p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={deductionForm.control as any}
-                    name="premiumMeals"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>الوجبات المميزة المراد خصمها</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} max={selectedSubscription.premiumRemaining || 0} {...field} />
-                        </FormControl>
-                        <p className="text-xs text-muted-foreground">
-                          الرصيد المتاح: {selectedSubscription.premiumRemaining || 0}
-                        </p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={deductionForm.control as any}
-                  name="reason"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>سبب الخصم *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="مثال: استلام يدوي، تصحيح خطأ، إلخ" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={deductionForm.control as any}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>ملاحظات (اختياري)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="أي ملاحظات إضافية..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex items-center gap-3 pt-2">
-                  <Button
-                    type="submit"
-                    disabled={deductMutation.isPending}
-                    className="min-w-[120px]"
-                  >
-                    {deductMutation.isPending ? "جاري الخصم..." : "تأكيد الخصم"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedSubscription(null);
-                      deductionForm.reset();
-                    }}
-                  >
-                    إلغاء
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+        <DeductionForm 
+          subscription={selectedSubscription}
+          onSubmit={onDeductionSubmit}
+          onCancel={handleCancelDeduction}
+          isPending={deductMutation.isPending}
+        />
       )}
-    </div>
-  );
-}
-
-function BalanceCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-        {icon}
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="font-semibold">{value}</p>
-      </div>
     </div>
   );
 }

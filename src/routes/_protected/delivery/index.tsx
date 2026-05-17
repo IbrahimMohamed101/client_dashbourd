@@ -38,6 +38,7 @@ function DeliveryDashboard() {
   // ── Server state ──
   const { data: listRes, isLoading: isListLoading } =
     useDashboardOpsListQuery(date);
+    
 
   const isSearching = debouncedSearch.length >= 3;
   const { data: searchRes, isLoading: isSearchLoading } =
@@ -69,7 +70,7 @@ function DeliveryDashboard() {
 
   // ── Render ──
   return (
-    <div className="flex h-[calc(100svh-var(--header-height)-1.5rem)] flex-col gap-3 overflow-hidden px-4 md:h-[calc(100vh-var(--header-height)-3rem)] md:gap-4 md:px-6 md:pt-4">
+    <div className="flex h-auto min-h-full flex-col gap-3 px-4 md:h-[calc(100vh-var(--header-height)-3rem)] md:overflow-hidden md:gap-4 md:px-6 md:pt-4 pb-6 md:pb-0">
       {/* ── Header ── */}
       <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between md:pb-4">
         <div>
@@ -113,7 +114,7 @@ function DeliveryDashboard() {
       </div>
 
       {/* ── Grid Container ── */}
-      <div className="min-h-[400px] flex-1 overflow-y-auto rounded-2xl border bg-muted/5 bg-gradient-to-b from-transparent to-muted/5 p-4 custom-scrollbar">
+      <div className="min-h-[400px] md:min-h-0 flex-1 overflow-y-auto rounded-2xl border bg-muted/5 bg-gradient-to-b from-transparent to-muted/5 p-4 custom-scrollbar">
         <DeliveryList
           data={displayData}
           isLoading={isMainLoading}

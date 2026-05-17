@@ -36,6 +36,46 @@ export interface UnifiedOperationalDTO {
   };
 }
 
+export interface UnifiedQueueItem {
+  // ── Shared fields ──
+  id: string;
+  status: string;
+  method: "delivery" | "pickup";
+  allowedActions: string[];
+  notes?: string;
+  userName?: string;
+  userPhone?: string;
+
+  // ── Discriminator fields ──
+  source?: "subscription" | "one_time_order";
+  entityType?: "subscription_day" | "order";
+
+  // ── Subscription-specific ──
+  subscriptionDayId?: string;
+  mealSlots?: {
+    slot: string;
+    items: { name: string; quantity: number; notes?: string }[];
+  }[];
+
+  // ── One-time order-specific ──
+  entityId?: string;
+  orderNumber?: string;
+  items?: { id: string; name: string; quantity: number; notes?: string }[];
+  paymentStatus?: string;
+  fulfillmentMethod?: "pickup" | "delivery";
+  pickup?: {
+    branchId: string;
+    branchName?: string;
+    window?: string;
+    pickupCode?: string;
+  };
+  customer?: {
+    id?: string;
+    name?: string;
+    phone?: string;
+  };
+}
+
 // ── API response wrappers ──
 
 export interface DashboardOpsListResponse {
