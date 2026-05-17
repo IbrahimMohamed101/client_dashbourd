@@ -1,158 +1,240 @@
-import React, { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle } from "lucide-react";
-import { searchSubscription, executeManualDeduction } from "@/utils/fetchDashboardOpsData";
+import { User, Phone, Package, AlertCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  useSearchSubscriptionsByPhoneQuery,
+  useManualDeductSubscriptionMutation,
+} from "@/hooks/useSubscriptionsQuery";
+import type { Subscription } from "@/types/subscriptionTypes";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { flexRender, getCoreRowModel, useReactTable, createColumnHelper } from "@tanstack/react-table";
+
+import { CustomerSearch } from "./CustomerSearch";
+import { DeductionForm } from "./DeductionForm";
+import type { DeductionFormValues } from "./DeductionForm";
+
+const columnHelper = createColumnHelper<Subscription>();
 
 export default function ManualDeductionPage() {
-  const [phone, setPhone] = useState("");
-  const [searchedPhone, setSearchedPhone] = useState("");
-  const [selectedSub, setSelectedSub] = useState<any>(null);
+  const [searchPhone, setSearchPhone] = useState("");
+  const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
 
-  const [form, setForm] = useState({
-    regularMeals: 0,
-    premiumMeals: 0,
-    reason: "",
-    notes: "",
-  });
+  const {
+    data: searchResponse,
+    isLoading: isSearching,
+    error: searchError,
+  } = useSearchSubscriptionsByPhoneQuery(searchPhone);
 
-  const { data: subs = [], isLoading } = useQuery({
-    queryKey: ["subscription-search", searchedPhone],
-    queryFn: () => searchSubscription(searchedPhone),
-    enabled: !!searchedPhone,
-  });
+  const deductMutation = useManualDeductSubscriptionMutation();
+  const subscriptions: Subscription[] = searchResponse?.data ?? [];
 
-  const deductionMutation = useMutation({
-    mutationFn: (payload: any) => executeManualDeduction(payload),
-    onSuccess: () => {
+  const handleSearch = (phone: string) => {
+    setSearchPhone(phone);
+    setSelectedSubscription(null);
+  };
+
+  const handleSelectSubscription = (sub: Subscription) => {
+    setSelectedSubscription(sub);
+  };
+
+  const handleCancelDeduction = () => {
+    setSelectedSubscription(null);
+  };
+
+  const onDeductionSubmit = async (values: DeductionFormValues, form: any) => {
+    if (!selectedSubscription) return;
+
+    if (
+      selectedSubscription.deliveryMode === "delivery" &&
+      selectedSubscription.hasDeliveryDeductionToday
+    ) {
+      toast.error("لا يمكن الخصم: تم خصم وجبة توصيل اليوم لهذا الاشتراك");
+      return;
+    }
+
+    if (values.regularMeals === 0 && values.premiumMeals === 0) {
+      form.setError("regularMeals", {
+        type: "manual",
+        message: "الرجاء إدخال عدد الوجبات المراد خصمها",
+      });
+      return;
+    }
+
+    if (values.regularMeals > selectedSubscription.remainingMeals) {
+      toast.error(`عدد الوجبات العادية يتجاوز الرصيد (${selectedSubscription.remainingMeals})`);
+      return;
+    }
+
+    if (values.premiumMeals > (selectedSubscription.premiumRemaining || 0)) {
+      toast.error(`عدد الوجبات المميزة يتجاوز الرصيد (${selectedSubscription.premiumRemaining || 0})`);
+      return;
+    }
+
+    try {
+      await deductMutation.mutateAsync({
+        id: selectedSubscription.id,
+        data: {
+          regularMeals: values.regularMeals,
+          premiumMeals: values.premiumMeals,
+          reason: values.reason.trim(),
+          notes: values.notes?.trim() || undefined,
+        },
+      });
+
       toast.success("تم خصم الوجبات بنجاح");
-      setForm({ regularMeals: 0, premiumMeals: 0, reason: "", notes: "" });
-      setSelectedSub(null);
-    },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message || error.message || "حدث خطأ أثناء الخصم";
-      toast.error(msg);
-    },
-  });
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (phone.trim()) {
-      setSearchedPhone(phone.trim());
-      setSelectedSub(null);
+      form.reset();
+      
+      // Refresh search
+      const currentPhone = searchPhone;
+      setSearchPhone("");
+      setTimeout(() => setSearchPhone(currentPhone), 50);
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || "حدث خطأ أثناء الخصم";
+      toast.error(message);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSub) return;
-    deductionMutation.mutate({
-      id: selectedSub.id,
-      ...form,
-    });
-  };
+  const columns = [
+    columnHelper.accessor((row) => row.userName || row.user?.fullName || "—", {
+      id: "userName",
+      header: "العميل",
+      cell: (info) => (
+        <div className="flex items-center gap-2 font-semibold">
+          <User className="h-4 w-4 text-muted-foreground" />
+          {info.getValue()}
+        </div>
+      ),
+    }),
+    columnHelper.accessor((row) => row.user?.phone || "—", {
+      id: "userPhone",
+      header: "الهاتف",
+      cell: (info) => (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Phone className="h-4 w-4" />
+          {info.getValue()}
+        </div>
+      ),
+    }),
+    columnHelper.accessor((row) => row.planName || row.plan?.name || "—", {
+      id: "planName",
+      header: "الخطة",
+      cell: (info) => (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Package className="h-4 w-4" />
+          {info.getValue()}
+        </div>
+      ),
+    }),
+    columnHelper.accessor("remainingMeals", {
+      header: "الرصيد",
+      cell: (info) => <Badge variant="outline">{info.getValue()} وجبة</Badge>,
+    }),
+    columnHelper.display({
+      id: "actions",
+      header: "",
+      cell: (info) => (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => handleSelectSubscription(info.row.original)}
+        >
+          اختيار
+        </Button>
+      ),
+    }),
+  ];
+
+  const table = useReactTable({
+    data: subscriptions,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">الخصم اليدوي للوجبات</h1>
-
-      <form onSubmit={handleSearch} className="flex gap-2 mb-8">
-        <Input 
-          placeholder="رقم هاتف العميل..." 
-          value={phone} 
-          onChange={(e) => setPhone(e.target.value)} 
-          className="flex-1"
-        />
-        <Button type="submit" disabled={isLoading}>بحث</Button>
-      </form>
-
-      {subs.length > 0 && !selectedSub && (
-        <div className="space-y-4">
-          <h3 className="font-bold text-lg">اختر الاشتراك:</h3>
-          {subs.map((sub: any) => (
-            <div key={sub.id} className="p-4 border rounded-xl flex justify-between items-center bg-white cursor-pointer hover:bg-gray-50" onClick={() => setSelectedSub(sub)}>
-              <div>
-                <div className="font-bold">{sub.planName || "اشتراك"}</div>
-                <div className="text-sm text-gray-500">{sub.mode === "delivery" ? "توصيل" : "استلام"}</div>
-              </div>
-              <Button variant="outline">اختيار</Button>
-            </div>
-          ))}
+    <div className="mx-auto max-w-4xl space-y-6 p-6" dir="rtl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">خصم يدوي من الاشتراك</h1>
+          <p className="text-muted-foreground">ابحث عن العميل بالهاتف ثم اختر الاشتراك وقم بالخصم</p>
         </div>
+      </div>
+
+      <CustomerSearch 
+        onSearch={handleSearch} 
+        isSearching={isSearching} 
+        error={searchError} 
+      />
+
+      {searchPhone && !isSearching && subscriptions.length > 0 && !selectedSubscription && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">اختر الاشتراك</CardTitle>
+            <CardDescription>
+              تم العثور على {subscriptions.length} اشتراك
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-hidden rounded-md border">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} className="text-right py-3 font-semibold">
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="text-right py-3">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {selectedSub && (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow space-y-4">
-          <div className="flex justify-between items-center mb-4 pb-4 border-b">
-            <div>
-              <h3 className="font-bold text-lg">الاشتراك المحدد</h3>
-              <p className="text-sm text-gray-500">طريقة الاستلام: {selectedSub.mode === "delivery" ? "توصيل" : "استلام من الفرع"}</p>
-            </div>
-            <Button variant="ghost" type="button" onClick={() => setSelectedSub(null)}>تغيير</Button>
-          </div>
+      {searchPhone && !isSearching && subscriptions.length === 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>لم يتم العثور على اشتراكات مرتبطة بهذا الرقم</AlertDescription>
+        </Alert>
+      )}
 
-          {selectedSub.mode === "delivery" && selectedSub.hasDeliveryDeductionToday && (
-            <div className="bg-red-50 text-red-700 p-4 rounded-lg flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 mt-0.5" />
-              <div>
-                <p className="font-bold">تنبيه!</p>
-                <p className="text-sm">تم خصم وجبة توصيل لهذا اليوم. لا يمكن إضافة خصم توصيل آخر في نفس اليوم.</p>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm mb-1">وجبات عادية</label>
-              <Input 
-                type="number" 
-                min="0" 
-                value={form.regularMeals} 
-                onChange={(e) => setForm({ ...form, regularMeals: parseInt(e.target.value) || 0 })} 
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">وجبات بريميوم</label>
-              <Input 
-                type="number" 
-                min="0" 
-                value={form.premiumMeals} 
-                onChange={(e) => setForm({ ...form, premiumMeals: parseInt(e.target.value) || 0 })} 
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">سبب الخصم</label>
-            <Input 
-              required 
-              value={form.reason} 
-              onChange={(e) => setForm({ ...form, reason: e.target.value })} 
-              placeholder="مثال: خصم يدوي لتعويض العميل" 
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-1">ملاحظات إضافية</label>
-            <textarea 
-              className="w-full border rounded-md p-2 text-sm min-h-[80px]" 
-              value={form.notes} 
-              onChange={(e) => setForm({ ...form, notes: e.target.value })} 
-            />
-          </div>
-
-          <div className="pt-4">
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={deductionMutation.isPending || (selectedSub.mode === "delivery" && selectedSub.hasDeliveryDeductionToday)}
-            >
-              تنفيذ الخصم
-            </Button>
-          </div>
-        </form>
+      {selectedSubscription && (
+        <DeductionForm 
+          subscription={selectedSubscription}
+          onSubmit={onDeductionSubmit}
+          onCancel={handleCancelDeduction}
+          isPending={deductMutation.isPending}
+        />
       )}
     </div>
   );

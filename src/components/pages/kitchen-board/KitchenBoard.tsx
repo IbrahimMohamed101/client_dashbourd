@@ -1,114 +1,170 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { toast } from "sonner";
-import { ShoppingBag, AlertTriangle } from "lucide-react";
-import { getKitchenQueue, executeKitchenAction } from "@/utils/fetchKitchenData";
-import { isOneTimeOrder } from "@/types/dashboardOpsTypes";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import type { KitchenOperationsRow } from "@/types/kitchenTypes";
+import { Clock, ListTodo, ChefHat, CheckCircle2 } from "lucide-react";
+import { Loader } from "@/components/global/loader";
+import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 
-export default function KitchenBoard() {
-  const [date] = useState(format(new Date(), "yyyy-MM-dd"));
-  const queryClient = useQueryClient();
+import { useKitchenQueueQuery, useKitchenActionMutation, isOneTimeOrder } from "@/hooks/useKitchenBoard";
+import { KitchenQueueCard } from "./KitchenQueueCard";
+import { type ReasonDialogState, ReasonActionDialog } from "./ReasonActionDialog";
 
-  const { data: queue = [], isLoading } = useQuery({
-    queryKey: ["kitchen-queue", date],
-    queryFn: () => getKitchenQueue({ date }),
-    refetchInterval: 30000,
+export const KitchenBoard: React.FC = () => {
+  const [reasonDialog, setReasonDialog] = useState<ReasonDialogState>({
+    open: false,
+    item: null,
+    action: "",
+    actionLabel: "",
+    isDangerous: false,
   });
 
-  const actionMutation = useMutation({
-    mutationFn: executeKitchenAction,
-    onSuccess: () => {
-      toast.success("تم تنفيذ الإجراء بنجاح");
-      queryClient.invalidateQueries({ queryKey: ["kitchen-queue"] });
-    },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message || error.message || "حدث خطأ أثناء تنفيذ الإجراء";
-      toast.error(msg);
-      queryClient.invalidateQueries({ queryKey: ["kitchen-queue"] });
-    },
-  });
+  const { data: queueData, isLoading } = useKitchenQueueQuery();
+  const updateStatus = useKitchenActionMutation();
 
-  const pendingItems = queue.filter((item) => ["open", "locked", "confirmed"].includes(item.status));
-  const preparingItems = queue.filter((item) => item.status === "in_preparation");
-  const readyItems = queue.filter((item) => item.status === "ready_for_pickup");
-
-  const renderCard = (item: KitchenOperationsRow) => {
-    const isOTO = isOneTimeOrder(item);
-    const isUnpaid = isOTO && item.paymentStatus !== "paid";
-    
-    return (
-      <div 
-        key={item.id} 
-        className={`bg-white p-4 rounded-lg shadow mb-4 border ${isOTO ? "border-l-4 border-l-purple-500" : ""}`}
-      >
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h4 className="font-bold text-gray-800 flex items-center gap-2">
-              {item.customer.name}
-              {isOTO && <ShoppingBag className="w-4 h-4 text-purple-500" />}
-            </h4>
-            <p className="text-sm text-gray-500">{item.customer.id} | {item.modeLabel}</p>
-          </div>
-          <Badge variant={isUnpaid ? "destructive" : "default"}>
-            {item.statusLabel}
-          </Badge>
-        </div>
-
-        {isUnpaid && (
-          <div className="bg-red-50 text-red-700 p-2 text-sm rounded-md flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-4 h-4" />
-            بانتظار الدفع (لا يمكن تحضير الطلب)
-          </div>
-        )}
-
-        <div className="text-sm mb-4">
-          <ul className="list-disc list-inside">
-            {item.items.map((i, idx) => (
-              <li key={idx}>{i.name} ({i.kind})</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="flex gap-2 flex-wrap">
-          {item.actions.map((action) => (
-            <Button
-              key={action.key}
-              variant={action.variant === "primary" ? "default" : "secondary"}
-              disabled={!action.enabled || isUnpaid || actionMutation.isPending}
-              onClick={() => actionMutation.mutate({ item, action: action.key })}
-              size="sm"
-            >
-              {action.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-    );
+  const requestAction = (
+    item: UnifiedQueueItem,
+    action: string,
+    actionLabel: string,
+    isDangerous: boolean = false
+  ) => {
+    setReasonDialog({
+      open: true,
+      item,
+      action,
+      actionLabel,
+      isDangerous,
+    });
   };
 
-  if (isLoading) return <div className="p-8 text-center text-gray-500">جاري التحميل...</div>;
+  const onConfirmSubmit = (values: { reason: string; notes?: string }) => {
+    if (!reasonDialog.item) return;
+    updateStatus.mutate({
+      item: reasonDialog.item,
+      action: reasonDialog.action,
+      reason: values.reason.trim(),
+      notes: values.notes?.trim() || undefined,
+    });
+    setReasonDialog({
+      open: false,
+      item: null,
+      action: "",
+      actionLabel: "",
+      isDangerous: false,
+    });
+  };
+
+  if (isLoading) return <Loader label="جاري تحميل طلبات المطبخ..." />;
+
+  const orders = queueData?.data?.items || [];
+
+  const sections = [
+    {
+      statuses: ["open", "locked", "confirmed"],
+      label: "بانتظار التحضير",
+      icon: <ListTodo className="h-5 w-5" />,
+      color: "bg-yellow-500/10 text-yellow-600 border-yellow-200",
+      primaryAction: "prepare",
+      primaryActionLabel: "بدء التحضير",
+    },
+    {
+      statuses: ["in_preparation"],
+      label: "جاري التحضير",
+      icon: <ChefHat className="h-5 w-5" />,
+      color: "bg-blue-500/10 text-blue-600 border-blue-200",
+      primaryAction: "ready_for_pickup",
+      primaryActionLabel: "إكمال التحضير",
+    },
+    {
+      statuses: ["ready_for_pickup"],
+      label: "جاهز للتسليم",
+      icon: <CheckCircle2 className="h-5 w-5" />,
+      color: "bg-green-500/10 text-green-600 border-green-200",
+      primaryAction: "dispatch",
+      primaryActionLabel: "إرسال للمندوب",
+    },
+  ];
 
   return (
-    <div className="p-6 h-full flex flex-col">
-      <h1 className="text-2xl font-bold mb-6">لوحة المطبخ ({date})</h1>
-      <div className="flex gap-6 flex-1 overflow-hidden">
-        <div className="flex-1 bg-gray-50 rounded-xl p-4 overflow-y-auto">
-          <h2 className="font-bold text-lg mb-4 text-gray-700">قيد الانتظار ({pendingItems.length})</h2>
-          {pendingItems.map(renderCard)}
-        </div>
-        <div className="flex-1 bg-gray-50 rounded-xl p-4 overflow-y-auto">
-          <h2 className="font-bold text-lg mb-4 text-yellow-600">قيد التحضير ({preparingItems.length})</h2>
-          {preparingItems.map(renderCard)}
-        </div>
-        <div className="flex-1 bg-gray-50 rounded-xl p-4 overflow-y-auto">
-          <h2 className="font-bold text-lg mb-4 text-green-600">جاهز ({readyItems.length})</h2>
-          {readyItems.map(renderCard)}
+    <div className="flex h-[calc(100vh-120px)] flex-col gap-6 p-6" dir="rtl">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-foreground">لوحة المطبخ</h1>
+        <div className="flex gap-2">
+          <Badge variant="outline" className="flex gap-2 px-3 py-1">
+            <Clock className="h-4 w-4" />
+            {new Date().toLocaleTimeString("ar-EG", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Badge>
         </div>
       </div>
+
+      <div className="grid flex-1 grid-cols-1 gap-6 overflow-hidden md:grid-cols-3">
+        {sections.map((section) => {
+          const sectionOrders = orders.filter((o) =>
+            section.statuses.includes(o.status)
+          );
+          return (
+            <div
+              key={section.label}
+              className="flex flex-col gap-4 overflow-hidden rounded-xl border border-border bg-muted/30 p-4 shadow-sm"
+            >
+              <div
+                className={`flex items-center gap-2 rounded-lg border p-3 ${section.color}`}
+              >
+                {section.icon}
+                <h2 className="text-lg font-bold">{section.label}</h2>
+                <Badge variant="secondary" className="mr-auto font-mono">
+                  {sectionOrders.length}
+                </Badge>
+              </div>
+
+              <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+                {sectionOrders.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    لا توجد طلبات
+                  </p>
+                ) : (
+                  sectionOrders.map((order) => {
+                    const isOTO = isOneTimeOrder(order);
+                    const itemKey = isOTO
+                      ? order.entityId || order.id
+                      : order.subscriptionDayId || order.id;
+
+                    return (
+                      <KitchenQueueCard
+                        key={itemKey}
+                        order={order}
+                        section={section}
+                        requestAction={requestAction}
+                        isPending={updateStatus.isPending}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <ReasonActionDialog
+        dialogState={reasonDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReasonDialog({
+              open: false,
+              item: null,
+              action: "",
+              actionLabel: "",
+              isDangerous: false,
+            });
+          }
+        }}
+        onSubmit={onConfirmSubmit}
+        isPending={updateStatus.isPending}
+      />
     </div>
   );
-}
+};
+
+export default KitchenBoard;

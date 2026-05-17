@@ -1,4 +1,5 @@
 export interface UnifiedQueueItem {
+  // ── Shared fields ──
   id: string;
   status: string;
   method: "delivery" | "pickup";
@@ -6,22 +7,34 @@ export interface UnifiedQueueItem {
   notes?: string;
   userName?: string;
   userPhone?: string;
+
+  // ── Discriminator fields ──
   source?: "subscription" | "one_time_order";
   entityType?: "subscription_day" | "order";
+
+  // ── Subscription-specific ──
   subscriptionDayId?: string;
   mealSlots?: {
     slot: string;
     items: { name: string; quantity: number; notes?: string }[];
   }[];
+
+  // ── One-time order-specific ──
   entityId?: string;
   orderNumber?: string;
   items?: { id: string; name: string; quantity: number; notes?: string }[];
   paymentStatus?: string;
+  fulfillmentMethod?: "pickup" | "delivery";
   pickup?: {
     branchId: string;
     branchName?: string;
     window?: string;
     pickupCode?: string;
+  };
+  customer?: {
+    id?: string;
+    name?: string;
+    phone?: string;
   };
 }
 
@@ -54,4 +67,111 @@ export interface UnifiedOperationalDTO {
 
 export const isOneTimeOrder = (item: { source?: string; entityType?: string }): boolean => {
   return item.source === "one_time_order" || item.entityType === "order";
+};
+
+// ── API response wrappers ──
+
+export interface DashboardOpsListResponse {
+  status: boolean;
+  data: UnifiedOperationalDTO[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface DashboardOpsActionRequest {
+  entityId: string;
+  type: "subscription" | "order";
+  source?: "subscription" | "one_time_order";
+  reason?: string;
+  note?: string;
+  payload?: {
+    reason?: string;
+    pickupCode?: string;
+    notes?: string;
+  };
+}
+
+export interface DashboardOpsActionResponse {
+  status: boolean;
+  data: UnifiedOperationalDTO;
+}
+
+// ── Filter types ──
+
+export type DashboardOpsStatusFilter =
+  | "all"
+  | "preparing"
+  | "out_for_delivery"
+  | "delivered"
+  | "canceled"
+  | "confirmed"
+  | "in_preparation"
+  | "ready_for_pickup"
+  | "fulfilled"
+  | "expired"
+  | "pending_payment";
+
+// ── Status grouping helpers ──
+// Centralised status-matching so every component uses the same logic.
+
+const DELIVERED_STATUSES = ["delivered", "fulfilled"];
+const CANCELED_STATUSES = ["canceled", "cancelled", "delivery_canceled"];
+const PREPARING_STATUSES = ["preparing", "in_preparation"];
+
+export function matchesStatusFilter(
+  itemStatus: string,
+  filter: DashboardOpsStatusFilter
+): boolean {
+  switch (filter) {
+    case "all":
+      return true;
+    case "preparing":
+      return PREPARING_STATUSES.includes(itemStatus);
+    case "out_for_delivery":
+      return itemStatus === "out_for_delivery";
+    case "delivered":
+      return DELIVERED_STATUSES.includes(itemStatus);
+    case "canceled":
+      return CANCELED_STATUSES.includes(itemStatus);
+    case "confirmed":
+      return itemStatus === "confirmed";
+    case "in_preparation":
+      return itemStatus === "in_preparation";
+    case "ready_for_pickup":
+      return itemStatus === "ready_for_pickup";
+    case "fulfilled":
+      return itemStatus === "fulfilled";
+    case "expired":
+      return itemStatus === "expired";
+    case "pending_payment":
+      return itemStatus === "pending_payment";
+    default:
+      return false;
+  }
+}
+
+export function countByFilter(
+  items: UnifiedOperationalDTO[],
+  filter: DashboardOpsStatusFilter
+): number {
+  if (filter === "all") return items.length;
+  return items.filter((i) => matchesStatusFilter(i.status, filter)).length;
+}
+
+// ── Badge color helper ──
+
+export type BadgeColorKey = "green" | "red" | "blue" | "orange" | "yellow";
+
+export const BADGE_CLASSES: Record<BadgeColorKey, string> = {
+  green: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400",
+  red: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-400",
+  blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-400",
+  orange:
+    "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-400",
+  yellow:
+    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-400",
 };
