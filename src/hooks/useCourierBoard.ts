@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "@/lib/apis";
+import type { Key } from "react";
 
 export interface CourierQueueItem {
+  id: Key | null | undefined;
   subscriptionDayId: string;
   userId: string;
   userName: string;
