@@ -145,7 +145,7 @@ export function ZonesTable({ data, isLoading }: ZonesTableProps) {
             </thead>
             <tbody className="divide-y divide-muted-foreground/5">
               {getFilteredData().length === 0 && (
-                <tr>
+                <tr key="empty-row">
                   <td
                     colSpan={5}
                     className="h-64 text-center text-muted-foreground"
@@ -166,9 +166,9 @@ export function ZonesTable({ data, isLoading }: ZonesTableProps) {
                   </td>
                 </tr>
               )}
-              {getFilteredData().map((zone: DeliveryZone) => (
+              {getFilteredData().map((zone: DeliveryZone, idx: number) => (
                 <tr
-                  key={zone.id}
+                  key={zone.id ?? `zone-${idx}`}
                   className="group border-muted-foreground/5 transition-colors hover:bg-primary/[0.03]"
                 >
                   <td className="p-4">

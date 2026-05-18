@@ -1,5 +1,11 @@
 import api from "@/lib/apis";
 import { type UnifiedQueueItem, isOneTimeOrder } from "@/types/dashboardOpsTypes";
+import type {
+  DashboardOpsListResponse,
+  DashboardOpsActionResponse,
+  DashboardOpsActionRequest,
+} from "@/types/dashboardOpsTypes";
+import { isOneTimeOrderActionAllowed } from "@/types/oneTimeOrderTypes";
 
 export interface GetPickupQueueParams {
   date: string;
@@ -99,4 +105,47 @@ export const executeManualDeduction = async ({
     notes,
   });
   return data;
+};
+
+// ── Fetch all ops for a date ──
+export const fetchDashboardOpsList = async (
+  date: string
+): Promise<DashboardOpsListResponse> => {
+  const response = await api.get("/api/dashboard/ops/list", {
+    params: { date },
+  });
+  return response.data;
+};
+
+// ── Full-text search across ops ──
+export const fetchDashboardOpsSearch = async (
+  query: string
+): Promise<DashboardOpsListResponse> => {
+  const response = await api.get("/api/dashboard/ops/search", {
+    params: { q: query },
+  });
+  return response.data;
+};
+
+// ── Execute an action ──
+export const executeDashboardOpsAction = async (
+  action: string,
+  payload: DashboardOpsActionRequest
+): Promise<DashboardOpsActionResponse> => {
+  if (
+    payload.source === "one_time_order" &&
+    !isOneTimeOrderActionAllowed(action)
+  ) {
+    return Promise.reject({
+      ok: false,
+      code: "ACTION_NOT_ALLOWED",
+      message: `Action "${action}" is not supported for pickup-only one-time orders`,
+    });
+  }
+
+  const response = await api.post(
+    `/api/dashboard/ops/actions/${action}`,
+    payload
+  );
+  return response.data;
 };

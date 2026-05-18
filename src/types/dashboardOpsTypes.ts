@@ -175,3 +175,7 @@ export const BADGE_CLASSES: Record<BadgeColorKey, string> = {
   yellow:
     "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-400",
 };
+
+export function getBadgeClasses(color: string): string {
+  return BADGE_CLASSES[color as BadgeColorKey] || BADGE_CLASSES.blue;
+}

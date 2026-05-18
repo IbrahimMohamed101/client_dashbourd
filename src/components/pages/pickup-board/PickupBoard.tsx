@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, PackageCheck, Store } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Loader } from "@/components/global/loader";
 import { usePickupQueueQuery } from "@/hooks/useOneTimeOrdersQuery";
 

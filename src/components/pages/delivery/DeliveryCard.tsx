@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, MapPin, ChevronDown, ChevronUp } from "lucide-react";
+import { Phone, MapPin, ChevronDown, ChevronUp, Clock, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeliveryTimeline } from "./DeliveryTimeline";
@@ -27,23 +27,23 @@ interface ActionConfig {
 
 const ACTION_CONFIG: Record<string, ActionConfig> = {
   dispatch: {
-    label: "خروج",
+    label: "خروج للتوصيل",
     variant: "default",
-    className: "bg-blue-600 hover:bg-blue-700 text-white shadow-sm",
+    className: "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20",
   },
   arriving_soon: {
     label: "قريب",
     variant: "secondary",
   },
   delivered: {
-    label: "تم",
+    label: "تم التسليم",
     variant: "default",
-    className: "bg-green-600 hover:bg-green-700 text-white shadow-sm",
+    className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20",
   },
   cancel: {
     label: "إلغاء",
     variant: "ghost",
-    className: "text-red-500 hover:text-red-600 hover:bg-red-50/50",
+    className: "text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30",
   },
 };
 
@@ -72,61 +72,74 @@ export function DeliveryCard({
     item.context.notes || item.context.orderDetails || item.context.cancelInfo;
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border bg-card p-3 shadow-sm transition-all hover:border-blue-200 hover:shadow-md dark:hover:border-blue-900">
-      {/* ── Top Meta ── */}
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 overflow-hidden">
-          <span className="truncate font-mono text-[10px] font-medium text-muted-foreground/60">
-            {item.reference}
-          </span>
-          {item.ui?.label && (
+    <div className="group flex h-full flex-col overflow-hidden rounded-3xl border border-muted-foreground/10 bg-card/50 p-5 shadow-sm backdrop-blur-sm transition-all hover:border-primary/20 hover:shadow-lg dark:hover:border-primary/30">
+      {/* ── Header ── */}
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
             <Badge
-              variant="secondary"
-              className={`px-1.5 py-0 text-[10px] font-medium ${getBadgeClasses(item.ui.color)}`}
+              variant="outline"
+              className="border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[10px] font-black text-primary"
             >
-              {item.ui.label}
+              {item.type === "subscription" ? "اشتراك" : "طلب لمرة واحدة"}
             </Badge>
-          )}
+            <span className="font-mono text-[11px] font-bold tracking-tight text-muted-foreground/60">
+              #{item.reference}
+            </span>
+          </div>
+          <h3 className="line-clamp-1 text-lg font-black tracking-tight text-foreground">
+            {item.customer.name}
+          </h3>
         </div>
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80">
-          <span>{item.type === "subscription" ? "اشتراك" : "طلب"}</span>
-          {item.context.window && (
-            <>
-              <span className="opacity-30">|</span>
-              <span className="font-semibold text-foreground/70">
-                {item.context.window}
-              </span>
-            </>
-          )}
-        </div>
+
+        {item.ui?.label && (
+          <div
+            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ${getBadgeClasses(item.ui.color)}`}
+          >
+            {item.ui.label}
+          </div>
+        )}
       </div>
 
-      {/* ── Main Info ── */}
-      <div className="mb-3 flex flex-col gap-0.5">
-        <h3 className="truncate text-base font-bold tracking-tight text-foreground">
-          {item.customer.name}
-        </h3>
-        <div
-          className="flex items-center gap-1.5 text-xs text-muted-foreground"
-          dir="ltr"
-        >
-          <Phone className="h-3 w-3" />
-          <span>{item.customer.phone}</span>
+      {/* ── Contact & Details ── */}
+      <div className="mb-6 flex flex-col gap-3.5">
+        <div className="flex items-center gap-3 text-sm">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
+            <Phone className="h-4 w-4" />
+          </div>
+          <span dir="ltr" className="font-mono font-bold text-foreground/80">
+            {item.customer.phone}
+          </span>
         </div>
+
+        <div className="flex items-start gap-3 text-sm">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <MapPin className="h-4 w-4" />
+          </div>
+          <p className="mt-1.5 line-clamp-2 leading-relaxed text-muted-foreground font-medium">
+            {item.context.addressSummary || "لا يوجد عنوان مسجل"}
+          </p>
+        </div>
+
+        {item.context.window && (
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
+              <Clock className="h-4 w-4" />
+            </div>
+            <span className="font-bold text-orange-600 dark:text-orange-400">
+              {item.context.window}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* ── Address ── */}
-      <div className="mb-3 flex items-start gap-1.5 rounded-lg bg-muted/30 p-2 text-xs">
-        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
-        <p className="line-clamp-2 leading-relaxed text-muted-foreground/90">
-          {item.context.addressSummary || "لا يوجد عنوان مسجل"}
-        </p>
-      </div>
+      {/* ── Spacer to push footer down ── */}
+      <div className="flex-1" />
 
       {/* ── Status Track ── */}
-      <div className="mb-3 space-y-1.5">
+      <div className="mb-6 space-y-2.5 rounded-2xl bg-muted/30 p-4">
         <DeliveryTimeline status={item.status} variant="compact" />
-        <div className="flex justify-between text-[10px] font-medium text-muted-foreground/50">
+        <div className="flex justify-between px-0.5 text-[10px] font-black text-muted-foreground/60">
           <span>تحضير</span>
           <span>شحن</span>
           <span>تسليم</span>
@@ -134,37 +147,44 @@ export function DeliveryCard({
       </div>
 
       {/* ── Footer Actions ── */}
-      <div className="flex items-center gap-1.5">
-        <div className="flex flex-1 items-center gap-1.5">
-          {item.allowedActions?.map((action) => {
-            const config = ACTION_CONFIG[action];
-            if (!config) return null;
-            return (
-              <Button
-                key={action}
-                variant={config.variant}
-                size="sm"
-                className={`h-10 flex-1 px-2 text-xs font-bold shadow-sm transition-transform active:scale-[0.98] md:h-8 ${config.className ?? ""}`}
-                disabled={isActionLoading}
-                onClick={() => handleAction(action)}
-              >
-                {config.label}
-              </Button>
-            );
-          })}
+      <div className="flex items-center gap-2 border-t border-muted-foreground/5 pt-4">
+        <div className="flex flex-1 items-center gap-2">
+          {item.allowedActions && item.allowedActions.length > 0 ? (
+            item.allowedActions.map((action) => {
+              const config = ACTION_CONFIG[action];
+              if (!config) return null;
+              return (
+                <Button
+                  key={action}
+                  variant={config.variant}
+                  size="sm"
+                  className={`h-10 flex-1 rounded-xl px-3 text-xs font-bold transition-all active:scale-95 ${config.className ?? ""}`}
+                  disabled={isActionLoading}
+                  onClick={() => handleAction(action)}
+                >
+                  {config.label}
+                </Button>
+              );
+            })
+          ) : (
+            <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-muted-foreground/20 py-2.5 bg-muted/10">
+              <Package className="h-4 w-4 text-muted-foreground/40" />
+              <span className="text-xs font-bold text-muted-foreground/50">لا توجد إجراءات متاحة</span>
+            </div>
+          )}
         </div>
 
         {hasDetails && (
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-10 w-10 text-muted-foreground/60 hover:text-foreground md:h-8 md:w-8"
+            className={`h-10 w-10 shrink-0 rounded-xl transition-all ${isExpanded ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground hover:text-foreground border-muted-foreground/20"}`}
             onClick={() => setIsExpanded(!isExpanded)}
           >
             {isExpanded ? (
-              <ChevronUp className="h-5 w-5 md:h-4 md:w-4" />
+              <ChevronUp className="h-5 w-5" />
             ) : (
-              <ChevronDown className="h-5 w-5 md:h-4 md:w-4" />
+              <ChevronDown className="h-5 w-5" />
             )}
           </Button>
         )}
@@ -172,33 +192,33 @@ export function DeliveryCard({
 
       {/* ── Expanded Detail View ── */}
       {isExpanded && (
-        <div className="mt-3 animate-in space-y-2 border-t pt-3 duration-200 fade-in slide-in-from-top-1">
+        <div className="mt-4 animate-in space-y-3 rounded-2xl bg-muted/40 p-4 duration-200 fade-in slide-in-from-top-2">
           {item.context.notes && (
-            <div className="rounded-md border border-blue-100 bg-blue-50/30 p-2 text-[11px] dark:border-blue-900 dark:bg-blue-950/20">
-              <span className="mb-0.5 block font-bold text-blue-700 dark:text-blue-400">
+            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 text-xs dark:border-blue-900/50 dark:bg-blue-950/30">
+              <span className="mb-1.5 block font-black text-blue-700 dark:text-blue-400">
                 ملاحظة:
               </span>
-              <p className="text-blue-800 dark:text-blue-300">
+              <p className="font-medium leading-relaxed text-blue-800 dark:text-blue-300">
                 {item.context.notes}
               </p>
             </div>
           )}
           {item.context.orderDetails && (
-            <div className="rounded-md bg-muted/50 p-2 text-[11px]">
-              <span className="mb-0.5 block font-bold text-foreground/70">
-                الطلب:
+            <div className="rounded-xl border border-muted-foreground/10 bg-background/50 p-3 text-xs shadow-sm">
+              <span className="mb-1.5 block font-black text-foreground/80">
+                تفاصيل الطلب:
               </span>
-              <p className="whitespace-pre-wrap text-muted-foreground">
+              <p className="whitespace-pre-wrap font-medium leading-relaxed text-muted-foreground">
                 {item.context.orderDetails}
               </p>
             </div>
           )}
           {item.context.cancelInfo && (
-            <div className="rounded-md border border-red-100 bg-red-50/30 p-2 text-[11px] dark:border-red-900 dark:bg-red-950/20">
-              <span className="mb-0.5 block font-bold text-red-700 dark:text-red-400">
-                إلغاء:
+            <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-3 text-xs dark:border-rose-900/50 dark:bg-rose-950/30">
+              <span className="mb-1.5 block font-black text-rose-700 dark:text-rose-400">
+                سبب الإلغاء:
               </span>
-              <p className="text-red-800 dark:text-red-300">
+              <p className="font-medium leading-relaxed text-rose-800 dark:text-rose-300">
                 {item.context.cancelInfo.reason}
               </p>
             </div>

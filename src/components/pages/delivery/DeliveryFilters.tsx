@@ -39,7 +39,7 @@ export function DeliveryFilters({
   baseData,
 }: DeliveryFiltersProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between">
+    <div className="flex flex-wrap gap-4 items-center justify-between">
       {/* Search Bar */}
       <div className="relative w-full md:w-[70%]">
         <Search className="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
