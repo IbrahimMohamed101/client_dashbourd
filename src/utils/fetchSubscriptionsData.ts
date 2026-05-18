@@ -1,4 +1,15 @@
 import api from "@/lib/apis";
+import type {
+  SubscriptionAddonEntitlementPayload,
+  SubscriptionDeliveryUpdatePayload,
+  ExtendSubscriptionPayload,
+} from "@/types/subscriptionTypes";
+import {
+  subscriptionAddonEntitlementsUrl,
+  subscriptionBalancesUrl,
+  subscriptionDeliveryUrl,
+  subscriptionExtendUrl,
+} from "./subscriptionApiContract";
 
 export const fetchSubscriptionsSummary = async () => {
   try {
@@ -69,12 +80,9 @@ export const extendSubscription = async ({
   data,
 }: {
   id: string;
-  data: { days: number };
+  data: ExtendSubscriptionPayload;
 }) => {
-  const response = await api.post(
-    `/api/dashboard/subscriptions/${id}/extend`,
-    data
-  );
+  const response = await api.put(subscriptionExtendUrl(id), data);
   return response.data;
 };
 
@@ -112,36 +120,84 @@ export const fetchSubscriptionAuditLog = async (subscriptionId: string) => {
 };
 
 // ----- Delivery -----
-export const fetchSubscriptionDelivery = async (subscriptionId: string, date: string) => {
-  const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}/delivery?date=${date}`);
+export const fetchSubscriptionDelivery = async (subscriptionId: string) => {
+  const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}`);
   return response.data;
 };
 
-export const updateSubscriptionDelivery = async (subscriptionId: string, date: string, data: Record<string, unknown>) => {
-  const response = await api.patch(`/api/dashboard/subscriptions/${subscriptionId}/delivery?date=${date}`, data);
+export const updateSubscriptionDelivery = async (
+  subscriptionId: string,
+  data: SubscriptionDeliveryUpdatePayload
+) => {
+  const response = await api.put(subscriptionDeliveryUrl(subscriptionId), data);
   return response.data;
 };
 
 // ----- Balances -----
 export const fetchSubscriptionBalances = async (subscriptionId: string) => {
-  const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}/balances`);
+  const response = await api.get(subscriptionBalancesUrl(subscriptionId));
   return response.data;
 };
 
 // ----- Addon entitlements -----
 export const fetchSubscriptionAddonEntitlements = async (subscriptionId: string) => {
-  const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}/addon-entitlements`);
+  const response = await api.get(subscriptionAddonEntitlementsUrl(subscriptionId));
   return response.data;
 };
 
-export const createSubscriptionAddonEntitlement = async (subscriptionId: string, data: Record<string, unknown>) => {
-  const response = await api.post(`/api/dashboard/subscriptions/${subscriptionId}/addon-entitlements`, data);
+export const replaceSubscriptionAddonEntitlements = async (
+  subscriptionId: string,
+  addonEntitlements: SubscriptionAddonEntitlementPayload[],
+  reason: string
+) => {
+  const response = await api.patch(subscriptionAddonEntitlementsUrl(subscriptionId), {
+    addonEntitlements,
+    reason,
+  });
   return response.data;
 };
 
-export const deleteSubscriptionAddonEntitlement = async (subscriptionId: string, entitlementId: string) => {
-  const response = await api.delete(`/api/dashboard/subscriptions/${subscriptionId}/addon-entitlements/${entitlementId}`);
-  return response.data;
+export const createSubscriptionAddonEntitlement = async (
+  subscriptionId: string,
+  data: SubscriptionAddonEntitlementPayload & { reason?: string }
+) => {
+  const current = await fetchSubscriptionAddonEntitlements(subscriptionId);
+  const addonEntitlements = [
+    ...(current.data?.addonEntitlements ?? []),
+    data,
+  ].map((row) => ({
+    addonId: row.addonId,
+    maxPerDay: row.maxPerDay,
+  }));
+
+  return replaceSubscriptionAddonEntitlements(
+    subscriptionId,
+    addonEntitlements,
+    data.reason ?? "Dashboard addon entitlement added"
+  );
+};
+
+export const deleteSubscriptionAddonEntitlement = async (
+  subscriptionId: string,
+  entitlementId: string,
+  reason = "Dashboard addon entitlement removed"
+) => {
+  const current = await fetchSubscriptionAddonEntitlements(subscriptionId);
+  const addonEntitlements = (current.data?.addonEntitlements ?? [])
+    .filter((row: { _id?: string; id?: string; addonId?: string }) => {
+      const rowId = row._id ?? row.id ?? row.addonId;
+      return rowId !== entitlementId;
+    })
+    .map((row: { addonId: string; maxPerDay?: number }) => ({
+      addonId: row.addonId,
+      maxPerDay: row.maxPerDay,
+    }));
+
+  return replaceSubscriptionAddonEntitlements(
+    subscriptionId,
+    addonEntitlements,
+    reason
+  );
 };
 
 // ----- Manual Deduction -----

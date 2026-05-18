@@ -11,6 +11,7 @@ import {
   normalizeOptionGroupsResponse,
   normalizeOptionGroupDetailResponse,
 } from "@/utils/menuResponseNormalizers";
+import { menuOptionGroupVisibilityUrl } from "./menuApiContract";
 
 // ── List Option Groups ──
 // GET /api/dashboard/menu/option-groups
@@ -91,10 +92,11 @@ export const fetchUpdateMenuOptionGroupAvailability = async (
 };
 
 // ── Toggle Option Group Active ──
-// PATCH /api/dashboard/menu/option-groups/:id/toggle-active
+// PATCH /api/dashboard/menu/option-groups/:id/visibility
 
 export const fetchToggleMenuOptionGroupActive = async (
-  id: string
+  id: string,
+  isVisible: boolean
 ): Promise<void> => {
-  await api.patch(`/api/dashboard/menu/option-groups/${id}/toggle-active`);
+  await api.patch(menuOptionGroupVisibilityUrl(id), { isVisible });
 };

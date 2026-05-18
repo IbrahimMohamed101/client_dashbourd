@@ -11,6 +11,7 @@ import {
   normalizeOptionsResponse,
   normalizeOptionDetailResponse,
 } from "@/utils/menuResponseNormalizers";
+import { menuOptionVisibilityUrl } from "./menuApiContract";
 
 // ── List Options ──
 // GET /api/dashboard/menu/options
@@ -93,8 +94,11 @@ export const fetchUpdateMenuOptionAvailability = async (
 };
 
 // ── Toggle Option Active ──
-// PATCH /api/dashboard/menu/options/:id/toggle-active
+// PATCH /api/dashboard/menu/options/:id/visibility
 
-export const fetchToggleMenuOptionActive = async (id: string): Promise<void> => {
-  await api.patch(`/api/dashboard/menu/options/${id}/toggle-active`);
+export const fetchToggleMenuOptionActive = async (
+  id: string,
+  isVisible: boolean
+): Promise<void> => {
+  await api.patch(menuOptionVisibilityUrl(id), { isVisible });
 };

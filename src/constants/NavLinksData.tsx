@@ -1,3 +1,6 @@
+import * as React from "react";
+void React;
+
 import {
   LayoutDashboardIcon,
   Settings2Icon,

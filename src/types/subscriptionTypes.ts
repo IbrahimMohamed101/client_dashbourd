@@ -161,4 +161,22 @@ export interface FreezeSubscriptionPayload {
 
 export interface ExtendSubscriptionPayload {
   days: number;
+  reason?: string;
+}
+
+export interface SubscriptionDeliveryUpdatePayload {
+  deliveryMode: "delivery" | "pickup";
+  deliveryZoneId?: string;
+  deliveryAddress?: {
+    line1: string;
+    notes?: string;
+  };
+  deliveryWindow?: string;
+  pickupLocationId?: string;
+  reason?: string;
+}
+
+export interface SubscriptionAddonEntitlementPayload {
+  addonId: string;
+  maxPerDay?: number;
 }

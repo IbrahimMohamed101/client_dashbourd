@@ -1,5 +1,6 @@
 import axios from "axios";
 import Cookies from "js-cookie";
+import { getApiErrorMessage } from "./apiErrors";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_URL,
@@ -29,20 +30,7 @@ api.interceptors.response.use(
       window.location.href = "/";
     }
 
-    const data = error.response?.data;
-    let message = "An unexpected error occurred";
-
-    if (data) {
-      if (typeof data.message === "string") {
-        // Shape 1: { status: false, message: "..." }
-        message = data.message;
-      } else if (data.ok === false && data.error?.message) {
-        // Shape 2: { ok: false, error: { code, message } }
-        message = data.error.message;
-      } else if (typeof data.error === "string") {
-        message = data.error;
-      }
-    }
+    const message = getApiErrorMessage(error);
 
     // Attach normalized message so callers can use it consistently
     (error as Error & { normalizedMessage?: string }).normalizedMessage = message;

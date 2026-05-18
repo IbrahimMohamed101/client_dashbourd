@@ -11,8 +11,14 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { NavLinksData } from "@/constants/NavLinksData";
+import { useAuth } from "@/hooks/useAuth";
+import { filterNavItemsForRole } from "@/lib/navPermissions";
+import type { UserRole } from "@/types/auth";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth();
+  const navMain = filterNavItemsForRole(NavLinksData.navMain, user?.role as UserRole | undefined);
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -33,7 +39,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={NavLinksData.navMain} />
+        <NavMain items={navMain} />
         <NavSecondary items={NavLinksData.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

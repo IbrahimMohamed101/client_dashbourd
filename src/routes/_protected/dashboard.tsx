@@ -1,5 +1,4 @@
 import * as React from "react";
-import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/pages/dashboard/data-table";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -12,6 +11,7 @@ import {
 import { dashboardQueryOptions } from "@/hooks/useDashboardQuery";
 import { Loader } from "@/components/global/loader";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { mapDashboardStatsToCards } from "@/lib/dashboardStats";
 
 export const Route = createFileRoute("/_protected/dashboard")({
   component: RouteComponent,
@@ -29,13 +29,7 @@ function RouteComponent() {
   const dashboardData = dashboardResponse?.data;
   const stats = dashboardData?.stats;
 
-  // Map stats to section cards
-  const mappedCardsData = dashboardSectionCards.map((card) => {
-    return {
-      ...card,
-      value: stats?.activeSubscriptions?.toString() || "0",
-    };
-  });
+  const mappedCardsData = mapDashboardStatsToCards(dashboardSectionCards, stats);
 
   const tableData =
     activeTab === "subscriptions"
@@ -48,10 +42,6 @@ function RouteComponent() {
   return (
     <>
       <SectionCards cardsData={mappedCardsData} />
-
-      <div className="px-4 lg:px-6">
-        <ChartAreaInteractive />
-      </div>
 
       <DataTable
         columns={

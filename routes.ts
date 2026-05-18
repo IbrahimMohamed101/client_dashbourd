@@ -55,7 +55,14 @@ const KITCHEN_ROUTES = [
 
 const COURIER_ROUTES = ["/courier-board", "/delivery"];
 
-const CASHIER_ROUTES = ["/dashboard", "/one-time-orders", "/pickup-board", "/manual-deduction",];
+const CASHIER_ROUTES = [
+  "/dashboard",
+  "/orders",
+  "/one-time-orders",
+  "/subscriptions",
+  "/payments",
+  "/users",
+];
 
 const AUTH_ROUTES = ["/"];
 

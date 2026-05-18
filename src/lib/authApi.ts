@@ -1,6 +1,7 @@
 import api from "./apis";
 import { queryOptions } from "@tanstack/react-query";
 import type { AuthResponse, LoginCredentials } from "@/types/auth";
+import { normalizeAuthResponse } from "./authResponse";
 
 export const login = async (
   credentials: LoginCredentials
@@ -9,12 +10,12 @@ export const login = async (
     "/api/dashboard/auth/login",
     credentials
   );
-  return response.data;
+  return normalizeAuthResponse(response.data);
 };
 
 export const getSession = async (): Promise<AuthResponse> => {
   const response = await api.get<AuthResponse>("/api/dashboard/auth/me");
-  return response.data;
+  return normalizeAuthResponse(response.data);
 };
 
 export const logout = async (): Promise<void> => {

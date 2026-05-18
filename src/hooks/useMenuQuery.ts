@@ -520,7 +520,8 @@ export const useToggleMenuOptionGroupAvailabilityMutation = () => {
 export const useToggleMenuOptionGroupActiveMutation = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => fetchToggleMenuOptionGroupActive(id),
+    mutationFn: ({ id, isVisible }: { id: string; isVisible: boolean }) =>
+      fetchToggleMenuOptionGroupActive(id, isVisible),
     onSuccess: () => {
       toast.success("تم تحديث حالة تفعيل مجموعة الخيارات");
       qc.invalidateQueries({ queryKey: ["menu", "optionGroups"] });
@@ -630,7 +631,8 @@ export const useToggleMenuOptionAvailabilityMutation = () => {
 export const useToggleMenuOptionActiveMutation = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => fetchToggleMenuOptionActive(id),
+    mutationFn: ({ id, isVisible }: { id: string; isVisible: boolean }) =>
+      fetchToggleMenuOptionActive(id, isVisible),
     onSuccess: () => {
       toast.success("تم تحديث حالة تفعيل الخيار");
       qc.invalidateQueries({ queryKey: ["menu", "options"] });
