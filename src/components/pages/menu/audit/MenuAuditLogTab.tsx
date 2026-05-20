@@ -40,7 +40,7 @@ export function MenuAuditLogTab() {
     Array.isArray(responseData) ? responseData : responseData?.items || []
   ) as MenuAuditLog[];
 
-  const meta = (responseData as any)?.pagination || {
+  const meta = responseData?.pagination ?? {
     total: logs.length,
     pages: 1,
     page: 1,

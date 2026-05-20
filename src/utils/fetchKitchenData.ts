@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/lib/apis";
 import type {
   KitchenOperationsSummaryResponse,
@@ -87,21 +86,21 @@ export const fetchKitchenOperationsList = async ({
 export async function executeKitchenAction(
   endpoint: string,
   method?: string,
-  body?: any
-): Promise<any>;
+  body?: unknown
+): Promise<unknown>;
 
 export async function executeKitchenAction(args: {
   item: KitchenOperationsRow;
   action: string;
   reason?: string;
   notes?: string;
-}): Promise<any>;
+}): Promise<unknown>;
 
 export async function executeKitchenAction(
-  arg1: any,
-  arg2?: any,
-  arg3?: any
-): Promise<any> {
+  arg1: string | { item: KitchenOperationsRow; action: string; reason?: string; notes?: string },
+  arg2?: string,
+  arg3?: unknown
+): Promise<unknown> {
   if (typeof arg1 === "string") {
     // Old signature: executeKitchenAction(endpoint, method, body)
     const endpoint = arg1;
@@ -109,8 +108,8 @@ export async function executeKitchenAction(
     const body = arg3;
     const response =
       method === "POST"
-        ? await api.post(endpoint, body)
-        : await api.put(endpoint, body);
+        ? await api.post<unknown>(endpoint, body)
+        : await api.put<unknown>(endpoint, body);
     return response.data;
   } else {
     // New signature: executeKitchenAction({ item, action, reason, notes })
@@ -121,10 +120,10 @@ export async function executeKitchenAction(
 
     if (isOneTimeOrder(item)) {
       const orderId = item.meta?.orderId || item.id;
-      const { data } = await api.post(`/api/dashboard/orders/${orderId}/actions/${action}`, { reason, notes });
+      const { data } = await api.post<unknown>(`/api/dashboard/orders/${orderId}/actions/${action}`, { reason, notes });
       return data;
     } else {
-      const { data } = await api.post(`/api/dashboard/kitchen/actions/${action}`, {
+      const { data } = await api.post<unknown>(`/api/dashboard/kitchen/actions/${action}`, {
         entityId: item.meta?.dayId || item.id,
         entityType: "subscription_day",
         payload: { reason, notes },

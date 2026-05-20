@@ -5,7 +5,7 @@ const SUPERADMIN_ROUTES = [
   "/dashboard",
   "/orders",
   "/one-time-orders",
-  "/pickup-board",
+  "/operations",
   "/subscriptions",
   "/packages",
   "/users",
@@ -17,8 +17,6 @@ const SUPERADMIN_ROUTES = [
   "/payments",
   "/promo-codes",
   "/zones",
-  "/kitchen-board",
-  "/courier-board",
   "/manual-deduction",
   "/menu",
 ];
@@ -27,7 +25,7 @@ const ADMIN_ROUTES = [
   "/dashboard",
   "/orders",
   "/one-time-orders",
-  "/pickup-board",
+  "/operations",
   "/subscriptions",
   "/packages",
   "/users",
@@ -39,21 +37,19 @@ const ADMIN_ROUTES = [
   "/payments",
   "/promo-codes",
   "/zones",
-  "/kitchen-board",
   "/manual-deduction",
   "/menu",
 ];
 
 const KITCHEN_ROUTES = [
-  "/kitchen-board",
+  "/operations",
   "/one-time-orders",
-  "/pickup-board",
   "/meals",
   "/categories",
   "/manual-deduction",
 ];
 
-const COURIER_ROUTES = ["/courier-board", "/delivery"];
+const COURIER_ROUTES = ["/operations", "/delivery"];
 
 const CASHIER_ROUTES = [
   "/dashboard",
@@ -69,8 +65,8 @@ const AUTH_ROUTES = ["/"];
 const ROLE_DEFAULTS: Record<UserRole, string> = {
   [UserRoles.SUPERADMIN]: "/dashboard",
   [UserRoles.ADMIN]: "/dashboard",
-  [UserRoles.KITCHEN]: "/kitchen-board",
-  [UserRoles.COURIER]: "/courier-board",
+  [UserRoles.KITCHEN]: "/operations",
+  [UserRoles.COURIER]: "/operations",
   [UserRoles.CASHIER]: "/dashboard",
 };
 

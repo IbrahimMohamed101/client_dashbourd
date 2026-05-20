@@ -24,7 +24,7 @@ type SearchFormValues = z.infer<typeof searchSchema>;
 interface CustomerSearchProps {
   onSearch: (phone: string) => void;
   isSearching: boolean;
-  error: any;
+  error: unknown;
 }
 
 export const CustomerSearch: React.FC<CustomerSearchProps> = ({
@@ -78,11 +78,11 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
           </form>
         </Form>
 
-        {error && (
+        {!!error && (
           <Alert variant="destructive" className="mt-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              حدث خطأ أثناء البحث. تأكد من الرقم وأعد المحاولة.
+              {(error as any)?.response?.data?.message || (error as any)?.message || "حدث خطأ أثناء البحث. تأكد من الرقم وأعد المحاولة."}
             </AlertDescription>
           </Alert>
         )}

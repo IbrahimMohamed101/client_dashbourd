@@ -1,47 +1,97 @@
 export interface UnifiedQueueItem {
-  // ── Shared fields ──
+  // ── Identity ──
   id: string;
-  status: string;
-  method: "delivery" | "pickup";
-  allowedActions: string[];
-  notes?: string;
-  userName?: string;
-  userPhone?: string;
+  entityId: string;
+  entityType: "subscription_day" | "order" | "subscription_pickup_request";
+  source: "subscription" | "one_time_order" | "subscription_pickup_request";
+  type: "subscription" | "order" | "subscription_pickup_request";
 
-  // ── Discriminator fields ──
-  source?: "subscription" | "one_time_order";
-  entityType?: "subscription_day" | "order";
+  // ── Display ──
+  mode: "delivery" | "pickup";
+  reference: string;
+  status: string;
+  statusLabel: string;
+  ui: {
+    label: string;
+    color: string;
+    icon: string;
+    badgeText?: string;
+  };
+
+  // ── Customer ──
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
+  };
+
+  // ── Context ──
+  context: {
+    date: string | null;
+    window?: string;
+    address?: unknown;
+    addressSummary?: string | null;
+    branch?: string | null;
+    pickupCode?: string | null;
+    notes?: string | null;
+    mealCount?: number;
+    requiredMealCount?: number;
+  };
+
+  // ── Delivery / Pickup details ──
+  delivery?: {
+    method?: string;
+    address?: unknown;
+    zone?: { id: string; name: string } | null;
+    zoneId?: string | null;
+    deliveryWindow?: string;
+    pickupLocationId?: string | null;
+  };
+  pickup?: {
+    pickupLocationId?: string | null;
+    pickupRequested?: boolean;
+    pickupPreparedAt?: string | null;
+    pickupCodeIssuedAt?: string | null;
+    pickupVerifiedAt?: string | null;
+    pickupNoShowAt?: string | null;
+    pickupCode?: string | null;
+  };
+
+  // ── Items (orders) ──
+  items?: { id: string; name: string; quantity: number; notes?: string }[];
+  pricing?: unknown;
+  paymentStatus?: string | null;
+  orderNumber?: string | null;
 
   // ── Subscription-specific ──
-  subscriptionDayId?: string;
-  mealSlots?: {
-    slot: string;
-    items: { name: string; quantity: number; notes?: string }[];
+  mealSlots?: { slot: string; items: { name: string; quantity: number; notes?: string }[] }[];
+  materializedMeals?: unknown[];
+  addonSelections?: unknown[];
+  premiumUpgradeSelections?: unknown[];
+  subscriptionDayId?: string | null;
+  subscriptionId?: string | null;
+
+  // ── Actions ──
+  allowedActions: {
+    id: string;
+    label: string;
+    color: string;
+    icon: string;
+    requiresReason: boolean;
   }[];
 
-  // ── One-time order-specific ──
-  entityId?: string;
-  orderNumber?: string;
-  items?: { id: string; name: string; quantity: number; notes?: string }[];
-  paymentStatus?: string;
-  fulfillmentMethod?: "pickup" | "delivery";
-  pickup?: {
-    branchId: string;
-    branchName?: string;
-    window?: string;
-    pickupCode?: string;
-  };
-  customer?: {
-    id?: string;
-    name?: string;
-    phone?: string;
+  // ── Metadata ──
+  notes?: string | null;
+  timestamps: {
+    createdAt: string | null;
+    updatedAt: string | null;
   };
 }
 
 export interface UnifiedOperationalDTO {
   id: string;
-  type: "subscription" | "order";
-  source?: "subscription" | "one_time_order";
+  type: "subscription" | "order" | "subscription_pickup_request";
+  source?: "subscription" | "one_time_order" | "subscription_pickup_request";
   mode: "delivery" | "pickup";
   reference: string;
   status: string;
@@ -53,27 +103,51 @@ export interface UnifiedOperationalDTO {
   };
   customer: { name: string; phone: string };
   context: {
-    date: string;
+    date: string | null;
     window?: string;
-    addressSummary?: string;
-    pickupCode?: string;
-    notes?: string;
+    addressSummary?: string | null;
+    pickupCode?: string | null;
+    notes?: string | null;
     cancelInfo?: { reason: string; note?: string };
     orderDetails?: string;
   };
-  allowedActions: string[];
-  timestamps: { createdAt: string; updatedAt: string };
+  allowedActions: {
+    id: string;
+    label: string;
+    color: string;
+    icon: string;
+    requiresReason: boolean;
+  }[];
+  timestamps: { createdAt: string | null; updatedAt: string | null };
 }
 
 export const isOneTimeOrder = (item: { source?: string; entityType?: string }): boolean => {
   return item.source === "one_time_order" || item.entityType === "order";
 };
 
+export const isSubscriptionDay = (item: { source?: string; entityType?: string }): boolean => {
+  return item.entityType === "subscription_day" || item.source === "subscription";
+};
+
+export const isPickupRequest = (item: { source?: string; entityType?: string }): boolean => {
+  return item.entityType === "subscription_pickup_request" || item.source === "subscription_pickup_request";
+};
+
 // ── API response wrappers ──
 
 export interface DashboardOpsListResponse {
   status: boolean;
-  data: UnifiedOperationalDTO[];
+  data: {
+    date: string;
+    items: UnifiedQueueItem[];
+    filters: {
+      status: string[];
+      method: string;
+      q: string | null;
+      zoneId: string | null;
+      branchId: string | null;
+    };
+  };
   pagination?: {
     page: number;
     limit: number;
@@ -84,8 +158,9 @@ export interface DashboardOpsListResponse {
 
 export interface DashboardOpsActionRequest {
   entityId: string;
-  type: "subscription" | "order";
-  source?: "subscription" | "one_time_order";
+  entityType: string;
+  source?: string;
+  action: string;
   reason?: string;
   note?: string;
   payload?: {
@@ -97,7 +172,7 @@ export interface DashboardOpsActionRequest {
 
 export interface DashboardOpsActionResponse {
   status: boolean;
-  data: UnifiedOperationalDTO;
+  data: UnifiedQueueItem;
 }
 
 // ── Filter types ──
@@ -155,7 +230,7 @@ export function matchesStatusFilter(
 }
 
 export function countByFilter(
-  items: UnifiedOperationalDTO[],
+  items: { status: string }[],
   filter: DashboardOpsStatusFilter
 ): number {
   if (filter === "all") return items.length;

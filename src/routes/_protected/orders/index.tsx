@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
@@ -54,7 +53,10 @@ function KitchenDashboard() {
   const actionMutation = useKitchenActionMutation();
 
   // ── Handlers ──
-  const handleActionClick = (action: KitchenRowAction, actionData?: any) => {
+  const handleActionClick = (
+    action: KitchenRowAction,
+    actionData?: Record<string, unknown>
+  ) => {
     actionMutation.mutate({
       endpoint: action.endpoint,
       method: action.method,

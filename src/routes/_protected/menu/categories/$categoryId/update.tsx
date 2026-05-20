@@ -75,9 +75,10 @@ function UpdateMenuCategoryPage() {
         to: "/menu",
         search: { tab: "categories" }
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       ToastMessage(
-        error?.response?.data?.message || "حدث خطأ أثناء الحفظ",
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || "حدث خطأ أثناء الحفظ",
         "error"
       );
     }

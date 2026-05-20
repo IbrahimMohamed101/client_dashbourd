@@ -18,7 +18,6 @@ import {
   Ticket,
   MapPin,
   ShoppingBag,
-  Store,
   BookOpen,
   MinusCircle,
 } from "lucide-react";
@@ -71,8 +70,8 @@ export const NavLinksData = {
       icon: <CalendarPlus />,
     },
     {
-      title: "عمليات المطبخ",
-      url: "/orders",
+      title: "لوحة العمليات",
+      url: "/operations",
       icon: <ChefHat />,
     },
     {
@@ -90,11 +89,7 @@ export const NavLinksData = {
       url: "/menu",
       icon: <BookOpen />,
     },
-    {
-      title: "لوحة الاستلام",
-      url: "/pickup-board",
-      icon: <Store />,
-    },
+
     {
       title: "التوصيل",
       url: "/delivery",

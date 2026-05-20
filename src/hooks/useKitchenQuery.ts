@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -64,7 +63,7 @@ export const useKitchenActionMutation = () => {
     }: {
       endpoint: string;
       method: string;
-      body?: any;
+      body?: unknown;
     }) => executeKitchenAction(endpoint, method, body),
     onSuccess: () => {
       toast.success("تم تنفيذ الإجراء بنجاح");

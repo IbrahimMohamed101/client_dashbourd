@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { login, logout, sessionQueryOptions } from "@/lib/authApi";
 import type { LoginCredentials, AuthResponse } from "@/types/auth";
 import { useRouter } from "@tanstack/react-router";
-import { ROLE_DEFAULTS } from "../../routes";
+import { ROLE_DEFAULTS } from "@/constants/routes";
 import type { UserRole } from "@/types/auth";
 import { ToastMessage } from "@/components/global/ToastMessage";
 import Cookies from "js-cookie";

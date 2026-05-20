@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingBag, Store, Truck, Bell, XCircle, RotateCcw } from "lucide-react";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isUnsupportedOneTimeOrderAction } from "@/types/oneTimeOrderTypes";
-import { isOneTimeOrder } from "@/hooks/useKitchenBoard";
+import { isOneTimeOrder } from "@/types/dashboardOpsTypes";
 
 interface SectionDef {
   statuses: string[];
@@ -41,21 +41,22 @@ export const KitchenQueueCard: React.FC<KitchenQueueCardProps> = ({
     isOTO &&
     (order.paymentStatus !== "paid" || order.status === "pending_payment");
 
+  const actionIds = order.allowedActions?.map((a) => a.id) || [];
   const canPrimary =
     section.primaryAction &&
-    order.allowedActions?.includes(section.primaryAction) &&
+    actionIds.includes(section.primaryAction) &&
     !isNonOperational;
   const canCancel =
-    order.allowedActions?.includes("cancel") &&
+    actionIds.includes("cancel") &&
     (!isOTO || !isUnsupportedOneTimeOrderAction("cancel"));
   const canReopen =
-    order.allowedActions?.includes("reopen") &&
+    actionIds.includes("reopen") &&
     (!isOTO || !isUnsupportedOneTimeOrderAction("reopen"));
   const canDispatch =
-    order.allowedActions?.includes("dispatch") &&
+    actionIds.includes("dispatch") &&
     (!isOTO || !isUnsupportedOneTimeOrderAction("dispatch"));
   const canNotifyArrival =
-    order.allowedActions?.includes("notify_arrival") &&
+    actionIds.includes("notify_arrival") &&
     (!isOTO || !isUnsupportedOneTimeOrderAction("notify_arrival"));
 
   return (
@@ -68,10 +69,10 @@ export const KitchenQueueCard: React.FC<KitchenQueueCardProps> = ({
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-1.5 text-base font-bold">
-              {order.userName}
+              {order.customer?.name || "Unknown"}
               {isOTO && <ShoppingBag className="h-3.5 w-3.5 text-purple-500" />}
             </CardTitle>
-            <p className="text-sm text-muted-foreground">{order.userPhone}</p>
+            <p className="text-sm text-muted-foreground">{order.customer?.phone || ""}</p>
             {isOTO && order.orderNumber && (
               <p className="font-mono text-xs text-purple-500">
                 {order.orderNumber}
@@ -91,7 +92,7 @@ export const KitchenQueueCard: React.FC<KitchenQueueCardProps> = ({
                 <Store className="ml-1 h-3 w-3" />
                 استلام
               </>
-            ) : order.method === "delivery" ? (
+            ) : order.mode === "delivery" ? (
               "توصيل"
             ) : (
               "استلام"
@@ -128,18 +129,18 @@ export const KitchenQueueCard: React.FC<KitchenQueueCardProps> = ({
         )}
 
         {/* Pickup info for one-time orders */}
-        {isOTO && order.pickup && (
+        {isOTO && (order.context?.branch || order.context?.window) && (
           <div className="space-y-0.5 rounded-md bg-purple-500/5 p-2 text-xs">
-            {order.pickup.branchName && (
+            {order.context?.branch && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">الفرع</span>
-                <span className="font-medium">{order.pickup.branchName}</span>
+                <span className="font-medium">{order.context.branch}</span>
               </div>
             )}
-            {order.pickup.window && (
+            {order.context?.window && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">النافذة</span>
-                <span className="font-medium">{order.pickup.window}</span>
+                <span className="font-medium">{order.context.window}</span>
               </div>
             )}
           </div>

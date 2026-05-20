@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckCircle2 } from "lucide-react";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
-import { isOneTimeOrder } from "@/hooks/usePickupBoard";
+import { isOneTimeOrder } from "@/types/dashboardOpsTypes";
 
 const fulfillSchema = z.object({
   pickupCode: z.string().optional(),
@@ -56,6 +56,8 @@ export const FulfillDialog: React.FC<FulfillDialogProps> = ({
   }, [item, form]);
 
   const isOTO = item ? isOneTimeOrder(item) : false;
+  const needsPickupCode = Boolean(item && !isOTO);
+  const pickupCodeValue = form.watch("pickupCode");
 
   return (
     <AlertDialog open={!!item} onOpenChange={onOpenChange}>
@@ -77,7 +79,7 @@ export const FulfillDialog: React.FC<FulfillDialogProps> = ({
                 )}
               </AlertDialogDescription>
               {/* Render input field ONLY if it is NOT a one-time order */}
-              {!isOTO && (
+              {needsPickupCode && (
                 <div className="mt-4 space-y-2">
                   <FormField
                     control={form.control}
@@ -105,7 +107,7 @@ export const FulfillDialog: React.FC<FulfillDialogProps> = ({
               <AlertDialogCancel type="button">إلغاء</AlertDialogCancel>
               <Button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || (needsPickupCode && !pickupCodeValue?.trim())}
                 className="bg-emerald-600 px-8 font-bold hover:bg-emerald-700"
               >
                 تأكيد الاستلام

@@ -78,7 +78,7 @@ export function MenuOptionsTab() {
     Array.isArray(responseData) ? responseData : responseData?.items || []
   ) as MenuOption[];
   
-  const meta = (responseData as any)?.pagination || {
+  const meta = responseData?.pagination ?? {
     total: options.length,
     pages: 1,
     page: 1,

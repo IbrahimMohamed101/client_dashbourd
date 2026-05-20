@@ -63,7 +63,7 @@ export function MenuOptionGroupsTab() {
   ) as MenuOptionGroup[];
     
 
-  const meta = (responseData as any)?.pagination || {
+  const meta = responseData?.pagination ?? {
     total: groups.length,
     pages: 1,
     page: 1,

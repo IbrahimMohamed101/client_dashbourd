@@ -54,14 +54,8 @@ import { Route as ProtectedMenuOptionsOptionIdUpdateRouteImport } from './routes
 import { Route as ProtectedMenuOptionGroupsGroupIdUpdateRouteImport } from './routes/_protected/menu/option-groups/$groupId/update'
 import { Route as ProtectedMenuCategoriesCategoryIdUpdateRouteImport } from './routes/_protected/menu/categories/$categoryId/update'
 
-const ProtectedPickupBoardIndexLazyRouteImport = createFileRoute(
-  '/_protected/pickup-board/',
-)()
-const ProtectedKitchenBoardIndexLazyRouteImport = createFileRoute(
-  '/_protected/kitchen-board/',
-)()
-const ProtectedCourierBoardIndexLazyRouteImport = createFileRoute(
-  '/_protected/courier-board/',
+const ProtectedOperationsIndexLazyRouteImport = createFileRoute(
+  '/_protected/operations/',
 )()
 
 const ProtectedRouteRoute = ProtectedRouteRouteImport.update({
@@ -78,29 +72,13 @@ const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
-const ProtectedPickupBoardIndexLazyRoute =
-  ProtectedPickupBoardIndexLazyRouteImport.update({
-    id: '/pickup-board/',
-    path: '/pickup-board/',
+const ProtectedOperationsIndexLazyRoute =
+  ProtectedOperationsIndexLazyRouteImport.update({
+    id: '/operations/',
+    path: '/operations/',
     getParentRoute: () => ProtectedRouteRoute,
   } as any).lazy(() =>
-    import('./routes/_protected/pickup-board/index.lazy').then((d) => d.Route),
-  )
-const ProtectedKitchenBoardIndexLazyRoute =
-  ProtectedKitchenBoardIndexLazyRouteImport.update({
-    id: '/kitchen-board/',
-    path: '/kitchen-board/',
-    getParentRoute: () => ProtectedRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_protected/kitchen-board/index.lazy').then((d) => d.Route),
-  )
-const ProtectedCourierBoardIndexLazyRoute =
-  ProtectedCourierBoardIndexLazyRouteImport.update({
-    id: '/courier-board/',
-    path: '/courier-board/',
-    getParentRoute: () => ProtectedRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_protected/courier-board/index.lazy').then((d) => d.Route),
+    import('./routes/_protected/operations/index.lazy').then((d) => d.Route),
   )
 const ProtectedZonesIndexRoute = ProtectedZonesIndexRouteImport.update({
   id: '/zones/',
@@ -354,9 +332,7 @@ export interface FileRoutesByFullPath {
   '/subscriptions/': typeof ProtectedSubscriptionsIndexRoute
   '/users/': typeof ProtectedUsersIndexRoute
   '/zones/': typeof ProtectedZonesIndexRoute
-  '/courier-board/': typeof ProtectedCourierBoardIndexLazyRoute
-  '/kitchen-board/': typeof ProtectedKitchenBoardIndexLazyRoute
-  '/pickup-board/': typeof ProtectedPickupBoardIndexLazyRoute
+  '/operations/': typeof ProtectedOperationsIndexLazyRoute
   '/addons/$addonId/update': typeof ProtectedAddonsAddonIdUpdateRoute
   '/categories/$categoryId/update': typeof ProtectedCategoriesCategoryIdUpdateRoute
   '/meals/$mealId/update': typeof ProtectedMealsMealIdUpdateRoute
@@ -400,9 +376,7 @@ export interface FileRoutesByTo {
   '/subscriptions': typeof ProtectedSubscriptionsIndexRoute
   '/users': typeof ProtectedUsersIndexRoute
   '/zones': typeof ProtectedZonesIndexRoute
-  '/courier-board': typeof ProtectedCourierBoardIndexLazyRoute
-  '/kitchen-board': typeof ProtectedKitchenBoardIndexLazyRoute
-  '/pickup-board': typeof ProtectedPickupBoardIndexLazyRoute
+  '/operations': typeof ProtectedOperationsIndexLazyRoute
   '/addons/$addonId/update': typeof ProtectedAddonsAddonIdUpdateRoute
   '/categories/$categoryId/update': typeof ProtectedCategoriesCategoryIdUpdateRoute
   '/meals/$mealId/update': typeof ProtectedMealsMealIdUpdateRoute
@@ -448,9 +422,7 @@ export interface FileRoutesById {
   '/_protected/subscriptions/': typeof ProtectedSubscriptionsIndexRoute
   '/_protected/users/': typeof ProtectedUsersIndexRoute
   '/_protected/zones/': typeof ProtectedZonesIndexRoute
-  '/_protected/courier-board/': typeof ProtectedCourierBoardIndexLazyRoute
-  '/_protected/kitchen-board/': typeof ProtectedKitchenBoardIndexLazyRoute
-  '/_protected/pickup-board/': typeof ProtectedPickupBoardIndexLazyRoute
+  '/_protected/operations/': typeof ProtectedOperationsIndexLazyRoute
   '/_protected/addons/$addonId/update': typeof ProtectedAddonsAddonIdUpdateRoute
   '/_protected/categories/$categoryId/update': typeof ProtectedCategoriesCategoryIdUpdateRoute
   '/_protected/meals/$mealId/update': typeof ProtectedMealsMealIdUpdateRoute
@@ -496,9 +468,7 @@ export interface FileRouteTypes {
     | '/subscriptions/'
     | '/users/'
     | '/zones/'
-    | '/courier-board/'
-    | '/kitchen-board/'
-    | '/pickup-board/'
+    | '/operations/'
     | '/addons/$addonId/update'
     | '/categories/$categoryId/update'
     | '/meals/$mealId/update'
@@ -542,9 +512,7 @@ export interface FileRouteTypes {
     | '/subscriptions'
     | '/users'
     | '/zones'
-    | '/courier-board'
-    | '/kitchen-board'
-    | '/pickup-board'
+    | '/operations'
     | '/addons/$addonId/update'
     | '/categories/$categoryId/update'
     | '/meals/$mealId/update'
@@ -589,9 +557,7 @@ export interface FileRouteTypes {
     | '/_protected/subscriptions/'
     | '/_protected/users/'
     | '/_protected/zones/'
-    | '/_protected/courier-board/'
-    | '/_protected/kitchen-board/'
-    | '/_protected/pickup-board/'
+    | '/_protected/operations/'
     | '/_protected/addons/$addonId/update'
     | '/_protected/categories/$categoryId/update'
     | '/_protected/meals/$mealId/update'
@@ -638,25 +604,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedDashboardRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
-    '/_protected/pickup-board/': {
-      id: '/_protected/pickup-board/'
-      path: '/pickup-board'
-      fullPath: '/pickup-board/'
-      preLoaderRoute: typeof ProtectedPickupBoardIndexLazyRouteImport
-      parentRoute: typeof ProtectedRouteRoute
-    }
-    '/_protected/kitchen-board/': {
-      id: '/_protected/kitchen-board/'
-      path: '/kitchen-board'
-      fullPath: '/kitchen-board/'
-      preLoaderRoute: typeof ProtectedKitchenBoardIndexLazyRouteImport
-      parentRoute: typeof ProtectedRouteRoute
-    }
-    '/_protected/courier-board/': {
-      id: '/_protected/courier-board/'
-      path: '/courier-board'
-      fullPath: '/courier-board/'
-      preLoaderRoute: typeof ProtectedCourierBoardIndexLazyRouteImport
+    '/_protected/operations/': {
+      id: '/_protected/operations/'
+      path: '/operations'
+      fullPath: '/operations/'
+      preLoaderRoute: typeof ProtectedOperationsIndexLazyRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/zones/': {
@@ -960,9 +912,7 @@ interface ProtectedRouteRouteChildren {
   ProtectedSubscriptionsIndexRoute: typeof ProtectedSubscriptionsIndexRoute
   ProtectedUsersIndexRoute: typeof ProtectedUsersIndexRoute
   ProtectedZonesIndexRoute: typeof ProtectedZonesIndexRoute
-  ProtectedCourierBoardIndexLazyRoute: typeof ProtectedCourierBoardIndexLazyRoute
-  ProtectedKitchenBoardIndexLazyRoute: typeof ProtectedKitchenBoardIndexLazyRoute
-  ProtectedPickupBoardIndexLazyRoute: typeof ProtectedPickupBoardIndexLazyRoute
+  ProtectedOperationsIndexLazyRoute: typeof ProtectedOperationsIndexLazyRoute
   ProtectedAddonsAddonIdUpdateRoute: typeof ProtectedAddonsAddonIdUpdateRoute
   ProtectedCategoriesCategoryIdUpdateRoute: typeof ProtectedCategoriesCategoryIdUpdateRoute
   ProtectedMealsMealIdUpdateRoute: typeof ProtectedMealsMealIdUpdateRoute
@@ -1006,9 +956,7 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedSubscriptionsIndexRoute: ProtectedSubscriptionsIndexRoute,
   ProtectedUsersIndexRoute: ProtectedUsersIndexRoute,
   ProtectedZonesIndexRoute: ProtectedZonesIndexRoute,
-  ProtectedCourierBoardIndexLazyRoute: ProtectedCourierBoardIndexLazyRoute,
-  ProtectedKitchenBoardIndexLazyRoute: ProtectedKitchenBoardIndexLazyRoute,
-  ProtectedPickupBoardIndexLazyRoute: ProtectedPickupBoardIndexLazyRoute,
+  ProtectedOperationsIndexLazyRoute: ProtectedOperationsIndexLazyRoute,
   ProtectedAddonsAddonIdUpdateRoute: ProtectedAddonsAddonIdUpdateRoute,
   ProtectedCategoriesCategoryIdUpdateRoute:
     ProtectedCategoriesCategoryIdUpdateRoute,

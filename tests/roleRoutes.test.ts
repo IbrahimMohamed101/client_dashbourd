@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { CASHIER_ROUTES } from "../routes";
+import { CASHIER_ROUTES } from "../src/constants/routes";
 
 assert.deepEqual(CASHIER_ROUTES, [
   "/dashboard",

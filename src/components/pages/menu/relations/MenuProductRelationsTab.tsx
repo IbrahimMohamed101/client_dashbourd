@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useReducer } from "react";
 import { Link2, SlidersHorizontal, ToggleLeft, Unlink2 } from "lucide-react";
 
 import {
@@ -39,6 +39,7 @@ import type {
   MenuOption,
 } from "@/types/menuTypes";
 
+/* ─── helpers ─── */
 const toHalala = (sar: string) => Math.round((Number(sar) || 0) * 100);
 const toOptionalNumber = (value: string) =>
   value.trim() === "" ? undefined : Number(value);
@@ -72,27 +73,413 @@ const normalizeOption = (
   sortOrder: option.sortOrder ?? 0,
 });
 
+/* ─── state reducer ─── */
+interface FormState {
+  productId: string;
+  groupId: string;
+  optionId: string;
+  minSelections: string;
+  maxSelections: string;
+  groupSortOrder: string;
+  isRequired: boolean;
+  extraPriceSar: string;
+  extraWeightUnitGrams: string;
+  extraWeightPriceSar: string;
+  optionSortOrder: string;
+  optionAvailable: boolean;
+}
+
+type FormAction =
+  | { type: "SET_PRODUCT"; payload: string }
+  | { type: "SET_GROUP"; payload: { id: string; linkedGroup?: MenuProductLinkedGroup } }
+  | { type: "SET_OPTION"; payload: { id: string; linkedOption?: ProductGroupOptionOverride } }
+  | { type: "UPDATE_GROUP_RULES"; payload: Partial<Omit<FormState, "productId" | "groupId" | "optionId">> }
+  | { type: "UPDATE_OPTION_FIELDS"; payload: Partial<FormState> }
+  | { type: "RESET_GROUP_FIELDS" }
+  | { type: "RESET_OPTION_FIELDS" };
+
+const initialState: FormState = {
+  productId: "",
+  groupId: "",
+  optionId: "",
+  minSelections: "0",
+  maxSelections: "1",
+  groupSortOrder: "0",
+  isRequired: false,
+  extraPriceSar: "0",
+  extraWeightUnitGrams: "",
+  extraWeightPriceSar: "",
+  optionSortOrder: "0",
+  optionAvailable: true,
+};
+
+function formReducer(state: FormState, action: FormAction): FormState {
+  switch (action.type) {
+    case "SET_PRODUCT":
+      return {
+        ...initialState,
+        productId: action.payload,
+      };
+    case "SET_GROUP": {
+      const { id, linkedGroup } = action.payload;
+      if (linkedGroup) {
+        return {
+          ...state,
+          groupId: id,
+          optionId: "",
+          minSelections: String(linkedGroup.minSelections ?? 0),
+          maxSelections: String(linkedGroup.maxSelections ?? 1),
+          groupSortOrder: String(linkedGroup.sortOrder ?? 0),
+          isRequired: linkedGroup.isRequired ?? false,
+          extraPriceSar: "0",
+          extraWeightUnitGrams: "",
+          extraWeightPriceSar: "",
+          optionSortOrder: "0",
+          optionAvailable: true,
+        };
+      }
+      return {
+        ...initialState,
+        productId: state.productId,
+        groupId: id,
+      };
+    }
+    case "SET_OPTION": {
+      const { id, linkedOption } = action.payload;
+      if (linkedOption) {
+        return {
+          ...state,
+          optionId: id,
+          extraPriceSar: String((linkedOption.extraPriceHalala ?? 0) / 100),
+          extraWeightUnitGrams:
+            linkedOption.extraWeightUnitGrams !== undefined
+              ? String(linkedOption.extraWeightUnitGrams)
+              : "",
+          extraWeightPriceSar:
+            linkedOption.extraWeightPriceHalala !== undefined
+              ? String(linkedOption.extraWeightPriceHalala / 100)
+              : "",
+          optionSortOrder: String(linkedOption.sortOrder ?? 0),
+          optionAvailable: linkedOption.isAvailable ?? true,
+        };
+      }
+      return {
+        ...state,
+        optionId: id,
+        extraPriceSar: "0",
+        extraWeightUnitGrams: "",
+        extraWeightPriceSar: "",
+        optionSortOrder: "0",
+        optionAvailable: true,
+      };
+    }
+    case "UPDATE_GROUP_RULES":
+      return { ...state, ...action.payload };
+    case "UPDATE_OPTION_FIELDS":
+      return { ...state, ...action.payload };
+    case "RESET_GROUP_FIELDS":
+      return {
+        ...state,
+        minSelections: "0",
+        maxSelections: "1",
+        groupSortOrder: "0",
+        isRequired: false,
+      };
+    case "RESET_OPTION_FIELDS":
+      return {
+        ...state,
+        extraPriceSar: "0",
+        extraWeightUnitGrams: "",
+        extraWeightPriceSar: "",
+        optionSortOrder: "0",
+        optionAvailable: true,
+      };
+    default:
+      return state;
+  }
+}
+
+/* ─── sub-components ─── */
+function ProductSelect({
+  value,
+  onChange,
+  products,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  products: MenuProduct[];
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>المنتج</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="اختر المنتج" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {products.map((product) => (
+              <SelectItem key={product.id} value={product.id}>
+                {product.name.ar}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function GroupSelect({
+  value,
+  onChange,
+  groups,
+  disabled,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  groups: MenuOptionGroup[];
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>مجموعة الخيارات</Label>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger>
+          <SelectValue placeholder="اختر المجموعة" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {groups.map((group) => (
+              <SelectItem key={group.id} value={group.id}>
+                {group.name.ar}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function OptionSelect({
+  value,
+  onChange,
+  options,
+  disabled,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: MenuOption[];
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>الخيار</Label>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger>
+          <SelectValue placeholder="اختر الخيار" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {options.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.name.ar}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function GroupRuleFields({
+  state,
+  dispatch,
+}: {
+  state: FormState;
+  dispatch: React.Dispatch<FormAction>;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-4">
+      <div className="space-y-1.5">
+        <Label>الحد الأدنى</Label>
+        <Input
+          type="number"
+          min="0"
+          value={state.minSelections}
+          onChange={(e) =>
+            dispatch({ type: "UPDATE_GROUP_RULES", payload: { minSelections: e.target.value } })
+          }
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label>الحد الأقصى</Label>
+        <Input
+          type="number"
+          min="0"
+          value={state.maxSelections}
+          onChange={(e) =>
+            dispatch({ type: "UPDATE_GROUP_RULES", payload: { maxSelections: e.target.value } })
+          }
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label>الترتيب</Label>
+        <Input
+          type="number"
+          min="0"
+          value={state.groupSortOrder}
+          onChange={(e) =>
+            dispatch({ type: "UPDATE_GROUP_RULES", payload: { groupSortOrder: e.target.value } })
+          }
+        />
+      </div>
+      <div className="flex items-end gap-3 pb-2">
+        <Switch
+          checked={state.isRequired}
+          onCheckedChange={(checked) =>
+            dispatch({ type: "UPDATE_GROUP_RULES", payload: { isRequired: checked } })
+          }
+        />
+        <span className="text-sm font-medium">
+          {state.isRequired ? "إجباري" : "اختياري"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function OptionOverrideFields({
+  state,
+  dispatch,
+}: {
+  state: FormState;
+  dispatch: React.Dispatch<FormAction>;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-4">
+      <div className="space-y-1.5">
+        <Label>وحدة الوزن</Label>
+        <Input
+          type="number"
+          min="0"
+          value={state.extraWeightUnitGrams}
+          onChange={(e) =>
+            dispatch({ type: "UPDATE_OPTION_FIELDS", payload: { extraWeightUnitGrams: e.target.value } })
+          }
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label>سعر الوزن (ر.س)</Label>
+        <Input
+          type="number"
+          min="0"
+          step="0.01"
+          value={state.extraWeightPriceSar}
+          onChange={(e) =>
+            dispatch({ type: "UPDATE_OPTION_FIELDS", payload: { extraWeightPriceSar: e.target.value } })
+          }
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label>الترتيب</Label>
+        <Input
+          type="number"
+          min="0"
+          value={state.optionSortOrder}
+          onChange={(e) =>
+            dispatch({ type: "UPDATE_OPTION_FIELDS", payload: { optionSortOrder: e.target.value } })
+          }
+        />
+      </div>
+      <div className="flex items-end gap-3 pb-2">
+        <Switch
+          checked={state.optionAvailable}
+          onCheckedChange={(checked) =>
+            dispatch({ type: "UPDATE_OPTION_FIELDS", payload: { optionAvailable: checked } })
+          }
+        />
+        <span className="text-sm font-medium">
+          {state.optionAvailable ? "متوفر" : "غير متوفر"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function LinkedGroupsPreview({
+  product,
+  linkedGroups,
+}: {
+  product?: MenuProduct;
+  linkedGroups: MenuProductLinkedGroup[];
+}) {
+  if (!product) return null;
+
+  return (
+    <div className="rounded-lg border bg-background p-4">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold">المجموعات المرتبطة</span>
+        <MenuKeyBadge value={product.key} />
+      </div>
+      {linkedGroups.length === 0 ? (
+        <MenuEmptyState
+          title="لا توجد مجموعات مرتبطة"
+          description="اختر مجموعة واضبط قواعدها ثم احفظ الربط لهذا المنتج."
+        />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {linkedGroups.map((group) => (
+            <div
+              key={group.groupId || group.group?.id}
+              className="rounded-md border bg-muted/20 p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">
+                    {group.group?.name?.ar || group.groupId}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {group.minSelections ?? 0} - {group.maxSelections ?? 1} اختيارات
+                  </p>
+                </div>
+                <Badge variant={group.isRequired ? "default" : "outline"}>
+                  {group.isRequired ? "إجباري" : "اختياري"}
+                </Badge>
+              </div>
+              {group.options?.length ? (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {group.options.map((option) => (
+                    <Badge
+                      key={option.optionId || option.option?.id}
+                      variant={option.isAvailable === false ? "outline" : "secondary"}
+                    >
+                      {option.option?.name?.ar || option.optionId}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── main component ─── */
 export function MenuProductRelationsTab() {
-  const [productId, setProductId] = useState("");
-  const [groupId, setGroupId] = useState("");
-  const [optionId, setOptionId] = useState("");
-  const [minSelections, setMinSelections] = useState("0");
-  const [maxSelections, setMaxSelections] = useState("1");
-  const [groupSortOrder, setGroupSortOrder] = useState("0");
-  const [isRequired, setIsRequired] = useState(false);
-  const [extraPriceSar, setExtraPriceSar] = useState("0");
-  const [extraWeightUnitGrams, setExtraWeightUnitGrams] = useState("");
-  const [extraWeightPriceSar, setExtraWeightPriceSar] = useState("");
-  const [optionSortOrder, setOptionSortOrder] = useState("0");
-  const [optionAvailable, setOptionAvailable] = useState(true);
+  const [state, dispatch] = useReducer(formReducer, initialState);
 
   const { data: productsData } = useMenuProductsQuery({ limit: 100 });
   const { data: groupsData } = useMenuOptionGroupsQuery({ limit: 100 });
   const { data: optionsData } = useMenuOptionsQuery({
     limit: 100,
-    groupId: groupId || undefined,
+    groupId: state.groupId || undefined,
   });
-  const { data: productData } = useMenuProductDetailQuery(productId);
+  const { data: productData } = useMenuProductDetailQuery(state.productId);
 
   const linkGroups = useLinkGroupsToProductMutation();
   const updateRules = useUpdateSelectionRulesMutation();
@@ -100,60 +487,91 @@ export function MenuProductRelationsTab() {
   const updateOverride = useUpdateOptionOverrideMutation();
   const updateAvailability = useUpdateOptionAvailabilityInProductMutation();
 
-  const productsRaw = productsData?.data;
   const products = (
-    Array.isArray(productsRaw) ? productsRaw : productsRaw?.items || []
+    Array.isArray(productsData?.data)
+      ? productsData?.data
+      : productsData?.data?.items || []
   ) as MenuProduct[];
-  
-  const groupsRaw = groupsData?.data;
+
   const groups = (
-    Array.isArray(groupsRaw) ? groupsRaw : groupsRaw?.items || []
+    Array.isArray(groupsData?.data)
+      ? groupsData?.data
+      : groupsData?.data?.items || []
   ) as MenuOptionGroup[];
-  
-  const optionsRaw = optionsData?.data;
+
   const options = (
-    Array.isArray(optionsRaw) ? optionsRaw : optionsRaw?.items || []
+    Array.isArray(optionsData?.data)
+      ? optionsData?.data
+      : optionsData?.data?.items || []
   ) as MenuOption[];
+
   const product = productData?.data;
   const linkedGroups = useMemo(
     () => getLinkedGroups(product?.groups, product?.optionGroups),
     [product]
   );
+
   const selectedLinkedGroup = linkedGroups.find(
-    (group) => (group.groupId || group.group?.id) === groupId
+    (group) => (group.groupId || group.group?.id) === state.groupId
   );
   const linkedOptions = selectedLinkedGroup?.options || [];
+  const selectedLinkedOption = linkedOptions.find(
+    (opt) => (opt.optionId || opt.option?.id) === state.optionId
+  );
 
-  const groupPayload = () => {
+  const isGroupAlreadyLinked = Boolean(selectedLinkedGroup);
+  const isOptionAlreadyLinked = Boolean(selectedLinkedOption);
+  const canSaveGroup = Boolean(state.productId && state.groupId);
+  const canSaveOption = Boolean(state.productId && state.groupId && state.optionId);
+
+  const handleProductChange = (value: string) => {
+    dispatch({ type: "SET_PRODUCT", payload: value });
+  };
+
+  const handleGroupChange = (value: string) => {
+    const linkedGroup = linkedGroups.find(
+      (g) => (g.groupId || g.group?.id) === value
+    );
+    dispatch({ type: "SET_GROUP", payload: { id: value, linkedGroup } });
+  };
+
+  const handleOptionChange = (value: string) => {
+    const linkedOption = linkedOptions.find(
+      (o) => (o.optionId || o.option?.id) === value
+    );
+    dispatch({ type: "SET_OPTION", payload: { id: value, linkedOption } });
+  };
+
+  const buildGroupPayload = (): { groups: ProductGroupRule[] } => {
     const nextRule: ProductGroupRule = {
-      groupId,
-      minSelections: Number(minSelections) || 0,
-      maxSelections: Number(maxSelections) || 1,
-      isRequired,
-      sortOrder: Number(groupSortOrder) || 0,
+      groupId: state.groupId,
+      minSelections: Number(state.minSelections) || 0,
+      maxSelections: Number(state.maxSelections) || 1,
+      isRequired: state.isRequired,
+      sortOrder: Number(state.groupSortOrder) || 0,
       isActive: true,
       isAvailable: true,
       isVisible: true,
     };
     const existing = linkedGroups
       .map(normalizeGroupRule)
-      .filter((group) => group.groupId && group.groupId !== groupId);
+      .filter((group) => group.groupId && group.groupId !== state.groupId);
     return { groups: [...existing, nextRule] };
   };
 
-  const optionPayload = () => {
+  const buildOptionPayload = (): { options: ProductGroupOptionOverride[] } => {
     const nextOption: ProductGroupOptionOverride = {
-      optionId,
-      extraPriceHalala: toHalala(extraPriceSar),
-      extraWeightUnitGrams: toOptionalNumber(extraWeightUnitGrams),
+      optionId: state.optionId,
+      extraPriceHalala: toHalala(state.extraPriceSar),
+      extraWeightUnitGrams: toOptionalNumber(state.extraWeightUnitGrams),
       extraWeightPriceHalala:
-        extraWeightPriceSar.trim() === ""
+        state.extraWeightPriceSar.trim() === ""
           ? undefined
-          : toHalala(extraWeightPriceSar),
+          : toHalala(state.extraWeightPriceSar),
       isActive: true,
-      isAvailable: optionAvailable,
+      isAvailable: state.optionAvailable,
       isVisible: true,
-      sortOrder: Number(optionSortOrder) || 0,
+      sortOrder: Number(state.optionSortOrder) || 0,
     };
     const existing = linkedOptions
       .map((option) =>
@@ -162,58 +580,37 @@ export function MenuProductRelationsTab() {
           optionId: option.optionId || option.option?.id || "",
         })
       )
-      .filter((option) => option.optionId && option.optionId !== optionId);
+      .filter((option) => option.optionId && option.optionId !== state.optionId);
     return { options: [...existing, nextOption] };
   };
 
-  const isGroupAlreadyLinked = Boolean(selectedLinkedGroup);
-  const selectedLinkedOption = linkedOptions.find(
-    (opt) => (opt.optionId || opt.option?.id) === optionId
-  );
-  const isOptionAlreadyLinked = Boolean(selectedLinkedOption);
+  const handleUnlinkGroup = () => {
+    const existing = linkedGroups
+      .map(normalizeGroupRule)
+      .filter((group) => group.groupId && group.groupId !== state.groupId);
+    linkGroups.mutate({
+      productId: state.productId,
+      data: { groups: existing },
+    });
+    dispatch({ type: "SET_GROUP", payload: { id: "" } });
+  };
 
-  // Hydrate Group Form when a group is selected
-  useEffect(() => {
-    if (selectedLinkedGroup) {
-      setMinSelections(String(selectedLinkedGroup.minSelections ?? 0));
-      setMaxSelections(String(selectedLinkedGroup.maxSelections ?? 1));
-      setGroupSortOrder(String(selectedLinkedGroup.sortOrder ?? 0));
-      setIsRequired(selectedLinkedGroup.isRequired ?? false);
-    } else {
-      setMinSelections("0");
-      setMaxSelections("1");
-      setGroupSortOrder("0");
-      setIsRequired(false);
-    }
-  }, [selectedLinkedGroup, groupId]);
-
-  // Hydrate Option Form when an option is selected
-  useEffect(() => {
-    if (selectedLinkedOption) {
-      setExtraPriceSar(String((selectedLinkedOption.extraPriceHalala ?? 0) / 100));
-      setExtraWeightUnitGrams(
-        selectedLinkedOption.extraWeightUnitGrams !== undefined
-          ? String(selectedLinkedOption.extraWeightUnitGrams)
-          : ""
-      );
-      setExtraWeightPriceSar(
-        selectedLinkedOption.extraWeightPriceHalala !== undefined
-          ? String(selectedLinkedOption.extraWeightPriceHalala / 100)
-          : ""
-      );
-      setOptionSortOrder(String(selectedLinkedOption.sortOrder ?? 0));
-      setOptionAvailable(selectedLinkedOption.isAvailable ?? true);
-    } else {
-      setExtraPriceSar("0");
-      setExtraWeightUnitGrams("");
-      setExtraWeightPriceSar("");
-      setOptionSortOrder("0");
-      setOptionAvailable(true);
-    }
-  }, [selectedLinkedOption, optionId]);
-
-  const canSaveGroup = Boolean(productId && groupId);
-  const canSaveOption = Boolean(productId && groupId && optionId);
+  const handleUnlinkOption = () => {
+    const existing = linkedOptions
+      .map((option) =>
+        normalizeOption({
+          ...option,
+          optionId: option.optionId || option.option?.id || "",
+        })
+      )
+      .filter((option) => option.optionId && option.optionId !== state.optionId);
+    linkOptions.mutate({
+      productId: state.productId,
+      groupId: state.groupId,
+      data: { options: existing },
+    });
+    dispatch({ type: "SET_OPTION", payload: { id: "" } });
+  };
 
   return (
     <MenuSectionCard
@@ -221,101 +618,31 @@ export function MenuProductRelationsTab() {
       description="اربط المنتجات بمجموعات الخيارات واضبط قواعد الاختيار والتجاوزات الأسبوعية."
     >
       <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
+        {/* Group linker panel */}
         <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>المنتج</Label>
-              <Select
-                value={productId}
-                onValueChange={(value) => {
-                  setProductId(value);
-                  setGroupId("");
-                  setOptionId("");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر المنتج" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name.ar}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>مجموعة الخيارات</Label>
-              <Select
-                value={groupId}
-                onValueChange={(value) => {
-                  setGroupId(value);
-                  setOptionId("");
-                }}
-                disabled={!productId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر المجموعة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name.ar}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
+            <ProductSelect
+              value={state.productId}
+              onChange={handleProductChange}
+              products={products}
+            />
+            <GroupSelect
+              value={state.groupId}
+              onChange={handleGroupChange}
+              groups={groups}
+              disabled={!state.productId}
+            />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label>الحد الأدنى</Label>
-              <Input
-                type="number"
-                min="0"
-                value={minSelections}
-                onChange={(event) => setMinSelections(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>الحد الأقصى</Label>
-              <Input
-                type="number"
-                min="0"
-                value={maxSelections}
-                onChange={(event) => setMaxSelections(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>الترتيب</Label>
-              <Input
-                type="number"
-                min="0"
-                value={groupSortOrder}
-                onChange={(event) => setGroupSortOrder(event.target.value)}
-              />
-            </div>
-            <div className="flex items-end gap-3 pb-2">
-              <Switch checked={isRequired} onCheckedChange={setIsRequired} />
-              <span className="text-sm font-medium">
-                {isRequired ? "إجباري" : "اختياري"}
-              </span>
-            </div>
-          </div>
+          <GroupRuleFields state={state} dispatch={dispatch} />
 
           <div className="flex flex-wrap gap-2">
             <Button
               disabled={!canSaveGroup || linkGroups.isPending}
               onClick={() =>
                 linkGroups.mutate({
-                  productId,
-                  data: groupPayload(),
+                  productId: state.productId,
+                  data: buildGroupPayload(),
                 })
               }
             >
@@ -327,12 +654,12 @@ export function MenuProductRelationsTab() {
               disabled={!isGroupAlreadyLinked || updateRules.isPending}
               onClick={() =>
                 updateRules.mutate({
-                  productId,
-                  groupId,
+                  productId: state.productId,
+                  groupId: state.groupId,
                   data: {
-                    minSelections: Number(minSelections) || 0,
-                    maxSelections: Number(maxSelections) || 1,
-                    isRequired,
+                    minSelections: Number(state.minSelections) || 0,
+                    maxSelections: Number(state.maxSelections) || 1,
+                    isRequired: state.isRequired,
                   },
                 })
               }
@@ -344,16 +671,7 @@ export function MenuProductRelationsTab() {
               <Button
                 variant="destructive"
                 disabled={linkGroups.isPending}
-                onClick={() => {
-                  const existing = linkedGroups
-                    .map(normalizeGroupRule)
-                    .filter((group) => group.groupId && group.groupId !== groupId);
-                  linkGroups.mutate({
-                    productId,
-                    data: { groups: existing },
-                  });
-                  setGroupId("");
-                }}
+                onClick={handleUnlinkGroup}
               >
                 <Unlink2 data-icon="inline-start" />
                 إلغاء الربط
@@ -362,93 +680,42 @@ export function MenuProductRelationsTab() {
           </div>
         </div>
 
+        {/* Option linker panel */}
         <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>الخيار</Label>
-              <Select
-                value={optionId}
-                onValueChange={setOptionId}
-                disabled={!groupId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الخيار" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {options.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.name.ar}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
+            <OptionSelect
+              value={state.optionId}
+              onChange={handleOptionChange}
+              options={options}
+              disabled={!state.groupId}
+            />
             <div className="space-y-1.5">
               <Label>السعر الإضافي (ر.س)</Label>
               <Input
                 type="number"
                 min="0"
                 step="0.01"
-                value={extraPriceSar}
-                onChange={(event) => setExtraPriceSar(event.target.value)}
+                value={state.extraPriceSar}
+                onChange={(e) =>
+                  dispatch({
+                    type: "UPDATE_OPTION_FIELDS",
+                    payload: { extraPriceSar: e.target.value },
+                  })
+                }
               />
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label>وحدة الوزن</Label>
-              <Input
-                type="number"
-                min="0"
-                value={extraWeightUnitGrams}
-                onChange={(event) =>
-                  setExtraWeightUnitGrams(event.target.value)
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>سعر الوزن (ر.س)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={extraWeightPriceSar}
-                onChange={(event) =>
-                  setExtraWeightPriceSar(event.target.value)
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>الترتيب</Label>
-              <Input
-                type="number"
-                min="0"
-                value={optionSortOrder}
-                onChange={(event) => setOptionSortOrder(event.target.value)}
-              />
-            </div>
-            <div className="flex items-end gap-3 pb-2">
-              <Switch
-                checked={optionAvailable}
-                onCheckedChange={setOptionAvailable}
-              />
-              <span className="text-sm font-medium">
-                {optionAvailable ? "متوفر" : "غير متوفر"}
-              </span>
-            </div>
-          </div>
+          <OptionOverrideFields state={state} dispatch={dispatch} />
 
           <div className="flex flex-wrap gap-2">
             <Button
               disabled={!canSaveOption || linkOptions.isPending}
               onClick={() =>
                 linkOptions.mutate({
-                  productId,
-                  groupId,
-                  data: optionPayload(),
+                  productId: state.productId,
+                  groupId: state.groupId,
+                  data: buildOptionPayload(),
                 })
               }
             >
@@ -460,10 +727,10 @@ export function MenuProductRelationsTab() {
               disabled={!isOptionAlreadyLinked || updateOverride.isPending}
               onClick={() =>
                 updateOverride.mutate({
-                  productId,
-                  groupId,
-                  optionId,
-                  data: optionPayload().options.at(-1) || {},
+                  productId: state.productId,
+                  groupId: state.groupId,
+                  optionId: state.optionId,
+                  data: buildOptionPayload().options.at(-1) || {},
                 })
               }
             >
@@ -475,10 +742,10 @@ export function MenuProductRelationsTab() {
               disabled={!isOptionAlreadyLinked || updateAvailability.isPending}
               onClick={() =>
                 updateAvailability.mutate({
-                  productId,
-                  groupId,
-                  optionId,
-                  isAvailable: optionAvailable,
+                  productId: state.productId,
+                  groupId: state.groupId,
+                  optionId: state.optionId,
+                  isAvailable: state.optionAvailable,
                 })
               }
             >
@@ -489,22 +756,7 @@ export function MenuProductRelationsTab() {
               <Button
                 variant="destructive"
                 disabled={linkOptions.isPending}
-                onClick={() => {
-                  const existing = linkedOptions
-                    .map((option) =>
-                      normalizeOption({
-                        ...option,
-                        optionId: option.optionId || option.option?.id || "",
-                      })
-                    )
-                    .filter((option) => option.optionId && option.optionId !== optionId);
-                  linkOptions.mutate({
-                    productId,
-                    groupId,
-                    data: { options: existing },
-                  });
-                  setOptionId("");
-                }}
+                onClick={handleUnlinkOption}
               >
                 <Unlink2 data-icon="inline-start" />
                 إلغاء الربط
@@ -514,55 +766,7 @@ export function MenuProductRelationsTab() {
         </div>
       </div>
 
-      {product ? (
-        <div className="rounded-lg border bg-background p-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold">المجموعات المرتبطة</span>
-            <MenuKeyBadge value={product.key} />
-          </div>
-          {linkedGroups.length === 0 ? (
-            <MenuEmptyState
-              title="لا توجد مجموعات مرتبطة"
-              description="اختر مجموعة واضبط قواعدها ثم احفظ الربط لهذا المنتج."
-            />
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {linkedGroups.map((group) => (
-                <div
-                  key={group.groupId || group.group?.id}
-                  className="rounded-md border bg-muted/20 p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">
-                        {group.group?.name?.ar || group.groupId}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {group.minSelections ?? 0} - {group.maxSelections ?? 1} اختيارات
-                      </p>
-                    </div>
-                    <Badge variant={group.isRequired ? "default" : "outline"}>
-                      {group.isRequired ? "إجباري" : "اختياري"}
-                    </Badge>
-                  </div>
-                  {group.options?.length ? (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {group.options.map((option) => (
-                        <Badge
-                          key={option.optionId || option.option?.id}
-                          variant={option.isAvailable === false ? "outline" : "secondary"}
-                        >
-                          {option.option?.name?.ar || option.optionId}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
+      <LinkedGroupsPreview product={product} linkedGroups={linkedGroups} />
     </MenuSectionCard>
   );
 }

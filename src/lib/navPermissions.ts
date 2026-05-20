@@ -6,7 +6,7 @@ import {
   COURIER_ROUTES,
   KITCHEN_ROUTES,
   SUPERADMIN_ROUTES,
-} from "../../routes";
+} from "@/constants/routes";
 
 export type NavItem = {
   title: string;

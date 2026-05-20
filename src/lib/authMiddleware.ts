@@ -9,7 +9,7 @@ import {
   COURIER_ROUTES,
   CASHIER_ROUTES,
   ROLE_DEFAULTS,
-} from "../../routes";
+} from "@/constants/routes";
 
 const isRouteMatch = (routes: string[], pathName: string) =>
   routes.some(

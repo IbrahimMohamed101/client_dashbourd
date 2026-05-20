@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -94,16 +95,20 @@ export const DeductionForm: React.FC<DeductionFormProps> = ({
             value={subscription.premiumRemaining || 0}
             icon={<Package className="h-4 w-4" />}
           />
-          <BalanceCard
-            label="تاريخ البداية"
-            value={new Date(subscription.startDate).toLocaleDateString("ar-EG")}
-            icon={<Calendar className="h-4 w-4" />}
-          />
-          <BalanceCard
-            label="تاريخ النهاية"
-            value={new Date(subscription.endDate).toLocaleDateString("ar-EG")}
-            icon={<Calendar className="h-4 w-4" />}
-          />
+          {subscription.startDate && (
+            <BalanceCard
+              label="تاريخ البداية"
+              value={new Date(subscription.startDate).toLocaleDateString("ar-EG")}
+              icon={<Calendar className="h-4 w-4" />}
+            />
+          )}
+          {subscription.endDate && (
+            <BalanceCard
+              label="تاريخ النهاية"
+              value={new Date(subscription.endDate).toLocaleDateString("ar-EG")}
+              icon={<Calendar className="h-4 w-4" />}
+            />
+          )}
         </div>
 
         <Separator />

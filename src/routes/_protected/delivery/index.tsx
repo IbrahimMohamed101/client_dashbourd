@@ -47,10 +47,10 @@ function DeliveryDashboard() {
   const actionMutation = useDashboardOpsActionMutation();
 
   // ── Derived data ──
-  const baseData = listRes?.data ?? [];
+  const baseData = listRes?.data?.items ?? [];
 
   const getDisplayData = () => {
-    if (isSearching) return searchRes?.data ?? [];
+    if (isSearching) return searchRes?.data?.items ?? [];
     if (statusFilter === "all") return baseData;
     return baseData.filter((item) =>
       matchesStatusFilter(item.status, statusFilter),

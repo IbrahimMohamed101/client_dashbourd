@@ -23,6 +23,7 @@ import { flexRender, getCoreRowModel, useReactTable, createColumnHelper } from "
 import { CustomerSearch } from "./CustomerSearch";
 import { DeductionForm } from "./DeductionForm";
 import type { DeductionFormValues } from "./DeductionForm";
+import type { UseFormReturn } from "react-hook-form";
 
 const columnHelper = createColumnHelper<Subscription>();
 
@@ -37,7 +38,21 @@ export default function ManualDeductionPage() {
   } = useSearchSubscriptionsByPhoneQuery(searchPhone);
 
   const deductMutation = useManualDeductSubscriptionMutation();
-  const subscriptions: Subscription[] = searchResponse?.data ?? [];
+  
+  const rawData = searchResponse?.data;
+  const rawSubscriptions = rawData?.subscriptions ?? [];
+  const customer = rawData?.customer;
+  const today = rawData?.today;
+
+  const subscriptions: Subscription[] = rawSubscriptions.map((sub: any) => ({
+    ...sub,
+    userName: customer?.name,
+    user: { fullName: customer?.name, phone: customer?.phone },
+    premiumRemaining: sub.remainingPremiumMeals ?? 0,
+    remainingMeals: sub.remainingRegularMeals ?? sub.remainingMeals ?? 0,
+    hasDeliveryDeductionToday: today?.hasDeliveryDeductionToday ?? false,
+    deliveryMode: sub.fulfillmentMethod ?? "delivery",
+  }));
 
   const handleSearch = (phone: string) => {
     setSearchPhone(phone);
@@ -52,7 +67,7 @@ export default function ManualDeductionPage() {
     setSelectedSubscription(null);
   };
 
-  const onDeductionSubmit = async (values: DeductionFormValues, form: any) => {
+  const onDeductionSubmit = async (values: DeductionFormValues, form: UseFormReturn<DeductionFormValues>) => {
     if (!selectedSubscription) return;
 
     if (
@@ -99,8 +114,9 @@ export default function ManualDeductionPage() {
       const currentPhone = searchPhone;
       setSearchPhone("");
       setTimeout(() => setSearchPhone(currentPhone), 50);
-    } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || "حدث خطأ أثناء الخصم";
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } }; message?: string };
+      const message = errorObj?.response?.data?.message || errorObj?.message || "حدث خطأ أثناء الخصم";
       toast.error(message);
     }
   };
@@ -221,7 +237,7 @@ export default function ManualDeductionPage() {
         </Card>
       )}
 
-      {searchPhone && !isSearching && subscriptions.length === 0 && (
+      {searchPhone && !isSearching && !searchError && subscriptions.length === 0 && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>لم يتم العثور على اشتراكات مرتبطة بهذا الرقم</AlertDescription>

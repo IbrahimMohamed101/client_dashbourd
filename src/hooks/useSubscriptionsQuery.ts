@@ -118,6 +118,7 @@ export const useSearchSubscriptionsByPhoneQuery = (phone: string) => {
     queryFn: () => searchSubscriptionsByPhone(phone),
     enabled: !!phone && phone.length >= 8,
     staleTime: 1000 * 60 * 2,
+    retry: false,
   });
 };
 

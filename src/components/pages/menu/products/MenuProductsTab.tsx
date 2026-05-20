@@ -76,7 +76,7 @@ export function MenuProductsTab() {
     Array.isArray(responseData) ? responseData : responseData?.items || []
   ) as MenuProduct[];
   
-  const meta = (responseData as any)?.pagination || {
+  const meta = responseData?.pagination ?? {
     total: products.length,
     pages: 1,
     page: 1,

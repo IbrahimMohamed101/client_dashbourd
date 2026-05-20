@@ -31,11 +31,11 @@ const ACTION_CONFIG: Record<string, ActionConfig> = {
     variant: "default",
     className: "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20",
   },
-  arriving_soon: {
+  notify_arrival: {
     label: "قريب",
     variant: "secondary",
   },
-  delivered: {
+  fulfill: {
     label: "تم التسليم",
     variant: "default",
     className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20",
@@ -64,8 +64,13 @@ export function DeliveryCard({
 }: DeliveryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleAction = (action: string) => {
-    onActionClick(action, { entityId: item.id, type: item.type });
+  const handleAction = (actionId: string) => {
+    onActionClick(actionId, {
+      action: actionId,
+      entityId: item.id,
+      entityType: item.type,
+      source: item.source,
+    });
   };
 
   const hasDetails =
@@ -151,18 +156,19 @@ export function DeliveryCard({
         <div className="flex flex-1 items-center gap-2">
           {item.allowedActions && item.allowedActions.length > 0 ? (
             item.allowedActions.map((action) => {
-              const config = ACTION_CONFIG[action];
+              const actionId = action.id;
+              const config = ACTION_CONFIG[actionId];
               if (!config) return null;
               return (
                 <Button
-                  key={action}
+                  key={actionId}
                   variant={config.variant}
                   size="sm"
                   className={`h-10 flex-1 rounded-xl px-3 text-xs font-bold transition-all active:scale-95 ${config.className ?? ""}`}
                   disabled={isActionLoading}
-                  onClick={() => handleAction(action)}
+                  onClick={() => handleAction(actionId)}
                 >
-                  {config.label}
+                  {config.label || action.label}
                 </Button>
               );
             })

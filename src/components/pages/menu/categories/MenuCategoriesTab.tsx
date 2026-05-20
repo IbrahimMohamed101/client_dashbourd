@@ -61,7 +61,7 @@ export function MenuCategoriesTab() {
     Array.isArray(responseData) ? responseData : responseData?.items || []
   ) as MenuCategory[];
   
-  const meta = (responseData as any)?.pagination || {
+  const meta = responseData?.pagination ?? {
     total: categories.length,
     pages: 1,
     page: 1,

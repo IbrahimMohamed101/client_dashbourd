@@ -17,7 +17,7 @@ import {
   type OneTimeOrderStatus,
 
 } from "@/types/oneTimeOrderTypes";
-import { isOneTimeOrder } from "@/hooks/usePickupBoard";
+import { isOneTimeOrder } from "@/types/dashboardOpsTypes";
 
 interface PickupQueueCardProps {
   order: UnifiedQueueItem;
@@ -47,28 +47,25 @@ export const PickupQueueCard: React.FC<PickupQueueCardProps> = ({
         border: "border-primary/20",
       };
 
+  const actionIds = order.allowedActions?.map((a) => a.id) || [];
   const canFulfill =
-    order.allowedActions?.includes("fulfill") &&
+    actionIds.includes("fulfill") &&
     (!isOTO || !isUnsupportedOneTimeOrderAction("fulfill"));
   const canReadyForPickup =
-    order.allowedActions?.includes("ready_for_pickup") &&
+    actionIds.includes("ready_for_pickup") &&
     (!isOTO || !isUnsupportedOneTimeOrderAction("ready_for_pickup"));
   const canCancel =
-    order.allowedActions?.includes("cancel") &&
+    actionIds.includes("cancel") &&
     (!isOTO || !isUnsupportedOneTimeOrderAction("cancel"));
   const canNoShow =
-    order.allowedActions?.includes("no_show") &&
+    actionIds.includes("no_show") &&
     (!isOTO || !isUnsupportedOneTimeOrderAction("no_show"));
   const canReopen =
-    order.allowedActions?.includes("reopen") &&
+    actionIds.includes("reopen") &&
     (!isOTO || !isUnsupportedOneTimeOrderAction("reopen"));
 
-  const displayName = isOTO
-    ? order.customer?.name || order.orderNumber || order.entityId
-    : order.userName || order.id;
-  const displayPhone = isOTO
-    ? order.customer?.phone || ""
-    : order.userPhone || "";
+  const displayName = order.customer?.name || order.orderNumber || order.entityId || order.id;
+  const displayPhone = order.customer?.phone || "";
 
   return (
     <Card
@@ -107,28 +104,28 @@ export const PickupQueueCard: React.FC<PickupQueueCardProps> = ({
       </CardHeader>
       <CardContent className="space-y-3 p-4 pt-0">
         {/* Pickup info */}
-        {order.pickup && (
+        {(order.context?.branch || order.context?.window || order.context?.pickupCode) && (
           <div className="space-y-1 rounded-md bg-muted/50 p-2">
-            {order.pickup.branchName && (
+            {order.context?.branch && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">الفرع</span>
-                <span className="font-medium">{order.pickup.branchName}</span>
+                <span className="font-medium">{order.context.branch}</span>
               </div>
             )}
-            {order.pickup.window && (
+            {order.context?.window && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">النافذة</span>
-                <span className="font-medium">{order.pickup.window}</span>
+                <span className="font-medium">{order.context.window}</span>
               </div>
             )}
-            {order.pickup.pickupCode && (
+            {order.context?.pickupCode && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">رمز الاستلام</span>
                 <span
                   className="rounded bg-primary/10 px-1.5 py-0.5 font-mono font-bold text-primary"
                   dir="ltr"
                 >
-                  {order.pickup.pickupCode}
+                  {order.context.pickupCode}
                 </span>
               </div>
             )}
