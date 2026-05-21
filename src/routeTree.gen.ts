@@ -144,11 +144,7 @@ const ProtectedManualDeductionIndexRoute =
     id: '/manual-deduction/',
     path: '/manual-deduction/',
     getParentRoute: () => ProtectedRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_protected/manual-deduction/index.lazy').then(
-      (d) => d.Route,
-    ),
-  )
+  } as any)
 const ProtectedDeliveryIndexRoute = ProtectedDeliveryIndexRouteImport.update({
   id: '/delivery/',
   path: '/delivery/',

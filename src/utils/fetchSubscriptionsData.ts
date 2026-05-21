@@ -202,8 +202,16 @@ export const deleteSubscriptionAddonEntitlement = async (
 
 // ----- Manual Deduction -----
 export const searchSubscriptionsByPhone = async (phone: string) => {
-  const response = await api.get(`/api/dashboard/subscriptions/search?phone=${encodeURIComponent(phone)}`);
-  return response.data;
+  try {
+    const response = await api.get(`/api/dashboard/subscriptions/search?phone=${encodeURIComponent(phone)}`);
+    return response.data;
+  } catch (error: any) {
+    // 404 means "customer not found" — treat as empty result, not an error
+    if (error?.response?.status === 404) {
+      return { data: { customer: null, subscriptions: [], today: null } };
+    }
+    throw error;
+  }
 };
 
 export const manualDeductSubscription = async ({

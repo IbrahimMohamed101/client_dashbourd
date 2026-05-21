@@ -9,6 +9,7 @@ import {
   useSearchSubscriptionsByPhoneQuery,
   useManualDeductSubscriptionMutation,
 } from "@/hooks/useSubscriptionsQuery";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Subscription } from "@/types/subscriptionTypes";
 import {
   Table,
@@ -30,6 +31,7 @@ const columnHelper = createColumnHelper<Subscription>();
 export default function ManualDeductionPage() {
   const [searchPhone, setSearchPhone] = useState("");
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  const queryClient = useQueryClient();
 
   const {
     data: searchResponse,
@@ -111,9 +113,7 @@ export default function ManualDeductionPage() {
       form.reset();
       
       // Refresh search
-      const currentPhone = searchPhone;
-      setSearchPhone("");
-      setTimeout(() => setSearchPhone(currentPhone), 50);
+      await queryClient.invalidateQueries({ queryKey: ["subscriptions-search", searchPhone] });
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { message?: string } }; message?: string };
       const message = errorObj?.response?.data?.message || errorObj?.message || "حدث خطأ أثناء الخصم";
