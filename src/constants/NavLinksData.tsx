@@ -9,11 +9,8 @@ import {
   Boxes,
   CalendarPlus,
   ChefHat,
-  UtensilsCrossed,
   PlusSquare,
-  Utensils,
   Truck,
-  FolderOpen,
   CreditCard,
   Ticket,
   MapPin,
@@ -38,21 +35,6 @@ export const NavLinksData = {
       title: "أكواد الخصم",
       url: "/promo-codes",
       icon: <Ticket />,
-    },
-    {
-      title: "الوجبات",
-      url: "/meals",
-      icon: <Utensils />,
-    },
-    {
-      title: "تصنيفات الوجبات",
-      url: "/categories",
-      icon: <FolderOpen />,
-    },
-    {
-      title: "الوجبات المميزة",
-      url: "/premium-meals",
-      icon: <UtensilsCrossed />,
     },
     {
       title: "الإضافات",
@@ -89,7 +71,6 @@ export const NavLinksData = {
       url: "/menu",
       icon: <BookOpen />,
     },
-
     {
       title: "التوصيل",
       url: "/delivery",

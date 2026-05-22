@@ -42,6 +42,131 @@ export interface MenuCategory {
 
 export type MenuCategoriesResponse = PaginatedResponse<MenuCategory>;
 
+// Subscription meal builder data now lives under /menu.
+
+export interface MenuMealCategory {
+  id: string;
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  isActive: boolean;
+  isAvailable: boolean;
+  isVisible?: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type MenuMealCategoriesResponse = PaginatedResponse<MenuMealCategory>;
+
+export interface MenuMealCategoryDetailResponse {
+  status: boolean;
+  data: MenuMealCategory;
+}
+
+export interface CreateMenuMealCategoryPayload {
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateMenuMealCategoryPayload {
+  name?: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  sortOrder?: number;
+}
+
+export interface MenuProtein {
+  id: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  categoryId: string;
+  category?: MenuMealCategory;
+  proteinGrams: number;
+  carbGrams: number;
+  fatGrams: number;
+  isActive: boolean;
+  isAvailable: boolean;
+  isVisible?: boolean;
+  availableForOrder?: boolean;
+  availableForSubscription?: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type MenuProteinsResponse = PaginatedResponse<MenuProtein>;
+
+export interface MenuProteinDetailResponse {
+  status: boolean;
+  data: MenuProtein;
+}
+
+export interface CreateMenuProteinPayload {
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  categoryId: string;
+  proteinGrams?: number;
+  carbGrams?: number;
+  fatGrams?: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  availableForOrder?: boolean;
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateMenuProteinPayload {
+  name?: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  categoryId?: string;
+  proteinGrams?: number;
+  carbGrams?: number;
+  fatGrams?: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  availableForOrder?: boolean;
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+export interface MenuPremiumProtein extends MenuProtein {
+  extraFeeHalala: number;
+  currency?: string;
+}
+
+export type MenuPremiumProteinsResponse = PaginatedResponse<MenuPremiumProtein>;
+
+export interface MenuPremiumProteinDetailResponse {
+  status: boolean;
+  data: MenuPremiumProtein;
+}
+
+export interface CreateMenuPremiumProteinPayload extends CreateMenuProteinPayload {
+  extraFeeHalala: number;
+  currency?: string;
+}
+
+export interface UpdateMenuPremiumProteinPayload extends UpdateMenuProteinPayload {
+  extraFeeHalala?: number;
+  currency?: string;
+}
+
 export interface MenuCategoryDetailResponse {
   status: boolean;
   data: MenuCategory;

@@ -13,17 +13,27 @@
 
 import type {
   MenuCategory,
+  MenuMealCategory,
+  MenuProtein,
+  MenuPremiumProtein,
   MenuProduct,
   MenuOptionGroup,
   MenuOption,
   MenuCategoriesResponse,
+  MenuMealCategoriesResponse,
+  MenuProteinsResponse,
+  MenuPremiumProteinsResponse,
   MenuProductsResponse,
   MenuOptionGroupsResponse,
   MenuOptionsResponse,
   MenuCategoryDetailResponse,
+  MenuMealCategoryDetailResponse,
+  MenuProteinDetailResponse,
+  MenuPremiumProteinDetailResponse,
   MenuProductDetailResponse,
   MenuOptionGroupDetailResponse,
   MenuOptionDetailResponse,
+  PaginationMeta,
 } from "@/types/menuTypes";
 
 // ── Helpers ──
@@ -46,13 +56,36 @@ function extractItems(raw: any): any[] {
 }
 
 /** Wrap an array into the paginated response shape the frontend expects */
-function toPaginatedResponse<T>(items: T[]): {
+function extractPagination(raw: any, itemCount: number): PaginationMeta {
+  const data = raw?.data ?? raw;
+  const pagination =
+    data?.pagination ?? raw?.pagination ?? raw?.meta?.pagination ?? raw?.meta;
+
+  if (pagination) {
+    const limit = Number(pagination.limit ?? pagination.perPage ?? (itemCount || 25));
+    const total = Number(pagination.total ?? pagination.totalItems ?? itemCount);
+    const pages = Number(
+      pagination.pages ?? pagination.totalPages ?? Math.max(1, Math.ceil(total / limit))
+    );
+
+    return {
+      page: Number(pagination.page ?? pagination.currentPage ?? 1),
+      limit,
+      total,
+      pages,
+    };
+  }
+
+  return { page: 1, limit: itemCount || 25, total: itemCount, pages: 1 };
+}
+
+function toPaginatedResponse<T>(raw: any, items: T[]): {
   items: T[];
-  pagination: { page: 1; limit: number; total: number; pages: 1 };
+  pagination: PaginationMeta;
 } {
   return {
     items,
-    pagination: { page: 1, limit: items.length || 25, total: items.length, pages: 1 },
+    pagination: extractPagination(raw, items.length),
   };
 }
 
@@ -89,7 +122,7 @@ export function normalizeCategoriesResponse(raw: any): MenuCategoriesResponse {
   const items = extractItems(raw).map(normalizeCategory);
   return {
     status: raw.status ?? true,
-    data: toPaginatedResponse(items),
+    data: toPaginatedResponse(raw, items),
   };
 }
 
@@ -98,6 +131,125 @@ export function normalizeCategoryDetailResponse(raw: any): MenuCategoryDetailRes
   return {
     status: raw.status ?? true,
     data: normalizeCategory(data),
+  };
+}
+
+// â”€â”€ Meal Category Normalizer â”€â”€
+
+function normalizeMealCategory(raw: any): MenuMealCategory {
+  const normalized = normalizeCategory(raw);
+  return {
+    ...normalized,
+    isAvailable: raw.isAvailable ?? raw.available ?? normalized.isAvailable ?? true,
+    isVisible: raw.isVisible ?? raw.visible ?? normalized.isVisible ?? true,
+  };
+}
+
+export function normalizeMealCategoriesResponse(raw: any): MenuMealCategoriesResponse {
+  const items = extractItems(raw).map(normalizeMealCategory);
+  return {
+    status: raw.status ?? true,
+    data: toPaginatedResponse(raw, items),
+  };
+}
+
+export function normalizeMealCategoryDetailResponse(
+  raw: any
+): MenuMealCategoryDetailResponse {
+  const data = raw.data ?? raw;
+  return {
+    status: raw.status ?? true,
+    data: normalizeMealCategory(data),
+  };
+}
+
+// â”€â”€ Protein Normalizer â”€â”€
+
+function normalizeProtein(raw: any): MenuProtein {
+  if (raw.name && typeof raw.name === "object" && "ar" in raw.name) {
+    return {
+      ...(raw as MenuProtein),
+      id: raw.id ?? raw._id ?? "",
+      imageUrl: raw.imageUrl ?? raw.image ?? raw.imageUrl,
+      isAvailable:
+        raw.isAvailable ?? raw.availableForOrder ?? raw.available ?? raw.isActive ?? true,
+      isVisible: raw.isVisible ?? raw.visible ?? true,
+      categoryId: raw.categoryId ?? raw.category_id ?? raw.category?._id ?? raw.category?.id ?? "",
+    };
+  }
+
+  return {
+    id: raw.id ?? raw._id ?? "",
+    name: {
+      ar: raw.nameAr ?? raw.name_ar ?? raw.name?.ar ?? "",
+      en: raw.nameEn ?? raw.name_en ?? raw.name?.en ?? "",
+    },
+    description: {
+      ar: raw.descriptionAr ?? raw.description_ar ?? raw.description?.ar ?? "",
+      en: raw.descriptionEn ?? raw.description_en ?? raw.description?.en ?? "",
+    },
+    imageUrl: raw.imageUrl ?? raw.image ?? "",
+    categoryId: raw.categoryId ?? raw.category_id ?? raw.category?._id ?? raw.category?.id ?? "",
+    category: raw.category ? normalizeMealCategory(raw.category) : undefined,
+    proteinGrams: raw.proteinGrams ?? raw.protein_grams ?? 0,
+    carbGrams: raw.carbGrams ?? raw.carb_grams ?? 0,
+    fatGrams: raw.fatGrams ?? raw.fat_grams ?? 0,
+    isActive: raw.isActive ?? raw.active ?? true,
+    isAvailable:
+      raw.isAvailable ?? raw.availableForOrder ?? raw.available ?? raw.isActive ?? true,
+    isVisible: raw.isVisible ?? raw.visible ?? true,
+    availableForOrder: raw.availableForOrder ?? raw.isAvailable ?? raw.available ?? true,
+    availableForSubscription: raw.availableForSubscription ?? true,
+    sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
+    createdAt: raw.createdAt ?? raw.created_at,
+    updatedAt: raw.updatedAt ?? raw.updated_at,
+  };
+}
+
+export function normalizeProteinsResponse(raw: any): MenuProteinsResponse {
+  const items = extractItems(raw).map(normalizeProtein);
+  return {
+    status: raw.status ?? true,
+    data: toPaginatedResponse(raw, items),
+  };
+}
+
+export function normalizeProteinDetailResponse(raw: any): MenuProteinDetailResponse {
+  const data = raw.data ?? raw;
+  return {
+    status: raw.status ?? true,
+    data: normalizeProtein(data),
+  };
+}
+
+// â”€â”€ Premium Protein Normalizer â”€â”€
+
+function normalizePremiumProtein(raw: any): MenuPremiumProtein {
+  const protein = normalizeProtein(raw);
+  return {
+    ...protein,
+    extraFeeHalala: raw.extraFeeHalala ?? raw.extra_fee_halala ?? raw.extraFee ?? 0,
+    currency: raw.currency ?? "SAR",
+  };
+}
+
+export function normalizePremiumProteinsResponse(
+  raw: any
+): MenuPremiumProteinsResponse {
+  const items = extractItems(raw).map(normalizePremiumProtein);
+  return {
+    status: raw.status ?? true,
+    data: toPaginatedResponse(raw, items),
+  };
+}
+
+export function normalizePremiumProteinDetailResponse(
+  raw: any
+): MenuPremiumProteinDetailResponse {
+  const data = raw.data ?? raw;
+  return {
+    status: raw.status ?? true,
+    data: normalizePremiumProtein(data),
   };
 }
 
@@ -144,7 +296,7 @@ export function normalizeProductsResponse(raw: any): MenuProductsResponse {
   const items = extractItems(raw).map(normalizeProduct);
   return {
     status: raw.status ?? true,
-    data: toPaginatedResponse(items),
+    data: toPaginatedResponse(raw, items),
   };
 }
 
@@ -187,7 +339,7 @@ export function normalizeOptionGroupsResponse(raw: any): MenuOptionGroupsRespons
   const items = extractItems(raw).map(normalizeOptionGroup);
   return {
     status: raw.status ?? true,
-    data: toPaginatedResponse(items),
+    data: toPaginatedResponse(raw, items),
   };
 }
 
@@ -235,7 +387,7 @@ export function normalizeOptionsResponse(raw: any): MenuOptionsResponse {
   const items = extractItems(raw).map(normalizeOption);
   return {
     status: raw.status ?? true,
-    data: toPaginatedResponse(items),
+    data: toPaginatedResponse(raw, items),
   };
 }
 

@@ -14,19 +14,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePremiumMealsQuery } from "@/hooks/usePremiumMealsQuery";
+import api from "@/lib/apis";
+import { useQuery } from "@tanstack/react-query";
 import { Sparkles, Plus, Trash2 } from "lucide-react";
 import { useFieldArray, type UseFormReturn } from "react-hook-form";
 import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubscriptionSchema";
-import type { PremiumMeal } from "@/types/premiumMealTypes";
 
 interface PremiumMealsSectionProps {
   form: UseFormReturn<CreateSubscriptionSchemaType>;
 }
 
+interface BuilderPremiumMeal {
+  id: string;
+  name: { ar?: string; en?: string } | string;
+  imageUrl?: string;
+  extraFeeHalala?: number;
+  isActive?: boolean;
+}
+
+interface BuilderPremiumMealsResponse {
+  status: boolean;
+  data: BuilderPremiumMeal[];
+}
+
+const fetchBuilderPremiumMeals = async (): Promise<BuilderPremiumMealsResponse> => {
+  const response = await api.get("/api/admin/builder-premium-meals");
+  return response.data;
+};
+
+const getMealName = (meal: BuilderPremiumMeal) =>
+  typeof meal.name === "string" ? meal.name : meal.name.ar || meal.name.en || "";
+
 export function PremiumMealsSection({ form }: PremiumMealsSectionProps) {
-  const { data: premiumResponse, isLoading } = usePremiumMealsQuery();
-  const premiumMeals = premiumResponse?.data?.filter((m) => m.isActive) || [];
+  const { data: premiumResponse, isLoading } = useQuery({
+    queryKey: ["builder-premium-meals"],
+    queryFn: fetchBuilderPremiumMeals,
+    staleTime: 1000 * 60 * 2,
+  });
+  const premiumMeals =
+    premiumResponse?.data.filter((meal) => meal.isActive !== false) || [];
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -35,8 +61,8 @@ export function PremiumMealsSection({ form }: PremiumMealsSectionProps) {
 
   const selectedIds = form.watch("premiumItems")?.map((p) => p.premiumMealId) || [];
 
-  const getSelectedMeal = (mealId: string): PremiumMeal | undefined =>
-    premiumMeals.find((m) => m._id === mealId);
+  const getSelectedMeal = (mealId: string): BuilderPremiumMeal | undefined =>
+    premiumMeals.find((meal) => meal.id === mealId);
 
   return (
     <Card>
@@ -90,10 +116,10 @@ export function PremiumMealsSection({ form }: PremiumMealsSectionProps) {
                   className="flex items-start gap-3 rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-all hover:border-border/80"
                 >
                   {/* Meal image preview */}
-                  {selectedMeal && (
+                  {selectedMeal?.imageUrl && (
                     <img
                       src={selectedMeal.imageUrl}
-                      alt={selectedMeal.name.ar}
+                      alt={getMealName(selectedMeal)}
                       className="size-16 shrink-0 rounded-lg object-cover"
                     />
                   )}
@@ -114,19 +140,19 @@ export function PremiumMealsSection({ form }: PremiumMealsSectionProps) {
                           <SelectValue placeholder="اختر الوجبة" />
                         </SelectTrigger>
                         <SelectContent>
-                          {premiumMeals.map((meal: PremiumMeal) => (
+                          {premiumMeals.map((meal) => (
                             <SelectItem
-                              key={meal._id}
-                              value={meal._id}
+                              key={meal.id}
+                              value={meal.id}
                               disabled={
-                                selectedIds.includes(meal._id) &&
-                                form.watch(`premiumItems.${index}.premiumMealId`) !== meal._id
+                                selectedIds.includes(meal.id) &&
+                                form.watch(`premiumItems.${index}.premiumMealId`) !== meal.id
                               }
                             >
                               <span className="flex items-center gap-2">
-                                {meal.name.ar}
+                                {getMealName(meal)}
                                 <span className="text-xs text-muted-foreground">
-                                  ({(meal.extraFeeHalala / 100).toFixed(0)} ريال)
+                                  ({((meal.extraFeeHalala || 0) / 100).toFixed(0)} ريال)
                                 </span>
                               </span>
                             </SelectItem>
@@ -157,7 +183,7 @@ export function PremiumMealsSection({ form }: PremiumMealsSectionProps) {
                       <div className="flex flex-col items-center gap-1 px-2">
                         <span className="text-[10px] text-muted-foreground">السعر</span>
                         <span className="text-sm font-bold text-amber-600">
-                          {(selectedMeal.extraFeeHalala / 100).toFixed(0)} ريال
+                          {((selectedMeal.extraFeeHalala || 0) / 100).toFixed(0)} ريال
                         </span>
                       </div>
                     )}

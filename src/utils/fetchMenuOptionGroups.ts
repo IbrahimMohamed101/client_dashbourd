@@ -11,6 +11,7 @@ import {
   normalizeOptionGroupsResponse,
   normalizeOptionGroupDetailResponse,
 } from "@/utils/menuResponseNormalizers";
+import { buildListQuery } from "@/utils/menu/buildListQuery";
 import { menuOptionGroupVisibilityUrl } from "./menuApiContract";
 
 // ── List Option Groups ──
@@ -19,18 +20,8 @@ import { menuOptionGroupVisibilityUrl } from "./menuApiContract";
 export const fetchMenuOptionGroups = async (
   params: MenuListParams = {}
 ): Promise<MenuOptionGroupsResponse> => {
-  const searchParams = new URLSearchParams();
-  if (params.page) searchParams.append("page", params.page.toString());
-  if (params.limit) searchParams.append("limit", params.limit.toString());
-  if (params.q) searchParams.append("q", params.q);
-  if (params.isActive !== undefined)
-    searchParams.append("isActive", params.isActive.toString());
-  if (params.isAvailable !== undefined)
-    searchParams.append("isAvailable", params.isAvailable.toString());
-
-  const query = searchParams.toString();
   const response = await api.get(
-    `/api/dashboard/menu/option-groups${query ? `?${query}` : ""}`
+    `/api/dashboard/menu/option-groups${buildListQuery(params)}`
   );
   return normalizeOptionGroupsResponse(response.data);
 };

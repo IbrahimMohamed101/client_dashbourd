@@ -5,6 +5,7 @@ import type {
   MenuIdentitySuggestionListParams,
   SuggestionActionPayload,
 } from "@/types/menuIdentityTypes";
+import { buildListQuery } from "@/utils/menu/buildListQuery";
 
 // ── §17.1 List Suggestions ──
 // GET /api/dashboard/menu-identity-suggestions
@@ -12,16 +13,8 @@ import type {
 export const fetchMenuIdentitySuggestions = async (
   params: MenuIdentitySuggestionListParams = {}
 ): Promise<MenuIdentitySuggestionsResponse> => {
-  const searchParams = new URLSearchParams();
-  if (params.page) searchParams.append("page", params.page.toString());
-  if (params.limit) searchParams.append("limit", params.limit.toString());
-  if (params.status) searchParams.append("status", params.status);
-  if (params.confidence) searchParams.append("confidence", params.confidence);
-  if (params.type) searchParams.append("type", params.type);
-
-  const query = searchParams.toString();
   const response = await api.get(
-    `/api/dashboard/menu-identity-suggestions${query ? `?${query}` : ""}`
+    `/api/dashboard/menu-identity-suggestions${buildListQuery(params)}`
   );
   return response.data;
 };

@@ -2,15 +2,24 @@ import type { MenuCategorySchemaType } from "@/lib/validations/menuCategorySchem
 import type { MenuOptionGroupSchemaType } from "@/lib/validations/menuOptionGroupSchema";
 import type { MenuOptionSchemaType } from "@/lib/validations/menuOptionSchema";
 import type { MenuProductSchemaType } from "@/lib/validations/menuProductSchema";
+import type { MenuProteinSchemaType } from "@/lib/validations/menuProteinSchema";
+import type { MenuPremiumProteinSchemaType } from "@/lib/validations/menuPremiumProteinSchema";
+import type { MenuMealCategorySchemaType } from "@/lib/validations/menuMealCategorySchema";
 import type {
   CreateMenuCategoryPayload,
+  CreateMenuMealCategoryPayload,
   CreateMenuOptionGroupPayload,
   CreateMenuOptionPayload,
+  CreateMenuPremiumProteinPayload,
   CreateMenuProductPayload,
+  CreateMenuProteinPayload,
   UpdateMenuCategoryPayload,
+  UpdateMenuMealCategoryPayload,
   UpdateMenuOptionGroupPayload,
   UpdateMenuOptionPayload,
+  UpdateMenuPremiumProteinPayload,
   UpdateMenuProductPayload,
+  UpdateMenuProteinPayload,
 } from "@/types/menuTypes";
 
 const sarToHalala = (amount: number) => Math.round(amount * 100);
@@ -41,6 +50,83 @@ export const toUpdateMenuCategoryPayload = (
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
   sortOrder: data.sortOrder,
+});
+
+export const toCreateMenuMealCategoryPayload = (
+  data: MenuMealCategorySchemaType
+): CreateMenuMealCategoryPayload => ({
+  key: data.key,
+  name: data.name,
+  description: data.description,
+  imageUrl: data.imageUrl,
+  isActive: data.isActive,
+  isAvailable: data.isAvailable,
+  isVisible: data.isVisible,
+  sortOrder: data.sortOrder,
+});
+
+export const toUpdateMenuMealCategoryPayload = (
+  data: MenuMealCategorySchemaType
+): UpdateMenuMealCategoryPayload => ({
+  name: data.name,
+  description: data.description,
+  imageUrl: data.imageUrl,
+  isActive: data.isActive,
+  isAvailable: data.isAvailable,
+  isVisible: data.isVisible,
+  sortOrder: data.sortOrder,
+});
+
+export const toCreateMenuProteinPayload = (
+  data: MenuProteinSchemaType
+): CreateMenuProteinPayload => ({
+  name: data.name,
+  description: data.description,
+  imageUrl: data.imageUrl,
+  categoryId: data.categoryId,
+  proteinGrams: data.proteinGrams,
+  carbGrams: data.carbGrams,
+  fatGrams: data.fatGrams,
+  isActive: data.isActive,
+  isAvailable: data.isAvailable,
+  isVisible: data.isVisible,
+  availableForOrder: data.availableForOrder,
+  availableForSubscription: data.availableForSubscription,
+  sortOrder: data.sortOrder,
+});
+
+export const toUpdateMenuProteinPayload = (
+  data: MenuProteinSchemaType
+): UpdateMenuProteinPayload => ({
+  name: data.name,
+  description: data.description,
+  imageUrl: data.imageUrl,
+  categoryId: data.categoryId,
+  proteinGrams: data.proteinGrams,
+  carbGrams: data.carbGrams,
+  fatGrams: data.fatGrams,
+  isActive: data.isActive,
+  isAvailable: data.isAvailable,
+  isVisible: data.isVisible,
+  availableForOrder: data.availableForOrder,
+  availableForSubscription: data.availableForSubscription,
+  sortOrder: data.sortOrder,
+});
+
+export const toCreateMenuPremiumProteinPayload = (
+  data: MenuPremiumProteinSchemaType
+): CreateMenuPremiumProteinPayload => ({
+  ...toCreateMenuProteinPayload(data),
+  currency: data.currency,
+  extraFeeHalala: sarToHalala(data.extraFeeSar),
+});
+
+export const toUpdateMenuPremiumProteinPayload = (
+  data: MenuPremiumProteinSchemaType
+): UpdateMenuPremiumProteinPayload => ({
+  ...toUpdateMenuProteinPayload(data),
+  currency: data.currency,
+  extraFeeHalala: sarToHalala(data.extraFeeSar),
 });
 
 export const toCreateMenuProductPayload = (

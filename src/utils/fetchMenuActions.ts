@@ -5,6 +5,7 @@ import type {
   MenuAuditLogsResponse,
   MenuAuditLogParams,
 } from "@/types/menuTypes";
+import { buildListQuery } from "@/utils/menu/buildListQuery";
 
 // ── §13 Validate Menu ──
 // POST /api/dashboard/menu/validate
@@ -32,16 +33,8 @@ export const fetchPublishMenu = async (
 export const fetchMenuAuditLogs = async (
   params: MenuAuditLogParams = {}
 ): Promise<MenuAuditLogsResponse> => {
-  const searchParams = new URLSearchParams();
-  if (params.page) searchParams.append("page", params.page.toString());
-  if (params.limit) searchParams.append("limit", params.limit.toString());
-  if (params.action) searchParams.append("action", params.action);
-  if (params.entityType) searchParams.append("entityType", params.entityType);
-  if (params.entityId) searchParams.append("entityId", params.entityId);
-
-  const query = searchParams.toString();
   const response = await api.get(
-    `/api/dashboard/menu/audit-logs${query ? `?${query}` : ""}`
+    `/api/dashboard/menu/audit-logs${buildListQuery(params)}`
   );
   return response.data;
 };

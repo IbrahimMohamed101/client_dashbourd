@@ -18,10 +18,14 @@ import { MenuPublishDialog } from "@/components/pages/menu/MenuPublishDialog";
 import { MenuProductRelationsTab } from "@/components/pages/menu/relations/MenuProductRelationsTab";
 import { workflowSteps } from "@/constants/menuData";
 
+const menuTabValues = new Set(workflowSteps.map((step) => step.value));
+
 export const Route = createFileRoute("/_protected/menu/")({
   validateSearch: (search: Record<string, unknown>) => {
+    const tab = typeof search.tab === "string" ? search.tab : "categories";
+
     return {
-      tab: (search.tab as string) || "categories",
+      tab: menuTabValues.has(tab) ? tab : "categories",
     };
   },
   component: MenuPage,

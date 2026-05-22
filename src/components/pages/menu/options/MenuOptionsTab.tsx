@@ -1,273 +1,47 @@
-import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
-import {
-  flexRender,
-  getCoreRowModel, useReactTable
-} from "@tanstack/react-table";
-
-import {
-  useDeleteMenuOptionMutation,
-  useMenuOptionGroupsQuery,
-  useMenuOptionsQuery,
-} from "@/hooks/useMenuQuery";
-import { useDebounce } from "@/hooks/useDebounce";
-import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
-import {
-  MenuSearchInput,
-  MenuSectionCard,
-} from "@/components/pages/menu/MenuTabScaffold";
+import { useState } from "react";
+import { MenuEntityTableTab } from "@/components/pages/menu/MenuEntityTableTab";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useDeleteMenuOptionMutation, useMenuOptionGroupsQuery, useMenuOptionsQuery } from "@/hooks/useMenuQuery";
+import type { MenuOption, MenuOptionListParams } from "@/types/menuTypes";
 import { getOptionColumns } from "../menu-columns";
-import type { MenuOption, MenuOptionGroup } from "@/types/menuTypes";
 
 export function MenuOptionsTab() {
-  const [search, setSearch] = useState("");
-  const [groupFilter, setGroupFilter] = useState<string>("all");
-  const debouncedSearch = useDebounce(search, 300);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 10,
-  });
-
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  const { data: groupsData } = useMenuOptionGroupsQuery({});
-  const groupsRawData = groupsData?.data;
-  const groups = (
-    Array.isArray(groupsRawData) ? groupsRawData : groupsRawData?.items || []
-  ) as MenuOptionGroup[];
-
-  const { data: response, isLoading } = useMenuOptionsQuery({
-    q: debouncedSearch || undefined,
-    groupId: groupFilter !== "all" ? groupFilter : undefined,
-    page: pagination.pageIndex + 1,
-    limit: pagination.pageSize,
-  });
-
-  const deleteMutation = useDeleteMenuOptionMutation();
-  const responseData = response?.data;
-  const options = (
-    Array.isArray(responseData) ? responseData : responseData?.items || []
-  ) as MenuOption[];
-  
-  const meta = responseData?.pagination ?? {
-    total: options.length,
-    pages: 1,
-    page: 1,
-    limit: pagination.pageSize,
-  };
-
-  const columns = useMemo(
-    () =>
-      getOptionColumns({
-        onDelete: setDeleteId,
-      }),
-    []
-  );
-
-  const table = useReactTable({
-    data: options,
-    columns,
-    state: {
-      pagination,
-    },
-    onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-    pageCount: meta.pages,
-    autoResetPageIndex: false,
-  });
-
-  async function handleDeleteConfirm() {
-    if (!deleteId) return;
-    try {
-      await deleteMutation.mutateAsync(deleteId);
-      setDeleteId(null);
-    } catch {
-      // Error handled by mutation defaults
-    }
-  }
+  const [groupFilter, setGroupFilter] = useState("all");
+  const { data: groupsData } = useMenuOptionGroupsQuery({ limit: 100 });
+  const groups = groupsData?.data.items ?? [];
 
   return (
-    <MenuSectionCard
+    <MenuEntityTableTab<MenuOption, MenuOptionListParams>
       title="الخيارات"
       description="أضف الخيارات الفردية داخل المجموعات مثل خيار دجاج أو خيار كبير."
-      action={
-        <Button asChild>
-          <Link to="/menu/options/create">
-            <Plus data-icon="inline-start" />
-            إضافة خيار
-          </Link>
-        </Button>
-      }
-    >
-      <div className="flex flex-col gap-4">
-        {/* Toolbar */}
-        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center">
-          <MenuSearchInput
-            placeholder="بحث في الخيارات..."
-            value={search}
-            onChange={(v) => {
-              setSearch(v);
-              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-            }}
-          />
-          <Select
-            value={groupFilter}
-            onValueChange={(v) => {
-              setGroupFilter(v);
-              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-            }}
-          >
-            <SelectTrigger className="w-full md:w-44">
-              <SelectValue placeholder="تصفية بالمجموعة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="all">كل المجموعات</SelectItem>
-                {groups.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.name.ar}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <DataTableViewOptions table={table} />
-        </div>
-
-        {/* Table Area */}
-        <div className="relative flex flex-col gap-4 overflow-auto">
-          <div className="overflow-hidden rounded-lg border bg-card">
-            <Table>
-              <TableHeader className="sticky top-0 z-10 bg-muted/50">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow
-                    key={headerGroup.id}
-                    className="border-b hover:bg-transparent"
-                  >
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className="py-4 text-right font-medium"
-                        style={{
-                          width:
-                            header.getSize() !== 150
-                              ? header.getSize()
-                              : undefined,
-                        }}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
-                      جاري التحميل...
-                    </TableCell>
-                  </TableRow>
-                ) : table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="py-4 text-right">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center text-muted-foreground"
-                    >
-                      لا توجد خيارات بعد. أضف الخيارات داخل المجموعات المتاحة.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <DataTablePagination
-            table={table}
-            totalItems={meta.total}
-            itemsLabel="خيارات"
-          />
-        </div>
-      </div>
-
-      <AlertDialog
-        open={Boolean(deleteId)}
-        onOpenChange={(open) => !open && setDeleteId(null)}
-      >
-        <AlertDialogContent className="rounded-[2rem]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
-                <Trash2 className="size-5" />
-              </div>
-              حذف الخيار
-            </AlertDialogTitle>
-            <AlertDialogDescription className="pt-2 text-right">
-              هل أنت متأكد من حذف هذا الخيار؟ لا يمكن التراجع عن هذا الإجراء.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-4 flex-row-reverse gap-2">
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              نعم، احذف
-            </AlertDialogAction>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </MenuSectionCard>
+      createTo="/menu/options/create"
+      createLabel="إضافة خيار"
+      searchPlaceholder="بحث في الخيارات..."
+      itemsLabel="خيارات"
+      emptyMessage="لا توجد خيارات بعد. أضف الخيارات داخل المجموعات المتاحة."
+      deleteTitle="حذف الخيار"
+      deleteDescription="هل أنت متأكد من حذف هذا الخيار؟ لا يمكن التراجع عن هذا الإجراء."
+      columns={(onDelete) => getOptionColumns({ onDelete })}
+      useQuery={useMenuOptionsQuery}
+      useDeleteMutation={useDeleteMenuOptionMutation}
+      buildQueryParams={(params) => ({
+        ...params,
+        groupId: groupFilter !== "all" ? groupFilter : undefined,
+      })}
+      renderToolbarFilters={(resetPagination) => (
+        <Select value={groupFilter} onValueChange={(value) => {
+          setGroupFilter(value);
+          resetPagination();
+        }}>
+          <SelectTrigger className="w-full md:w-44">
+            <SelectValue placeholder="تصفية بالمجموعة" />
+          </SelectTrigger>
+          <SelectContent><SelectGroup>
+            <SelectItem value="all">كل المجموعات</SelectItem>
+            {groups.map((group) => <SelectItem key={group.id} value={group.id}>{group.name.ar}</SelectItem>)}
+          </SelectGroup></SelectContent>
+        </Select>
+      )}
+    />
   );
 }

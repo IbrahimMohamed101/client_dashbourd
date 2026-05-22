@@ -11,6 +11,7 @@ import {
   normalizeCategoriesResponse,
   normalizeCategoryDetailResponse,
 } from "@/utils/menuResponseNormalizers";
+import { buildListQuery } from "@/utils/menu/buildListQuery";
 
 // ── List Categories ──
 // GET /api/dashboard/menu/categories
@@ -18,18 +19,8 @@ import {
 export const fetchMenuCategories = async (
   params: MenuListParams = {}
 ): Promise<MenuCategoriesResponse> => {
-  const searchParams = new URLSearchParams();
-  if (params.page) searchParams.append("page", params.page.toString());
-  if (params.limit) searchParams.append("limit", params.limit.toString());
-  if (params.q) searchParams.append("q", params.q);
-  if (params.isActive !== undefined)
-    searchParams.append("isActive", params.isActive.toString());
-  if (params.isAvailable !== undefined)
-    searchParams.append("isAvailable", params.isAvailable.toString());
-
-  const query = searchParams.toString();
   const response = await api.get(
-    `/api/dashboard/menu/categories${query ? `?${query}` : ""}`
+    `/api/dashboard/menu/categories${buildListQuery(params)}`
   );
   return normalizeCategoriesResponse(response.data);
 };

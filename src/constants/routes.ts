@@ -9,10 +9,7 @@ const SUPERADMIN_ROUTES = [
   "/subscriptions",
   "/packages",
   "/users",
-  "/premium-meals",
   "/addons",
-  "/meals",
-  "/categories",
   "/delivery",
   "/payments",
   "/promo-codes",
@@ -29,10 +26,7 @@ const ADMIN_ROUTES = [
   "/subscriptions",
   "/packages",
   "/users",
-  "/premium-meals",
   "/addons",
-  "/meals",
-  "/categories",
   "/delivery",
   "/payments",
   "/promo-codes",
@@ -44,8 +38,7 @@ const ADMIN_ROUTES = [
 const KITCHEN_ROUTES = [
   "/operations",
   "/one-time-orders",
-  "/meals",
-  "/categories",
+  "/menu",
   "/manual-deduction",
 ];
 

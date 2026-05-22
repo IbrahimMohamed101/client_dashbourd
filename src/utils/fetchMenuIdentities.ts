@@ -7,6 +7,7 @@ import type {
   MenuIdentityListParams,
   MenuIdentityLinkListParams,
 } from "@/types/menuIdentityTypes";
+import { buildListQuery } from "@/utils/menu/buildListQuery";
 
 // ── §16.1 List Shared Identities ──
 // GET /api/dashboard/menu-identities
@@ -14,17 +15,8 @@ import type {
 export const fetchMenuIdentities = async (
   params: MenuIdentityListParams = {}
 ): Promise<SharedMenuIdentitiesResponse> => {
-  const searchParams = new URLSearchParams();
-  if (params.page) searchParams.append("page", params.page.toString());
-  if (params.limit) searchParams.append("limit", params.limit.toString());
-  if (params.key) searchParams.append("key", params.key);
-  if (params.type) searchParams.append("type", params.type);
-  if (params.isActive !== undefined)
-    searchParams.append("isActive", params.isActive.toString());
-
-  const query = searchParams.toString();
   const response = await api.get(
-    `/api/dashboard/menu-identities${query ? `?${query}` : ""}`
+    `/api/dashboard/menu-identities${buildListQuery(params)}`
   );
   return response.data;
 };
@@ -57,20 +49,8 @@ export const fetchMenuIdentityLinks = async (
 export const fetchAllIdentityLinks = async (
   params: MenuIdentityLinkListParams = {}
 ): Promise<MenuIdentityLinksResponse> => {
-  const searchParams = new URLSearchParams();
-  if (params.page) searchParams.append("page", params.page.toString());
-  if (params.limit) searchParams.append("limit", params.limit.toString());
-  if (params.channel) searchParams.append("channel", params.channel);
-  if (params.sourceModel)
-    searchParams.append("sourceModel", params.sourceModel);
-  if (params.confidence) searchParams.append("confidence", params.confidence);
-  if (params.status) searchParams.append("status", params.status);
-  if (params.isActive !== undefined)
-    searchParams.append("isActive", params.isActive.toString());
-
-  const query = searchParams.toString();
   const response = await api.get(
-    `/api/dashboard/menu-identity-links${query ? `?${query}` : ""}`
+    `/api/dashboard/menu-identity-links${buildListQuery(params)}`
   );
   return response.data;
 };

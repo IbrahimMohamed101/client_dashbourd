@@ -11,6 +11,7 @@ import {
   normalizeProductsResponse,
   normalizeProductDetailResponse,
 } from "@/utils/menuResponseNormalizers";
+import { buildListQuery } from "@/utils/menu/buildListQuery";
 
 // ── List Products ──
 // GET /api/dashboard/menu/products
@@ -18,22 +19,8 @@ import {
 export const fetchMenuProducts = async (
   params: MenuProductListParams = {}
 ): Promise<MenuProductsResponse> => {
-  const searchParams = new URLSearchParams();
-  if (params.page) searchParams.append("page", params.page.toString());
-  if (params.limit) searchParams.append("limit", params.limit.toString());
-  if (params.q) searchParams.append("q", params.q);
-  if (params.categoryId) searchParams.append("categoryId", params.categoryId);
-  if (params.pricingModel)
-    searchParams.append("pricingModel", params.pricingModel);
-  if (params.itemType) searchParams.append("itemType", params.itemType);
-  if (params.isActive !== undefined)
-    searchParams.append("isActive", params.isActive.toString());
-  if (params.isAvailable !== undefined)
-    searchParams.append("isAvailable", params.isAvailable.toString());
-
-  const query = searchParams.toString();
   const response = await api.get(
-    `/api/dashboard/menu/products${query ? `?${query}` : ""}`
+    `/api/dashboard/menu/products${buildListQuery(params)}`
   );
   return normalizeProductsResponse(response.data);
 };
