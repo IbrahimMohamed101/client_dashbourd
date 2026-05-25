@@ -1,20 +1,38 @@
-type ApiErrorLike = {
-  response?: {
-    data?: {
-      message?: unknown;
-      error?:
-        | string
-        | {
-            message?: unknown;
-            messageKey?: unknown;
-          };
-    };
-  };
+type ApiErrorData = {
   message?: unknown;
+  code?: unknown;
+  success?: unknown;
+  status?: unknown;
+  expectedField?: unknown;
+  error?:
+    | string
+    | {
+        message?: unknown;
+        messageKey?: unknown;
+        code?: unknown;
+        details?: unknown;
+      };
 };
 
-export function getApiErrorMessage(error: ApiErrorLike): string {
-  const data = error.response?.data;
+type ApiErrorLike = {
+  response?: {
+    data?: ApiErrorData;
+  };
+  message?: unknown;
+  code?: unknown;
+  status?: unknown;
+};
+
+const isApiErrorLike = (error: unknown): error is ApiErrorLike =>
+  typeof error === "object" && error !== null;
+
+export function getApiErrorMessage(error: unknown): string {
+  const apiError = isApiErrorLike(error) ? error : {};
+  const data: ApiErrorData = apiError.response?.data ?? {
+    message: apiError.message,
+    code: apiError.code,
+    status: apiError.status,
+  };
 
   if (typeof data?.message === "string") return data.message;
 
@@ -26,7 +44,20 @@ export function getApiErrorMessage(error: ApiErrorLike): string {
     return data.error.messageKey;
   }
 
-  if (typeof error.message === "string") return error.message;
+  if (typeof data?.error?.code === "string") return data.error.code;
+
+  if (typeof data?.code === "string") return data.code;
+
+  if (
+    (data?.success === false || data?.status === false) &&
+    typeof data?.expectedField === "string"
+  ) {
+    return `Expected field: ${data.expectedField}`;
+  }
+
+  if (typeof apiError.message === "string") return apiError.message;
+
+  if (typeof apiError.code === "string") return apiError.code;
 
   return "Unexpected error";
 }

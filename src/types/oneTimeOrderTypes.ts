@@ -264,6 +264,7 @@ export interface OneTimeOrderListParams {
   from?: string;
   to?: string;
   branchId?: string;
+  zoneId?: string;
   q?: string;
   page?: number;
   limit?: number;

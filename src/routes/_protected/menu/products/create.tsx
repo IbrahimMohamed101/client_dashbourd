@@ -36,6 +36,8 @@ function CreateMenuProductPage() {
       isActive: true,
       isAvailable: true,
       isVisible: true,
+      availableFor: ["order", "subscription"],
+      availableForSubscription: true,
       sortOrder: 0,
     },
   });

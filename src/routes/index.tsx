@@ -8,9 +8,13 @@ import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
     const data = await context.queryClient.ensureQueryData(sessionQueryOptions);
-    authMiddleware(data as AuthResponse, location.pathname);
+    authMiddleware(
+      data as AuthResponse,
+      location.pathname,
+      location.search as Record<string, string>
+    );
   },
   errorComponent: RouteError,
   pendingComponent: Loader,

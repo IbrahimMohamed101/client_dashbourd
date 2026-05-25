@@ -4,8 +4,13 @@ import {
   fetchValidateMenu,
   fetchPublishMenu,
   fetchMenuAuditLogs,
+  fetchMenuVersions,
+  fetchRollbackMenuVersion,
 } from "@/utils/fetchMenuActions";
-import type { MenuAuditLogParams } from "@/types/menuTypes";
+import type {
+  MenuAuditLogParams,
+  MenuVersionListParams,
+} from "@/types/menuTypes";
 
 const MENU_KEY = "menu";
 
@@ -33,3 +38,20 @@ export const menuAuditLogsQueryOptions = (params: MenuAuditLogParams = {}) =>
 
 export const useMenuAuditLogsQuery = (params: MenuAuditLogParams = {}) =>
   useQuery(menuAuditLogsQueryOptions(params));
+
+export const menuVersionsQueryOptions = (params: MenuVersionListParams = {}) =>
+  queryOptions({
+    queryKey: [MENU_KEY, "versions", params],
+    queryFn: () => fetchMenuVersions(params),
+    staleTime: 1000 * 60 * 1,
+  });
+
+export const useMenuVersionsQuery = (params: MenuVersionListParams = {}) =>
+  useQuery(menuVersionsQueryOptions(params));
+
+export const useRollbackMenuVersionMutation = () =>
+  useMutationWithToast({
+    mutationFn: (versionId: string) => fetchRollbackMenuVersion(versionId),
+    successMessage: "تم استرجاع نسخة القائمة بنجاح",
+    invalidateKeys: [[MENU_KEY]],
+  });

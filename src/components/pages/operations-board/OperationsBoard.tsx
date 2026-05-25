@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, ChefHat, Search, Store, Truck } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { FulfillDialog } from "@/components/pages/pickup-board/FulfillDialog";
 import { ReasonActionDialog } from "@/components/pages/pickup-board/ReasonActionDialog";
 import { Badge } from "@/components/ui/badge";
@@ -9,25 +10,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useOperationsBoard } from "@/hooks/useOperationsBoard";
 import { useOperationsBoardDialog } from "@/hooks/useOperationsBoardDialog";
+import { getSafeOperationsTab } from "@/lib/operationsBoard";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { OperationsBoardSkeleton } from "./OperationsBoardSkeleton";
 import { OperationsCourierBoard } from "./OperationsCourierBoard";
 import { OperationsKitchenBoard } from "./OperationsKitchenBoard";
 import { OperationsPickupBoard } from "./OperationsPickupBoard";
+import { Route } from "@/routes/_protected/operations";
 
 export function OperationsBoard() {
+  const { tab: tabFromUrl } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
   const { visibleScreens, itemsByScreen, isLoading, isPending, requestAction } =
     useOperationsBoard({ date, q: debouncedSearch });
-  const [requestedTab, setRequestedTab] = useState<string>("kitchen");
   const { dialogState, openReasonDialog, openFulfillDialog, closeDialog } =
     useOperationsBoardDialog();
+  const activeTab = getSafeOperationsTab(tabFromUrl, visibleScreens);
 
-  const activeTab = visibleScreens.some((screen) => screen === requestedTab)
-    ? requestedTab
-    : visibleScreens[0] || "kitchen";
+
+  const handleTabChange = (value: string) => {
+    if (value === activeTab) {
+      return;
+    }
+
+    navigate({ search: (prev) => ({ ...prev, tab: value }) });
+  };
 
   const handleRequestAction = (
     item: UnifiedQueueItem,
@@ -111,7 +121,7 @@ export function OperationsBoard() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setRequestedTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="mb-4 h-auto flex-wrap gap-1 rounded-xl bg-muted/40 p-1">
           {visibleScreens.includes("kitchen") && (
             <TabsTrigger value="kitchen" className="flex items-center gap-2">

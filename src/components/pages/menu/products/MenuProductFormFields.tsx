@@ -47,8 +47,24 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
   const isAvailable = form.watch("isAvailable") ?? true;
   const isVisible = form.watch("isVisible") ?? true;
+  const availableFor = form.watch("availableFor") ?? ["order", "subscription"];
   const { data: catsData } = useMenuCategoriesQuery({});
   const categories = catsData?.data?.items || [];
+
+  const setChannel = (channel: string, checked: boolean) => {
+    const next = checked
+      ? Array.from(new Set([...availableFor, channel]))
+      : availableFor.filter((item) => item !== channel);
+
+    form.setValue("availableFor", next, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue("availableForSubscription", next.includes("subscription"), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -353,6 +369,36 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                 placeholder="0"
                 {...form.register("sortOrder")}
                 aria-invalid={!!form.formState.errors.sortOrder}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+              <div className="space-y-0.5">
+                <Label className="text-base font-bold">Order channel</Label>
+                <p className="text-xs text-muted-foreground">
+                  Visible for one-time ordering
+                </p>
+              </div>
+              <Switch
+                type="button"
+                checked={availableFor.includes("order")}
+                onCheckedChange={(checked) => setChannel("order", checked)}
+              />
+            </div>
+
+            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+              <div className="space-y-0.5">
+                <Label className="text-base font-bold">Subscription channel</Label>
+                <p className="text-xs text-muted-foreground">
+                  Visible in subscription builder
+                </p>
+              </div>
+              <Switch
+                type="button"
+                checked={availableFor.includes("subscription")}
+                onCheckedChange={(checked) => setChannel("subscription", checked)}
               />
             </div>
           </div>

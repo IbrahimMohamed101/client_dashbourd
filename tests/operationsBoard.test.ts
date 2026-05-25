@@ -5,6 +5,7 @@ import {
   getEndpointForAction,
   getItemsByStatuses,
   getPickupItems,
+  getSafeOperationsTab,
   getScreensForRole,
 } from "../src/lib/operationsBoard";
 import type { UnifiedQueueItem } from "../src/types/dashboardOpsTypes";
@@ -33,6 +34,16 @@ const makeItem = (
 assert.deepEqual(getScreensForRole("kitchen").screens, ["kitchen", "pickup"]);
 assert.deepEqual(getScreensForRole("courier").screens, ["courier"]);
 assert.deepEqual(getScreensForRole("cashier").screens, []);
+assert.equal(
+  getSafeOperationsTab("pickup", ["kitchen", "pickup", "courier"]),
+  "pickup"
+);
+assert.equal(
+  getSafeOperationsTab("courier", ["kitchen", "pickup"]),
+  "kitchen"
+);
+assert.equal(getSafeOperationsTab(undefined, ["courier"]), "courier");
+assert.equal(getSafeOperationsTab(undefined, []), "kitchen");
 
 const items = [
   makeItem({ entityId: "ready-pickup", status: "ready", mode: "pickup" }),

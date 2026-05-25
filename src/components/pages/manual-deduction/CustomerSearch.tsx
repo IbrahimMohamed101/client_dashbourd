@@ -14,6 +14,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { getApiErrorMessage } from "@/lib/apiErrors";
 
 const searchSchema = z.object({
   phone: z.string().min(8, "الرجاء إدخال رقم هاتف صحيح (8 أرقام على الأقل)"),
@@ -82,7 +83,8 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
           <Alert variant="destructive" className="mt-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              {(error as any)?.response?.data?.message || (error as any)?.message || "حدث خطأ أثناء البحث. تأكد من الرقم وأعد المحاولة."}
+              {getApiErrorMessage(error) ||
+                "حدث خطأ أثناء البحث. تأكد من الرقم وأعد المحاولة."}
             </AlertDescription>
           </Alert>
         )}

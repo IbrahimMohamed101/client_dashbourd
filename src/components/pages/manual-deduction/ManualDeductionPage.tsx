@@ -28,6 +28,12 @@ import type { UseFormReturn } from "react-hook-form";
 
 const columnHelper = createColumnHelper<Subscription>();
 
+type ManualDeductionSubscription = Subscription & {
+  remainingPremiumMeals?: number;
+  remainingRegularMeals?: number;
+  fulfillmentMethod?: string;
+};
+
 export default function ManualDeductionPage() {
   const [searchPhone, setSearchPhone] = useState("");
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
@@ -46,7 +52,7 @@ export default function ManualDeductionPage() {
   const customer = rawData?.customer;
   const today = rawData?.today;
 
-  const subscriptions: Subscription[] = rawSubscriptions.map((sub: any) => ({
+  const subscriptions: Subscription[] = rawSubscriptions.map((sub: ManualDeductionSubscription) => ({
     ...sub,
     userName: customer?.name,
     user: { fullName: customer?.name, phone: customer?.phone },

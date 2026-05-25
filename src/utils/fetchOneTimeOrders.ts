@@ -12,16 +12,11 @@ import type {
 } from "@/types/oneTimeOrderTypes";
 import { isOneTimeOrderActionAllowed } from "@/types/oneTimeOrderTypes";
 
-// ── Step 1: List dashboard orders ──
-// GET /api/dashboard/orders
-// One-Time Orders are separate from subscriptions. Do NOT use subscription endpoints.
-
-export const fetchOneTimeOrders = async (
+export const buildOneTimeOrdersQuery = (
   params: OneTimeOrderListParams = {}
-): Promise<OneTimeOrderListResponse> => {
+): string => {
   const searchParams = new URLSearchParams();
 
-  // Always filter by pickup for launch (pickup-only)
   searchParams.append(
     "fulfillmentMethod",
     params.fulfillmentMethod ?? "pickup"
@@ -33,13 +28,23 @@ export const fetchOneTimeOrders = async (
   if (params.date) searchParams.append("date", params.date);
   if (params.from) searchParams.append("from", params.from);
   if (params.to) searchParams.append("to", params.to);
-  if (params.branchId) searchParams.append("branchId", params.branchId);
+  if (params.zoneId) searchParams.append("zoneId", params.zoneId);
   if (params.q) searchParams.append("q", params.q);
   searchParams.append("page", (params.page ?? 1).toString());
   searchParams.append("limit", (params.limit ?? 20).toString());
 
+  return searchParams.toString();
+};
+
+// ── Step 1: List dashboard orders ──
+// GET /api/dashboard/orders
+// One-Time Orders are separate from subscriptions. Do NOT use subscription endpoints.
+
+export const fetchOneTimeOrders = async (
+  params: OneTimeOrderListParams = {}
+): Promise<OneTimeOrderListResponse> => {
   const response = await api.get(
-    `/api/dashboard/orders?${searchParams.toString()}`
+    `/api/dashboard/orders?${buildOneTimeOrdersQuery(params)}`
   );
   return response.data;
 };

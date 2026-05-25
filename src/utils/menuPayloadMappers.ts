@@ -148,6 +148,8 @@ export const toCreateMenuProductPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
+  availableFor: data.availableFor,
+  availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,
 });
 
@@ -169,6 +171,8 @@ export const toUpdateMenuProductPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
+  availableFor: data.availableFor,
+  availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,
 });
 
@@ -209,6 +213,10 @@ export const toCreateMenuOptionPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
+  displayCategoryKey: data.displayCategoryKey,
+  proteinFamilyKey: data.proteinFamilyKey,
+  availableFor: data.availableFor,
+  availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,
 });
 
@@ -224,5 +232,9 @@ export const toUpdateMenuOptionPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
+  displayCategoryKey: data.displayCategoryKey,
+  proteinFamilyKey: data.proteinFamilyKey,
+  availableFor: data.availableFor,
+  availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,
 });

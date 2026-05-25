@@ -56,6 +56,13 @@ function UpdateOptionPage() {
           isActive: option.isActive,
           isAvailable: option.isAvailable,
           isVisible: option.isVisible ?? true,
+          displayCategoryKey: option.displayCategoryKey ?? "",
+          proteinFamilyKey: option.proteinFamilyKey ?? "",
+          availableFor: option.availableFor ?? ["order", "subscription"],
+          availableForSubscription:
+            option.availableForSubscription ??
+            option.availableFor?.includes("subscription") ??
+            true,
           sortOrder: option.sortOrder,
         }
       : undefined,

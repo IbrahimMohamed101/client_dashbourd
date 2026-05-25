@@ -16,6 +16,7 @@ import { MenuAuditLogTab } from "@/components/pages/menu/audit/MenuAuditLogTab";
 import { MenuValidationDialog } from "@/components/pages/menu/MenuValidationDialog";
 import { MenuPublishDialog } from "@/components/pages/menu/MenuPublishDialog";
 import { MenuProductRelationsTab } from "@/components/pages/menu/relations/MenuProductRelationsTab";
+import { MenuVersionsTab } from "@/components/pages/menu/versions/MenuVersionsTab";
 import { workflowSteps } from "@/constants/menuData";
 
 const menuTabValues = new Set(workflowSteps.map((step) => step.value));
@@ -146,6 +147,9 @@ function MenuPage() {
         </TabsContent>
         <TabsContent value="audit" className="mt-5">
           <MenuAuditLogTab />
+        </TabsContent>
+        <TabsContent value="versions" className="mt-5">
+          <MenuVersionsTab />
         </TabsContent>
       </Tabs>
     </div>

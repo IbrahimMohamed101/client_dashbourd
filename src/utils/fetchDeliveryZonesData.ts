@@ -1,4 +1,5 @@
 import api from "@/lib/apis";
+import { deliveryZoneToggleUrl } from "@/utils/deliveryZoneApiContract";
 
 export const fetchDeliveryZonesList = async ({
   page = 1,
@@ -57,6 +58,16 @@ export const deleteDeliveryZone = async (id: string) => {
     return response.data;
   } catch (error) {
     console.error(`Error deleting delivery zone ${id}:`, error);
+    throw error;
+  }
+};
+
+export const toggleDeliveryZone = async (id: string) => {
+  try {
+    const response = await api.patch(deliveryZoneToggleUrl(id));
+    return response.data;
+  } catch (error) {
+    console.error(`Error toggling delivery zone ${id}:`, error);
     throw error;
   }
 };

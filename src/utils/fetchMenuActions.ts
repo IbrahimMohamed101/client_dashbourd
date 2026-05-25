@@ -4,8 +4,12 @@ import type {
   MenuPublishResponse,
   MenuAuditLogsResponse,
   MenuAuditLogParams,
+  MenuVersionsResponse,
+  MenuVersionListParams,
+  MenuRollbackResponse,
 } from "@/types/menuTypes";
 import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { menuRollbackUrl, menuVersionsUrl } from "@/utils/menuApiContract";
 
 // ── §13 Validate Menu ──
 // POST /api/dashboard/menu/validate
@@ -36,5 +40,25 @@ export const fetchMenuAuditLogs = async (
   const response = await api.get(
     `/api/dashboard/menu/audit-logs${buildListQuery(params)}`
   );
+  return response.data;
+};
+
+// ── Menu Versions ──
+// GET /api/dashboard/menu/versions
+
+export const fetchMenuVersions = async (
+  params: MenuVersionListParams = {}
+): Promise<MenuVersionsResponse> => {
+  const response = await api.get(menuVersionsUrl(params));
+  return response.data;
+};
+
+// ── Rollback Menu Version ──
+// POST /api/dashboard/menu/rollback/:versionId
+
+export const fetchRollbackMenuVersion = async (
+  versionId: string
+): Promise<MenuRollbackResponse> => {
+  const response = await api.post(menuRollbackUrl(versionId), { confirm: true });
   return response.data;
 };

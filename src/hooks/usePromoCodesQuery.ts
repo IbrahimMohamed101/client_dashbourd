@@ -10,7 +10,9 @@ import {
   deletePromoCode,
   fetchPromoCodeById,
   fetchPromoCodesList,
+  togglePromoCode,
   updatePromoCode,
+  validatePromoCode,
 } from "@/utils/fetchPromoCodesData";
 
 export const promoCodesListQueryOptions = (
@@ -81,5 +83,22 @@ export const useDeletePromoCodeMutation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["promo-codes-list"] });
     },
+  });
+};
+
+export const useTogglePromoCodeMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: togglePromoCode,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["promo-codes-list"] });
+    },
+  });
+};
+
+export const useValidatePromoCodeMutation = () => {
+  return useMutation({
+    mutationFn: validatePromoCode,
   });
 };

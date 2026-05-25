@@ -4,6 +4,7 @@ import {
   Layers,
   Link2,
   Package,
+  RotateCcw,
   Settings2,
 } from "lucide-react";
 
@@ -43,6 +44,12 @@ const workflowSteps = [
     label: "السجل",
     description: "آخر التغييرات",
     icon: FileText,
+  },
+  {
+    value: "versions",
+    label: "Versions",
+    description: "Publish history and rollback",
+    icon: RotateCcw,
   },
 ];
 

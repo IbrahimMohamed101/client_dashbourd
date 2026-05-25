@@ -4,6 +4,10 @@ import type {
   PromoCodePayload,
   PromoCodesListResponse,
 } from "@/types/financeTypes";
+import {
+  promoCodeToggleUrl,
+  promoCodeValidateUrl,
+} from "@/utils/promoCodeApiContract";
 
 interface FetchPromoCodesListParams {
   page?: number;
@@ -114,5 +118,19 @@ export const updatePromoCode = async ({
 
 export const deletePromoCode = async (id: string): Promise<unknown> => {
   const response = await api.delete<unknown>(`/api/dashboard/promo-codes/${id}`);
+  return response.data;
+};
+
+export const togglePromoCode = async (
+  id: string
+): Promise<PromoCodeDTO | null> => {
+  const response = await api.patch<unknown>(promoCodeToggleUrl(id));
+  return normalizePromoCodeDetailResponse(response.data);
+};
+
+export const validatePromoCode = async (
+  data: Record<string, unknown>
+): Promise<unknown> => {
+  const response = await api.post<unknown>(promoCodeValidateUrl(), data);
   return response.data;
 };

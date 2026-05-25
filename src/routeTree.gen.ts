@@ -8,8 +8,6 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createFileRoute } from '@tanstack/react-router'
-
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ProtectedRouteRouteImport } from './routes/_protected/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -21,6 +19,7 @@ import { Route as ProtectedPromoCodesIndexRouteImport } from './routes/_protecte
 import { Route as ProtectedPaymentsIndexRouteImport } from './routes/_protected/payments/index'
 import { Route as ProtectedPackagesIndexRouteImport } from './routes/_protected/packages/index'
 import { Route as ProtectedOrdersIndexRouteImport } from './routes/_protected/orders/index'
+import { Route as ProtectedOperationsIndexRouteImport } from './routes/_protected/operations/index'
 import { Route as ProtectedOneTimeOrdersIndexRouteImport } from './routes/_protected/one-time-orders/index'
 import { Route as ProtectedMenuIndexRouteImport } from './routes/_protected/menu/index'
 import { Route as ProtectedManualDeductionIndexRouteImport } from './routes/_protected/manual-deduction/index'
@@ -45,10 +44,6 @@ import { Route as ProtectedMenuOptionsOptionIdUpdateRouteImport } from './routes
 import { Route as ProtectedMenuOptionGroupsGroupIdUpdateRouteImport } from './routes/_protected/menu/option-groups/$groupId/update'
 import { Route as ProtectedMenuCategoriesCategoryIdUpdateRouteImport } from './routes/_protected/menu/categories/$categoryId/update'
 
-const ProtectedOperationsIndexLazyRouteImport = createFileRoute(
-  '/_protected/operations/',
-)()
-
 const ProtectedRouteRoute = ProtectedRouteRouteImport.update({
   id: '/_protected',
   getParentRoute: () => rootRouteImport,
@@ -63,14 +58,6 @@ const ProtectedDashboardRoute = ProtectedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
-const ProtectedOperationsIndexLazyRoute =
-  ProtectedOperationsIndexLazyRouteImport.update({
-    id: '/operations/',
-    path: '/operations/',
-    getParentRoute: () => ProtectedRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_protected/operations/index.lazy').then((d) => d.Route),
-  )
 const ProtectedZonesIndexRoute = ProtectedZonesIndexRouteImport.update({
   id: '/zones/',
   path: '/zones/',
@@ -108,6 +95,14 @@ const ProtectedOrdersIndexRoute = ProtectedOrdersIndexRouteImport.update({
   path: '/orders/',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
+const ProtectedOperationsIndexRoute =
+  ProtectedOperationsIndexRouteImport.update({
+    id: '/operations/',
+    path: '/operations/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_protected/operations/index.lazy').then((d) => d.Route),
+  )
 const ProtectedOneTimeOrdersIndexRoute =
   ProtectedOneTimeOrdersIndexRouteImport.update({
     id: '/one-time-orders/',
@@ -254,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
   '/menu/': typeof ProtectedMenuIndexRoute
   '/one-time-orders/': typeof ProtectedOneTimeOrdersIndexRoute
+  '/operations/': typeof ProtectedOperationsIndexRoute
   '/orders/': typeof ProtectedOrdersIndexRoute
   '/packages/': typeof ProtectedPackagesIndexRoute
   '/payments/': typeof ProtectedPaymentsIndexRoute
@@ -261,7 +257,6 @@ export interface FileRoutesByFullPath {
   '/subscriptions/': typeof ProtectedSubscriptionsIndexRoute
   '/users/': typeof ProtectedUsersIndexRoute
   '/zones/': typeof ProtectedZonesIndexRoute
-  '/operations/': typeof ProtectedOperationsIndexLazyRoute
   '/addons/$addonId/update': typeof ProtectedAddonsAddonIdUpdateRoute
   '/menu/categories/create': typeof ProtectedMenuCategoriesCreateRoute
   '/menu/option-groups/create': typeof ProtectedMenuOptionGroupsCreateRoute
@@ -289,6 +284,7 @@ export interface FileRoutesByTo {
   '/manual-deduction': typeof ProtectedManualDeductionIndexRoute
   '/menu': typeof ProtectedMenuIndexRoute
   '/one-time-orders': typeof ProtectedOneTimeOrdersIndexRoute
+  '/operations': typeof ProtectedOperationsIndexRoute
   '/orders': typeof ProtectedOrdersIndexRoute
   '/packages': typeof ProtectedPackagesIndexRoute
   '/payments': typeof ProtectedPaymentsIndexRoute
@@ -296,7 +292,6 @@ export interface FileRoutesByTo {
   '/subscriptions': typeof ProtectedSubscriptionsIndexRoute
   '/users': typeof ProtectedUsersIndexRoute
   '/zones': typeof ProtectedZonesIndexRoute
-  '/operations': typeof ProtectedOperationsIndexLazyRoute
   '/addons/$addonId/update': typeof ProtectedAddonsAddonIdUpdateRoute
   '/menu/categories/create': typeof ProtectedMenuCategoriesCreateRoute
   '/menu/option-groups/create': typeof ProtectedMenuOptionGroupsCreateRoute
@@ -326,6 +321,7 @@ export interface FileRoutesById {
   '/_protected/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
   '/_protected/menu/': typeof ProtectedMenuIndexRoute
   '/_protected/one-time-orders/': typeof ProtectedOneTimeOrdersIndexRoute
+  '/_protected/operations/': typeof ProtectedOperationsIndexRoute
   '/_protected/orders/': typeof ProtectedOrdersIndexRoute
   '/_protected/packages/': typeof ProtectedPackagesIndexRoute
   '/_protected/payments/': typeof ProtectedPaymentsIndexRoute
@@ -333,7 +329,6 @@ export interface FileRoutesById {
   '/_protected/subscriptions/': typeof ProtectedSubscriptionsIndexRoute
   '/_protected/users/': typeof ProtectedUsersIndexRoute
   '/_protected/zones/': typeof ProtectedZonesIndexRoute
-  '/_protected/operations/': typeof ProtectedOperationsIndexLazyRoute
   '/_protected/addons/$addonId/update': typeof ProtectedAddonsAddonIdUpdateRoute
   '/_protected/menu/categories/create': typeof ProtectedMenuCategoriesCreateRoute
   '/_protected/menu/option-groups/create': typeof ProtectedMenuOptionGroupsCreateRoute
@@ -363,6 +358,7 @@ export interface FileRouteTypes {
     | '/manual-deduction/'
     | '/menu/'
     | '/one-time-orders/'
+    | '/operations/'
     | '/orders/'
     | '/packages/'
     | '/payments/'
@@ -370,7 +366,6 @@ export interface FileRouteTypes {
     | '/subscriptions/'
     | '/users/'
     | '/zones/'
-    | '/operations/'
     | '/addons/$addonId/update'
     | '/menu/categories/create'
     | '/menu/option-groups/create'
@@ -398,6 +393,7 @@ export interface FileRouteTypes {
     | '/manual-deduction'
     | '/menu'
     | '/one-time-orders'
+    | '/operations'
     | '/orders'
     | '/packages'
     | '/payments'
@@ -405,7 +401,6 @@ export interface FileRouteTypes {
     | '/subscriptions'
     | '/users'
     | '/zones'
-    | '/operations'
     | '/addons/$addonId/update'
     | '/menu/categories/create'
     | '/menu/option-groups/create'
@@ -434,6 +429,7 @@ export interface FileRouteTypes {
     | '/_protected/manual-deduction/'
     | '/_protected/menu/'
     | '/_protected/one-time-orders/'
+    | '/_protected/operations/'
     | '/_protected/orders/'
     | '/_protected/packages/'
     | '/_protected/payments/'
@@ -441,7 +437,6 @@ export interface FileRouteTypes {
     | '/_protected/subscriptions/'
     | '/_protected/users/'
     | '/_protected/zones/'
-    | '/_protected/operations/'
     | '/_protected/addons/$addonId/update'
     | '/_protected/menu/categories/create'
     | '/_protected/menu/option-groups/create'
@@ -483,13 +478,6 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof ProtectedDashboardRouteImport
-      parentRoute: typeof ProtectedRouteRoute
-    }
-    '/_protected/operations/': {
-      id: '/_protected/operations/'
-      path: '/operations'
-      fullPath: '/operations/'
-      preLoaderRoute: typeof ProtectedOperationsIndexLazyRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/zones/': {
@@ -539,6 +527,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders/'
       preLoaderRoute: typeof ProtectedOrdersIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/operations/': {
+      id: '/_protected/operations/'
+      path: '/operations'
+      fullPath: '/operations/'
+      preLoaderRoute: typeof ProtectedOperationsIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/one-time-orders/': {
@@ -717,6 +712,7 @@ interface ProtectedRouteRouteChildren {
   ProtectedManualDeductionIndexRoute: typeof ProtectedManualDeductionIndexRoute
   ProtectedMenuIndexRoute: typeof ProtectedMenuIndexRoute
   ProtectedOneTimeOrdersIndexRoute: typeof ProtectedOneTimeOrdersIndexRoute
+  ProtectedOperationsIndexRoute: typeof ProtectedOperationsIndexRoute
   ProtectedOrdersIndexRoute: typeof ProtectedOrdersIndexRoute
   ProtectedPackagesIndexRoute: typeof ProtectedPackagesIndexRoute
   ProtectedPaymentsIndexRoute: typeof ProtectedPaymentsIndexRoute
@@ -724,7 +720,6 @@ interface ProtectedRouteRouteChildren {
   ProtectedSubscriptionsIndexRoute: typeof ProtectedSubscriptionsIndexRoute
   ProtectedUsersIndexRoute: typeof ProtectedUsersIndexRoute
   ProtectedZonesIndexRoute: typeof ProtectedZonesIndexRoute
-  ProtectedOperationsIndexLazyRoute: typeof ProtectedOperationsIndexLazyRoute
   ProtectedAddonsAddonIdUpdateRoute: typeof ProtectedAddonsAddonIdUpdateRoute
   ProtectedMenuCategoriesCreateRoute: typeof ProtectedMenuCategoriesCreateRoute
   ProtectedMenuOptionGroupsCreateRoute: typeof ProtectedMenuOptionGroupsCreateRoute
@@ -752,6 +747,7 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedManualDeductionIndexRoute: ProtectedManualDeductionIndexRoute,
   ProtectedMenuIndexRoute: ProtectedMenuIndexRoute,
   ProtectedOneTimeOrdersIndexRoute: ProtectedOneTimeOrdersIndexRoute,
+  ProtectedOperationsIndexRoute: ProtectedOperationsIndexRoute,
   ProtectedOrdersIndexRoute: ProtectedOrdersIndexRoute,
   ProtectedPackagesIndexRoute: ProtectedPackagesIndexRoute,
   ProtectedPaymentsIndexRoute: ProtectedPaymentsIndexRoute,
@@ -759,7 +755,6 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedSubscriptionsIndexRoute: ProtectedSubscriptionsIndexRoute,
   ProtectedUsersIndexRoute: ProtectedUsersIndexRoute,
   ProtectedZonesIndexRoute: ProtectedZonesIndexRoute,
-  ProtectedOperationsIndexLazyRoute: ProtectedOperationsIndexLazyRoute,
   ProtectedAddonsAddonIdUpdateRoute: ProtectedAddonsAddonIdUpdateRoute,
   ProtectedMenuCategoriesCreateRoute: ProtectedMenuCategoriesCreateRoute,
   ProtectedMenuOptionGroupsCreateRoute: ProtectedMenuOptionGroupsCreateRoute,

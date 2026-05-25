@@ -59,6 +59,11 @@ function UpdateMenuProductPage() {
           isActive: product.isActive,
           isAvailable: product.isAvailable,
           isVisible: product.isVisible ?? true,
+          availableFor: product.availableFor ?? ["order", "subscription"],
+          availableForSubscription:
+            product.availableForSubscription ??
+            product.availableFor?.includes("subscription") ??
+            true,
           sortOrder: product.sortOrder,
         }
       : undefined,

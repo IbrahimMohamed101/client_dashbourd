@@ -11,6 +11,12 @@ import {
   subscriptionExtendUrl,
 } from "./subscriptionApiContract";
 
+type ApiStatusError = {
+  response?: {
+    status?: number;
+  };
+};
+
 export const fetchSubscriptionsSummary = async () => {
   try {
     const response = await api.get("/api/dashboard/subscriptions/summary");
@@ -205,9 +211,9 @@ export const searchSubscriptionsByPhone = async (phone: string) => {
   try {
     const response = await api.get(`/api/dashboard/subscriptions/search?phone=${encodeURIComponent(phone)}`);
     return response.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 404 means "customer not found" — treat as empty result, not an error
-    if (error?.response?.status === 404) {
+    if ((error as ApiStatusError)?.response?.status === 404) {
       return { data: { customer: null, subscriptions: [], today: null } };
     }
     throw error;

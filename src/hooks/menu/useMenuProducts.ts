@@ -6,6 +6,7 @@ import {
   fetchCreateMenuProduct,
   fetchUpdateMenuProduct,
   fetchUpdateMenuProductAvailability,
+  fetchDuplicateMenuProduct,
   fetchDeleteMenuProduct,
   fetchReorderMenuProducts,
 } from "@/utils/fetchMenuProducts";
@@ -58,6 +59,13 @@ export const useToggleMenuProductAvailabilityMutation = () =>
     mutationFn: ({ id, isAvailable }: { id: string; isAvailable: boolean }) =>
       fetchUpdateMenuProductAvailability(id, isAvailable),
     successMessage: "تم تحديث حالة التوفر",
+    invalidateKeys: [[PRODUCTS_KEY]],
+  });
+
+export const useDuplicateMenuProductMutation = () =>
+  useMutationWithToast({
+    mutationFn: (id: string) => fetchDuplicateMenuProduct(id),
+    successMessage: "تم نسخ المنتج بنجاح",
     invalidateKeys: [[PRODUCTS_KEY]],
   });
 

@@ -35,11 +35,27 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
   const isAvailable = form.watch("isAvailable") ?? true;
   const isVisible = form.watch("isVisible") ?? true;
+  const availableFor = form.watch("availableFor") ?? ["order", "subscription"];
   const { data: groupsData } = useMenuOptionGroupsQuery({});
   const responseData = groupsData?.data;
   const groups = (
     Array.isArray(responseData) ? responseData : responseData?.items || []
   ) as MenuOptionGroup[];
+
+  const setChannel = (channel: string, checked: boolean) => {
+    const next = checked
+      ? Array.from(new Set([...availableFor, channel]))
+      : availableFor.filter((item) => item !== channel);
+
+    form.setValue("availableFor", next, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue("availableForSubscription", next.includes("subscription"), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -146,6 +162,25 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Display category key</Label>
+              <Input
+                dir="ltr"
+                placeholder="protein"
+                {...form.register("displayCategoryKey")}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Protein family key</Label>
+              <Input
+                dir="ltr"
+                placeholder="chicken"
+                {...form.register("proteinFamilyKey")}
+              />
+            </div>
+          </div>
+
         </CardContent>
       </Card>
 
@@ -206,6 +241,36 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
                 min="0"
                 placeholder="0"
                 {...form.register("sortOrder")}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+              <div className="space-y-0.5">
+                <Label className="text-base font-bold">Order channel</Label>
+                <p className="text-xs text-muted-foreground">
+                  Visible for one-time ordering
+                </p>
+              </div>
+              <Switch
+                type="button"
+                checked={availableFor.includes("order")}
+                onCheckedChange={(checked) => setChannel("order", checked)}
+              />
+            </div>
+
+            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+              <div className="space-y-0.5">
+                <Label className="text-base font-bold">Subscription channel</Label>
+                <p className="text-xs text-muted-foreground">
+                  Visible in subscription builder
+                </p>
+              </div>
+              <Switch
+                type="button"
+                checked={availableFor.includes("subscription")}
+                onCheckedChange={(checked) => setChannel("subscription", checked)}
               />
             </div>
           </div>

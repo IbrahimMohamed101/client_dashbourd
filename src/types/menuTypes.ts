@@ -35,6 +35,8 @@ export interface MenuCategory {
   isActive: boolean;
   isAvailable: boolean;
   isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
   sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
@@ -73,6 +75,8 @@ export interface CreateMenuMealCategoryPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
   sortOrder?: number;
 }
 
@@ -83,6 +87,8 @@ export interface UpdateMenuMealCategoryPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
   sortOrder?: number;
 }
 
@@ -232,6 +238,8 @@ export interface MenuProduct {
   isActive: boolean;
   isAvailable: boolean;
   isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
   sortOrder: number;
   groups?: MenuProductLinkedGroup[];
   optionGroups?: MenuProductLinkedGroup[];
@@ -263,6 +271,8 @@ export interface CreateMenuProductPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
   sortOrder?: number;
 }
 
@@ -282,6 +292,8 @@ export interface UpdateMenuProductPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
   sortOrder?: number;
 }
 
@@ -341,6 +353,10 @@ export interface MenuOption {
   isActive: boolean;
   isAvailable: boolean;
   isVisible?: boolean;
+  displayCategoryKey?: string;
+  proteinFamilyKey?: string;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
   sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
@@ -365,6 +381,10 @@ export interface CreateMenuOptionPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  displayCategoryKey?: string;
+  proteinFamilyKey?: string;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
   sortOrder?: number;
 }
 
@@ -378,6 +398,10 @@ export interface UpdateMenuOptionPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  displayCategoryKey?: string;
+  proteinFamilyKey?: string;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
   sortOrder?: number;
 }
 
@@ -522,4 +546,30 @@ export interface MenuAuditLogParams {
   action?: string;
   entityType?: string;
   entityId?: string;
+}
+
+export interface MenuVersion {
+  id: string;
+  version?: string;
+  status?: string;
+  notes?: string;
+  createdAt?: string;
+  publishedAt?: string;
+}
+
+export interface MenuVersionListParams extends MenuListParams {
+  status?: string;
+}
+
+export type MenuVersionsResponse = PaginatedResponse<MenuVersion>;
+
+export interface MenuRollbackResponse {
+  status?: boolean;
+  ok?: boolean;
+  data: {
+    success?: boolean;
+    restoredVersion?: string;
+    backupVersion?: string;
+    rollback?: Record<string, unknown>;
+  };
 }

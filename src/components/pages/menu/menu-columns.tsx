@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
-import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
+import { Copy, Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -148,11 +148,13 @@ export const getCategoryColumns = ({
 
 interface ProductActions {
   onToggleAvailability: (id: string, isAvailable: boolean) => void;
+  onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
 export const getProductColumns = ({
   onToggleAvailability,
+  onDuplicate,
   onDelete,
 }: ProductActions): ColumnDef<MenuProduct>[] => [
   {
@@ -258,6 +260,13 @@ export const getProductColumns = ({
               <Pencil data-icon="inline-start" />
               تعديل
             </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDuplicate(product.id)}
+          >
+            <Copy />
           </Button>
           <Button
             variant="ghost"

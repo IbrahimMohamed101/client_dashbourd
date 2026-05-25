@@ -35,12 +35,7 @@ const ADMIN_ROUTES = [
   "/menu",
 ];
 
-const KITCHEN_ROUTES = [
-  "/operations",
-  "/one-time-orders",
-  "/menu",
-  "/manual-deduction",
-];
+const KITCHEN_ROUTES = ["/operations", "/one-time-orders"];
 
 const COURIER_ROUTES = ["/operations", "/delivery"];
 

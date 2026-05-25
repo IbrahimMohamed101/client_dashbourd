@@ -10,8 +10,10 @@ export const login = async (
     "/api/dashboard/auth/login",
     credentials
   );
+
   return normalizeAuthResponse(response.data);
 };
+
 
 export const getSession = async (): Promise<AuthResponse> => {
   const response = await api.get<AuthResponse>("/api/dashboard/auth/me");

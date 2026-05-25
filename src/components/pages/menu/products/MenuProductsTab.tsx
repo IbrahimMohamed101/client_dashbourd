@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MenuEntityTableTab } from "@/components/pages/menu/MenuEntityTableTab";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useDeleteMenuProductMutation, useMenuProductsQuery, useToggleMenuProductAvailabilityMutation } from "@/hooks/useMenuQuery";
+import { useDeleteMenuProductMutation, useDuplicateMenuProductMutation, useMenuProductsQuery, useToggleMenuProductAvailabilityMutation } from "@/hooks/useMenuQuery";
 import type { MenuProduct, MenuProductListParams, PricingModel } from "@/types/menuTypes";
 import { getProductColumns } from "../menu-columns";
 
@@ -9,6 +9,7 @@ type PricingFilter = PricingModel | "all";
 export function MenuProductsTab() {
   const [pricingFilter, setPricingFilter] = useState<PricingFilter>("all");
   const toggleAvailability = useToggleMenuProductAvailabilityMutation();
+  const duplicateProduct = useDuplicateMenuProductMutation();
 
   return (
     <MenuEntityTableTab<MenuProduct, MenuProductListParams>
@@ -23,6 +24,7 @@ export function MenuProductsTab() {
       deleteDescription="هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء."
       columns={(onDelete) => getProductColumns({
         onToggleAvailability: (id, isAvailable) => toggleAvailability.mutate({ id, isAvailable }),
+        onDuplicate: (id) => duplicateProduct.mutate(id),
         onDelete,
       })}
       useQuery={useMenuProductsQuery}

@@ -65,6 +65,16 @@ export const fetchUpdateMenuProductAvailability = async (
   });
 };
 
+// ── Duplicate Product ──
+// POST /api/dashboard/menu/products/:id/duplicate
+
+export const fetchDuplicateMenuProduct = async (
+  id: string
+): Promise<MenuProductDetailResponse> => {
+  const response = await api.post(`/api/dashboard/menu/products/${id}/duplicate`);
+  return normalizeProductDetailResponse(response.data);
+};
+
 // ── Soft Delete Product ──
 // DELETE /api/dashboard/menu/products/:id
 

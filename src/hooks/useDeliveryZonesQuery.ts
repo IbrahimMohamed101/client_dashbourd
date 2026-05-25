@@ -10,6 +10,7 @@ import {
   createDeliveryZone,
   updateDeliveryZone,
   deleteDeliveryZone,
+  toggleDeliveryZone,
 } from "@/utils/fetchDeliveryZonesData";
 
 export const deliveryZonesListQueryOptions = (
@@ -56,6 +57,16 @@ export const useDeleteDeliveryZoneMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deleteDeliveryZone,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["delivery-zones-list"] });
+    },
+  });
+};
+
+export const useToggleDeliveryZoneMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: toggleDeliveryZone,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["delivery-zones-list"] });
     },

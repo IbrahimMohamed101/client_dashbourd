@@ -26,7 +26,21 @@ export interface DaySchedule {
 export type WeekSchedule = Record<string, DaySchedule>;
 
 export interface RestaurantHours {
-  schedule: WeekSchedule;
+  restaurant_open_time?: string;
+  restaurant_close_time?: string;
+  openTime?: string;
+  closeTime?: string;
+  deliveryWindows?: string[];
+  delivery_windows?: string[];
+  cutoffTime?: string;
+  cutoff_time?: string;
+  restaurant_is_open?: boolean;
+  isOpen?: boolean;
+  weekly_schedule?: WeekSchedule;
+  weeklySchedule?: WeekSchedule;
+  temporary_closure?: Record<string, unknown> | null;
+  temporaryClosure?: Record<string, unknown> | null;
+  schedule?: WeekSchedule;
   timezone?: string;
   [key: string]: unknown;
 }

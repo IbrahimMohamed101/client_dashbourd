@@ -41,6 +41,17 @@ export function getScreensForRole(
   return ROLE_SCREEN_MAP[role] || { label: "", screens: [] };
 }
 
+export function getSafeOperationsTab(
+  tab: string | undefined,
+  visibleScreens: readonly OperationsScreen[]
+): OperationsScreen {
+  if (tab && visibleScreens.includes(tab as OperationsScreen)) {
+    return tab as OperationsScreen;
+  }
+
+  return visibleScreens[0] || "kitchen";
+}
+
 export function getEndpointForAction(action: string): string {
   return `/api/dashboard/ops/actions/${action}`;
 }

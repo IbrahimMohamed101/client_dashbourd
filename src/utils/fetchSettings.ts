@@ -5,6 +5,10 @@ import type {
   RestaurantHours,
   RestaurantHoursResponse,
 } from "@/types/settingsTypes";
+import {
+  settingEndpointUrl,
+  type SettingEndpointKey,
+} from "@/utils/settingsApiContract";
 
 // ── §22 Get Dashboard Settings ──
 // GET /api/dashboard/settings
@@ -42,3 +46,39 @@ export const fetchUpdateRestaurantHours = async (
 ): Promise<void> => {
   await api.put("/api/dashboard/settings/restaurant-hours", data);
 };
+
+export const fetchUpdateSettingEndpoint = async (
+  key: SettingEndpointKey,
+  data: Record<string, unknown>
+): Promise<unknown> => {
+  const response = await api.put(settingEndpointUrl(key), data);
+  return response.data;
+};
+
+export const fetchUpdateCutoff = (time: string) =>
+  fetchUpdateSettingEndpoint("cutoff", { time });
+
+export const fetchUpdateDeliveryWindows = (windows: string[]) =>
+  fetchUpdateSettingEndpoint("delivery-windows", { windows });
+
+export const fetchUpdateSkipAllowance = (days: number) =>
+  fetchUpdateSettingEndpoint("skip-allowance", { days });
+
+export const fetchUpdatePremiumPrice = (price: number) =>
+  fetchUpdateSettingEndpoint("premium-price", { price });
+
+export const fetchUpdateSubscriptionDeliveryFee = (
+  deliveryFeeHalala: number
+) =>
+  fetchUpdateSettingEndpoint("subscription-delivery-fee", {
+    deliveryFeeHalala,
+  });
+
+export const fetchUpdateVatPercentage = (percentage: number) =>
+  fetchUpdateSettingEndpoint("vat-percentage", { percentage });
+
+export const fetchUpdateCustomSaladBasePrice = (price: number) =>
+  fetchUpdateSettingEndpoint("custom-salad-base-price", { price });
+
+export const fetchUpdateCustomMealBasePrice = (price: number) =>
+  fetchUpdateSettingEndpoint("custom-meal-base-price", { price });

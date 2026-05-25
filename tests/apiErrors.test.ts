@@ -20,5 +20,47 @@ assert.equal(
   "payments.not_found"
 );
 
+assert.equal(
+  getApiErrorMessage({
+    response: {
+      data: {
+        ok: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          details: { field: "email" },
+        },
+      },
+    },
+  }),
+  "VALIDATION_ERROR"
+);
+
+assert.equal(
+  getApiErrorMessage({
+    response: {
+      data: {
+        success: false,
+        message: "Image file is required under the image field",
+        expectedField: "image",
+      },
+    },
+  }),
+  "Image file is required under the image field"
+);
+
+assert.equal(
+  getApiErrorMessage({
+    response: { data: { status: false, code: "ACTION_NOT_ALLOWED" } },
+  }),
+  "ACTION_NOT_ALLOWED"
+);
+
+assert.equal(
+  getApiErrorMessage({
+    response: { data: { ok: false, error: "NOT_FOUND", status: "approved" } },
+  }),
+  "NOT_FOUND"
+);
+
 assert.equal(getApiErrorMessage({ message: "Network Error" }), "Network Error");
 assert.equal(getApiErrorMessage({}), "Unexpected error");

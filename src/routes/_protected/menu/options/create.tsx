@@ -34,6 +34,10 @@ function CreateOptionPage() {
       isActive: true,
       isAvailable: true,
       isVisible: true,
+      displayCategoryKey: "",
+      proteinFamilyKey: "",
+      availableFor: ["order", "subscription"],
+      availableForSubscription: true,
       sortOrder: 0,
     },
   });

@@ -45,6 +45,10 @@ const menuOptionSchema = z.object({
   isActive: z.boolean().default(true),
   isAvailable: z.boolean().default(true),
   isVisible: z.boolean().default(true),
+  displayCategoryKey: z.string().trim().optional(),
+  proteinFamilyKey: z.string().trim().optional(),
+  availableFor: z.array(z.string()).default(["order", "subscription"]),
+  availableForSubscription: z.boolean().default(true),
   sortOrder: z.coerce
     .number({ message: "ترتيب العرض يجب أن يكون رقماً" })
     .int("ترتيب العرض يجب أن يكون رقماً صحيحاً")
