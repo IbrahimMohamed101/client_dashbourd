@@ -12,3 +12,9 @@ export const subscriptionBalancesUrl = (subscriptionId: string) =>
 
 export const subscriptionAddonEntitlementsUrl = (subscriptionId: string) =>
   `${subscriptionBaseUrl(subscriptionId)}/addon-entitlements`;
+
+export const subscriptionDaysUrl = (subscriptionId: string) =>
+  `${subscriptionBaseUrl(subscriptionId)}/days`;
+
+export const subscriptionCancelUrl = (subscriptionId: string) =>
+  `${subscriptionBaseUrl(subscriptionId)}/cancel`;

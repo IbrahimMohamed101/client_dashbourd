@@ -1,5 +1,5 @@
 import type { MenuVersionListParams } from "@/types/menuTypes";
-import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { buildListQuery } from "@/utils/buildListQuery";
 
 export const menuOptionVisibilityUrl = (id: string) =>
   `/api/dashboard/menu/options/${id}/visibility`;

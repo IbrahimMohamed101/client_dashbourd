@@ -11,7 +11,6 @@ assert.deepEqual(cashierUrls, [
   "/dashboard",
   "/payments",
   "/subscriptions",
-  "/orders",
   "/one-time-orders",
   "/users",
 ]);
@@ -25,6 +24,6 @@ const kitchenUrls = filterNavItemsForRole(
   "kitchen"
 ).map((item) => item.url);
 
-assert.deepEqual(kitchenUrls, ["/operations", "/one-time-orders"]);
+assert.deepEqual(kitchenUrls, ["/one-time-orders", "/operations"]);
 assert.equal(kitchenUrls.includes("/menu"), false);
 assert.equal(kitchenUrls.includes("/manual-deduction"), false);

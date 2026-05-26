@@ -1,13 +1,18 @@
 import api from "@/lib/apis";
 import type {
   SubscriptionAddonEntitlementPayload,
+  SubscriptionBalancesPayload,
+  SubscriptionBalancesResponse,
   SubscriptionDeliveryUpdatePayload,
   ExtendSubscriptionPayload,
+  SubscriptionDaysResponse,
 } from "@/types/subscriptionTypes";
 import {
   subscriptionAddonEntitlementsUrl,
   subscriptionBalancesUrl,
+  subscriptionCancelUrl,
   subscriptionDeliveryUrl,
+  subscriptionDaysUrl,
   subscriptionExtendUrl,
 } from "./subscriptionApiContract";
 
@@ -92,8 +97,10 @@ export const extendSubscription = async ({
   return response.data;
 };
 
-export const cancelSubscription = async (id: string) => {
-  const response = await api.post(`/api/dashboard/subscriptions/${id}/cancel`);
+export const cancelSubscription = async (id: string, reason?: string) => {
+  const response = await api.post(subscriptionCancelUrl(id), {
+    ...(reason ? { reason } : {}),
+  });
   return response.data;
 };
 
@@ -125,6 +132,15 @@ export const fetchSubscriptionAuditLog = async (subscriptionId: string) => {
   return response.data;
 };
 
+export const fetchSubscriptionDays = async (
+  subscriptionId: string
+): Promise<SubscriptionDaysResponse> => {
+  const response = await api.get<SubscriptionDaysResponse>(
+    subscriptionDaysUrl(subscriptionId)
+  );
+  return response.data;
+};
+
 // ----- Delivery -----
 export const fetchSubscriptionDelivery = async (subscriptionId: string) => {
   const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}`);
@@ -140,8 +156,23 @@ export const updateSubscriptionDelivery = async (
 };
 
 // ----- Balances -----
-export const fetchSubscriptionBalances = async (subscriptionId: string) => {
-  const response = await api.get(subscriptionBalancesUrl(subscriptionId));
+export const fetchSubscriptionBalances = async (
+  subscriptionId: string
+): Promise<SubscriptionBalancesResponse> => {
+  const response = await api.get<SubscriptionBalancesResponse>(
+    subscriptionBalancesUrl(subscriptionId)
+  );
+  return response.data;
+};
+
+export const updateSubscriptionBalances = async (
+  subscriptionId: string,
+  data: SubscriptionBalancesPayload
+): Promise<SubscriptionBalancesResponse> => {
+  const response = await api.patch<SubscriptionBalancesResponse>(
+    subscriptionBalancesUrl(subscriptionId),
+    data
+  );
   return response.data;
 };
 
@@ -157,6 +188,8 @@ export const replaceSubscriptionAddonEntitlements = async (
   reason: string
 ) => {
   const response = await api.patch(subscriptionAddonEntitlementsUrl(subscriptionId), {
+    addonSubscriptions: addonEntitlements,
+    entitlements: addonEntitlements,
     addonEntitlements,
     reason,
   });

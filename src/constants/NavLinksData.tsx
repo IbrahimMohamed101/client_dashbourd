@@ -14,9 +14,11 @@ import {
   CreditCard,
   Ticket,
   MapPin,
-  ShoppingBag,
   BookOpen,
   MinusCircle,
+  ShieldUser,
+  ChartNoAxesCombined,
+  ClipboardList,
 } from "lucide-react";
 
 export const NavLinksData = {
@@ -30,6 +32,11 @@ export const NavLinksData = {
       title: "المدفوعات",
       url: "/payments",
       icon: <CreditCard />,
+    },
+    {
+      title: "المحاسبة",
+      url: "/accounting",
+      icon: <ChartNoAxesCombined />,
     },
     {
       title: "أكواد الخصم",
@@ -52,14 +59,14 @@ export const NavLinksData = {
       icon: <CalendarPlus />,
     },
     {
+      title: "الطلبات",
+      url: "/one-time-orders",
+      icon: <ClipboardList />,
+    },
+    {
       title: "لوحة العمليات",
       url: "/operations",
       icon: <ChefHat />,
-    },
-    {
-      title: "طلبات لمرة واحدة",
-      url: "/one-time-orders",
-      icon: <ShoppingBag />,
     },
     {
       title: "خصم يدوي",
@@ -85,6 +92,11 @@ export const NavLinksData = {
       title: "المستخدمين",
       url: "/users",
       icon: <Users />,
+    },
+    {
+      title: "مستخدمو اللوحة",
+      url: "/dashboard-users",
+      icon: <ShieldUser />,
     },
   ],
   navSecondary: [

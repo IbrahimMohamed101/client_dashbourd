@@ -11,7 +11,7 @@ import {
   normalizeOptionsResponse,
   normalizeOptionDetailResponse,
 } from "@/utils/menuResponseNormalizers";
-import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { buildListQuery } from "@/utils/buildListQuery";
 import { menuOptionVisibilityUrl } from "./menuApiContract";
 
 // ── List Options ──

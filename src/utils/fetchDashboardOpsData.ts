@@ -127,6 +127,17 @@ export const fetchDashboardOpsSearch = async (
   return response.data;
 };
 
+export const fetchDeliverySchedule = async (
+  date?: string
+): Promise<unknown> => {
+  const response = await api.get("/api/dashboard/delivery-schedule", {
+    params: {
+      ...(date ? { date } : {}),
+    },
+  });
+  return response.data;
+};
+
 // ── Execute an action ──
 export const executeDashboardOpsAction = async (
   action: string,

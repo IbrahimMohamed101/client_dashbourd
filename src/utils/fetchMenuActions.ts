@@ -8,7 +8,7 @@ import type {
   MenuVersionListParams,
   MenuRollbackResponse,
 } from "@/types/menuTypes";
-import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { buildListQuery } from "@/utils/buildListQuery";
 import { menuRollbackUrl, menuVersionsUrl } from "@/utils/menuApiContract";
 
 // ── §13 Validate Menu ──

@@ -11,7 +11,7 @@ import {
   normalizeProductsResponse,
   normalizeProductDetailResponse,
 } from "@/utils/menuResponseNormalizers";
-import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { buildListQuery } from "@/utils/buildListQuery";
 
 // ── List Products ──
 // GET /api/dashboard/menu/products

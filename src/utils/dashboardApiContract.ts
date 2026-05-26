@@ -1,4 +1,4 @@
-import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { buildListQuery } from "@/utils/buildListQuery";
 
 type QueryParams = Record<string, string | number | boolean | undefined | null>;
 

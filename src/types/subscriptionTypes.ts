@@ -180,3 +180,44 @@ export interface SubscriptionAddonEntitlementPayload {
   addonId: string;
   maxPerDay?: number;
 }
+
+export interface SubscriptionDayRecord {
+  [key: string]: unknown;
+}
+
+export interface SubscriptionDaysResponse {
+  status: boolean;
+  data: SubscriptionDayRecord[];
+}
+
+export interface SubscriptionBalancePremiumRow {
+  premiumKey: string;
+  proteinId: string | null;
+  purchasedQty: number;
+  remainingQty: number;
+}
+
+export interface SubscriptionBalanceAddonRow {
+  addonId: string | null;
+  purchasedQty: number;
+  remainingQty: number;
+}
+
+export interface SubscriptionBalancesPayload {
+  premiumBalance?: SubscriptionBalancePremiumRow[];
+  addonBalance?: SubscriptionBalanceAddonRow[];
+  reason?: string;
+}
+
+export interface SubscriptionBalancesResponse {
+  status: boolean;
+  data: {
+    subscriptionId: string;
+    balances: {
+      premiumBalance: SubscriptionBalancePremiumRow[];
+      addonBalance: SubscriptionBalanceAddonRow[];
+    };
+    premiumBalance: SubscriptionBalancePremiumRow[];
+    addonBalance: SubscriptionBalanceAddonRow[];
+  };
+}

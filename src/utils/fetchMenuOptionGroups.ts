@@ -11,7 +11,7 @@ import {
   normalizeOptionGroupsResponse,
   normalizeOptionGroupDetailResponse,
 } from "@/utils/menuResponseNormalizers";
-import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { buildListQuery } from "@/utils/buildListQuery";
 import { menuOptionGroupVisibilityUrl } from "./menuApiContract";
 
 // ── List Option Groups ──

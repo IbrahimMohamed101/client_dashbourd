@@ -1,32 +1,33 @@
 export interface DeliveryZone {
   id: string;
-  name: string;
-  delivery_fee: number;
-  is_active: boolean;
-  coverage_description?: string;
-  created_at?: string;
-  updated_at?: string;
+  _id?: string;
+  name: string | { ar?: string; en?: string };
+  deliveryFeeHalala: number;
+  isActive: boolean;
+  sortOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateDeliveryZoneDTO {
-  name: string;
-  delivery_fee: number;
-  is_active?: boolean;
-  coverage_description?: string;
+  name: string | { ar?: string; en?: string };
+  deliveryFeeHalala: number;
+  isActive?: boolean;
+  sortOrder?: number;
 }
 
 export interface UpdateDeliveryZoneDTO {
-  name?: string;
-  delivery_fee?: number;
-  is_active?: boolean;
-  coverage_description?: string;
+  name?: string | { ar?: string; en?: string };
+  deliveryFeeHalala: number;
+  isActive?: boolean;
+  sortOrder?: number;
 }
 
 export interface DeliveryZonesResponse {
+  status: boolean;
   data: DeliveryZone[];
   meta: {
-    current_page: number;
-    last_page: number;
-    total: number;
+    filters: Record<string, unknown>;
+    totalCount: number;
   };
 }

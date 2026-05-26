@@ -5,7 +5,7 @@ import type {
   MenuIdentitySuggestionListParams,
   SuggestionActionPayload,
 } from "@/types/menuIdentityTypes";
-import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { buildListQuery } from "@/utils/buildListQuery";
 
 // ── §17.1 List Suggestions ──
 // GET /api/dashboard/menu-identity-suggestions

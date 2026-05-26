@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   Form,
@@ -32,19 +31,20 @@ import type { DeliveryZone } from "@/types/deliveryZoneTypes";
 function safeStr(val: unknown): string {
   if (typeof val === "string") return val;
   if (val == null) return "";
-  if (typeof val === "object" && "ar" in (val as Record<string, unknown>))
+  if (typeof val === "object" && "ar" in (val as Record<string, unknown>)) {
     return String((val as Record<string, unknown>).ar ?? val);
+  }
   return String(val);
 }
 
 const zoneSchema = z.object({
   name: z.string().min(1, "يرجى إدخال اسم المنطقة"),
-  delivery_fee: z
+  deliveryFeeHalala: z
     .string()
     .min(1, "يرجى إدخال رسوم توصيل صحيحة")
     .refine((v) => Number(v) >= 0, "يرجى إدخال رسوم توصيل صحيحة"),
-  coverage_description: z.string().optional(),
-  is_active: z.boolean(),
+  sortOrder: z.string().optional(),
+  isActive: z.boolean(),
 });
 
 type ZoneFormValues = z.infer<typeof zoneSchema>;
@@ -55,16 +55,21 @@ interface ZoneFormDialogProps {
   zone?: DeliveryZone;
 }
 
-export function ZoneFormDialog({ isOpen, onClose, zone }: ZoneFormDialogProps) {
+export function ZoneFormDialog({
+  isOpen,
+  onClose,
+  zone,
+}: ZoneFormDialogProps) {
   const isEditing = !!zone;
 
   const form = useForm<ZoneFormValues>({
     resolver: zodResolver(zoneSchema),
     defaultValues: {
       name: safeStr(zone?.name),
-      delivery_fee: zone?.delivery_fee?.toString() ?? "",
-      coverage_description: safeStr(zone?.coverage_description),
-      is_active: zone?.is_active ?? true,
+      deliveryFeeHalala: zone?.deliveryFeeHalala?.toString() ?? "",
+      sortOrder:
+        typeof zone?.sortOrder === "number" ? String(zone.sortOrder) : "",
+      isActive: zone?.isActive ?? true,
     },
   });
 
@@ -72,15 +77,12 @@ export function ZoneFormDialog({ isOpen, onClose, zone }: ZoneFormDialogProps) {
   const updateMutation = useUpdateDeliveryZoneMutation();
 
   const onSubmit = async (data: ZoneFormValues) => {
-    const payload: Record<string, unknown> = {
+    const payload = {
       name: data.name.trim(),
-      delivery_fee: Number(data.delivery_fee),
-      is_active: data.is_active,
+      deliveryFeeHalala: Number(data.deliveryFeeHalala),
+      isActive: data.isActive,
+      sortOrder: data.sortOrder?.trim() ? Number(data.sortOrder) : 0,
     };
-
-    if (data.coverage_description?.trim()) {
-      payload.coverage_description = data.coverage_description.trim();
-    }
 
     try {
       if (isEditing && zone) {
@@ -143,18 +145,18 @@ export function ZoneFormDialog({ isOpen, onClose, zone }: ZoneFormDialogProps) {
 
             <FormField
               control={form.control}
-              name="delivery_fee"
+              name="deliveryFeeHalala"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-bold">
-                    رسوم التوصيل (ر.س)
+                    رسوم التوصيل (هللة)
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       min="0"
-                      step="0.01"
-                      placeholder="مثال: 25"
+                      step="1"
+                      placeholder="2500"
                       {...field}
                       className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
                       dir="rtl"
@@ -167,17 +169,20 @@ export function ZoneFormDialog({ isOpen, onClose, zone }: ZoneFormDialogProps) {
 
             <FormField
               control={form.control}
-              name="coverage_description"
+              name="sortOrder"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-bold">
-                    وصف التغطية
+                    ترتيب العرض
                   </FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="صف الأحياء أو المناطق التي تشملها هذه المنطقة..."
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="0"
                       {...field}
-                      className="h-24 resize-none rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
+                      className="h-12 rounded-lg border-muted-foreground/10 bg-muted/30 pr-4 ring-offset-background transition-all focus:bg-background"
                       dir="rtl"
                     />
                   </FormControl>
@@ -188,7 +193,7 @@ export function ZoneFormDialog({ isOpen, onClose, zone }: ZoneFormDialogProps) {
 
             <FormField
               control={form.control}
-              name="is_active"
+              name="isActive"
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center justify-between rounded-lg border border-muted-foreground/10 bg-muted/30 p-4">
@@ -218,7 +223,7 @@ export function ZoneFormDialog({ isOpen, onClose, zone }: ZoneFormDialogProps) {
                 className="h-12 gap-2 rounded-lg px-8 shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95"
               >
                 {isLoading
-                  ? "جاري الحفظ..."
+                  ? "جارٍ الحفظ..."
                   : isEditing
                     ? "تحديث المنطقة"
                     : "إضافة المنطقة"}

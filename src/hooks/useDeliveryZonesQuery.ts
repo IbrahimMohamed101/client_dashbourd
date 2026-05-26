@@ -14,23 +14,21 @@ import {
 } from "@/utils/fetchDeliveryZonesData";
 
 export const deliveryZonesListQueryOptions = (
-  page: number = 1,
-  limit: number = 20,
-  q: string = ""
+  q: string = "",
+  isActive?: boolean
 ) =>
   queryOptions({
-    queryKey: ["delivery-zones-list", { page, limit, q }],
-    queryFn: () => fetchDeliveryZonesList({ page, limit, q }),
+    queryKey: ["delivery-zones-list", { q, isActive: isActive ?? null }],
+    queryFn: () => fetchDeliveryZonesList({ q, isActive }),
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
 
 export const useDeliveryZonesListQuery = (
-  page: number = 1,
-  limit: number = 20,
-  q: string = ""
+  q: string = "",
+  isActive?: boolean
 ) => {
-  return useQuery(deliveryZonesListQueryOptions(page, limit, q));
+  return useQuery(deliveryZonesListQueryOptions(q, isActive));
 };
 
 export const useCreateDeliveryZoneMutation = () => {

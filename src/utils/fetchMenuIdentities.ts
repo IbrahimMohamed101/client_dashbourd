@@ -7,7 +7,7 @@ import type {
   MenuIdentityListParams,
   MenuIdentityLinkListParams,
 } from "@/types/menuIdentityTypes";
-import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { buildListQuery } from "@/utils/buildListQuery";
 
 // ── §16.1 List Shared Identities ──
 // GET /api/dashboard/menu-identities

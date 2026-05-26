@@ -93,7 +93,7 @@ export const useExtendSubscriptionMutation = () => {
 export const useCancelSubscriptionMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: cancelSubscription,
+    mutationFn: (id: string) => cancelSubscription(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["subscription-details", id] });
       queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] });

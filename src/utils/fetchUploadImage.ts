@@ -9,6 +9,9 @@ export interface UploadImageResponse {
   status: boolean;
   data: {
     url: string;
+    secureUrl: string;
+    publicId: string;
+    resourceType: string;
   };
 }
 

@@ -10,3 +10,9 @@ export const fetchUpdateAddon = async (
     },
   });
 };
+
+/** PATCH /api/dashboard/addon-items/:id/toggle */
+export const toggleAddonItem = async (id: string): Promise<unknown> => {
+  const response = await api.patch(`/api/dashboard/addon-items/${id}/toggle`);
+  return response.data;
+};

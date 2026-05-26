@@ -11,7 +11,7 @@ import {
   normalizeCategoriesResponse,
   normalizeCategoryDetailResponse,
 } from "@/utils/menuResponseNormalizers";
-import { buildListQuery } from "@/utils/menu/buildListQuery";
+import { buildListQuery } from "@/utils/buildListQuery";
 
 // ── List Categories ──
 // GET /api/dashboard/menu/categories

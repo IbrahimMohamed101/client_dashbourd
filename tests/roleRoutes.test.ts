@@ -3,7 +3,6 @@ import { CASHIER_ROUTES, KITCHEN_ROUTES } from "../src/constants/routes";
 
 assert.deepEqual(CASHIER_ROUTES, [
   "/dashboard",
-  "/orders",
   "/one-time-orders",
   "/subscriptions",
   "/payments",

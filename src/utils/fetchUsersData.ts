@@ -39,7 +39,9 @@ export const updateUser = async ({
   data,
 }: {
   userId: string;
-  data: Record<string, unknown>;
+  data: {
+    isActive: boolean;
+  };
 }) => {
   const response = await api.put(`/api/dashboard/users/${userId}`, data);
   return response.data;

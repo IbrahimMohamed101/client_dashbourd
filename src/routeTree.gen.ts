@@ -18,13 +18,14 @@ import { Route as ProtectedSubscriptionsIndexRouteImport } from './routes/_prote
 import { Route as ProtectedPromoCodesIndexRouteImport } from './routes/_protected/promo-codes/index'
 import { Route as ProtectedPaymentsIndexRouteImport } from './routes/_protected/payments/index'
 import { Route as ProtectedPackagesIndexRouteImport } from './routes/_protected/packages/index'
-import { Route as ProtectedOrdersIndexRouteImport } from './routes/_protected/orders/index'
 import { Route as ProtectedOperationsIndexRouteImport } from './routes/_protected/operations/index'
 import { Route as ProtectedOneTimeOrdersIndexRouteImport } from './routes/_protected/one-time-orders/index'
 import { Route as ProtectedMenuIndexRouteImport } from './routes/_protected/menu/index'
 import { Route as ProtectedManualDeductionIndexRouteImport } from './routes/_protected/manual-deduction/index'
 import { Route as ProtectedDeliveryIndexRouteImport } from './routes/_protected/delivery/index'
+import { Route as ProtectedDashboardUsersIndexRouteImport } from './routes/_protected/dashboard-users/index'
 import { Route as ProtectedAddonsIndexRouteImport } from './routes/_protected/addons/index'
+import { Route as ProtectedAccountingIndexRouteImport } from './routes/_protected/accounting/index'
 import { Route as ProtectedUsersCreateRouteImport } from './routes/_protected/users/create'
 import { Route as ProtectedSubscriptionsCreateRouteImport } from './routes/_protected/subscriptions/create'
 import { Route as ProtectedPackagesCreateRouteImport } from './routes/_protected/packages/create'
@@ -90,11 +91,6 @@ const ProtectedPackagesIndexRoute = ProtectedPackagesIndexRouteImport.update({
   path: '/packages/',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
-const ProtectedOrdersIndexRoute = ProtectedOrdersIndexRouteImport.update({
-  id: '/orders/',
-  path: '/orders/',
-  getParentRoute: () => ProtectedRouteRoute,
-} as any)
 const ProtectedOperationsIndexRoute =
   ProtectedOperationsIndexRouteImport.update({
     id: '/operations/',
@@ -125,11 +121,23 @@ const ProtectedDeliveryIndexRoute = ProtectedDeliveryIndexRouteImport.update({
   path: '/delivery/',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
+const ProtectedDashboardUsersIndexRoute =
+  ProtectedDashboardUsersIndexRouteImport.update({
+    id: '/dashboard-users/',
+    path: '/dashboard-users/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
 const ProtectedAddonsIndexRoute = ProtectedAddonsIndexRouteImport.update({
   id: '/addons/',
   path: '/addons/',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
+const ProtectedAccountingIndexRoute =
+  ProtectedAccountingIndexRouteImport.update({
+    id: '/accounting/',
+    path: '/accounting/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
 const ProtectedUsersCreateRoute = ProtectedUsersCreateRouteImport.update({
   id: '/users/create',
   path: '/users/create',
@@ -244,13 +252,14 @@ export interface FileRoutesByFullPath {
   '/packages/create': typeof ProtectedPackagesCreateRoute
   '/subscriptions/create': typeof ProtectedSubscriptionsCreateRoute
   '/users/create': typeof ProtectedUsersCreateRoute
+  '/accounting/': typeof ProtectedAccountingIndexRoute
   '/addons/': typeof ProtectedAddonsIndexRoute
+  '/dashboard-users/': typeof ProtectedDashboardUsersIndexRoute
   '/delivery/': typeof ProtectedDeliveryIndexRoute
   '/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
   '/menu/': typeof ProtectedMenuIndexRoute
   '/one-time-orders/': typeof ProtectedOneTimeOrdersIndexRoute
   '/operations/': typeof ProtectedOperationsIndexRoute
-  '/orders/': typeof ProtectedOrdersIndexRoute
   '/packages/': typeof ProtectedPackagesIndexRoute
   '/payments/': typeof ProtectedPaymentsIndexRoute
   '/promo-codes/': typeof ProtectedPromoCodesIndexRoute
@@ -279,13 +288,14 @@ export interface FileRoutesByTo {
   '/packages/create': typeof ProtectedPackagesCreateRoute
   '/subscriptions/create': typeof ProtectedSubscriptionsCreateRoute
   '/users/create': typeof ProtectedUsersCreateRoute
+  '/accounting': typeof ProtectedAccountingIndexRoute
   '/addons': typeof ProtectedAddonsIndexRoute
+  '/dashboard-users': typeof ProtectedDashboardUsersIndexRoute
   '/delivery': typeof ProtectedDeliveryIndexRoute
   '/manual-deduction': typeof ProtectedManualDeductionIndexRoute
   '/menu': typeof ProtectedMenuIndexRoute
   '/one-time-orders': typeof ProtectedOneTimeOrdersIndexRoute
   '/operations': typeof ProtectedOperationsIndexRoute
-  '/orders': typeof ProtectedOrdersIndexRoute
   '/packages': typeof ProtectedPackagesIndexRoute
   '/payments': typeof ProtectedPaymentsIndexRoute
   '/promo-codes': typeof ProtectedPromoCodesIndexRoute
@@ -316,13 +326,14 @@ export interface FileRoutesById {
   '/_protected/packages/create': typeof ProtectedPackagesCreateRoute
   '/_protected/subscriptions/create': typeof ProtectedSubscriptionsCreateRoute
   '/_protected/users/create': typeof ProtectedUsersCreateRoute
+  '/_protected/accounting/': typeof ProtectedAccountingIndexRoute
   '/_protected/addons/': typeof ProtectedAddonsIndexRoute
+  '/_protected/dashboard-users/': typeof ProtectedDashboardUsersIndexRoute
   '/_protected/delivery/': typeof ProtectedDeliveryIndexRoute
   '/_protected/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
   '/_protected/menu/': typeof ProtectedMenuIndexRoute
   '/_protected/one-time-orders/': typeof ProtectedOneTimeOrdersIndexRoute
   '/_protected/operations/': typeof ProtectedOperationsIndexRoute
-  '/_protected/orders/': typeof ProtectedOrdersIndexRoute
   '/_protected/packages/': typeof ProtectedPackagesIndexRoute
   '/_protected/payments/': typeof ProtectedPaymentsIndexRoute
   '/_protected/promo-codes/': typeof ProtectedPromoCodesIndexRoute
@@ -353,13 +364,14 @@ export interface FileRouteTypes {
     | '/packages/create'
     | '/subscriptions/create'
     | '/users/create'
+    | '/accounting/'
     | '/addons/'
+    | '/dashboard-users/'
     | '/delivery/'
     | '/manual-deduction/'
     | '/menu/'
     | '/one-time-orders/'
     | '/operations/'
-    | '/orders/'
     | '/packages/'
     | '/payments/'
     | '/promo-codes/'
@@ -388,13 +400,14 @@ export interface FileRouteTypes {
     | '/packages/create'
     | '/subscriptions/create'
     | '/users/create'
+    | '/accounting'
     | '/addons'
+    | '/dashboard-users'
     | '/delivery'
     | '/manual-deduction'
     | '/menu'
     | '/one-time-orders'
     | '/operations'
-    | '/orders'
     | '/packages'
     | '/payments'
     | '/promo-codes'
@@ -424,13 +437,14 @@ export interface FileRouteTypes {
     | '/_protected/packages/create'
     | '/_protected/subscriptions/create'
     | '/_protected/users/create'
+    | '/_protected/accounting/'
     | '/_protected/addons/'
+    | '/_protected/dashboard-users/'
     | '/_protected/delivery/'
     | '/_protected/manual-deduction/'
     | '/_protected/menu/'
     | '/_protected/one-time-orders/'
     | '/_protected/operations/'
-    | '/_protected/orders/'
     | '/_protected/packages/'
     | '/_protected/payments/'
     | '/_protected/promo-codes/'
@@ -522,13 +536,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedPackagesIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
-    '/_protected/orders/': {
-      id: '/_protected/orders/'
-      path: '/orders'
-      fullPath: '/orders/'
-      preLoaderRoute: typeof ProtectedOrdersIndexRouteImport
-      parentRoute: typeof ProtectedRouteRoute
-    }
     '/_protected/operations/': {
       id: '/_protected/operations/'
       path: '/operations'
@@ -564,11 +571,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedDeliveryIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
+    '/_protected/dashboard-users/': {
+      id: '/_protected/dashboard-users/'
+      path: '/dashboard-users'
+      fullPath: '/dashboard-users/'
+      preLoaderRoute: typeof ProtectedDashboardUsersIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
     '/_protected/addons/': {
       id: '/_protected/addons/'
       path: '/addons'
       fullPath: '/addons/'
       preLoaderRoute: typeof ProtectedAddonsIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/accounting/': {
+      id: '/_protected/accounting/'
+      path: '/accounting'
+      fullPath: '/accounting/'
+      preLoaderRoute: typeof ProtectedAccountingIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/users/create': {
@@ -707,13 +728,14 @@ interface ProtectedRouteRouteChildren {
   ProtectedPackagesCreateRoute: typeof ProtectedPackagesCreateRoute
   ProtectedSubscriptionsCreateRoute: typeof ProtectedSubscriptionsCreateRoute
   ProtectedUsersCreateRoute: typeof ProtectedUsersCreateRoute
+  ProtectedAccountingIndexRoute: typeof ProtectedAccountingIndexRoute
   ProtectedAddonsIndexRoute: typeof ProtectedAddonsIndexRoute
+  ProtectedDashboardUsersIndexRoute: typeof ProtectedDashboardUsersIndexRoute
   ProtectedDeliveryIndexRoute: typeof ProtectedDeliveryIndexRoute
   ProtectedManualDeductionIndexRoute: typeof ProtectedManualDeductionIndexRoute
   ProtectedMenuIndexRoute: typeof ProtectedMenuIndexRoute
   ProtectedOneTimeOrdersIndexRoute: typeof ProtectedOneTimeOrdersIndexRoute
   ProtectedOperationsIndexRoute: typeof ProtectedOperationsIndexRoute
-  ProtectedOrdersIndexRoute: typeof ProtectedOrdersIndexRoute
   ProtectedPackagesIndexRoute: typeof ProtectedPackagesIndexRoute
   ProtectedPaymentsIndexRoute: typeof ProtectedPaymentsIndexRoute
   ProtectedPromoCodesIndexRoute: typeof ProtectedPromoCodesIndexRoute
@@ -742,13 +764,14 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedPackagesCreateRoute: ProtectedPackagesCreateRoute,
   ProtectedSubscriptionsCreateRoute: ProtectedSubscriptionsCreateRoute,
   ProtectedUsersCreateRoute: ProtectedUsersCreateRoute,
+  ProtectedAccountingIndexRoute: ProtectedAccountingIndexRoute,
   ProtectedAddonsIndexRoute: ProtectedAddonsIndexRoute,
+  ProtectedDashboardUsersIndexRoute: ProtectedDashboardUsersIndexRoute,
   ProtectedDeliveryIndexRoute: ProtectedDeliveryIndexRoute,
   ProtectedManualDeductionIndexRoute: ProtectedManualDeductionIndexRoute,
   ProtectedMenuIndexRoute: ProtectedMenuIndexRoute,
   ProtectedOneTimeOrdersIndexRoute: ProtectedOneTimeOrdersIndexRoute,
   ProtectedOperationsIndexRoute: ProtectedOperationsIndexRoute,
-  ProtectedOrdersIndexRoute: ProtectedOrdersIndexRoute,
   ProtectedPackagesIndexRoute: ProtectedPackagesIndexRoute,
   ProtectedPaymentsIndexRoute: ProtectedPaymentsIndexRoute,
   ProtectedPromoCodesIndexRoute: ProtectedPromoCodesIndexRoute,

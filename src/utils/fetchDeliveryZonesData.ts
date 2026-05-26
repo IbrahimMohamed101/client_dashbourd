@@ -1,23 +1,27 @@
 import api from "@/lib/apis";
 import { deliveryZoneToggleUrl } from "@/utils/deliveryZoneApiContract";
+import type {
+  CreateDeliveryZoneDTO,
+  DeliveryZonesResponse,
+  UpdateDeliveryZoneDTO,
+} from "@/types/deliveryZoneTypes";
 
 export const fetchDeliveryZonesList = async ({
-  page = 1,
-  limit = 20,
   q = "",
+  isActive,
 }: {
-  page?: number;
-  limit?: number;
   q?: string;
-}) => {
+  isActive?: boolean;
+} = {}): Promise<DeliveryZonesResponse> => {
   try {
     const params = new URLSearchParams();
-    if (page) params.append("page", page.toString());
-    if (limit) params.append("limit", limit.toString());
     if (q) params.append("q", q);
+    if (typeof isActive === "boolean") {
+      params.append("isActive", String(isActive));
+    }
 
     const response = await api.get(
-      `/api/dashboard/zones?${params.toString()}`
+      `/api/dashboard/zones${params.size ? `?${params.toString()}` : ""}`
     );
     return response.data;
   } catch (error) {
@@ -26,7 +30,7 @@ export const fetchDeliveryZonesList = async ({
   }
 };
 
-export const createDeliveryZone = async (data: Record<string, unknown>) => {
+export const createDeliveryZone = async (data: CreateDeliveryZoneDTO) => {
   try {
     const response = await api.post("/api/dashboard/zones", data);
     return response.data;
@@ -41,7 +45,7 @@ export const updateDeliveryZone = async ({
   data,
 }: {
   id: string;
-  data: Record<string, unknown>;
+  data: UpdateDeliveryZoneDTO;
 }) => {
   try {
     const response = await api.put(`/api/dashboard/zones/${id}`, data);

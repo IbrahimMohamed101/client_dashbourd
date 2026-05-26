@@ -1,4 +1,5 @@
 type ApiErrorData = {
+  ok?: unknown;
   message?: unknown;
   code?: unknown;
   success?: unknown;
@@ -16,6 +17,7 @@ type ApiErrorData = {
 
 type ApiErrorLike = {
   response?: {
+    status?: number;
     data?: ApiErrorData;
   };
   message?: unknown;
@@ -26,38 +28,68 @@ type ApiErrorLike = {
 const isApiErrorLike = (error: unknown): error is ApiErrorLike =>
   typeof error === "object" && error !== null;
 
-export function getApiErrorMessage(error: unknown): string {
+export interface ParsedApiError {
+  status?: number;
+  message: string;
+  code?: string;
+  details?: unknown;
+  expectedField?: string;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const readString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.trim() ? value.trim() : undefined;
+
+const readDetailsMessage = (details: unknown): string | undefined => {
+  if (typeof details === "string" && details.trim()) return details.trim();
+  if (!isRecord(details)) return undefined;
+
+  return (
+    readString(details.message) ??
+    readString(details.error) ??
+    readString(details.reason)
+  );
+};
+
+export function parseApiError(error: unknown): ParsedApiError {
   const apiError = isApiErrorLike(error) ? error : {};
+  const responseStatus = apiError.response?.status;
   const data: ApiErrorData = apiError.response?.data ?? {
     message: apiError.message,
     code: apiError.code,
     status: apiError.status,
   };
+  const errorNode =
+    data?.error && typeof data.error !== "string" ? data.error : undefined;
+  const errorCode =
+    readString(errorNode?.code) ??
+    readString(data?.code) ??
+    readString(apiError.code);
+  const details = errorNode?.details;
+  const expectedField = readString(data?.expectedField);
 
-  if (typeof data?.message === "string") return data.message;
+  const message =
+    readString(data?.message) ??
+    (typeof data?.error === "string" ? data.error : undefined) ??
+    readString(errorNode?.message) ??
+    readString(errorNode?.messageKey) ??
+    readDetailsMessage(details) ??
+    (expectedField ? `Expected field: ${expectedField}` : undefined) ??
+    errorCode ??
+    readString(apiError.message) ??
+    "Unexpected error";
 
-  if (typeof data?.error === "string") return data.error;
+  return {
+    status: responseStatus,
+    message,
+    code: errorCode,
+    details,
+    expectedField,
+  };
+}
 
-  if (typeof data?.error?.message === "string") return data.error.message;
-
-  if (typeof data?.error?.messageKey === "string") {
-    return data.error.messageKey;
-  }
-
-  if (typeof data?.error?.code === "string") return data.error.code;
-
-  if (typeof data?.code === "string") return data.code;
-
-  if (
-    (data?.success === false || data?.status === false) &&
-    typeof data?.expectedField === "string"
-  ) {
-    return `Expected field: ${data.expectedField}`;
-  }
-
-  if (typeof apiError.message === "string") return apiError.message;
-
-  if (typeof apiError.code === "string") return apiError.code;
-
-  return "Unexpected error";
+export function getApiErrorMessage(error: unknown): string {
+  return parseApiError(error).message;
 }

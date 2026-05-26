@@ -10,7 +10,7 @@ import type { DeliveryZone } from "@/types/deliveryZoneTypes";
 export const Route = createFileRoute("/_protected/zones/")({
   component: RouteComponent,
   loader: ({ context }) =>
-    context.queryClient.ensureQueryData(deliveryZonesListQueryOptions(1, 20)),
+    context.queryClient.ensureQueryData(deliveryZonesListQueryOptions()),
   pendingComponent: () => (
     <Loader variant="full-screen" label="جاري تحميل مناطق التوصيل..." />
   ),
@@ -18,11 +18,12 @@ export const Route = createFileRoute("/_protected/zones/")({
 
 function RouteComponent() {
   const { data: zonesResponse } = useSuspenseQuery(
-    deliveryZonesListQueryOptions(1, 20)
+    deliveryZonesListQueryOptions()
   );
 
   const zones = (zonesResponse?.data || []) as DeliveryZone[];
-  const activeZones = zones.filter((z) => z.is_active).length;
+  const totalZones = zonesResponse?.meta?.totalCount ?? zones.length;
+  const activeZones = zones.filter((z) => z.isActive).length;
 
   return (
     <>
@@ -45,7 +46,7 @@ function RouteComponent() {
             <div className="flex items-center gap-6 sm:border-r sm:pr-6">
               <div className="text-center sm:text-right">
                 <p className="text-3xl font-black text-primary">
-                  {zones.length}
+                  {totalZones}
                 </p>
                 <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                   إجمالي المناطق

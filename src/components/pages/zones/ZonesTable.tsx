@@ -53,9 +53,7 @@ export function ZonesTable({ data, isLoading }: ZonesTableProps) {
       const name =
         typeof item.name === "string" ? item.name : String(item.name ?? "");
       const desc =
-        typeof item.coverage_description === "string"
-          ? item.coverage_description
-          : String(item.coverage_description ?? "");
+        typeof item.sortOrder === "number" ? String(item.sortOrder) : "";
       return name.toLowerCase().includes(q) || desc.toLowerCase().includes(q);
     });
   };
@@ -183,16 +181,18 @@ export function ZonesTable({ data, isLoading }: ZonesTableProps) {
                   </td>
                   <td className="p-4">
                     <span className="text-base font-bold tabular-nums">
-                      {zone.delivery_fee?.toLocaleString() || 0} ر.س
+                      {zone.deliveryFeeHalala?.toLocaleString() || 0} ر.س
                     </span>
                   </td>
                   <td className="p-4">
                     <span className="line-clamp-1 max-w-[200px] text-sm text-muted-foreground">
-                      {safeStr(zone.coverage_description) || "—"}
+                      {typeof zone.sortOrder === "number"
+                        ? `الترتيب: ${zone.sortOrder}`
+                        : "—"}
                     </span>
                   </td>
                   <td className="p-4">
-                    <StatusBadge isActive={zone.is_active} />
+                    <StatusBadge isActive={zone.isActive} />
                   </td>
                   <td className="p-4 text-center">
                     <div className="flex items-center justify-center gap-1">
