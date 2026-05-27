@@ -36,6 +36,7 @@ function CreateMenuCategoryPage() {
       isActive: true,
       isAvailable: true,
       isVisible: true,
+      ui: { cardVariant: "meal_builder" },
       sortOrder: 0,
     },
   });

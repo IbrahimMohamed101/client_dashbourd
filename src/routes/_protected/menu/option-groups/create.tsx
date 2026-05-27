@@ -33,6 +33,7 @@ function CreateOptionGroupPage() {
       isActive: true,
       isAvailable: true,
       isVisible: true,
+      ui: { displayStyle: "chips" },
       sortOrder: 0,
     },
   });

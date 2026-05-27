@@ -21,4 +21,9 @@ export const routeTranslations: Record<string, string> = {
   products: "المنتجات",
   "option-groups": "مجموعات الخيارات",
   options: "الخيارات",
+  settings: "الإعدادات",
+  "restaurant-hours": "ساعات العمل",
+  "pickup-branches": "فروع الاستلام",
+  notifications: "الإشعارات",
+  profile: "الملف الشخصي",
 };

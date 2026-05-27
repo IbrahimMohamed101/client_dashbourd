@@ -54,6 +54,7 @@ function UpdateMenuCategoryPage() {
           isActive: category.isActive,
           isAvailable: category.isAvailable,
           isVisible: category.isVisible ?? true,
+          ui: { cardVariant: category.ui?.cardVariant },
           sortOrder: category.sortOrder,
         }
       : undefined,

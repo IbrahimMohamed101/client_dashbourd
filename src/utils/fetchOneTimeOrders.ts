@@ -109,7 +109,6 @@ export const fulfillOneTimeOrder = async (
     `/api/dashboard/orders/${orderId}/actions/fulfill`,
     {
       reason: body.reason ?? "Customer picked up the order from branch",
-      pickupCode: body.pickupCode,
       notes: body.notes,
     }
   );

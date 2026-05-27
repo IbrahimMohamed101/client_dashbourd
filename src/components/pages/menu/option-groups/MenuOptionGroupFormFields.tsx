@@ -1,13 +1,20 @@
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Layers } from "lucide-react";
 import { Controller } from "react-hook-form";
@@ -26,6 +33,14 @@ interface Props {
   isEdit?: boolean;
 }
 
+const DISPLAY_STYLES = [
+  { value: "chips", label: "شرائح" },
+  { value: "radio_cards", label: "بطاقات اختيار مفرد" },
+  { value: "checkbox_grid", label: "شبكة اختيارات متعددة" },
+  { value: "dropdown", label: "قائمة منسدلة" },
+  { value: "stepper", label: "عداد" },
+];
+
 export function MenuOptionGroupFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
   const isAvailable = form.watch("isAvailable") ?? true;
@@ -36,85 +51,88 @@ export function MenuOptionGroupFormFields({ form, isEdit }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Layers className="size-4" />
-            </div>
+            </span>
             مجموعة الخيارات
           </CardTitle>
           <CardDescription>
-            أدخل تفاصيل مجموعة الخيارات (مثال: البروتينات، الفواكه...)
+            أدخل تفاصيل مجموعة الخيارات مثل البروتينات أو الصلصات.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-1.5">
-            <Label>المفتاح (Key)</Label>
-            <Input
-              dir="ltr"
-              placeholder="e.g. proteins"
-              {...form.register("key")}
-              disabled={isEdit}
-            />
-            {form.formState.errors.key && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.key.message}
+          {isEdit ? (
+            <div className="space-y-1.5">
+              <Label>المفتاح</Label>
+              <Input dir="ltr" {...form.register("key")} disabled />
+              <p className="text-xs text-muted-foreground">
+                يتم توليد المفتاح من الخادم ولا يمكن تعديله.
               </p>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+              سيتم توليد المفتاح تلقائياً من الخادم بعد إنشاء مجموعة الخيارات.
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>الاسم (عربي)</Label>
-              <Input
-                placeholder="مثال: البروتينات"
-                {...form.register("name.ar")}
-              />
-              {form.formState.errors.name?.ar && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.name.ar.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label>الاسم (إنجليزي)</Label>
-              <Input
-                dir="ltr"
-                placeholder="e.g. Proteins"
-                {...form.register("name.en")}
-              />
-              {form.formState.errors.name?.en && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.name.en.message}
-                </p>
-              )}
-            </div>
+            <Field
+              label="الاسم بالعربية"
+              placeholder="مثال: البروتينات"
+              error={form.formState.errors.name?.ar?.message}
+              inputProps={form.register("name.ar")}
+            />
+            <Field
+              label="الاسم بالإنجليزية"
+              placeholder="e.g. Proteins"
+              dir="ltr"
+              error={form.formState.errors.name?.en?.message}
+              inputProps={form.register("name.en")}
+            />
           </div>
+
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>الوصف (عربي)</Label>
-              <Textarea
-                placeholder="وصف..."
-                className="resize-none"
-                {...form.register("description.ar")}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>الوصف (إنجليزي)</Label>
-              <Textarea
-                dir="ltr"
-                placeholder="Description..."
-                className="resize-none"
-                {...form.register("description.en")}
-              />
-            </div>
+            <TextAreaField
+              label="الوصف بالعربية"
+              placeholder="وصف..."
+              inputProps={form.register("description.ar")}
+            />
+            <TextAreaField
+              label="الوصف بالإنجليزية"
+              placeholder="Description..."
+              dir="ltr"
+              inputProps={form.register("description.en")}
+            />
           </div>
+
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <Field
+              label="ترتيب العرض"
+              type="number"
+              min="0"
+              placeholder="0"
+              error={form.formState.errors.sortOrder?.message}
+              inputProps={form.register("sortOrder")}
+            />
             <div className="space-y-1.5">
-              <Label>ترتيب العرض</Label>
-              <Input
-                type="number"
-                min="0"
-                placeholder="0"
-                {...form.register("sortOrder")}
-                aria-invalid={!!form.formState.errors.sortOrder}
+              <Label>طريقة عرض المجموعة</Label>
+              <Controller
+                control={form.control}
+                name="ui.displayStyle"
+                render={({ field }) => (
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <SelectTrigger className="min-w-full" dir="rtl">
+                      <SelectValue placeholder="اختر طريقة العرض" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DISPLAY_STYLES.map((style) => (
+                        <SelectItem key={style.value} value={style.value}>
+                          {style.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               />
             </div>
           </div>
@@ -124,73 +142,110 @@ export function MenuOptionGroupFormFields({ form, isEdit }: Props) {
       <Card>
         <CardHeader>
           <CardTitle>إعدادات الحالة والظهور</CardTitle>
-          <CardDescription>تحكم في تفعيل وظهور مجموعة الخيارات في التطبيق</CardDescription>
+          <CardDescription>
+            تحكم في تفعيل وظهور مجموعة الخيارات في التطبيق.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-            <div className="space-y-0.5">
-              <Label className="text-base font-bold">نشط</Label>
-              <p className="text-xs text-muted-foreground">
-                {isActive ? "مجموعة الخيارات مفعلة" : "مجموعة الخيارات معطلة"}
-              </p>
-            </div>
-            <Controller
-              control={form.control}
-              name="isActive"
-              render={({ field }) => (
-                <Switch
-                  type="button"
-                  checked={field.value ?? true}
-                  className="data-[state=checked]:bg-green-500"
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-          </div>
-
-          <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-            <div className="space-y-0.5">
-              <Label className="text-base font-bold">متوفر</Label>
-              <p className="text-xs text-muted-foreground">
-                {isAvailable ? "متاح للطلب" : "غير متوفر حالياً"}
-              </p>
-            </div>
-            <Controller
-              control={form.control}
-              name="isAvailable"
-              render={({ field }) => (
-                <Switch
-                  type="button"
-                  checked={field.value ?? true}
-                  className="data-[state=checked]:bg-emerald-500"
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-          </div>
-
-          <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-            <div className="space-y-0.5">
-              <Label className="text-base font-bold">الظهور</Label>
-              <p className="text-xs text-muted-foreground">
-                {isVisible ? "مرئي للعملاء" : "مخفي عن العملاء"}
-              </p>
-            </div>
-            <Controller
-              control={form.control}
-              name="isVisible"
-              render={({ field }) => (
-                <Switch
-                  type="button"
-                  checked={field.value ?? true}
-                  className="data-[state=checked]:bg-blue-500"
-                  onCheckedChange={field.onChange}
-                />
-              )}
-            />
-          </div>
+          <ToggleCard
+            label="نشط"
+            note={isActive ? "مجموعة الخيارات مفعلة" : "مجموعة الخيارات معطلة"}
+            name="isActive"
+            form={form}
+            className="data-[state=checked]:bg-green-500"
+          />
+          <ToggleCard
+            label="متوفر"
+            note={isAvailable ? "متاح للطلب" : "غير متوفر حالياً"}
+            name="isAvailable"
+            form={form}
+            className="data-[state=checked]:bg-emerald-500"
+          />
+          <ToggleCard
+            label="الظهور"
+            note={isVisible ? "مرئي للعملاء" : "مخفي عن العملاء"}
+            name="isVisible"
+            form={form}
+            className="data-[state=checked]:bg-blue-500"
+          />
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  error,
+  inputProps,
+  dir,
+  ...props
+}: React.ComponentProps<typeof Input> & {
+  label: string;
+  error?: string;
+  inputProps: ReturnType<UseFormReturn["register"]>;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Input dir={dir} {...props} {...inputProps} />
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
+function TextAreaField({
+  label,
+  inputProps,
+  dir,
+  ...props
+}: React.ComponentProps<typeof Textarea> & {
+  label: string;
+  inputProps: ReturnType<UseFormReturn["register"]>;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Textarea dir={dir} className="resize-none" {...props} {...inputProps} />
+    </div>
+  );
+}
+
+function ToggleCard({
+  label,
+  note,
+  name,
+  form,
+  className,
+}: {
+  label: string;
+  note: string;
+  name: "isActive" | "isAvailable" | "isVisible";
+  form: UseFormReturn<
+    MenuOptionGroupSchemaInput,
+    unknown,
+    MenuOptionGroupSchemaType
+  >;
+  className: string;
+}) {
+  return (
+    <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+      <div className="space-y-0.5">
+        <Label className="text-base font-bold">{label}</Label>
+        <p className="text-xs text-muted-foreground">{note}</p>
+      </div>
+      <Controller
+        control={form.control}
+        name={name}
+        render={({ field }) => (
+          <Switch
+            type="button"
+            checked={field.value ?? true}
+            className={className}
+            onCheckedChange={field.onChange}
+          />
+        )}
+      />
     </div>
   );
 }

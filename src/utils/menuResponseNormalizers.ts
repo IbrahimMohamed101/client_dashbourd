@@ -112,6 +112,9 @@ function normalizeCategory(raw: any): MenuCategory {
     isActive: raw.isActive ?? raw.active ?? true,
     isAvailable: raw.isAvailable ?? raw.available ?? true,
     isVisible: raw.isVisible ?? raw.visible ?? true,
+    ui: raw.ui ?? {
+      cardVariant: raw.cardVariant ?? raw.card_variant,
+    },
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     createdAt: raw.createdAt ?? raw.created_at,
     updatedAt: raw.updatedAt ?? raw.updated_at,
@@ -284,6 +287,12 @@ function normalizeProduct(raw: any): MenuProduct {
     isActive: raw.isActive ?? raw.active ?? true,
     isAvailable: raw.isAvailable ?? raw.available ?? true,
     isVisible: raw.isVisible ?? raw.visible ?? true,
+    ui: raw.ui ?? {
+      cardVariant: raw.cardVariant ?? raw.card_variant,
+      badge: raw.badge ?? "",
+      ctaLabel: raw.ctaLabel ?? raw.cta_label ?? "",
+      imageRatio: raw.imageRatio ?? raw.image_ratio ?? "",
+    },
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     groups: raw.groups,
     optionGroups: raw.optionGroups ?? raw.option_groups,
@@ -329,6 +338,9 @@ function normalizeOptionGroup(raw: any): MenuOptionGroup {
     isActive: raw.isActive ?? raw.active ?? true,
     isAvailable: raw.isAvailable ?? raw.available ?? true,
     isVisible: raw.isVisible ?? raw.visible ?? true,
+    ui: raw.ui ?? {
+      displayStyle: raw.displayStyle ?? raw.display_style,
+    },
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     createdAt: raw.createdAt ?? raw.created_at,
     updatedAt: raw.updatedAt ?? raw.updated_at,

@@ -54,9 +54,7 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
 
   const [confirmDialog, setConfirmDialog] = useState<{
     action: OneTimeOrderAction;
-    requiresPickupCode: boolean;
   } | null>(null);
-  const [pickupCode, setPickupCode] = useState("");
   const [cancelReason, setCancelReason] = useState("");
 
   const order = detailRes?.data;
@@ -96,7 +94,6 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
     if (action === "fulfill" || action === "cancel") {
       setConfirmDialog({
         action,
-        requiresPickupCode: action === "fulfill",
       });
     } else {
       actionMutation.mutate({ orderId: order.entityId, action });
@@ -106,15 +103,11 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
   const handleConfirmAction = () => {
     if (!confirmDialog) return;
     const body: OneTimeOrderActionRequest = {};
-    if (confirmDialog.requiresPickupCode && pickupCode) {
-      body.pickupCode = pickupCode;
-    }
     if (confirmDialog.action === "cancel" && cancelReason) {
       body.reason = cancelReason;
     }
     actionMutation.mutate({ orderId: order.entityId, action: confirmDialog.action, body });
     setConfirmDialog(null);
-    setPickupCode("");
     setCancelReason("");
   };
 
@@ -413,7 +406,6 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
         onOpenChange={(open) => {
           if (!open) {
             setConfirmDialog(null);
-            setPickupCode("");
             setCancelReason("");
           }
         }}
@@ -436,20 +428,6 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
                 : "هل أنت متأكد من إلغاء هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء بسهولة."}
             </AlertDialogDescription>
 
-            {confirmDialog?.requiresPickupCode && (
-              <div className="mt-4 space-y-2">
-                <label className="text-sm font-semibold text-foreground/80">رمز الاستلام</label>
-                <Input
-                  placeholder="000000"
-                  value={pickupCode}
-                  onChange={(e) => setPickupCode(e.target.value)}
-                  className="h-12 border-2 text-center text-2xl font-bold tracking-[0.5em] focus-visible:ring-primary"
-                  dir="ltr"
-                  autoFocus
-                />
-              </div>
-            )}
-
             {confirmDialog?.action === "cancel" && (
               <div className="mt-4 space-y-2">
                 <label className="text-sm font-semibold text-foreground/80">سبب الإلغاء</label>
@@ -470,7 +448,6 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
               onClick={handleConfirmAction}
               disabled={
                 actionMutation.isPending ||
-                (confirmDialog?.requiresPickupCode && !pickupCode.trim()) ||
                 (confirmDialog?.action === "cancel" && !cancelReason.trim())
               }
               className={

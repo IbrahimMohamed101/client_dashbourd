@@ -64,6 +64,12 @@ function UpdateMenuProductPage() {
             product.availableForSubscription ??
             product.availableFor?.includes("subscription") ??
             true,
+          ui: {
+            cardVariant: product.ui?.cardVariant,
+            badge: product.ui?.badge ?? "",
+            ctaLabel: product.ui?.ctaLabel ?? "",
+            imageRatio: product.ui?.imageRatio ?? "",
+          },
           sortOrder: product.sortOrder,
         }
       : undefined,

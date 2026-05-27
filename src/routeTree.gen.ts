@@ -15,11 +15,16 @@ import { Route as ProtectedDashboardRouteImport } from './routes/_protected/dash
 import { Route as ProtectedZonesIndexRouteImport } from './routes/_protected/zones/index'
 import { Route as ProtectedUsersIndexRouteImport } from './routes/_protected/users/index'
 import { Route as ProtectedSubscriptionsIndexRouteImport } from './routes/_protected/subscriptions/index'
+import { Route as ProtectedSettingsIndexRouteImport } from './routes/_protected/settings/index'
+import { Route as ProtectedRestaurantHoursIndexRouteImport } from './routes/_protected/restaurant-hours/index'
 import { Route as ProtectedPromoCodesIndexRouteImport } from './routes/_protected/promo-codes/index'
+import { Route as ProtectedProfileIndexRouteImport } from './routes/_protected/profile/index'
+import { Route as ProtectedPickupBranchesIndexRouteImport } from './routes/_protected/pickup-branches/index'
 import { Route as ProtectedPaymentsIndexRouteImport } from './routes/_protected/payments/index'
 import { Route as ProtectedPackagesIndexRouteImport } from './routes/_protected/packages/index'
 import { Route as ProtectedOperationsIndexRouteImport } from './routes/_protected/operations/index'
 import { Route as ProtectedOneTimeOrdersIndexRouteImport } from './routes/_protected/one-time-orders/index'
+import { Route as ProtectedNotificationsIndexRouteImport } from './routes/_protected/notifications/index'
 import { Route as ProtectedMenuIndexRouteImport } from './routes/_protected/menu/index'
 import { Route as ProtectedManualDeductionIndexRouteImport } from './routes/_protected/manual-deduction/index'
 import { Route as ProtectedDeliveryIndexRouteImport } from './routes/_protected/delivery/index'
@@ -75,10 +80,32 @@ const ProtectedSubscriptionsIndexRoute =
     path: '/subscriptions/',
     getParentRoute: () => ProtectedRouteRoute,
   } as any)
+const ProtectedSettingsIndexRoute = ProtectedSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => ProtectedRouteRoute,
+} as any)
+const ProtectedRestaurantHoursIndexRoute =
+  ProtectedRestaurantHoursIndexRouteImport.update({
+    id: '/restaurant-hours/',
+    path: '/restaurant-hours/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
 const ProtectedPromoCodesIndexRoute =
   ProtectedPromoCodesIndexRouteImport.update({
     id: '/promo-codes/',
     path: '/promo-codes/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
+const ProtectedProfileIndexRoute = ProtectedProfileIndexRouteImport.update({
+  id: '/profile/',
+  path: '/profile/',
+  getParentRoute: () => ProtectedRouteRoute,
+} as any)
+const ProtectedPickupBranchesIndexRoute =
+  ProtectedPickupBranchesIndexRouteImport.update({
+    id: '/pickup-branches/',
+    path: '/pickup-branches/',
     getParentRoute: () => ProtectedRouteRoute,
   } as any)
 const ProtectedPaymentsIndexRoute = ProtectedPaymentsIndexRouteImport.update({
@@ -103,6 +130,12 @@ const ProtectedOneTimeOrdersIndexRoute =
   ProtectedOneTimeOrdersIndexRouteImport.update({
     id: '/one-time-orders/',
     path: '/one-time-orders/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
+const ProtectedNotificationsIndexRoute =
+  ProtectedNotificationsIndexRouteImport.update({
+    id: '/notifications/',
+    path: '/notifications/',
     getParentRoute: () => ProtectedRouteRoute,
   } as any)
 const ProtectedMenuIndexRoute = ProtectedMenuIndexRouteImport.update({
@@ -258,11 +291,16 @@ export interface FileRoutesByFullPath {
   '/delivery/': typeof ProtectedDeliveryIndexRoute
   '/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
   '/menu/': typeof ProtectedMenuIndexRoute
+  '/notifications/': typeof ProtectedNotificationsIndexRoute
   '/one-time-orders/': typeof ProtectedOneTimeOrdersIndexRoute
   '/operations/': typeof ProtectedOperationsIndexRoute
   '/packages/': typeof ProtectedPackagesIndexRoute
   '/payments/': typeof ProtectedPaymentsIndexRoute
+  '/pickup-branches/': typeof ProtectedPickupBranchesIndexRoute
+  '/profile/': typeof ProtectedProfileIndexRoute
   '/promo-codes/': typeof ProtectedPromoCodesIndexRoute
+  '/restaurant-hours/': typeof ProtectedRestaurantHoursIndexRoute
+  '/settings/': typeof ProtectedSettingsIndexRoute
   '/subscriptions/': typeof ProtectedSubscriptionsIndexRoute
   '/users/': typeof ProtectedUsersIndexRoute
   '/zones/': typeof ProtectedZonesIndexRoute
@@ -294,11 +332,16 @@ export interface FileRoutesByTo {
   '/delivery': typeof ProtectedDeliveryIndexRoute
   '/manual-deduction': typeof ProtectedManualDeductionIndexRoute
   '/menu': typeof ProtectedMenuIndexRoute
+  '/notifications': typeof ProtectedNotificationsIndexRoute
   '/one-time-orders': typeof ProtectedOneTimeOrdersIndexRoute
   '/operations': typeof ProtectedOperationsIndexRoute
   '/packages': typeof ProtectedPackagesIndexRoute
   '/payments': typeof ProtectedPaymentsIndexRoute
+  '/pickup-branches': typeof ProtectedPickupBranchesIndexRoute
+  '/profile': typeof ProtectedProfileIndexRoute
   '/promo-codes': typeof ProtectedPromoCodesIndexRoute
+  '/restaurant-hours': typeof ProtectedRestaurantHoursIndexRoute
+  '/settings': typeof ProtectedSettingsIndexRoute
   '/subscriptions': typeof ProtectedSubscriptionsIndexRoute
   '/users': typeof ProtectedUsersIndexRoute
   '/zones': typeof ProtectedZonesIndexRoute
@@ -332,11 +375,16 @@ export interface FileRoutesById {
   '/_protected/delivery/': typeof ProtectedDeliveryIndexRoute
   '/_protected/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
   '/_protected/menu/': typeof ProtectedMenuIndexRoute
+  '/_protected/notifications/': typeof ProtectedNotificationsIndexRoute
   '/_protected/one-time-orders/': typeof ProtectedOneTimeOrdersIndexRoute
   '/_protected/operations/': typeof ProtectedOperationsIndexRoute
   '/_protected/packages/': typeof ProtectedPackagesIndexRoute
   '/_protected/payments/': typeof ProtectedPaymentsIndexRoute
+  '/_protected/pickup-branches/': typeof ProtectedPickupBranchesIndexRoute
+  '/_protected/profile/': typeof ProtectedProfileIndexRoute
   '/_protected/promo-codes/': typeof ProtectedPromoCodesIndexRoute
+  '/_protected/restaurant-hours/': typeof ProtectedRestaurantHoursIndexRoute
+  '/_protected/settings/': typeof ProtectedSettingsIndexRoute
   '/_protected/subscriptions/': typeof ProtectedSubscriptionsIndexRoute
   '/_protected/users/': typeof ProtectedUsersIndexRoute
   '/_protected/zones/': typeof ProtectedZonesIndexRoute
@@ -370,11 +418,16 @@ export interface FileRouteTypes {
     | '/delivery/'
     | '/manual-deduction/'
     | '/menu/'
+    | '/notifications/'
     | '/one-time-orders/'
     | '/operations/'
     | '/packages/'
     | '/payments/'
+    | '/pickup-branches/'
+    | '/profile/'
     | '/promo-codes/'
+    | '/restaurant-hours/'
+    | '/settings/'
     | '/subscriptions/'
     | '/users/'
     | '/zones/'
@@ -406,11 +459,16 @@ export interface FileRouteTypes {
     | '/delivery'
     | '/manual-deduction'
     | '/menu'
+    | '/notifications'
     | '/one-time-orders'
     | '/operations'
     | '/packages'
     | '/payments'
+    | '/pickup-branches'
+    | '/profile'
     | '/promo-codes'
+    | '/restaurant-hours'
+    | '/settings'
     | '/subscriptions'
     | '/users'
     | '/zones'
@@ -443,11 +501,16 @@ export interface FileRouteTypes {
     | '/_protected/delivery/'
     | '/_protected/manual-deduction/'
     | '/_protected/menu/'
+    | '/_protected/notifications/'
     | '/_protected/one-time-orders/'
     | '/_protected/operations/'
     | '/_protected/packages/'
     | '/_protected/payments/'
+    | '/_protected/pickup-branches/'
+    | '/_protected/profile/'
     | '/_protected/promo-codes/'
+    | '/_protected/restaurant-hours/'
+    | '/_protected/settings/'
     | '/_protected/subscriptions/'
     | '/_protected/users/'
     | '/_protected/zones/'
@@ -515,11 +578,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedSubscriptionsIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
+    '/_protected/settings/': {
+      id: '/_protected/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof ProtectedSettingsIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/restaurant-hours/': {
+      id: '/_protected/restaurant-hours/'
+      path: '/restaurant-hours'
+      fullPath: '/restaurant-hours/'
+      preLoaderRoute: typeof ProtectedRestaurantHoursIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
     '/_protected/promo-codes/': {
       id: '/_protected/promo-codes/'
       path: '/promo-codes'
       fullPath: '/promo-codes/'
       preLoaderRoute: typeof ProtectedPromoCodesIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/profile/': {
+      id: '/_protected/profile/'
+      path: '/profile'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProtectedProfileIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/pickup-branches/': {
+      id: '/_protected/pickup-branches/'
+      path: '/pickup-branches'
+      fullPath: '/pickup-branches/'
+      preLoaderRoute: typeof ProtectedPickupBranchesIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/payments/': {
@@ -548,6 +639,13 @@ declare module '@tanstack/react-router' {
       path: '/one-time-orders'
       fullPath: '/one-time-orders/'
       preLoaderRoute: typeof ProtectedOneTimeOrdersIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/notifications/': {
+      id: '/_protected/notifications/'
+      path: '/notifications'
+      fullPath: '/notifications/'
+      preLoaderRoute: typeof ProtectedNotificationsIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/menu/': {
@@ -734,11 +832,16 @@ interface ProtectedRouteRouteChildren {
   ProtectedDeliveryIndexRoute: typeof ProtectedDeliveryIndexRoute
   ProtectedManualDeductionIndexRoute: typeof ProtectedManualDeductionIndexRoute
   ProtectedMenuIndexRoute: typeof ProtectedMenuIndexRoute
+  ProtectedNotificationsIndexRoute: typeof ProtectedNotificationsIndexRoute
   ProtectedOneTimeOrdersIndexRoute: typeof ProtectedOneTimeOrdersIndexRoute
   ProtectedOperationsIndexRoute: typeof ProtectedOperationsIndexRoute
   ProtectedPackagesIndexRoute: typeof ProtectedPackagesIndexRoute
   ProtectedPaymentsIndexRoute: typeof ProtectedPaymentsIndexRoute
+  ProtectedPickupBranchesIndexRoute: typeof ProtectedPickupBranchesIndexRoute
+  ProtectedProfileIndexRoute: typeof ProtectedProfileIndexRoute
   ProtectedPromoCodesIndexRoute: typeof ProtectedPromoCodesIndexRoute
+  ProtectedRestaurantHoursIndexRoute: typeof ProtectedRestaurantHoursIndexRoute
+  ProtectedSettingsIndexRoute: typeof ProtectedSettingsIndexRoute
   ProtectedSubscriptionsIndexRoute: typeof ProtectedSubscriptionsIndexRoute
   ProtectedUsersIndexRoute: typeof ProtectedUsersIndexRoute
   ProtectedZonesIndexRoute: typeof ProtectedZonesIndexRoute
@@ -770,11 +873,16 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedDeliveryIndexRoute: ProtectedDeliveryIndexRoute,
   ProtectedManualDeductionIndexRoute: ProtectedManualDeductionIndexRoute,
   ProtectedMenuIndexRoute: ProtectedMenuIndexRoute,
+  ProtectedNotificationsIndexRoute: ProtectedNotificationsIndexRoute,
   ProtectedOneTimeOrdersIndexRoute: ProtectedOneTimeOrdersIndexRoute,
   ProtectedOperationsIndexRoute: ProtectedOperationsIndexRoute,
   ProtectedPackagesIndexRoute: ProtectedPackagesIndexRoute,
   ProtectedPaymentsIndexRoute: ProtectedPaymentsIndexRoute,
+  ProtectedPickupBranchesIndexRoute: ProtectedPickupBranchesIndexRoute,
+  ProtectedProfileIndexRoute: ProtectedProfileIndexRoute,
   ProtectedPromoCodesIndexRoute: ProtectedPromoCodesIndexRoute,
+  ProtectedRestaurantHoursIndexRoute: ProtectedRestaurantHoursIndexRoute,
+  ProtectedSettingsIndexRoute: ProtectedSettingsIndexRoute,
   ProtectedSubscriptionsIndexRoute: ProtectedSubscriptionsIndexRoute,
   ProtectedUsersIndexRoute: ProtectedUsersIndexRoute,
   ProtectedZonesIndexRoute: ProtectedZonesIndexRoute,

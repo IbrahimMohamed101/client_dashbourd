@@ -1,23 +1,21 @@
 import { z } from "zod";
 
+const optionalGeneratedKey = z
+  .string()
+  .trim()
+  .regex(
+    /^[a-z0-9_]+$/,
+    "المفتاح يجب أن يحتوي فقط على حروف إنجليزية صغيرة وأرقام و _"
+  )
+  .or(z.literal(""))
+  .optional()
+  .default("");
+
 const menuCategorySchema = z.object({
-  key: z
-    .string({ message: "المفتاح مطلوب" })
-    .min(1, "المفتاح مطلوب")
-    .regex(
-      /^[a-z0-9_]+$/,
-      "المفتاح يجب أن يحتوي فقط على حروف إنجليزية صغيرة وأرقام و _"
-    )
-    .trim(),
+  key: optionalGeneratedKey,
   name: z.object({
-    ar: z
-      .string({ message: "الاسم بالعربية مطلوب" })
-      .min(1, "الاسم بالعربية مطلوب")
-      .trim(),
-    en: z
-      .string({ message: "الاسم بالإنجليزية مطلوب" })
-      .min(1, "الاسم بالإنجليزية مطلوب")
-      .trim(),
+    ar: z.string({ message: "الاسم بالعربية مطلوب" }).min(1, "الاسم بالعربية مطلوب").trim(),
+    en: z.string({ message: "الاسم بالإنجليزية مطلوب" }).min(1, "الاسم بالإنجليزية مطلوب").trim(),
   }),
   description: z.object({
     ar: z.string().default(""),
@@ -28,6 +26,18 @@ const menuCategorySchema = z.object({
   isActive: z.boolean().default(true),
   isAvailable: z.boolean().default(true),
   isVisible: z.boolean().default(true),
+  ui: z
+    .object({
+      cardVariant: z
+        .enum([
+          "meal_builder",
+          "light_collection",
+          "sandwich_collection",
+          "addon_collection",
+        ])
+        .optional(),
+    })
+    .default({}),
   sortOrder: z.coerce
     .number({ message: "ترتيب العرض يجب أن يكون رقماً" })
     .int("ترتيب العرض يجب أن يكون رقماً صحيحاً")

@@ -18,6 +18,13 @@ import type { UserRole } from "@/types/auth";
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
   const navMain = filterNavItemsForRole(NavLinksData.navMain, user?.role as UserRole | undefined);
+  const navSecondary = [
+    ...filterNavItemsForRole(
+      NavLinksData.navSecondary.filter((item) => item.url !== "#"),
+      user?.role as UserRole | undefined
+    ),
+    ...NavLinksData.navSecondary.filter((item) => item.url === "#"),
+  ];
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -40,7 +47,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
-        <NavSecondary items={NavLinksData.navSecondary} className="mt-auto" />
+        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

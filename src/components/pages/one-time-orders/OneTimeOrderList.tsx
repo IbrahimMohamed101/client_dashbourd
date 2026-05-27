@@ -94,10 +94,6 @@ export const OneTimeOrderList: React.FC = () => {
     return action === "fulfill" || action === "cancel";
   };
 
-  const isActionRequiresPickupCode = (action: OneTimeOrderAction) => {
-    return action === "fulfill" || action === "ready_for_pickup";
-  };
-
   const handleAction = React.useCallback(
     (order: OneTimeOrderListItem, action: OneTimeOrderAction) => {
       if (isUnsupportedOneTimeOrderAction(action)) return;
@@ -108,7 +104,7 @@ export const OneTimeOrderList: React.FC = () => {
         setConfirmDialog({
           order,
           action,
-          requiresPickupCode: isActionRequiresPickupCode(action),
+          requiresPickupCode: false,
         });
         return;
       }

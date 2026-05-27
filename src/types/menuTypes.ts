@@ -9,6 +9,25 @@ export interface LocalizedText {
   en: string;
 }
 
+export type MenuCategoryCardVariant =
+  | "meal_builder"
+  | "light_collection"
+  | "sandwich_collection"
+  | "addon_collection";
+
+export type MenuProductCardVariant =
+  | "standard"
+  | "premium"
+  | "large_salad"
+  | "addon";
+
+export type MenuOptionGroupDisplayStyle =
+  | "chips"
+  | "radio_cards"
+  | "checkbox_grid"
+  | "dropdown"
+  | "stepper";
+
 export interface PaginationMeta {
   page: number;
   limit: number;
@@ -37,6 +56,9 @@ export interface MenuCategory {
   isVisible?: boolean;
   availableFor?: string[];
   availableForSubscription?: boolean;
+  ui?: {
+    cardVariant?: MenuCategoryCardVariant;
+  };
   sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
@@ -179,13 +201,16 @@ export interface MenuCategoryDetailResponse {
 }
 
 export interface CreateMenuCategoryPayload {
-  key: string;
+  key?: string;
   name: LocalizedText;
   description?: LocalizedText;
   imageUrl?: string;
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  ui?: {
+    cardVariant?: MenuCategoryCardVariant;
+  };
   sortOrder?: number;
 }
 
@@ -196,6 +221,9 @@ export interface UpdateMenuCategoryPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  ui?: {
+    cardVariant?: MenuCategoryCardVariant;
+  };
   sortOrder?: number;
 }
 
@@ -240,6 +268,12 @@ export interface MenuProduct {
   isVisible?: boolean;
   availableFor?: string[];
   availableForSubscription?: boolean;
+  ui?: {
+    cardVariant?: MenuProductCardVariant;
+    badge?: string;
+    ctaLabel?: string;
+    imageRatio?: string;
+  };
   sortOrder: number;
   groups?: MenuProductLinkedGroup[];
   optionGroups?: MenuProductLinkedGroup[];
@@ -256,7 +290,7 @@ export interface MenuProductDetailResponse {
 
 export interface CreateMenuProductPayload {
   categoryId: string;
-  key: string;
+  key?: string;
   itemType: ItemType;
   name: LocalizedText;
   description?: LocalizedText;
@@ -273,6 +307,12 @@ export interface CreateMenuProductPayload {
   isVisible?: boolean;
   availableFor?: string[];
   availableForSubscription?: boolean;
+  ui?: {
+    cardVariant?: MenuProductCardVariant;
+    badge?: string;
+    ctaLabel?: string;
+    imageRatio?: string;
+  };
   sortOrder?: number;
 }
 
@@ -294,6 +334,12 @@ export interface UpdateMenuProductPayload {
   isVisible?: boolean;
   availableFor?: string[];
   availableForSubscription?: boolean;
+  ui?: {
+    cardVariant?: MenuProductCardVariant;
+    badge?: string;
+    ctaLabel?: string;
+    imageRatio?: string;
+  };
   sortOrder?: number;
 }
 
@@ -307,6 +353,9 @@ export interface MenuOptionGroup {
   isActive: boolean;
   isAvailable: boolean;
   isVisible?: boolean;
+  ui?: {
+    displayStyle?: MenuOptionGroupDisplayStyle;
+  };
   sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
@@ -320,12 +369,15 @@ export interface MenuOptionGroupDetailResponse {
 }
 
 export interface CreateMenuOptionGroupPayload {
-  key: string;
+  key?: string;
   name: LocalizedText;
   description?: LocalizedText;
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  ui?: {
+    displayStyle?: MenuOptionGroupDisplayStyle;
+  };
   sortOrder?: number;
 }
 
@@ -335,6 +387,9 @@ export interface UpdateMenuOptionGroupPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  ui?: {
+    displayStyle?: MenuOptionGroupDisplayStyle;
+  };
   sortOrder?: number;
 }
 

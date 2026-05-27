@@ -14,7 +14,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
-import { EllipsisVerticalIcon, LogOutIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { EllipsisVerticalIcon, LogOutIcon, UserIcon } from "lucide-react";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -68,6 +69,12 @@ export function NavUser() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/profile">
+                <UserIcon />
+                Profile
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="transition-colors duration-200 hover:bg-destructive!"
               onClick={() => logout()}

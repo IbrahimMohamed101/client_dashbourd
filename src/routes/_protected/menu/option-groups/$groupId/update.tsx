@@ -51,6 +51,7 @@ function UpdateOptionGroupPage() {
           isActive: group.isActive,
           isAvailable: group.isAvailable,
           isVisible: group.isVisible ?? true,
+          ui: { displayStyle: group.ui?.displayStyle },
           sortOrder: group.sortOrder,
         }
       : undefined,

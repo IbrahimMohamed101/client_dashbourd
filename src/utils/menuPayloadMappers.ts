@@ -27,16 +27,22 @@ const sarToHalala = (amount: number) => Math.round(amount * 100);
 const optionalSarToHalala = (amount?: number) =>
   amount === undefined ? undefined : sarToHalala(amount);
 
+const optionalKey = (key?: string) => {
+  const value = key?.trim();
+  return value ? value : undefined;
+};
+
 export const toCreateMenuCategoryPayload = (
   data: MenuCategorySchemaType
 ): CreateMenuCategoryPayload => ({
-  key: data.key,
+  key: optionalKey(data.key),
   name: data.name,
   description: data.description,
   imageUrl: data.imageUrl,
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
+  ui: data.ui,
   sortOrder: data.sortOrder,
 });
 
@@ -49,6 +55,7 @@ export const toUpdateMenuCategoryPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
+  ui: data.ui,
   sortOrder: data.sortOrder,
 });
 
@@ -133,7 +140,7 @@ export const toCreateMenuProductPayload = (
   data: MenuProductSchemaType
 ): CreateMenuProductPayload => ({
   categoryId: data.categoryId,
-  key: data.key,
+  key: optionalKey(data.key),
   itemType: data.itemType,
   name: data.name,
   description: data.description,
@@ -150,6 +157,7 @@ export const toCreateMenuProductPayload = (
   isVisible: data.isVisible,
   availableFor: data.availableFor,
   availableForSubscription: data.availableForSubscription,
+  ui: data.ui,
   sortOrder: data.sortOrder,
 });
 
@@ -173,18 +181,20 @@ export const toUpdateMenuProductPayload = (
   isVisible: data.isVisible,
   availableFor: data.availableFor,
   availableForSubscription: data.availableForSubscription,
+  ui: data.ui,
   sortOrder: data.sortOrder,
 });
 
 export const toCreateMenuOptionGroupPayload = (
   data: MenuOptionGroupSchemaType
 ): CreateMenuOptionGroupPayload => ({
-  key: data.key,
+  key: optionalKey(data.key),
   name: data.name,
   description: data.description,
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
+  ui: data.ui,
   sortOrder: data.sortOrder,
 });
 
@@ -196,6 +206,7 @@ export const toUpdateMenuOptionGroupPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
+  ui: data.ui,
   sortOrder: data.sortOrder,
 });
 

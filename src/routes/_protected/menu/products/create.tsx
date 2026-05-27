@@ -38,6 +38,12 @@ function CreateMenuProductPage() {
       isVisible: true,
       availableFor: ["order", "subscription"],
       availableForSubscription: true,
+      ui: {
+        cardVariant: "standard",
+        badge: "",
+        ctaLabel: "",
+        imageRatio: "",
+      },
       sortOrder: 0,
     },
   });

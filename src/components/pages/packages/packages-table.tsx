@@ -73,7 +73,7 @@ export function PackagesTable({ data: initialData }: { data: Package[] }) {
   const [data, setData] = React.useState(initialData);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
+    [{ id: "isActive", value: "active" }]
   );
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [pagination, setPagination] = React.useState({

@@ -19,6 +19,8 @@ import {
   ShieldUser,
   ChartNoAxesCombined,
   ClipboardList,
+  Bell,
+  Clock,
 } from "lucide-react";
 
 export const NavLinksData = {
@@ -102,8 +104,23 @@ export const NavLinksData = {
   navSecondary: [
     {
       title: "الإعدادات",
-      url: "#",
+      url: "/settings",
       icon: <Settings2Icon />,
+    },
+    {
+      title: "ساعات العمل",
+      url: "/restaurant-hours",
+      icon: <Clock />,
+    },
+    {
+      title: "فروع الاستلام",
+      url: "/pickup-branches",
+      icon: <MapPin />,
+    },
+    {
+      title: "الإشعارات",
+      url: "/notifications",
+      icon: <Bell />,
     },
     {
       title: "المساعدة",

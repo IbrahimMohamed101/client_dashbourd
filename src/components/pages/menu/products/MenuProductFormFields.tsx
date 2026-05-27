@@ -1,14 +1,12 @@
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -16,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Package } from "lucide-react";
 import { Controller } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
@@ -35,6 +35,13 @@ const ITEM_TYPES = [
   { value: "dessert", label: "حلويات" },
   { value: "juice", label: "عصير" },
   { value: "ice_cream", label: "آيس كريم" },
+];
+
+const CARD_VARIANTS = [
+  { value: "standard", label: "قياسي" },
+  { value: "premium", label: "مميز" },
+  { value: "large_salad", label: "سلطة كبيرة" },
+  { value: "addon", label: "إضافة" },
 ];
 
 interface Props {
@@ -71,141 +78,116 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Package className="size-4" />
-            </div>
+            </span>
             المعلومات الأساسية
           </CardTitle>
           <CardDescription>أدخل تفاصيل المنتج</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Key + Category + ItemType */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          {isEdit ? (
             <div className="space-y-2">
-              <Label>المفتاح (Key)</Label>
-              <Input
-                dir="ltr"
-                placeholder="e.g. grilled_chicken"
-                {...form.register("key")}
-                disabled={isEdit}
-              />
-              {form.formState.errors.key && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.key.message}
-                </p>
-              )}
+              <Label>المفتاح</Label>
+              <Input dir="ltr" {...form.register("key")} disabled />
+              <p className="text-xs text-muted-foreground">
+                يتم توليد المفتاح من الخادم ولا يمكن تعديله.
+              </p>
             </div>
+          ) : (
+            <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+              سيتم توليد المفتاح تلقائياً من الخادم بعد إنشاء المنتج.
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>التصنيف</Label>
               <Controller
                 control={form.control}
                 name="categoryId"
                 render={({ field }) => (
-                  <Select
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                  >
-                    <SelectTrigger className="min-w-full" dir="rlt">
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <SelectTrigger className="min-w-full" dir="rtl">
                       <SelectValue placeholder="اختر التصنيف" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name.ar}
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name.ar}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {form.formState.errors.categoryId && (
+              {form.formState.errors.categoryId ? (
                 <p className="text-xs text-destructive">
                   {form.formState.errors.categoryId.message}
                 </p>
-              )}
+              ) : null}
             </div>
+
             <div className="space-y-2">
               <Label>نوع العنصر</Label>
               <Controller
                 control={form.control}
                 name="itemType"
                 render={({ field }) => (
-                  <Select
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                  >
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
                     <SelectTrigger className="min-w-full" dir="rtl">
                       <SelectValue placeholder="اختر النوع" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ITEM_TYPES.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>
-                          {t.label}
+                      {ITEM_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              {form.formState.errors.itemType && (
+              {form.formState.errors.itemType ? (
                 <p className="text-xs text-destructive">
                   {form.formState.errors.itemType.message}
                 </p>
-              )}
+              ) : null}
             </div>
           </div>
 
-          {/* Names */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>الاسم (عربي)</Label>
-              <Input
-                placeholder="مثال: دجاج مشوي"
-                {...form.register("name.ar")}
-              />
-              {form.formState.errors.name?.ar && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.name.ar.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>الاسم (إنجليزي)</Label>
-              <Input
-                dir="ltr"
-                placeholder="e.g. Grilled Chicken"
-                {...form.register("name.en")}
-              />
-              {form.formState.errors.name?.en && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.name.en.message}
-                </p>
-              )}
-            </div>
+            <Field
+              label="الاسم بالعربية"
+              placeholder="مثال: دجاج مشوي"
+              error={form.formState.errors.name?.ar?.message}
+              inputProps={form.register("name.ar")}
+            />
+            <Field
+              label="الاسم بالإنجليزية"
+              placeholder="e.g. Grilled Chicken"
+              dir="ltr"
+              error={form.formState.errors.name?.en?.message}
+              inputProps={form.register("name.en")}
+            />
           </div>
 
-          {/* Descriptions */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>الوصف (عربي)</Label>
-              <Textarea
-                placeholder="وصف المنتج..."
-                className="resize-none"
-                {...form.register("description.ar")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>الوصف (إنجليزي)</Label>
-              <Textarea
-                dir="ltr"
-                placeholder="Product description..."
-                className="resize-none"
-                {...form.register("description.en")}
-              />
-            </div>
+            <TextAreaField
+              label="الوصف بالعربية"
+              placeholder="وصف المنتج..."
+              inputProps={form.register("description.ar")}
+            />
+            <TextAreaField
+              label="الوصف بالإنجليزية"
+              placeholder="Product description..."
+              dir="ltr"
+              inputProps={form.register("description.en")}
+            />
           </div>
-          <div className="flex flex-col justify-end space-y-1.5">
-            <Label className="text-sm font-medium">صورة المنتج (Image)</Label>
+
+          <div className="space-y-1.5">
+            <Label>صورة المنتج</Label>
             <div className="flex items-center gap-3">
               {(form.watch("imageFile") || form.watch("imageUrl")) && (
                 <div className="relative size-10 shrink-0 overflow-hidden rounded-md border bg-muted">
@@ -222,37 +204,69 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                   />
                 </div>
               )}
-              <div className="flex-1">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  dir="ltr"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      form.setValue("imageFile", file, {
-                        shouldValidate: true,
-                      });
-                    } else {
-                      form.setValue("imageFile", undefined, {
-                        shouldValidate: true,
-                      });
-                    }
-                  }}
-                  aria-invalid={!!form.formState.errors.imageFile}
-                />
-              </div>
+              <Input
+                type="file"
+                accept="image/*"
+                dir="ltr"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  form.setValue("imageFile", file, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }}
+              />
             </div>
-            {form.formState.errors.imageFile && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.imageFile.message as string}
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* ── Pricing ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>بيانات العرض في التطبيق</CardTitle>
+          <CardDescription>حقول `ui` المطلوبة من عقد القائمة في الخادم</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>شكل بطاقة المنتج</Label>
+            <Controller
+              control={form.control}
+              name="ui.cardVariant"
+              render={({ field }) => (
+                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                  <SelectTrigger className="min-w-full" dir="rtl">
+                    <SelectValue placeholder="اختر شكل البطاقة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CARD_VARIANTS.map((variant) => (
+                      <SelectItem key={variant.value} value={variant.value}>
+                        {variant.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <Field
+            label="شارة المنتج"
+            placeholder="مثال: جديد"
+            inputProps={form.register("ui.badge")}
+          />
+          <Field
+            label="نص زر الإجراء"
+            placeholder="مثال: أضف للسلة"
+            inputProps={form.register("ui.ctaLabel")}
+          />
+          <Field
+            label="نسبة الصورة"
+            placeholder="مثال: 4/3"
+            dir="ltr"
+            inputProps={form.register("ui.imageRatio")}
+          />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>التسعير</CardTitle>
@@ -267,208 +281,189 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                 name="pricingModel"
                 render={({ field }) => (
                   <Select value={field.value ?? "fixed"} onValueChange={field.onChange}>
-                    <SelectTrigger dir="rlt" className="min-w-full">
+                    <SelectTrigger dir="rtl" className="min-w-full">
                       <SelectValue placeholder="اختر نوع التسعير" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fixed">سعر ثابت (Fixed)</SelectItem>
-                      <SelectItem value="per_100g">
-                        بالوزن (Per 100g)
-                      </SelectItem>
+                      <SelectItem value="fixed">سعر ثابت</SelectItem>
+                      <SelectItem value="per_100g">بالوزن لكل 100 جم</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               />
             </div>
-            <div className="space-y-2">
-              <Label>السعر (ر.س)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                {...form.register("priceSar")}
-              />
-              {form.formState.errors.priceSar && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.priceSar.message}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                أدخل بالريال السعودي — يتم التحويل تلقائياً
-              </p>
-            </div>
+            <Field
+              label="السعر (ر.س)"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              error={form.formState.errors.priceSar?.message}
+              inputProps={form.register("priceSar")}
+            />
           </div>
 
-          {pricingModel === "per_100g" && (
+          {pricingModel === "per_100g" ? (
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-5">
-              <div className="space-y-2">
-                <Label>وحدة الوزن (غ)</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  placeholder="100"
-                  {...form.register("baseUnitGrams")}
-                />
-                {form.formState.errors.baseUnitGrams && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.baseUnitGrams.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>الوزن الافتراضي</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  {...form.register("defaultWeightGrams")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>الحد الأدنى</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  {...form.register("minWeightGrams")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>الحد الأقصى</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  {...form.register("maxWeightGrams")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>خطوة الوزن</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  {...form.register("weightStepGrams")}
-                />
-              </div>
+              <Field label="وحدة الوزن (جم)" type="number" min="1" inputProps={form.register("baseUnitGrams")} />
+              <Field label="الوزن الافتراضي" type="number" min="0" inputProps={form.register("defaultWeightGrams")} />
+              <Field label="الحد الأدنى" type="number" min="0" inputProps={form.register("minWeightGrams")} />
+              <Field label="الحد الأقصى" type="number" min="0" inputProps={form.register("maxWeightGrams")} />
+              <Field label="خطوة الوزن" type="number" min="1" inputProps={form.register("weightStepGrams")} />
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
 
-      {/* ── Settings ── */}
       <Card>
         <CardHeader>
           <CardTitle>إعدادات الحالة والظهور</CardTitle>
           <CardDescription>تحكم في ترتيب وتفعيل وظهور المنتج في التطبيق</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>ترتيب العرض</Label>
-              <Input
-                type="number"
-                min="0"
-                placeholder="0"
-                {...form.register("sortOrder")}
-                aria-invalid={!!form.formState.errors.sortOrder}
-              />
-            </div>
-          </div>
+          <Field
+            label="ترتيب العرض"
+            type="number"
+            min="0"
+            placeholder="0"
+            error={form.formState.errors.sortOrder?.message}
+            inputProps={form.register("sortOrder")}
+          />
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-              <div className="space-y-0.5">
-                <Label className="text-base font-bold">Order channel</Label>
-                <p className="text-xs text-muted-foreground">
-                  Visible for one-time ordering
-                </p>
-              </div>
-              <Switch
-                type="button"
-                checked={availableFor.includes("order")}
-                onCheckedChange={(checked) => setChannel("order", checked)}
-              />
-            </div>
-
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-              <div className="space-y-0.5">
-                <Label className="text-base font-bold">Subscription channel</Label>
-                <p className="text-xs text-muted-foreground">
-                  Visible in subscription builder
-                </p>
-              </div>
-              <Switch
-                type="button"
-                checked={availableFor.includes("subscription")}
-                onCheckedChange={(checked) => setChannel("subscription", checked)}
-              />
-            </div>
+            <ChannelToggle
+              label="قناة الطلب الفردي"
+              note="يظهر في طلبات المرة الواحدة"
+              checked={availableFor.includes("order")}
+              onChange={(checked) => setChannel("order", checked)}
+            />
+            <ChannelToggle
+              label="قناة الاشتراكات"
+              note="يظهر في منشئ الاشتراك"
+              checked={availableFor.includes("subscription")}
+              onChange={(checked) => setChannel("subscription", checked)}
+            />
           </div>
-          
+
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-              <div className="space-y-0.5">
-                <Label className="text-base font-bold">نشط</Label>
-                <p className="text-xs text-muted-foreground">
-                  {isActive ? "المنتج مفعل" : "المنتج معطل"}
-                </p>
-              </div>
-              <Controller
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <Switch
-                    type="button"
-                    checked={field.value ?? true}
-                    className="data-[state=checked]:bg-green-500"
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
-
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-              <div className="space-y-0.5">
-                <Label className="text-base font-bold">متوفر</Label>
-                <p className="text-xs text-muted-foreground">
-                  {isAvailable ? "متاح للطلب" : "غير متوفر حالياً"}
-                </p>
-              </div>
-              <Controller
-                control={form.control}
-                name="isAvailable"
-                render={({ field }) => (
-                  <Switch
-                    type="button"
-                    checked={field.value ?? true}
-                    className="data-[state=checked]:bg-emerald-500"
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
-
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-              <div className="space-y-0.5">
-                <Label className="text-base font-bold">الظهور</Label>
-                <p className="text-xs text-muted-foreground">
-                  {isVisible ? "مرئي للعملاء" : "مخفي عن العملاء"}
-                </p>
-              </div>
-              <Controller
-                control={form.control}
-                name="isVisible"
-                render={({ field }) => (
-                  <Switch
-                    type="button"
-                    checked={field.value ?? true}
-                    className="data-[state=checked]:bg-blue-500"
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
+            <ToggleCard
+              label="نشط"
+              note={isActive ? "المنتج مفعل" : "المنتج معطل"}
+              name="isActive"
+              form={form}
+              className="data-[state=checked]:bg-green-500"
+            />
+            <ToggleCard
+              label="متوفر"
+              note={isAvailable ? "متاح للطلب" : "غير متوفر حالياً"}
+              name="isAvailable"
+              form={form}
+              className="data-[state=checked]:bg-emerald-500"
+            />
+            <ToggleCard
+              label="الظهور"
+              note={isVisible ? "مرئي للعملاء" : "مخفي عن العملاء"}
+              name="isVisible"
+              form={form}
+              className="data-[state=checked]:bg-blue-500"
+            />
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  error,
+  inputProps,
+  dir,
+  ...props
+}: React.ComponentProps<typeof Input> & {
+  label: string;
+  error?: string;
+  inputProps: ReturnType<UseFormReturn["register"]>;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Input dir={dir} {...props} {...inputProps} />
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
+function TextAreaField({
+  label,
+  inputProps,
+  dir,
+  ...props
+}: React.ComponentProps<typeof Textarea> & {
+  label: string;
+  inputProps: ReturnType<UseFormReturn["register"]>;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <Textarea dir={dir} className="resize-none" {...props} {...inputProps} />
+    </div>
+  );
+}
+
+function ChannelToggle({
+  label,
+  note,
+  checked,
+  onChange,
+}: {
+  label: string;
+  note: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+      <div className="space-y-0.5">
+        <Label className="text-base font-bold">{label}</Label>
+        <p className="text-xs text-muted-foreground">{note}</p>
+      </div>
+      <Switch type="button" checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+}
+
+function ToggleCard({
+  label,
+  note,
+  name,
+  form,
+  className,
+}: {
+  label: string;
+  note: string;
+  name: "isActive" | "isAvailable" | "isVisible";
+  form: UseFormReturn<MenuProductSchemaInput, unknown, MenuProductSchemaType>;
+  className: string;
+}) {
+  return (
+    <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+      <div className="space-y-0.5">
+        <Label className="text-base font-bold">{label}</Label>
+        <p className="text-xs text-muted-foreground">{note}</p>
+      </div>
+      <Controller
+        control={form.control}
+        name={name}
+        render={({ field }) => (
+          <Switch
+            type="button"
+            checked={field.value ?? true}
+            className={className}
+            onCheckedChange={field.onChange}
+          />
+        )}
+      />
     </div>
   );
 }
