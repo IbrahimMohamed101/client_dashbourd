@@ -1,0 +1,575 @@
+// ── One-Time Menu Management Types ──
+// These types cover the one-time order menu system (§6–§15 of the API README).
+// All prices are in halala (100 halala = 1 SAR).
+
+// ── Shared ──
+
+export interface LocalizedText {
+  ar: string;
+  en: string;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export interface PaginatedResponse<T> {
+  status: boolean;
+  data: {
+    items: T[];
+    pagination: PaginationMeta;
+  };
+}
+
+// ── §6 Menu Categories ──
+
+export interface MenuCategory {
+  id: string;
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  isActive: boolean;
+  isAvailable: boolean;
+  isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type MenuCategoriesResponse = PaginatedResponse<MenuCategory>;
+
+// Subscription meal builder data now lives under /menu.
+
+export interface MenuMealCategory {
+  id: string;
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  isActive: boolean;
+  isAvailable: boolean;
+  isVisible?: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type MenuMealCategoriesResponse = PaginatedResponse<MenuMealCategory>;
+
+export interface MenuMealCategoryDetailResponse {
+  status: boolean;
+  data: MenuMealCategory;
+}
+
+export interface CreateMenuMealCategoryPayload {
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateMenuMealCategoryPayload {
+  name?: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+export interface MenuProtein {
+  id: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  categoryId: string;
+  category?: MenuMealCategory;
+  proteinGrams: number;
+  carbGrams: number;
+  fatGrams: number;
+  isActive: boolean;
+  isAvailable: boolean;
+  isVisible?: boolean;
+  availableForOrder?: boolean;
+  availableForSubscription?: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type MenuProteinsResponse = PaginatedResponse<MenuProtein>;
+
+export interface MenuProteinDetailResponse {
+  status: boolean;
+  data: MenuProtein;
+}
+
+export interface CreateMenuProteinPayload {
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  categoryId: string;
+  proteinGrams?: number;
+  carbGrams?: number;
+  fatGrams?: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  availableForOrder?: boolean;
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateMenuProteinPayload {
+  name?: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  categoryId?: string;
+  proteinGrams?: number;
+  carbGrams?: number;
+  fatGrams?: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  availableForOrder?: boolean;
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+export interface MenuPremiumProtein extends MenuProtein {
+  extraFeeHalala: number;
+  currency?: string;
+}
+
+export type MenuPremiumProteinsResponse = PaginatedResponse<MenuPremiumProtein>;
+
+export interface MenuPremiumProteinDetailResponse {
+  status: boolean;
+  data: MenuPremiumProtein;
+}
+
+export interface CreateMenuPremiumProteinPayload extends CreateMenuProteinPayload {
+  extraFeeHalala: number;
+  currency?: string;
+}
+
+export interface UpdateMenuPremiumProteinPayload extends UpdateMenuProteinPayload {
+  extraFeeHalala?: number;
+  currency?: string;
+}
+
+export interface MenuCategoryDetailResponse {
+  status: boolean;
+  data: MenuCategory;
+}
+
+export interface CreateMenuCategoryPayload {
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateMenuCategoryPayload {
+  name?: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  sortOrder?: number;
+}
+
+export interface ReorderItem {
+  id: string;
+  sortOrder: number;
+}
+
+// ── §7 Menu Products ──
+
+export type PricingModel = "fixed" | "per_100g";
+
+export type ItemType =
+  | "basic_salad"
+  | "basic_meal"
+  | "fruit_salad"
+  | "greek_yogurt"
+  | "drink"
+  | "sandwich"
+  | "dessert"
+  | "juice"
+  | "ice_cream"
+  | string; // allow other item types
+
+export interface MenuProduct {
+  id: string;
+  categoryId?: string;
+  key: string;
+  itemType: ItemType;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  pricingModel: PricingModel;
+  priceHalala: number;
+  baseUnitGrams?: number;
+  defaultWeightGrams?: number;
+  minWeightGrams?: number;
+  maxWeightGrams?: number;
+  weightStepGrams?: number;
+  isActive: boolean;
+  isAvailable: boolean;
+  isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
+  sortOrder: number;
+  groups?: MenuProductLinkedGroup[];
+  optionGroups?: MenuProductLinkedGroup[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type MenuProductsResponse = PaginatedResponse<MenuProduct>;
+
+export interface MenuProductDetailResponse {
+  status: boolean;
+  data: MenuProduct;
+}
+
+export interface CreateMenuProductPayload {
+  categoryId: string;
+  key: string;
+  itemType: ItemType;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  pricingModel: PricingModel;
+  priceHalala: number;
+  baseUnitGrams?: number;
+  defaultWeightGrams?: number;
+  minWeightGrams?: number;
+  maxWeightGrams?: number;
+  weightStepGrams?: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateMenuProductPayload {
+  categoryId?: string;
+  itemType?: ItemType;
+  name?: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  pricingModel?: PricingModel;
+  priceHalala?: number;
+  baseUnitGrams?: number;
+  defaultWeightGrams?: number;
+  minWeightGrams?: number;
+  maxWeightGrams?: number;
+  weightStepGrams?: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+// ── §8 Option Groups ──
+
+export interface MenuOptionGroup {
+  id: string;
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  isActive: boolean;
+  isAvailable: boolean;
+  isVisible?: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type MenuOptionGroupsResponse = PaginatedResponse<MenuOptionGroup>;
+
+export interface MenuOptionGroupDetailResponse {
+  status: boolean;
+  data: MenuOptionGroup;
+}
+
+export interface CreateMenuOptionGroupPayload {
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateMenuOptionGroupPayload {
+  name?: LocalizedText;
+  description?: LocalizedText;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  sortOrder?: number;
+}
+
+// ── §9 Options ──
+
+export interface MenuOption {
+  id: string;
+  groupId: string;
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  extraPriceHalala: number;
+  extraWeightUnitGrams?: number;
+  extraWeightPriceHalala?: number;
+  isActive: boolean;
+  isAvailable: boolean;
+  isVisible?: boolean;
+  displayCategoryKey?: string;
+  proteinFamilyKey?: string;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
+  sortOrder: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type MenuOptionsResponse = PaginatedResponse<MenuOption>;
+
+export interface MenuOptionDetailResponse {
+  status: boolean;
+  data: MenuOption;
+}
+
+export interface CreateMenuOptionPayload {
+  groupId: string;
+  key: string;
+  name: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  extraPriceHalala?: number;
+  extraWeightUnitGrams?: number;
+  extraWeightPriceHalala?: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  displayCategoryKey?: string;
+  proteinFamilyKey?: string;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+export interface UpdateMenuOptionPayload {
+  name?: LocalizedText;
+  description?: LocalizedText;
+  imageUrl?: string;
+  extraPriceHalala?: number;
+  extraWeightUnitGrams?: number;
+  extraWeightPriceHalala?: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  displayCategoryKey?: string;
+  proteinFamilyKey?: string;
+  availableFor?: string[];
+  availableForSubscription?: boolean;
+  sortOrder?: number;
+}
+
+// ── §10 Product Option Group Rules ──
+
+export interface ProductGroupRule {
+  groupId: string;
+  minSelections: number;
+  maxSelections: number;
+  isRequired: boolean;
+  sortOrder: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+}
+
+export interface MenuProductLinkedOption extends ProductGroupOptionOverride {
+  id?: string;
+  option?: MenuOption;
+}
+
+export interface MenuProductLinkedGroup extends ProductGroupRule {
+  id?: string;
+  group?: MenuOptionGroup;
+  options?: MenuProductLinkedOption[];
+}
+
+export interface LinkGroupsPayload {
+  groups: ProductGroupRule[];
+}
+
+export interface UpdateSelectionRulesPayload {
+  minSelections?: number;
+  maxSelections?: number;
+  isRequired?: boolean;
+}
+
+// ── §11 Product Group Option Overrides ──
+
+export interface ProductGroupOptionOverride {
+  optionId: string;
+  extraPriceHalala?: number;
+  extraWeightUnitGrams?: number;
+  extraWeightPriceHalala?: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  sortOrder?: number;
+}
+
+export interface LinkOptionsPayload {
+  options: ProductGroupOptionOverride[];
+}
+
+export interface UpdateOptionOverridePayload {
+  extraPriceHalala?: number;
+  extraWeightUnitGrams?: number;
+  extraWeightPriceHalala?: number;
+  isAvailable?: boolean;
+  sortOrder?: number;
+}
+
+// ── §13 Menu Validation ──
+
+export interface MenuValidationError {
+  code: string;
+  message: string;
+}
+
+export interface MenuValidationSummary {
+  categories: number;
+  products: number;
+  groups: number;
+  options: number;
+  activeProducts: number;
+}
+
+export interface MenuValidationResult {
+  status: boolean;
+  ok: boolean;
+  errors: MenuValidationError[];
+  warnings: MenuValidationError[];
+  summary?: MenuValidationSummary;
+}
+
+export interface MenuValidationResponse {
+  status: boolean;
+  data: MenuValidationResult;
+}
+
+// ── §14 Menu Publish ──
+
+export interface MenuPublishResult {
+  versionId: string;
+  status: string;
+  publishedAt: string;
+}
+
+export interface MenuPublishResponse {
+  status: boolean;
+  data: MenuPublishResult;
+}
+
+// ── §15 Menu Audit Logs ──
+
+export interface MenuAuditLog {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  actorId: string;
+  createdAt: string;
+}
+
+export type MenuAuditLogsResponse = PaginatedResponse<MenuAuditLog>;
+
+// ── Query Params ──
+
+export interface MenuListParams {
+  page?: number;
+  limit?: number;
+  q?: string;
+  isActive?: boolean;
+  isAvailable?: boolean;
+}
+
+export interface MenuProductListParams extends MenuListParams {
+  categoryId?: string;
+  pricingModel?: PricingModel;
+  itemType?: string;
+}
+
+export interface MenuOptionListParams extends MenuListParams {
+  groupId?: string;
+}
+
+export interface MenuAuditLogParams {
+  page?: number;
+  limit?: number;
+  action?: string;
+  entityType?: string;
+  entityId?: string;
+}
+
+export interface MenuVersion {
+  id: string;
+  version?: string;
+  status?: string;
+  notes?: string;
+  createdAt?: string;
+  publishedAt?: string;
+}
+
+export interface MenuVersionListParams extends MenuListParams {
+  status?: string;
+}
+
+export type MenuVersionsResponse = PaginatedResponse<MenuVersion>;
+
+export interface MenuRollbackResponse {
+  status?: boolean;
+  ok?: boolean;
+  data: {
+    success?: boolean;
+    restoredVersion?: string;
+    backupVersion?: string;
+    rollback?: Record<string, unknown>;
+  };
+}

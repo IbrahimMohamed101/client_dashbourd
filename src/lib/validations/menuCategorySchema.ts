@@ -1,0 +1,40 @@
+import { z } from "zod";
+
+const menuCategorySchema = z.object({
+  key: z
+    .string({ message: "المفتاح مطلوب" })
+    .min(1, "المفتاح مطلوب")
+    .regex(
+      /^[a-z0-9_]+$/,
+      "المفتاح يجب أن يحتوي فقط على حروف إنجليزية صغيرة وأرقام و _"
+    )
+    .trim(),
+  name: z.object({
+    ar: z
+      .string({ message: "الاسم بالعربية مطلوب" })
+      .min(1, "الاسم بالعربية مطلوب")
+      .trim(),
+    en: z
+      .string({ message: "الاسم بالإنجليزية مطلوب" })
+      .min(1, "الاسم بالإنجليزية مطلوب")
+      .trim(),
+  }),
+  description: z.object({
+    ar: z.string().default(""),
+    en: z.string().default(""),
+  }),
+  imageFile: z.any().optional(),
+  imageUrl: z.string().trim().optional(),
+  isActive: z.boolean().default(true),
+  isAvailable: z.boolean().default(true),
+  isVisible: z.boolean().default(true),
+  sortOrder: z.coerce
+    .number({ message: "ترتيب العرض يجب أن يكون رقماً" })
+    .int("ترتيب العرض يجب أن يكون رقماً صحيحاً")
+    .min(0, "ترتيب العرض لا يمكن أن يكون أقل من 0")
+    .default(0),
+});
+
+export type MenuCategorySchemaInput = z.input<typeof menuCategorySchema>;
+export type MenuCategorySchemaType = z.output<typeof menuCategorySchema>;
+export default menuCategorySchema;
