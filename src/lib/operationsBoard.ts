@@ -170,7 +170,7 @@ function normalizeMealSlots(raw: unknown): UnifiedQueueItem["mealSlots"] {
 
     return {
       slot: String(record.slot || `slot-${index + 1}`),
-      items: slotItems.map((entry, itemIndex) => {
+      items: slotItems.map((entry) => {
         const item = asRecord(entry) || {};
         return {
           name: String(item.name || "عنصر"),
@@ -269,50 +269,50 @@ export function normalizeOperationsQueueItem(raw: unknown): UnifiedQueueItem {
     },
     delivery: delivery
       ? {
-          method: typeof delivery.method === "string" ? delivery.method : mode,
-          address: delivery.address,
-          zone:
-            delivery.zone && typeof delivery.zone === "object"
-              ? (delivery.zone as { id: string; name: string })
-              : null,
-          zoneId:
-            typeof delivery.zoneId === "string" ? delivery.zoneId : null,
-          deliveryWindow:
-            typeof delivery.deliveryWindow === "string"
-              ? delivery.deliveryWindow
-              : undefined,
-          pickupLocationId:
-            typeof delivery.pickupLocationId === "string"
-              ? delivery.pickupLocationId
-              : null,
-        }
+        method: typeof delivery.method === "string" ? delivery.method : mode,
+        address: delivery.address,
+        zone:
+          delivery.zone && typeof delivery.zone === "object"
+            ? (delivery.zone as { id: string; name: string })
+            : null,
+        zoneId:
+          typeof delivery.zoneId === "string" ? delivery.zoneId : null,
+        deliveryWindow:
+          typeof delivery.deliveryWindow === "string"
+            ? delivery.deliveryWindow
+            : undefined,
+        pickupLocationId:
+          typeof delivery.pickupLocationId === "string"
+            ? delivery.pickupLocationId
+            : null,
+      }
       : undefined,
     pickup: pickup
       ? {
-          pickupLocationId:
-            typeof pickup.pickupLocationId === "string"
-              ? pickup.pickupLocationId
-              : null,
-          pickupRequested: Boolean(pickup.pickupRequested),
-          pickupPreparedAt:
-            typeof pickup.pickupPreparedAt === "string"
-              ? pickup.pickupPreparedAt
-              : null,
-          pickupCodeIssuedAt:
-            typeof pickup.pickupCodeIssuedAt === "string"
-              ? pickup.pickupCodeIssuedAt
-              : null,
-          pickupVerifiedAt:
-            typeof pickup.pickupVerifiedAt === "string"
-              ? pickup.pickupVerifiedAt
-              : null,
-          pickupNoShowAt:
-            typeof pickup.pickupNoShowAt === "string"
-              ? pickup.pickupNoShowAt
-              : null,
-          pickupCode:
-            typeof pickup.pickupCode === "string" ? pickup.pickupCode : null,
-        }
+        pickupLocationId:
+          typeof pickup.pickupLocationId === "string"
+            ? pickup.pickupLocationId
+            : null,
+        pickupRequested: Boolean(pickup.pickupRequested),
+        pickupPreparedAt:
+          typeof pickup.pickupPreparedAt === "string"
+            ? pickup.pickupPreparedAt
+            : null,
+        pickupCodeIssuedAt:
+          typeof pickup.pickupCodeIssuedAt === "string"
+            ? pickup.pickupCodeIssuedAt
+            : null,
+        pickupVerifiedAt:
+          typeof pickup.pickupVerifiedAt === "string"
+            ? pickup.pickupVerifiedAt
+            : null,
+        pickupNoShowAt:
+          typeof pickup.pickupNoShowAt === "string"
+            ? pickup.pickupNoShowAt
+            : null,
+        pickupCode:
+          typeof pickup.pickupCode === "string" ? pickup.pickupCode : null,
+      }
       : undefined,
     items: normalizeLineItems(record.items),
     paymentStatus:
