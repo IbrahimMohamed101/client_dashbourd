@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  DEFAULT_MENU_AVAILABLE_FOR,
+  MENU_AVAILABLE_CHANNELS,
+  MENU_ITEM_TYPES,
+  MENU_PRODUCT_CARD_VARIANTS,
+} from "@/constants/menuCatalog";
 
 const optionalGeneratedKey = z
   .string()
@@ -15,7 +21,7 @@ const menuProductSchema = z
   .object({
     categoryId: z.string({ message: "التصنيف مطلوب" }).min(1, "التصنيف مطلوب"),
     key: optionalGeneratedKey,
-    itemType: z.string({ message: "نوع العنصر مطلوب" }).min(1, "نوع العنصر مطلوب"),
+    itemType: z.enum(MENU_ITEM_TYPES, { message: "نوع العنصر مطلوب" }),
     name: z.object({
       ar: z.string({ message: "الاسم بالعربية مطلوب" }).min(1, "الاسم بالعربية مطلوب").trim(),
       en: z.string({ message: "الاسم بالإنجليزية مطلوب" }).min(1, "الاسم بالإنجليزية مطلوب").trim(),
@@ -40,18 +46,21 @@ const menuProductSchema = z
     isActive: z.boolean().default(true),
     isAvailable: z.boolean().default(true),
     isVisible: z.boolean().default(true),
-    availableFor: z.array(z.string()).default(["order", "subscription"]),
+    availableFor: z
+      .array(z.enum(MENU_AVAILABLE_CHANNELS))
+      .default([...DEFAULT_MENU_AVAILABLE_FOR]),
     availableForSubscription: z.boolean().default(true),
     ui: z
       .object({
         cardVariant: z
-          .enum(["standard", "premium", "large_salad", "addon"])
-          .optional(),
+          .enum(MENU_PRODUCT_CARD_VARIANTS)
+          .optional()
+          .default("standard"),
         badge: z.string().trim().optional().default(""),
         ctaLabel: z.string().trim().optional().default(""),
-        imageRatio: z.string().trim().optional().default(""),
+        imageRatio: z.string().trim().optional().default("square"),
       })
-      .default({ badge: "", ctaLabel: "", imageRatio: "" }),
+      .default({ cardVariant: "standard", badge: "", ctaLabel: "", imageRatio: "square" }),
     sortOrder: z.coerce
       .number({ message: "ترتيب العرض يجب أن يكون رقماً" })
       .int("ترتيب العرض يجب أن يكون رقماً صحيحاً")

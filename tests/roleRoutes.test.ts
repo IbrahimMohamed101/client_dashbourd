@@ -7,6 +7,7 @@ assert.deepEqual(CASHIER_ROUTES, [
   "/subscriptions",
   "/payments",
   "/users",
+  "/profile",
 ]);
 
 assert.equal(CASHIER_ROUTES.includes("/manual-deduction"), false);
@@ -14,6 +15,6 @@ assert.equal(CASHIER_ROUTES.includes("/pickup-board"), false);
 assert.equal(CASHIER_ROUTES.includes("/menu"), false);
 assert.equal(CASHIER_ROUTES.includes("/packages"), false);
 
-assert.deepEqual(KITCHEN_ROUTES, ["/operations", "/one-time-orders"]);
+assert.deepEqual(KITCHEN_ROUTES, ["/operations", "/one-time-orders", "/profile"]);
 assert.equal(KITCHEN_ROUTES.includes("/menu"), false);
 assert.equal(KITCHEN_ROUTES.includes("/manual-deduction"), false);

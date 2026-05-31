@@ -25,6 +25,10 @@ import type {
 } from "@/lib/validations/menuOptionSchema";
 import { useMenuOptionGroupsQuery } from "@/hooks/useMenuQuery";
 import type { MenuOptionGroup } from "@/types/menuTypes";
+import {
+  DEFAULT_MENU_AVAILABLE_FOR,
+  type MenuAvailableChannel,
+} from "@/constants/menuCatalog";
 
 interface Props {
   form: UseFormReturn<MenuOptionSchemaInput, unknown, MenuOptionSchemaType>;
@@ -35,17 +39,24 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
   const isAvailable = form.watch("isAvailable") ?? true;
   const isVisible = form.watch("isVisible") ?? true;
-  const availableFor = form.watch("availableFor") ?? ["order", "subscription"];
+  const availableFor =
+    form.watch("availableFor") ?? [...DEFAULT_MENU_AVAILABLE_FOR];
   const { data: groupsData } = useMenuOptionGroupsQuery({});
   const responseData = groupsData?.data;
   const groups = (
     Array.isArray(responseData) ? responseData : responseData?.items || []
   ) as MenuOptionGroup[];
 
-  const setChannel = (channel: string, checked: boolean) => {
+  const normalizeChannels = (channels: string[]): MenuAvailableChannel[] =>
+    channels.map((item) =>
+      item === "order" ? "one_time" : item
+    ) as MenuAvailableChannel[];
+
+  const setChannel = (channel: MenuAvailableChannel, checked: boolean) => {
+    const current = normalizeChannels(availableFor);
     const next = checked
-      ? Array.from(new Set([...availableFor, channel]))
-      : availableFor.filter((item) => item !== channel);
+      ? Array.from(new Set([...current, channel]))
+      : current.filter((item) => item !== channel);
 
     form.setValue("availableFor", next, {
       shouldDirty: true,
@@ -73,20 +84,19 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>المفتاح (Key)</Label>
-              <Input
-                dir="ltr"
-                placeholder="e.g. salmon"
-                {...form.register("key")}
-                disabled={isEdit}
-              />
-              {form.formState.errors.key && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.key.message}
+            {isEdit ? (
+              <div className="space-y-1.5">
+                <Label>المفتاح (Key)</Label>
+                <Input dir="ltr" {...form.register("key")} disabled />
+                <p className="text-xs text-muted-foreground">
+                  يتم توليد المفتاح من الخادم ولا يمكن تعديله.
                 </p>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground flex items-center">
+                سيتم توليد المفتاح تلقائياً من الخادم بعد إنشاء الخيار.
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>المجموعة</Label>
               <Controller
@@ -248,23 +258,23 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
               <div className="space-y-0.5">
-                <Label className="text-base font-bold">Order channel</Label>
+                <Label className="text-base font-bold">قناة الطلب الفردي</Label>
                 <p className="text-xs text-muted-foreground">
-                  Visible for one-time ordering
+                  يظهر في طلبات المرة الواحدة
                 </p>
               </div>
               <Switch
                 type="button"
-                checked={availableFor.includes("order")}
-                onCheckedChange={(checked) => setChannel("order", checked)}
+                checked={normalizeChannels(availableFor).includes("one_time")}
+                onCheckedChange={(checked) => setChannel("one_time", checked)}
               />
             </div>
 
             <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
               <div className="space-y-0.5">
-                <Label className="text-base font-bold">Subscription channel</Label>
+                <Label className="text-base font-bold">قناة الاشتراكات</Label>
                 <p className="text-xs text-muted-foreground">
-                  Visible in subscription builder
+                  يظهر في منشئ الاشتراك
                 </p>
               </div>
               <Switch

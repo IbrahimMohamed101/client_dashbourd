@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Settings2, Save, Loader2 } from "lucide-react";
 import { MenuOptionFormFields } from "@/components/pages/menu/options/MenuOptionFormFields";
+import { DEFAULT_MENU_AVAILABLE_FOR } from "@/constants/menuCatalog";
 import { toCreateMenuOptionPayload } from "@/utils/menuPayloadMappers";
 
 import { ToastMessage } from "@/components/global/ToastMessage";
@@ -36,7 +37,7 @@ function CreateOptionPage() {
       isVisible: true,
       displayCategoryKey: "",
       proteinFamilyKey: "",
-      availableFor: ["order", "subscription"],
+      availableFor: [...DEFAULT_MENU_AVAILABLE_FOR],
       availableForSubscription: true,
       sortOrder: 0,
     },

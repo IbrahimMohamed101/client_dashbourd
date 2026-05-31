@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import api from "@/lib/apis";
 import {
   buildOperationsActionPayload,
+  extractOperationsQueueItems,
   getEndpointForAction,
   getScreensForRole,
   OPERATIONS_SCREENS,
@@ -41,7 +42,8 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
               },
             }
           );
-          return { screen, items: data.data?.items || [] };
+          const items = extractOperationsQueueItems(data);
+          return { screen, items };
         })
       );
       return results;
@@ -60,11 +62,11 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
 
   const itemsByScreen = queueQuery.data?.reduce(
     (acc, result) => {
-      acc[result.screen] = result.items;
+      acc[result.screen] = Array.isArray(result.items) ? result.items : [];
       return acc;
     },
-    emptyItemsByScreen
-  ) || emptyItemsByScreen;
+    { ...emptyItemsByScreen }
+  ) ?? { ...emptyItemsByScreen };
 
   const allItems = Object.values(itemsByScreen).flat();
 
@@ -130,7 +132,7 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     visibleScreens,
     itemsByScreen,
     allItems,
-    isLoading: queueQuery.isLoading,
+    isLoading: visibleScreens.length > 0 && queueQuery.isLoading,
     isPending: actionMutation.isPending,
     requestAction,
   };

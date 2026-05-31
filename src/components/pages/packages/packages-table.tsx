@@ -28,7 +28,6 @@ import {
   restrictToParentElement,
 } from "@dnd-kit/modifiers";
 import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/custom/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -59,15 +58,12 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   SearchIcon,
-  PlusIcon,
   ChevronsRightIcon,
   ChevronsLeftIcon,
 } from "lucide-react";
 import type { Package } from "@/types/packageTypes";
 import { packagesColumns } from "./packages-columns";
 import { DraggableRow } from "./draggable-row";
-import { Link } from "@tanstack/react-router";
-import { cn } from "@/lib/utils";
 
 export function PackagesTable({ data: initialData }: { data: Package[] }) {
   const [data, setData] = React.useState(initialData);
@@ -172,16 +168,6 @@ export function PackagesTable({ data: initialData }: { data: Package[] }) {
             />
           </div>
 
-          {/* action link */}
-          <Link
-            to="/packages/create"
-            className={cn(buttonVariants({ variant: "default" }), "bg-primary")}
-          >
-            <PlusIcon />
-            إضافة باقة جديدة
-          </Link>
-
-          {/* Column visibility */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">

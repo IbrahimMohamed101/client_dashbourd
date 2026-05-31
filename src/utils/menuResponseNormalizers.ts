@@ -36,7 +36,7 @@ import type {
   PaginationMeta,
 } from "@/types/menuTypes";
 
-// ── Helpers ──
+import { normalizeAvailableForFromApi } from "@/constants/menuCatalog";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -260,7 +260,11 @@ export function normalizePremiumProteinDetailResponse(
 
 function normalizeProduct(raw: any): MenuProduct {
   if (raw.name && typeof raw.name === "object" && "ar" in raw.name) {
-    return raw as MenuProduct;
+    const normalized = raw as MenuProduct;
+    return {
+      ...normalized,
+      availableFor: normalizeAvailableForFromApi(normalized.availableFor),
+    };
   }
 
   return {
@@ -287,6 +291,8 @@ function normalizeProduct(raw: any): MenuProduct {
     isActive: raw.isActive ?? raw.active ?? true,
     isAvailable: raw.isAvailable ?? raw.available ?? true,
     isVisible: raw.isVisible ?? raw.visible ?? true,
+    availableFor: normalizeAvailableForFromApi(raw.availableFor),
+    availableForSubscription: raw.availableForSubscription ?? raw.available_for_subscription ?? true,
     ui: raw.ui ?? {
       cardVariant: raw.cardVariant ?? raw.card_variant,
       badge: raw.badge ?? "",
@@ -367,7 +373,13 @@ export function normalizeOptionGroupDetailResponse(raw: any): MenuOptionGroupDet
 
 function normalizeOption(raw: any): MenuOption {
   if (raw.name && typeof raw.name === "object" && "ar" in raw.name) {
-    return raw as MenuOption;
+    const normalized = raw as MenuOption;
+    return {
+      ...normalized,
+      displayCategoryKey: normalized.displayCategoryKey ?? (normalized as any).display_category_key,
+      proteinFamilyKey: normalized.proteinFamilyKey ?? (normalized as any).protein_family_key,
+      availableFor: normalizeAvailableForFromApi(normalized.availableFor),
+    };
   }
 
   return {
@@ -389,6 +401,10 @@ function normalizeOption(raw: any): MenuOption {
     isActive: raw.isActive ?? raw.active ?? true,
     isAvailable: raw.isAvailable ?? raw.available ?? true,
     isVisible: raw.isVisible ?? raw.visible ?? true,
+    displayCategoryKey: raw.displayCategoryKey ?? raw.display_category_key ?? undefined,
+    proteinFamilyKey: raw.proteinFamilyKey ?? raw.protein_family_key ?? undefined,
+    availableFor: normalizeAvailableForFromApi(raw.availableFor),
+    availableForSubscription: raw.availableForSubscription ?? raw.available_for_subscription ?? true,
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     createdAt: raw.createdAt ?? raw.created_at,
     updatedAt: raw.updatedAt ?? raw.updated_at,

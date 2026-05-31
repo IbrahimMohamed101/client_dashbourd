@@ -13,6 +13,10 @@ import { Package, Save, Loader2 } from "lucide-react";
 import { Loader } from "@/components/global/loader";
 import { MenuProductFormFields } from "@/components/pages/menu/products/MenuProductFormFields";
 import { useQuery } from "@tanstack/react-query";
+import {
+  normalizeAvailableForFromApi,
+  normalizeMenuItemTypeFromApi,
+} from "@/constants/menuCatalog";
 import { toUpdateMenuProductPayload } from "@/utils/menuPayloadMappers";
 import { fetchUploadImage } from "@/utils/fetchUploadImage";
 import { ToastMessage } from "@/components/global/ToastMessage";
@@ -45,7 +49,7 @@ function UpdateMenuProductPage() {
       ? {
           categoryId: product.categoryId || "",
           key: product.key,
-          itemType: product.itemType || "",
+          itemType: normalizeMenuItemTypeFromApi(product.itemType),
           name: product.name,
           description: product.description || { ar: "", en: "" },
           imageUrl: product.imageUrl || "",
@@ -59,7 +63,7 @@ function UpdateMenuProductPage() {
           isActive: product.isActive,
           isAvailable: product.isAvailable,
           isVisible: product.isVisible ?? true,
-          availableFor: product.availableFor ?? ["order", "subscription"],
+          availableFor: normalizeAvailableForFromApi(product.availableFor),
           availableForSubscription:
             product.availableForSubscription ??
             product.availableFor?.includes("subscription") ??

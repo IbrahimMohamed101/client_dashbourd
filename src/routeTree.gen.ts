@@ -123,9 +123,7 @@ const ProtectedOperationsIndexRoute =
     id: '/operations/',
     path: '/operations/',
     getParentRoute: () => ProtectedRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_protected/operations/index.lazy').then((d) => d.Route),
-  )
+  } as any)
 const ProtectedOneTimeOrdersIndexRoute =
   ProtectedOneTimeOrdersIndexRouteImport.update({
     id: '/one-time-orders/',

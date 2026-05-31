@@ -115,7 +115,7 @@ function getDisplayQuantity(entry: unknown) {
 }
 
 function getItemNames(item: UnifiedQueueItem) {
-  if (item.items?.length) {
+  if (Array.isArray(item.items) && item.items.length) {
     return item.items.map((entry, index) => ({
       id: String(entry.id || getDisplayName(entry.name) || index),
       name: getDisplayName(entry.name),
@@ -124,13 +124,14 @@ function getItemNames(item: UnifiedQueueItem) {
   }
 
   if (item.mealSlots?.length) {
-    return item.mealSlots.flatMap((slot) =>
-      slot.items.map((entry, index) => ({
+    return item.mealSlots.flatMap((slot) => {
+      const slotItems = Array.isArray(slot.items) ? slot.items : [];
+      return slotItems.map((entry, index) => ({
         id: `${slot.slot}-${getDisplayName(entry.name)}-${index}`,
         name: getDisplayName(entry.name),
         quantity: getDisplayQuantity(entry),
-      }))
-    );
+      }));
+    });
   }
 
   if (item.context?.mealCount) {
@@ -149,7 +150,7 @@ function getItemNames(item: UnifiedQueueItem) {
 const columnHelper = createColumnHelper<UnifiedQueueItem>();
 
 export function OperationsQueueTable({
-  items,
+  items = [],
   isPending,
   onAction,
   onFulfill,

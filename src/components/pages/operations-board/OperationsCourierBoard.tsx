@@ -14,7 +14,7 @@ interface OperationsCourierBoardProps {
 }
 
 export function OperationsCourierBoard({
-  items,
+  items = [],
   isPending,
   onAction,
 }: OperationsCourierBoardProps) {

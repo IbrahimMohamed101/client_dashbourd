@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Package, Save, Loader2 } from "lucide-react";
 import { MenuProductFormFields } from "@/components/pages/menu/products/MenuProductFormFields";
+import { DEFAULT_MENU_AVAILABLE_FOR } from "@/constants/menuCatalog";
 import { toCreateMenuProductPayload } from "@/utils/menuPayloadMappers";
 import { fetchUploadImage } from "@/utils/fetchUploadImage";
 import { ToastMessage } from "@/components/global/ToastMessage";
@@ -27,7 +28,7 @@ function CreateMenuProductPage() {
     defaultValues: {
       categoryId: "",
       key: "",
-      itemType: "",
+      itemType: "product",
       pricingModel: "fixed",
       name: { ar: "", en: "" },
       description: { ar: "", en: "" },
@@ -36,7 +37,7 @@ function CreateMenuProductPage() {
       isActive: true,
       isAvailable: true,
       isVisible: true,
-      availableFor: ["order", "subscription"],
+      availableFor: [...DEFAULT_MENU_AVAILABLE_FOR],
       availableForSubscription: true,
       ui: {
         cardVariant: "standard",

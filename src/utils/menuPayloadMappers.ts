@@ -5,6 +5,7 @@ import type { MenuProductSchemaType } from "@/lib/validations/menuProductSchema"
 import type { MenuProteinSchemaType } from "@/lib/validations/menuProteinSchema";
 import type { MenuPremiumProteinSchemaType } from "@/lib/validations/menuPremiumProteinSchema";
 import type { MenuMealCategorySchemaType } from "@/lib/validations/menuMealCategorySchema";
+import { normalizeAvailableForToApi } from "@/constants/menuCatalog";
 import type {
   CreateMenuCategoryPayload,
   CreateMenuMealCategoryPayload,
@@ -20,6 +21,7 @@ import type {
   UpdateMenuPremiumProteinPayload,
   UpdateMenuProductPayload,
   UpdateMenuProteinPayload,
+  UpdateSelectionRulesPayload,
 } from "@/types/menuTypes";
 
 const sarToHalala = (amount: number) => Math.round(amount * 100);
@@ -31,6 +33,8 @@ const optionalKey = (key?: string) => {
   const value = key?.trim();
   return value ? value : undefined;
 };
+
+const mapAvailableFor = normalizeAvailableForToApi;
 
 export const toCreateMenuCategoryPayload = (
   data: MenuCategorySchemaType
@@ -62,7 +66,7 @@ export const toUpdateMenuCategoryPayload = (
 export const toCreateMenuMealCategoryPayload = (
   data: MenuMealCategorySchemaType
 ): CreateMenuMealCategoryPayload => ({
-  key: data.key,
+  key: optionalKey(data.key),
   name: data.name,
   description: data.description,
   imageUrl: data.imageUrl,
@@ -155,7 +159,7 @@ export const toCreateMenuProductPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
-  availableFor: data.availableFor,
+  availableFor: mapAvailableFor(data.availableFor),
   availableForSubscription: data.availableForSubscription,
   ui: data.ui,
   sortOrder: data.sortOrder,
@@ -179,7 +183,7 @@ export const toUpdateMenuProductPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
-  availableFor: data.availableFor,
+  availableFor: mapAvailableFor(data.availableFor),
   availableForSubscription: data.availableForSubscription,
   ui: data.ui,
   sortOrder: data.sortOrder,
@@ -214,7 +218,7 @@ export const toCreateMenuOptionPayload = (
   data: MenuOptionSchemaType
 ): CreateMenuOptionPayload => ({
   groupId: data.groupId,
-  key: data.key,
+  key: optionalKey(data.key),
   name: data.name,
   description: data.description,
   imageUrl: data.imageUrl,
@@ -226,7 +230,7 @@ export const toCreateMenuOptionPayload = (
   isVisible: data.isVisible,
   displayCategoryKey: data.displayCategoryKey,
   proteinFamilyKey: data.proteinFamilyKey,
-  availableFor: data.availableFor,
+  availableFor: mapAvailableFor(data.availableFor),
   availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,
 });
@@ -245,7 +249,19 @@ export const toUpdateMenuOptionPayload = (
   isVisible: data.isVisible,
   displayCategoryKey: data.displayCategoryKey,
   proteinFamilyKey: data.proteinFamilyKey,
-  availableFor: data.availableFor,
+  availableFor: mapAvailableFor(data.availableFor),
   availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,
+});
+
+export const toUpdateSelectionRulesPayload = (data: {
+  minSelections: string | number;
+  maxSelections: string | number;
+  isRequired: boolean;
+  sortOrder?: string | number;
+}): UpdateSelectionRulesPayload => ({
+  minSelections: Number(data.minSelections),
+  maxSelections: Number(data.maxSelections),
+  isRequired: data.isRequired,
+  sortOrder: data.sortOrder !== undefined ? Number(data.sortOrder) : undefined,
 });

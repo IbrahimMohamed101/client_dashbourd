@@ -137,10 +137,10 @@ export const isPickupRequest = (item: { source?: string; entityType?: string }):
 
 export interface DashboardOpsListResponse {
   status: boolean;
-  data: {
+  data?: {
     date: string;
     items: UnifiedQueueItem[];
-    filters: {
+    filters?: {
       status: string[];
       method: string;
       q: string | null;
@@ -148,6 +148,7 @@ export interface DashboardOpsListResponse {
       branchId: string | null;
     };
   };
+  items?: UnifiedQueueItem[];
   pagination?: {
     page: number;
     limit: number;

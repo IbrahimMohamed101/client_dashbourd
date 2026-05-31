@@ -90,6 +90,18 @@ export function OperationsBoard() {
     return <OperationsBoardSkeleton />;
   }
 
+  if (visibleScreens.length === 0) {
+    return (
+      <div className="flex flex-col gap-4 p-6" dir="rtl">
+        <h1 className="text-2xl font-bold tracking-tight">لوحة العمليات</h1>
+        <p className="text-sm text-muted-foreground">
+          حسابك الحالي لا يملك صلاحية عرض طوابير العمليات. تواصل مع المسؤول إذا
+          كنت تحتاج الوصول.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6" dir="rtl">
       <div className="flex flex-col gap-4 border-b pb-4 lg:flex-row lg:items-center lg:justify-between">
@@ -128,7 +140,7 @@ export function OperationsBoard() {
               <ChefHat className="h-4 w-4" />
               التحضير
               <Badge variant="secondary" className="mr-1 min-w-5 justify-center">
-                {itemsByScreen.kitchen.length}
+                {(itemsByScreen.kitchen ?? []).length}
               </Badge>
             </TabsTrigger>
           )}
@@ -137,7 +149,7 @@ export function OperationsBoard() {
               <Store className="h-4 w-4" />
               استلام الفرع
               <Badge variant="secondary" className="mr-1 min-w-5 justify-center">
-                {itemsByScreen.pickup.length}
+                {(itemsByScreen.pickup ?? []).length}
               </Badge>
             </TabsTrigger>
           )}
@@ -146,7 +158,7 @@ export function OperationsBoard() {
               <Truck className="h-4 w-4" />
               التوصيل
               <Badge variant="secondary" className="mr-1 min-w-5 justify-center">
-                {itemsByScreen.courier.length}
+                {(itemsByScreen.courier ?? []).length}
               </Badge>
             </TabsTrigger>
           )}
@@ -154,14 +166,14 @@ export function OperationsBoard() {
 
         <TabsContent value="kitchen">
           <OperationsKitchenBoard
-            items={itemsByScreen.kitchen}
+            items={itemsByScreen.kitchen ?? []}
             isPending={isPending}
             onAction={handleRequestAction}
           />
         </TabsContent>
         <TabsContent value="pickup">
           <OperationsPickupBoard
-            items={itemsByScreen.pickup}
+            items={itemsByScreen.pickup ?? []}
             isPending={isPending}
             onAction={handleRequestAction}
             onFulfill={openFulfillDialog}
@@ -169,7 +181,7 @@ export function OperationsBoard() {
         </TabsContent>
         <TabsContent value="courier">
           <OperationsCourierBoard
-            items={itemsByScreen.courier}
+            items={itemsByScreen.courier ?? []}
             isPending={isPending}
             onAction={handleRequestAction}
           />

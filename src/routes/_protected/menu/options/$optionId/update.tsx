@@ -14,6 +14,7 @@ import { Loader } from "@/components/global/loader";
 import { MenuOptionFormFields } from "@/components/pages/menu/options/MenuOptionFormFields";
 import { useQuery } from "@tanstack/react-query";
 import { toUpdateMenuOptionPayload } from "@/utils/menuPayloadMappers";
+import { normalizeAvailableForFromApi } from "@/constants/menuCatalog";
 
 import { ToastMessage } from "@/components/global/ToastMessage";
 
@@ -58,7 +59,7 @@ function UpdateOptionPage() {
           isVisible: option.isVisible ?? true,
           displayCategoryKey: option.displayCategoryKey ?? "",
           proteinFamilyKey: option.proteinFamilyKey ?? "",
-          availableFor: option.availableFor ?? ["order", "subscription"],
+          availableFor: normalizeAvailableForFromApi(option.availableFor),
           availableForSubscription:
             option.availableForSubscription ??
             option.availableFor?.includes("subscription") ??

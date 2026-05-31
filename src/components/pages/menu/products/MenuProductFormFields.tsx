@@ -24,18 +24,11 @@ import type {
   MenuProductSchemaType,
 } from "@/lib/validations/menuProductSchema";
 import { useMenuCategoriesQuery } from "@/hooks/useMenuQuery";
-
-const ITEM_TYPES = [
-  { value: "basic_salad", label: "سلطة أساسية" },
-  { value: "basic_meal", label: "وجبة أساسية" },
-  { value: "fruit_salad", label: "سلطة فواكه" },
-  { value: "greek_yogurt", label: "زبادي يوناني" },
-  { value: "drink", label: "مشروب" },
-  { value: "sandwich", label: "ساندويتش" },
-  { value: "dessert", label: "حلويات" },
-  { value: "juice", label: "عصير" },
-  { value: "ice_cream", label: "آيس كريم" },
-];
+import {
+  DEFAULT_MENU_AVAILABLE_FOR,
+  MENU_ITEM_TYPE_OPTIONS,
+  type MenuAvailableChannel,
+} from "@/constants/menuCatalog";
 
 const CARD_VARIANTS = [
   { value: "standard", label: "قياسي" },
@@ -54,14 +47,19 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
   const isAvailable = form.watch("isAvailable") ?? true;
   const isVisible = form.watch("isVisible") ?? true;
-  const availableFor = form.watch("availableFor") ?? ["order", "subscription"];
-  const { data: catsData } = useMenuCategoriesQuery({});
-  const categories = catsData?.data?.items || [];
+  const availableFor =
+    form.watch("availableFor") ?? [...DEFAULT_MENU_AVAILABLE_FOR];
 
-  const setChannel = (channel: string, checked: boolean) => {
+  const normalizeChannels = (channels: string[]): MenuAvailableChannel[] =>
+    channels.map((item) =>
+      item === "order" ? "one_time" : item
+    ) as MenuAvailableChannel[];
+
+  const setChannel = (channel: MenuAvailableChannel, checked: boolean) => {
+    const current = normalizeChannels(availableFor);
     const next = checked
-      ? Array.from(new Set([...availableFor, channel]))
-      : availableFor.filter((item) => item !== channel);
+      ? Array.from(new Set([...current, channel]))
+      : current.filter((item) => item !== channel);
 
     form.setValue("availableFor", next, {
       shouldDirty: true,
@@ -72,6 +70,9 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
       shouldValidate: true,
     });
   };
+
+  const { data: catsData } = useMenuCategoriesQuery({});
+  const categories = catsData?.data?.items || [];
 
   return (
     <div className="space-y-6">
@@ -139,7 +140,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
                       <SelectValue placeholder="اختر النوع" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ITEM_TYPES.map((type) => (
+                      {MENU_ITEM_TYPE_OPTIONS.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
                         </SelectItem>
@@ -334,8 +335,8 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
             <ChannelToggle
               label="قناة الطلب الفردي"
               note="يظهر في طلبات المرة الواحدة"
-              checked={availableFor.includes("order")}
-              onChange={(checked) => setChannel("order", checked)}
+              checked={normalizeChannels(availableFor).includes("one_time")}
+              onChange={(checked) => setChannel("one_time", checked)}
             />
             <ChannelToggle
               label="قناة الاشتراكات"

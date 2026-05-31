@@ -92,7 +92,7 @@ function computeCounts(items: UnifiedQueueItem[]) {
 }
 
 export function OperationsKitchenBoard({
-  items,
+  items = [],
   isPending,
   onAction,
 }: OperationsKitchenBoardProps) {

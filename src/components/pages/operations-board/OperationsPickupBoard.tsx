@@ -15,7 +15,7 @@ interface OperationsPickupBoardProps {
 }
 
 export function OperationsPickupBoard({
-  items,
+  items = [],
   isPending,
   onAction,
   onFulfill,

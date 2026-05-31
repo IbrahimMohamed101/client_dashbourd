@@ -90,7 +90,7 @@ export interface MenuMealCategoryDetailResponse {
 }
 
 export interface CreateMenuMealCategoryPayload {
-  key: string;
+  key?: string;
   name: LocalizedText;
   description?: LocalizedText;
   imageUrl?: string;
@@ -241,11 +241,14 @@ export type ItemType =
   | "basic_meal"
   | "fruit_salad"
   | "greek_yogurt"
-  | "drink"
-  | "sandwich"
+  | "green_salad"
+  | "cold_sandwich"
+  | "sourdough"
   | "dessert"
   | "juice"
+  | "drink"
   | "ice_cream"
+  | "product"
   | string; // allow other item types
 
 export interface MenuProduct {
@@ -426,7 +429,7 @@ export interface MenuOptionDetailResponse {
 
 export interface CreateMenuOptionPayload {
   groupId: string;
-  key: string;
+  key?: string;
   name: LocalizedText;
   description?: LocalizedText;
   imageUrl?: string;
@@ -492,6 +495,7 @@ export interface UpdateSelectionRulesPayload {
   minSelections?: number;
   maxSelections?: number;
   isRequired?: boolean;
+  sortOrder?: number;
 }
 
 // ── §11 Product Group Option Overrides ──

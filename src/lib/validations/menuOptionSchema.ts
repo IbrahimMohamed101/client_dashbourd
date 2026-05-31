@@ -1,17 +1,25 @@
 import { z } from "zod";
+import {
+  DEFAULT_MENU_AVAILABLE_FOR,
+  MENU_AVAILABLE_CHANNELS,
+} from "@/constants/menuCatalog";
+
+const optionalGeneratedKey = z
+  .string()
+  .trim()
+  .regex(
+    /^[a-z0-9_]+$/,
+    "المفتاح يجب أن يحتوي فقط على حروف إنجليزية صغيرة وأرقام و _"
+  )
+  .or(z.literal(""))
+  .optional()
+  .default("");
 
 const menuOptionSchema = z.object({
   groupId: z
     .string({ message: "مجموعة الخيارات مطلوبة" })
     .min(1, "مجموعة الخيارات مطلوبة"),
-  key: z
-    .string({ message: "المفتاح مطلوب" })
-    .min(1, "المفتاح مطلوب")
-    .regex(
-      /^[a-z0-9_]+$/,
-      "المفتاح يجب أن يحتوي فقط على حروف إنجليزية صغيرة وأرقام و _"
-    )
-    .trim(),
+  key: optionalGeneratedKey,
   name: z.object({
     ar: z
       .string({ message: "الاسم بالعربية مطلوب" })
@@ -47,7 +55,9 @@ const menuOptionSchema = z.object({
   isVisible: z.boolean().default(true),
   displayCategoryKey: z.string().trim().optional(),
   proteinFamilyKey: z.string().trim().optional(),
-  availableFor: z.array(z.string()).default(["order", "subscription"]),
+  availableFor: z
+    .array(z.enum(MENU_AVAILABLE_CHANNELS))
+    .default([...DEFAULT_MENU_AVAILABLE_FOR]),
   availableForSubscription: z.boolean().default(true),
   sortOrder: z.coerce
     .number({ message: "ترتيب العرض يجب أن يكون رقماً" })
