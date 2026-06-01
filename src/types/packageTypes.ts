@@ -21,6 +21,7 @@ export interface FreezePolicy {
 
 export interface Package {
   _id: string;
+  key?: string;
   name: {
     ar: string;
     en: string;

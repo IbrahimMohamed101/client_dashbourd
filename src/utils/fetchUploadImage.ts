@@ -15,14 +15,20 @@ export interface UploadImageResponse {
   };
 }
 
-export const fetchUploadImage = async (
-  file: File
-): Promise<UploadImageResponse> => {
+export const createImageUploadFormData = (file: File): FormData => {
   if (!(file instanceof File)) {
     throw new Error("Invalid file object");
   }
+
   const formData = new FormData();
   formData.append("image", file);
+  return formData;
+};
+
+export const fetchUploadImage = async (
+  file: File
+): Promise<UploadImageResponse> => {
+  const formData = createImageUploadFormData(file);
 
   const response = await api.post("/api/dashboard/uploads/image", formData);
   return response.data;

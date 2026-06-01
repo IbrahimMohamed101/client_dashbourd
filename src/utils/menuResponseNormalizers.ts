@@ -263,6 +263,9 @@ function normalizeProduct(raw: any): MenuProduct {
     const normalized = raw as MenuProduct;
     return {
       ...normalized,
+      id: raw.id ?? raw._id ?? "",
+      categoryId: raw.categoryId ?? raw.category_id ?? raw.category ?? normalized.categoryId ?? "",
+      imageUrl: raw.imageUrl ?? raw.image ?? normalized.imageUrl ?? "",
       availableFor: normalizeAvailableForFromApi(normalized.availableFor),
     };
   }
@@ -378,6 +381,10 @@ function normalizeOption(raw: any): MenuOption {
       ...normalized,
       displayCategoryKey: normalized.displayCategoryKey ?? (normalized as any).display_category_key,
       proteinFamilyKey: normalized.proteinFamilyKey ?? (normalized as any).protein_family_key,
+      premiumKey: normalized.premiumKey ?? (normalized as any).premium_key,
+      extraFeeHalala: normalized.extraFeeHalala ?? (normalized as any).extra_fee_halala,
+      ruleTags: normalized.ruleTags ?? (normalized as any).rule_tags,
+      selectionType: normalized.selectionType ?? (normalized as any).selection_type,
       availableFor: normalizeAvailableForFromApi(normalized.availableFor),
     };
   }
@@ -403,6 +410,10 @@ function normalizeOption(raw: any): MenuOption {
     isVisible: raw.isVisible ?? raw.visible ?? true,
     displayCategoryKey: raw.displayCategoryKey ?? raw.display_category_key ?? undefined,
     proteinFamilyKey: raw.proteinFamilyKey ?? raw.protein_family_key ?? undefined,
+    premiumKey: raw.premiumKey ?? raw.premium_key ?? undefined,
+    extraFeeHalala: raw.extraFeeHalala ?? raw.extra_fee_halala ?? undefined,
+    ruleTags: raw.ruleTags ?? raw.rule_tags ?? undefined,
+    selectionType: raw.selectionType ?? raw.selection_type ?? undefined,
     availableFor: normalizeAvailableForFromApi(raw.availableFor),
     availableForSubscription: raw.availableForSubscription ?? raw.available_for_subscription ?? true,
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,

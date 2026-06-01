@@ -34,6 +34,8 @@ const optionalKey = (key?: string) => {
   return value ? value : undefined;
 };
 
+const clearableString = (value?: string) => value?.trim() ?? "";
+
 const mapAvailableFor = normalizeAvailableForToApi;
 
 export const toCreateMenuCategoryPayload = (
@@ -228,8 +230,12 @@ export const toCreateMenuOptionPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
-  displayCategoryKey: data.displayCategoryKey,
-  proteinFamilyKey: data.proteinFamilyKey,
+  displayCategoryKey: optionalKey(data.displayCategoryKey),
+  proteinFamilyKey: optionalKey(data.proteinFamilyKey),
+  premiumKey: clearableString(data.premiumKey),
+  extraFeeHalala: data.extraFeeSar ? sarToHalala(data.extraFeeSar) : 0,
+  ruleTags: data.ruleTags ? data.ruleTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+  selectionType: clearableString(data.selectionType),
   availableFor: mapAvailableFor(data.availableFor),
   availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,
@@ -247,8 +253,12 @@ export const toUpdateMenuOptionPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
-  displayCategoryKey: data.displayCategoryKey,
-  proteinFamilyKey: data.proteinFamilyKey,
+  displayCategoryKey: optionalKey(data.displayCategoryKey),
+  proteinFamilyKey: optionalKey(data.proteinFamilyKey),
+  premiumKey: clearableString(data.premiumKey),
+  extraFeeHalala: data.extraFeeSar ? sarToHalala(data.extraFeeSar) : 0,
+  ruleTags: data.ruleTags ? data.ruleTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+  selectionType: clearableString(data.selectionType),
   availableFor: mapAvailableFor(data.availableFor),
   availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,

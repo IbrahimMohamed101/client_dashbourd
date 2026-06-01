@@ -62,11 +62,14 @@ import {
   ChevronsLeftIcon,
 } from "lucide-react";
 import type { Package } from "@/types/packageTypes";
+import { filterCanonicalSubscriptionPlans } from "@/constants/menuCatalog";
 import { packagesColumns } from "./packages-columns";
 import { DraggableRow } from "./draggable-row";
 
 export function PackagesTable({ data: initialData }: { data: Package[] }) {
-  const [data, setData] = React.useState(initialData);
+  const [data, setData] = React.useState(() =>
+    filterCanonicalSubscriptionPlans(initialData)
+  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     [{ id: "isActive", value: "active" }]
@@ -79,7 +82,7 @@ export function PackagesTable({ data: initialData }: { data: Package[] }) {
 
   // Update data when initialData changes
   React.useEffect(() => {
-    setData(initialData);
+    setData(filterCanonicalSubscriptionPlans(initialData));
   }, [initialData]);
 
   const table = useReactTable({

@@ -546,7 +546,7 @@ export function MenuProductRelationsTab() {
     const nextRule: ProductGroupRule = {
       groupId: state.groupId,
       minSelections: Number(state.minSelections) || 0,
-      maxSelections: Number(state.maxSelections) || 1,
+      maxSelections: state.maxSelections.trim() === "" ? 1 : Number(state.maxSelections),
       isRequired: state.isRequired,
       sortOrder: Number(state.groupSortOrder) || 0,
       isActive: true,
@@ -658,7 +658,7 @@ export function MenuProductRelationsTab() {
                   groupId: state.groupId,
                   data: {
                     minSelections: Number(state.minSelections) || 0,
-                    maxSelections: Number(state.maxSelections) || 1,
+                    maxSelections: state.maxSelections.trim() === "" ? 1 : Number(state.maxSelections),
                     isRequired: state.isRequired,
                   },
                 })

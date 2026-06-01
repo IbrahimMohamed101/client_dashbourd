@@ -42,6 +42,7 @@ function UpdateMenuProductPage() {
   });
 
   const product = prodData?.data;
+  
 
   const form = useForm<MenuProductSchemaInput, unknown, MenuProductSchemaType>({
     resolver: zodResolver(menuProductSchema),

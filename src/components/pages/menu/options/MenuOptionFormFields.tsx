@@ -172,6 +172,39 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <Label>صورة الخيار</Label>
+            <div className="flex items-center gap-3">
+              {(form.watch("imageFile") || form.watch("imageUrl")) && (
+                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md border bg-muted">
+                  <img
+                    src={
+                      form.watch("imageFile")
+                        ? URL.createObjectURL(
+                            form.watch("imageFile") as unknown as File
+                          )
+                        : form.watch("imageUrl")!
+                    }
+                    alt="Preview"
+                    className="size-full object-cover"
+                  />
+                </div>
+              )}
+              <Input
+                type="file"
+                accept="image/*"
+                dir="ltr"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  form.setValue("imageFile", file, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }}
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Display category key</Label>
@@ -191,6 +224,37 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>مفتاح الاشتراك المميز (Premium Key)</Label>
+              <Input
+                dir="ltr"
+                placeholder="premium_chicken"
+                {...form.register("premiumKey")}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>نوع الاختيار (Selection Type)</Label>
+              <Input
+                dir="ltr"
+                placeholder="double_protein"
+                {...form.register("selectionType")}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>وسوم التحكم بالاشتراكات (Rule Tags - مفصولة بفاصلة)</Label>
+            <Input
+              dir="ltr"
+              placeholder="beef, double, premium"
+              {...form.register("ruleTags")}
+            />
+            <p className="text-xs text-muted-foreground">
+              أدخل الكلمات المفتاحية للتحكم بالاشتراك، مفصولة بفاصلة إنجليزية (,)
+            </p>
+          </div>
+
         </CardContent>
       </Card>
 
@@ -202,7 +266,7 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
             <div className="space-y-1.5">
               <Label>السعر الإضافي (ر.س)</Label>
               <Input
@@ -214,6 +278,19 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
               />
               <p className="text-xs text-muted-foreground">
                 يتم التحويل تلقائياً للهللة
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>رسوم اشتراك إضافية (ر.س)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                {...form.register("extraFeeSar")}
+              />
+              <p className="text-xs text-muted-foreground">
+                الرسوم الإضافية للاشتراكات (Extra Fee)
               </p>
             </div>
             <div className="space-y-1.5">
@@ -230,6 +307,7 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
                 type="number"
                 step="0.01"
                 min="0"
+                placeholder="0.00"
                 {...form.register("extraWeightPriceSar")}
               />
             </div>

@@ -92,9 +92,11 @@ export const normalizeAvailableForFromApi = (
     return [...DEFAULT_MENU_AVAILABLE_FOR];
   }
 
-  return availableFor.map((value) =>
-    value === "order" ? "one_time" : value
-  ) as MenuAvailableChannel[];
+  return availableFor
+    .map((value) => (value === "order" ? "one_time" : value))
+    .filter((value): value is MenuAvailableChannel =>
+      (MENU_AVAILABLE_CHANNELS as readonly string[]).includes(value)
+    );
 };
 
 /** Normalize form channel values before sending to the backend API. */
@@ -103,9 +105,11 @@ export const normalizeAvailableForToApi = (
 ): MenuAvailableChannel[] => {
   if (!availableFor || !Array.isArray(availableFor)) return [];
 
-  return availableFor.map((value) =>
-    value === "order" ? "one_time" : value
-  ) as MenuAvailableChannel[];
+  return availableFor
+    .map((value) => (value === "order" ? "one_time" : value))
+    .filter((value): value is MenuAvailableChannel =>
+      (MENU_AVAILABLE_CHANNELS as readonly string[]).includes(value)
+    );
 };
 
 export const isCanonicalSubscriptionPlanKey = (

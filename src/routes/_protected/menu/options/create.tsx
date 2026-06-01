@@ -12,6 +12,7 @@ import { Settings2, Save, Loader2 } from "lucide-react";
 import { MenuOptionFormFields } from "@/components/pages/menu/options/MenuOptionFormFields";
 import { DEFAULT_MENU_AVAILABLE_FOR } from "@/constants/menuCatalog";
 import { toCreateMenuOptionPayload } from "@/utils/menuPayloadMappers";
+import { fetchUploadImage } from "@/utils/fetchUploadImage";
 
 import { ToastMessage } from "@/components/global/ToastMessage";
 
@@ -37,6 +38,10 @@ function CreateOptionPage() {
       isVisible: true,
       displayCategoryKey: "",
       proteinFamilyKey: "",
+      premiumKey: "",
+      extraFeeSar: 0,
+      ruleTags: "",
+      selectionType: "",
       availableFor: [...DEFAULT_MENU_AVAILABLE_FOR],
       availableForSubscription: true,
       sortOrder: 0,
@@ -45,7 +50,12 @@ function CreateOptionPage() {
 
   const onSubmit = async (data: MenuOptionSchemaType) => {
     try {
-      await mutation.mutateAsync(toCreateMenuOptionPayload(data));
+      let imageUrl = data.imageUrl;
+      if (data.imageFile instanceof File) {
+        const uploadRes = await fetchUploadImage(data.imageFile);
+        imageUrl = uploadRes.data.url;
+      }
+      await mutation.mutateAsync(toCreateMenuOptionPayload({ ...data, imageUrl }));
       ToastMessage("تم إنشاء الخيار بنجاح", "success");
       router.navigate({
         to: "/menu",

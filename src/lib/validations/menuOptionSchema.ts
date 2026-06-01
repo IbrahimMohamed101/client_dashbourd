@@ -55,6 +55,14 @@ const menuOptionSchema = z.object({
   isVisible: z.boolean().default(true),
   displayCategoryKey: z.string().trim().optional(),
   proteinFamilyKey: z.string().trim().optional(),
+  premiumKey: z.string().trim().optional().default(""),
+  extraFeeSar: z.coerce
+    .number()
+    .min(0, "الرسوم الإضافية لا يمكن أن تكون أقل من 0")
+    .optional()
+    .default(0),
+  ruleTags: z.string().trim().optional().default(""),
+  selectionType: z.string().trim().optional().default(""),
   availableFor: z
     .array(z.enum(MENU_AVAILABLE_CHANNELS))
     .default([...DEFAULT_MENU_AVAILABLE_FOR]),

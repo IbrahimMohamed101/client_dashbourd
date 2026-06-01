@@ -413,6 +413,10 @@ export interface MenuOption {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
+  premiumKey?: string;
+  extraFeeHalala?: number;
+  ruleTags?: string[];
+  selectionType?: string;
   availableFor?: string[];
   availableForSubscription?: boolean;
   sortOrder: number;
@@ -441,6 +445,10 @@ export interface CreateMenuOptionPayload {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
+  premiumKey?: string;
+  extraFeeHalala?: number;
+  ruleTags?: string[];
+  selectionType?: string;
   availableFor?: string[];
   availableForSubscription?: boolean;
   sortOrder?: number;
@@ -458,6 +466,10 @@ export interface UpdateMenuOptionPayload {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
+  premiumKey?: string;
+  extraFeeHalala?: number;
+  ruleTags?: string[];
+  selectionType?: string;
   availableFor?: string[];
   availableForSubscription?: boolean;
   sortOrder?: number;

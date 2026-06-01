@@ -4,6 +4,7 @@ import {
   toCreateMenuOptionGroupPayload,
   toCreateMenuOptionPayload,
   toCreateMenuProductPayload,
+  toUpdateMenuOptionPayload,
   toUpdateSelectionRulesPayload,
 } from "../src/utils/menuPayloadMappers";
 import menuProductSchema from "../src/lib/validations/menuProductSchema";
@@ -55,6 +56,22 @@ assert.equal("displayCategory" in optionPayload, false);
 assert.equal(optionPayload.key, undefined);
 assert.deepEqual(optionPayload.availableFor, ["one_time", "subscription"]);
 assert.equal(optionPayload.availableForSubscription, true);
+
+const optionUpdatePayload = toUpdateMenuOptionPayload({
+  ...optionPayload,
+  key: "",
+  extraPriceSar: 0,
+  extraWeightPriceSar: 0,
+  premiumKey: "",
+  extraFeeSar: 0,
+  ruleTags: "",
+  selectionType: "",
+});
+
+assert.equal(optionUpdatePayload.premiumKey, "");
+assert.equal(optionUpdatePayload.selectionType, "");
+assert.equal(optionUpdatePayload.extraFeeHalala, 0);
+assert.deepEqual(optionUpdatePayload.ruleTags, []);
 
 const productDefaults = menuProductSchema.parse({
   categoryId: "cat-1",
@@ -111,5 +128,20 @@ assert.deepEqual(
     maxSelections: 2,
     isRequired: true,
     sortOrder: 5,
+  }
+);
+
+assert.deepEqual(
+  toUpdateSelectionRulesPayload({
+    minSelections: "0",
+    maxSelections: "0",
+    isRequired: false,
+    sortOrder: "0",
+  }),
+  {
+    minSelections: 0,
+    maxSelections: 0,
+    isRequired: false,
+    sortOrder: 0,
   }
 );

@@ -108,7 +108,7 @@ export function MenuCategoryFormFields({ form, isEdit }: Props) {
             <Label>صورة التصنيف</Label>
             <div className="flex items-center gap-3">
               {(form.watch("imageFile") || form.watch("imageUrl")) && (
-                <div className="relative size-10 shrink-0 overflow-hidden rounded-md border bg-muted">
+                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-md border bg-muted">
                   <img
                     src={
                       form.watch("imageFile")

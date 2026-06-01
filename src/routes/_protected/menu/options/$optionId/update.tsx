@@ -15,6 +15,7 @@ import { MenuOptionFormFields } from "@/components/pages/menu/options/MenuOption
 import { useQuery } from "@tanstack/react-query";
 import { toUpdateMenuOptionPayload } from "@/utils/menuPayloadMappers";
 import { normalizeAvailableForFromApi } from "@/constants/menuCatalog";
+import { fetchUploadImage } from "@/utils/fetchUploadImage";
 
 import { ToastMessage } from "@/components/global/ToastMessage";
 
@@ -59,6 +60,10 @@ function UpdateOptionPage() {
           isVisible: option.isVisible ?? true,
           displayCategoryKey: option.displayCategoryKey ?? "",
           proteinFamilyKey: option.proteinFamilyKey ?? "",
+          premiumKey: option.premiumKey ?? "",
+          extraFeeSar: option.extraFeeHalala ? option.extraFeeHalala / 100 : 0,
+          ruleTags: Array.isArray(option.ruleTags) ? option.ruleTags.join(", ") : (option.ruleTags ?? ""),
+          selectionType: option.selectionType ?? "",
           availableFor: normalizeAvailableForFromApi(option.availableFor),
           availableForSubscription:
             option.availableForSubscription ??
@@ -71,9 +76,14 @@ function UpdateOptionPage() {
 
   const onSubmit = async (data: MenuOptionSchemaType) => {
     try {
+      let imageUrl = data.imageUrl;
+      if (data.imageFile instanceof File) {
+        const uploadRes = await fetchUploadImage(data.imageFile);
+        imageUrl = uploadRes.data.url;
+      }
       await mutation.mutateAsync({
         id: optionId,
-        data: toUpdateMenuOptionPayload(data),
+        data: toUpdateMenuOptionPayload({ ...data, imageUrl }),
       });
       ToastMessage("تم تحديث الخيار بنجاح", "success");
       router.navigate({
