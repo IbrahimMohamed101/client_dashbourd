@@ -12,7 +12,7 @@ import { Settings2, Save, Loader2 } from "lucide-react";
 import { MenuOptionFormFields } from "@/components/pages/menu/options/MenuOptionFormFields";
 import { DEFAULT_MENU_AVAILABLE_FOR } from "@/constants/menuCatalog";
 import { toCreateMenuOptionPayload } from "@/utils/menuPayloadMappers";
-import { fetchUploadImage } from "@/utils/fetchUploadImage";
+import { fetchUploadImage, resolveUploadedImageUrl } from "@/utils/fetchUploadImage";
 
 import { ToastMessage } from "@/components/global/ToastMessage";
 
@@ -53,7 +53,7 @@ function CreateOptionPage() {
       let imageUrl = data.imageUrl;
       if (data.imageFile instanceof File) {
         const uploadRes = await fetchUploadImage(data.imageFile);
-        imageUrl = uploadRes.data.url;
+        imageUrl = resolveUploadedImageUrl(uploadRes);
       }
       await mutation.mutateAsync(toCreateMenuOptionPayload({ ...data, imageUrl }));
       ToastMessage("تم إنشاء الخيار بنجاح", "success");

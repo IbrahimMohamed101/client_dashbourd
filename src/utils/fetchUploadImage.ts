@@ -8,10 +8,12 @@ import api from "@/lib/apis";
 export interface UploadImageResponse {
   status: boolean;
   data: {
-    url: string;
-    secureUrl: string;
-    publicId: string;
-    resourceType: string;
+    imageUrl?: string;
+    url?: string;
+    secureUrl?: string;
+    secure_url?: string;
+    publicId?: string;
+    resourceType?: string;
   };
 }
 
@@ -32,4 +34,19 @@ export const fetchUploadImage = async (
 
   const response = await api.post("/api/dashboard/uploads/image", formData);
   return response.data;
+};
+
+export const resolveUploadedImageUrl = (upload: UploadImageResponse): string => {
+  const url =
+    upload.data.imageUrl ||
+    upload.data.secureUrl ||
+    upload.data.secure_url ||
+    upload.data.url ||
+    "";
+
+  if (!url) {
+    throw new Error("Image upload response did not include an image URL");
+  }
+
+  return url;
 };

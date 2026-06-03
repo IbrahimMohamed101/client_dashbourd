@@ -10,10 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Package, Save, Loader2 } from "lucide-react";
 import { MenuProductFormFields } from "@/components/pages/menu/products/MenuProductFormFields";
-import { DEFAULT_MENU_AVAILABLE_FOR } from "@/constants/menuCatalog";
 import { toCreateMenuProductPayload } from "@/utils/menuPayloadMappers";
-import { fetchUploadImage } from "@/utils/fetchUploadImage";
+import { fetchUploadImage, resolveUploadedImageUrl } from "@/utils/fetchUploadImage";
 import { ToastMessage } from "@/components/global/ToastMessage";
+import { getMenuProductCreateDefaults } from "@/utils/menuFormValues";
 
 export const Route = createFileRoute("/_protected/menu/products/create")({
   component: CreateMenuProductPage,
@@ -25,28 +25,7 @@ function CreateMenuProductPage() {
 
   const form = useForm<MenuProductSchemaInput, unknown, MenuProductSchemaType>({
     resolver: zodResolver(menuProductSchema),
-    defaultValues: {
-      categoryId: "",
-      key: "",
-      itemType: "product",
-      pricingModel: "fixed",
-      name: { ar: "", en: "" },
-      description: { ar: "", en: "" },
-      imageUrl: "",
-      priceSar: 0,
-      isActive: true,
-      isAvailable: true,
-      isVisible: true,
-      availableFor: [...DEFAULT_MENU_AVAILABLE_FOR],
-      availableForSubscription: true,
-      ui: {
-        cardVariant: "standard",
-        badge: "",
-        ctaLabel: "",
-        imageRatio: "",
-      },
-      sortOrder: 0,
-    },
+    defaultValues: getMenuProductCreateDefaults(),
   });
 
   const onSubmit = async (data: MenuProductSchemaType) => {
@@ -54,7 +33,7 @@ function CreateMenuProductPage() {
       let imageUrl = data.imageUrl;
       if (data.imageFile instanceof File) {
         const uploadRes = await fetchUploadImage(data.imageFile);
-        imageUrl = uploadRes.data.url;
+        imageUrl = resolveUploadedImageUrl(uploadRes);
       }
       await mutation.mutateAsync(toCreateMenuProductPayload({ ...data, imageUrl }));
       ToastMessage("تم إنشاء المنتج بنجاح", "success");

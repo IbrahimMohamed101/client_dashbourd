@@ -4,7 +4,48 @@ import type {
   UpdateSelectionRulesPayload,
   LinkOptionsPayload,
   UpdateOptionOverridePayload,
+  MenuProductLinkedGroup,
+  MenuProductLinkedOption,
 } from "@/types/menuTypes";
+
+export interface ProductGroupRelationsResponse {
+  status: boolean;
+  data:
+    | MenuProductLinkedGroup[]
+    | {
+        items: MenuProductLinkedGroup[];
+        pagination?: unknown;
+      };
+}
+
+export interface ProductGroupOptionRelationsResponse {
+  status: boolean;
+  data:
+    | MenuProductLinkedOption[]
+    | {
+        items: MenuProductLinkedOption[];
+        pagination?: unknown;
+      };
+}
+
+export const fetchProductGroupRelations = async (
+  productId: string
+): Promise<ProductGroupRelationsResponse> => {
+  const response = await api.get(
+    `/api/dashboard/menu/products/${productId}/option-groups?limit=100`
+  );
+  return response.data;
+};
+
+export const fetchProductGroupOptionRelations = async (
+  productId: string,
+  groupId: string
+): Promise<ProductGroupOptionRelationsResponse> => {
+  const response = await api.get(
+    `/api/dashboard/menu/products/${productId}/option-groups/${groupId}/options?limit=100`
+  );
+  return response.data;
+};
 
 // ── §10.1 Link Groups to Product ──
 // PUT /api/dashboard/menu/products/:productId/groups

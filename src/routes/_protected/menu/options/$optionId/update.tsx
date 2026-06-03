@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import menuOptionSchema, {
@@ -14,10 +15,10 @@ import { Loader } from "@/components/global/loader";
 import { MenuOptionFormFields } from "@/components/pages/menu/options/MenuOptionFormFields";
 import { useQuery } from "@tanstack/react-query";
 import { toUpdateMenuOptionPayload } from "@/utils/menuPayloadMappers";
-import { normalizeAvailableForFromApi } from "@/constants/menuCatalog";
-import { fetchUploadImage } from "@/utils/fetchUploadImage";
+import { fetchUploadImage, resolveUploadedImageUrl } from "@/utils/fetchUploadImage";
 
 import { ToastMessage } from "@/components/global/ToastMessage";
+import { getMenuOptionCreateDefaults, getMenuOptionFormValues } from "@/utils/menuFormValues";
 
 export const Route = createFileRoute(
   "/_protected/menu/options/$optionId/update"
@@ -43,43 +44,21 @@ function UpdateOptionPage() {
 
   const form = useForm<MenuOptionSchemaInput, unknown, MenuOptionSchemaType>({
     resolver: zodResolver(menuOptionSchema),
-    values: option
-      ? {
-          groupId: option.groupId || "",
-          key: option.key,
-          name: option.name,
-          description: option.description || { ar: "", en: "" },
-          imageUrl: option.imageUrl || "",
-          extraPriceSar: option.extraPriceHalala / 100,
-          extraWeightUnitGrams: option.extraWeightUnitGrams,
-          extraWeightPriceSar: option.extraWeightPriceHalala
-            ? option.extraWeightPriceHalala / 100
-            : undefined,
-          isActive: option.isActive,
-          isAvailable: option.isAvailable,
-          isVisible: option.isVisible ?? true,
-          displayCategoryKey: option.displayCategoryKey ?? "",
-          proteinFamilyKey: option.proteinFamilyKey ?? "",
-          premiumKey: option.premiumKey ?? "",
-          extraFeeSar: option.extraFeeHalala ? option.extraFeeHalala / 100 : 0,
-          ruleTags: Array.isArray(option.ruleTags) ? option.ruleTags.join(", ") : (option.ruleTags ?? ""),
-          selectionType: option.selectionType ?? "",
-          availableFor: normalizeAvailableForFromApi(option.availableFor),
-          availableForSubscription:
-            option.availableForSubscription ??
-            option.availableFor?.includes("subscription") ??
-            true,
-          sortOrder: option.sortOrder,
-        }
-      : undefined,
+    defaultValues: getMenuOptionCreateDefaults(),
   });
+
+  useEffect(() => {
+    if (option) {
+      form.reset(getMenuOptionFormValues(option));
+    }
+  }, [form, option]);
 
   const onSubmit = async (data: MenuOptionSchemaType) => {
     try {
       let imageUrl = data.imageUrl;
       if (data.imageFile instanceof File) {
         const uploadRes = await fetchUploadImage(data.imageFile);
-        imageUrl = uploadRes.data.url;
+        imageUrl = resolveUploadedImageUrl(uploadRes);
       }
       await mutation.mutateAsync({
         id: optionId,

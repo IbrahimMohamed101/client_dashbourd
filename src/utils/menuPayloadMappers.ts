@@ -34,14 +34,18 @@ const optionalKey = (key?: string) => {
   return value ? value : undefined;
 };
 
+const withOptionalKey = <T extends object>(payload: T, key?: string): T & { key?: string } => {
+  const normalizedKey = optionalKey(key);
+  return normalizedKey ? { ...payload, key: normalizedKey } : payload;
+};
+
 const clearableString = (value?: string) => value?.trim() ?? "";
 
 const mapAvailableFor = normalizeAvailableForToApi;
 
 export const toCreateMenuCategoryPayload = (
   data: MenuCategorySchemaType
-): CreateMenuCategoryPayload => ({
-  key: optionalKey(data.key),
+): CreateMenuCategoryPayload => withOptionalKey({
   name: data.name,
   description: data.description,
   imageUrl: data.imageUrl,
@@ -50,7 +54,7 @@ export const toCreateMenuCategoryPayload = (
   isVisible: data.isVisible,
   ui: data.ui,
   sortOrder: data.sortOrder,
-});
+}, data.key);
 
 export const toUpdateMenuCategoryPayload = (
   data: MenuCategorySchemaType
@@ -67,8 +71,7 @@ export const toUpdateMenuCategoryPayload = (
 
 export const toCreateMenuMealCategoryPayload = (
   data: MenuMealCategorySchemaType
-): CreateMenuMealCategoryPayload => ({
-  key: optionalKey(data.key),
+): CreateMenuMealCategoryPayload => withOptionalKey({
   name: data.name,
   description: data.description,
   imageUrl: data.imageUrl,
@@ -76,7 +79,7 @@ export const toCreateMenuMealCategoryPayload = (
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
   sortOrder: data.sortOrder,
-});
+}, data.key);
 
 export const toUpdateMenuMealCategoryPayload = (
   data: MenuMealCategorySchemaType
@@ -144,9 +147,8 @@ export const toUpdateMenuPremiumProteinPayload = (
 
 export const toCreateMenuProductPayload = (
   data: MenuProductSchemaType
-): CreateMenuProductPayload => ({
+): CreateMenuProductPayload => withOptionalKey({
   categoryId: data.categoryId,
-  key: optionalKey(data.key),
   itemType: data.itemType,
   name: data.name,
   description: data.description,
@@ -165,7 +167,7 @@ export const toCreateMenuProductPayload = (
   availableForSubscription: data.availableForSubscription,
   ui: data.ui,
   sortOrder: data.sortOrder,
-});
+}, data.key);
 
 export const toUpdateMenuProductPayload = (
   data: MenuProductSchemaType
@@ -193,8 +195,7 @@ export const toUpdateMenuProductPayload = (
 
 export const toCreateMenuOptionGroupPayload = (
   data: MenuOptionGroupSchemaType
-): CreateMenuOptionGroupPayload => ({
-  key: optionalKey(data.key),
+): CreateMenuOptionGroupPayload => withOptionalKey({
   name: data.name,
   description: data.description,
   isActive: data.isActive,
@@ -202,7 +203,7 @@ export const toCreateMenuOptionGroupPayload = (
   isVisible: data.isVisible,
   ui: data.ui,
   sortOrder: data.sortOrder,
-});
+}, data.key);
 
 export const toUpdateMenuOptionGroupPayload = (
   data: MenuOptionGroupSchemaType
@@ -218,9 +219,8 @@ export const toUpdateMenuOptionGroupPayload = (
 
 export const toCreateMenuOptionPayload = (
   data: MenuOptionSchemaType
-): CreateMenuOptionPayload => ({
+): CreateMenuOptionPayload => withOptionalKey({
   groupId: data.groupId,
-  key: optionalKey(data.key),
   name: data.name,
   description: data.description,
   imageUrl: data.imageUrl,
@@ -239,7 +239,7 @@ export const toCreateMenuOptionPayload = (
   availableFor: mapAvailableFor(data.availableFor),
   availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,
-});
+}, data.key);
 
 export const toUpdateMenuOptionPayload = (
   data: MenuOptionSchemaType
@@ -266,12 +266,20 @@ export const toUpdateMenuOptionPayload = (
 
 export const toUpdateSelectionRulesPayload = (data: {
   minSelections: string | number;
-  maxSelections: string | number;
+  maxSelections: string | number | null | undefined;
   isRequired: boolean;
   sortOrder?: string | number;
 }): UpdateSelectionRulesPayload => ({
   minSelections: Number(data.minSelections),
-  maxSelections: Number(data.maxSelections),
+  maxSelections: parseOptionalSelectionLimit(data.maxSelections),
   isRequired: data.isRequired,
   sortOrder: data.sortOrder !== undefined ? Number(data.sortOrder) : undefined,
 });
+
+export const parseOptionalSelectionLimit = (
+  value: string | number | null | undefined
+): number | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  return Number(value);
+};

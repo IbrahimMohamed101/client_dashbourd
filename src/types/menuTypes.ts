@@ -480,7 +480,7 @@ export interface UpdateMenuOptionPayload {
 export interface ProductGroupRule {
   groupId: string;
   minSelections: number;
-  maxSelections: number;
+  maxSelections: number | null;
   isRequired: boolean;
   sortOrder: number;
   isActive?: boolean;
@@ -505,7 +505,7 @@ export interface LinkGroupsPayload {
 
 export interface UpdateSelectionRulesPayload {
   minSelections?: number;
-  maxSelections?: number;
+  maxSelections?: number | null;
   isRequired?: boolean;
   sortOrder?: number;
 }

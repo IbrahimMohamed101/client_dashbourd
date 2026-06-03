@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import menuOptionGroupSchema, {
@@ -14,6 +15,7 @@ import { MenuOptionGroupFormFields } from "@/components/pages/menu/option-groups
 import { useQuery } from "@tanstack/react-query";
 import { fetchMenuOptionGroupById } from "@/utils/fetchMenuOptionGroups";
 import { toUpdateMenuOptionGroupPayload } from "@/utils/menuPayloadMappers";
+import { getMenuOptionGroupCreateDefaults, getMenuOptionGroupFormValues } from "@/utils/menuFormValues";
 
 export const Route = createFileRoute(
   "/_protected/menu/option-groups/$groupId/update"
@@ -43,19 +45,14 @@ function UpdateOptionGroupPage() {
     MenuOptionGroupSchemaType
   >({
     resolver: zodResolver(menuOptionGroupSchema),
-    values: group
-      ? {
-          key: group.key,
-          name: group.name,
-          description: group.description || { ar: "", en: "" },
-          isActive: group.isActive,
-          isAvailable: group.isAvailable,
-          isVisible: group.isVisible ?? true,
-          ui: { displayStyle: group.ui?.displayStyle },
-          sortOrder: group.sortOrder,
-        }
-      : undefined,
+    defaultValues: getMenuOptionGroupCreateDefaults(),
   });
+
+  useEffect(() => {
+    if (group) {
+      form.reset(getMenuOptionGroupFormValues(group));
+    }
+  }, [form, group]);
 
   const onSubmit = async (data: MenuOptionGroupSchemaType) => {
     await mutation.mutateAsync({

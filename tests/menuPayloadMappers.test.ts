@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  parseOptionalSelectionLimit,
   toCreateMenuCategoryPayload,
   toCreateMenuOptionGroupPayload,
   toCreateMenuOptionPayload,
@@ -28,10 +29,10 @@ const productPayload = toCreateMenuProductPayload({
   sortOrder: 0,
 });
 
-assert.equal("key" in productPayload, true);
 assert.equal(productPayload.key, undefined);
 assert.deepEqual(productPayload.availableFor, ["one_time", "subscription"]);
 assert.equal(productPayload.availableForSubscription, true);
+assert.equal("key" in productPayload, false);
 
 const optionPayload = toCreateMenuOptionPayload({
   groupId: "group-1",
@@ -54,6 +55,7 @@ const optionPayload = toCreateMenuOptionPayload({
 assert.equal(optionPayload.displayCategoryKey, "protein");
 assert.equal("displayCategory" in optionPayload, false);
 assert.equal(optionPayload.key, undefined);
+assert.equal("key" in optionPayload, false);
 assert.deepEqual(optionPayload.availableFor, ["one_time", "subscription"]);
 assert.equal(optionPayload.availableForSubscription, true);
 
@@ -100,6 +102,7 @@ const categoryPayload = toCreateMenuCategoryPayload({
 });
 
 assert.equal(categoryPayload.key, undefined);
+assert.equal("key" in categoryPayload, false);
 assert.equal(categoryPayload.ui?.cardVariant, "addon_collection");
 
 const optionGroupPayload = toCreateMenuOptionGroupPayload({
@@ -114,6 +117,7 @@ const optionGroupPayload = toCreateMenuOptionGroupPayload({
 });
 
 assert.equal(optionGroupPayload.key, undefined);
+assert.equal("key" in optionGroupPayload, false);
 assert.equal(optionGroupPayload.ui?.displayStyle, "radio_cards");
 
 assert.deepEqual(
@@ -145,3 +149,6 @@ assert.deepEqual(
     sortOrder: 0,
   }
 );
+
+assert.equal(parseOptionalSelectionLimit(""), null);
+assert.equal(parseOptionalSelectionLimit("0"), 0);

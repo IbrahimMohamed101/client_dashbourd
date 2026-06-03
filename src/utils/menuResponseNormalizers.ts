@@ -89,31 +89,61 @@ function toPaginatedResponse<T>(raw: any, items: T[]): {
   };
 }
 
+function idFromRef(value: any): string {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  const id = value.id ?? value._id;
+  if (id) return String(id);
+  if (typeof value.toHexString === "function") return value.toHexString();
+  return "";
+}
+
+function nonEmptyString(value: any): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return trimmed;
+}
+
+function firstNonEmptyString(...values: any[]): string {
+  for (const value of values) {
+    const normalized = nonEmptyString(value);
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
+function productPriceHalala(raw: any): number {
+  const halala = raw.priceHalala ?? raw.price_halala;
+  if (typeof halala === "number" && Number.isFinite(halala)) return halala;
+
+  const sar = raw.price;
+  if (typeof sar === "number" && Number.isFinite(sar)) return Math.round(sar * 100);
+
+  return 0;
+}
+
 // ── Category Normalizer ──
 
 function normalizeCategory(raw: any): MenuCategory {
-  // If the backend already returns the expected nested shape, pass through
-  if (raw.name && typeof raw.name === "object" && "ar" in raw.name) {
-    return raw as MenuCategory;
-  }
-
   return {
     id: raw.id ?? raw._id ?? "",
     key: raw.key ?? "",
     name: {
-      ar: raw.nameAr ?? raw.name_ar ?? raw.name?.ar ?? "",
-      en: raw.nameEn ?? raw.name_en ?? raw.name?.en ?? "",
+      ar: raw.name?.ar ?? raw.nameAr ?? raw.name_ar ?? "",
+      en: raw.name?.en ?? raw.nameEn ?? raw.name_en ?? "",
     },
     description: {
-      ar: raw.descriptionAr ?? raw.description_ar ?? raw.description?.ar ?? "",
-      en: raw.descriptionEn ?? raw.description_en ?? raw.description?.en ?? "",
+      ar: raw.description?.ar ?? raw.descriptionAr ?? raw.description_ar ?? "",
+      en: raw.description?.en ?? raw.descriptionEn ?? raw.description_en ?? "",
     },
     imageUrl: raw.imageUrl ?? raw.image ?? "",
-    isActive: raw.isActive ?? raw.active ?? true,
-    isAvailable: raw.isAvailable ?? raw.available ?? true,
-    isVisible: raw.isVisible ?? raw.visible ?? true,
-    ui: raw.ui ?? {
-      cardVariant: raw.cardVariant ?? raw.card_variant,
+    isActive: raw.isActive ?? raw.active ?? raw.is_active ?? true,
+    isAvailable: raw.isAvailable ?? raw.available ?? raw.is_available ?? true,
+    isVisible: raw.isVisible ?? raw.visible ?? raw.is_visible ?? true,
+    availableFor: normalizeAvailableForFromApi(raw.availableFor ?? raw.available_for),
+    availableForSubscription: raw.availableForSubscription ?? raw.available_for_subscription ?? true,
+    ui: {
+      cardVariant: raw.ui?.cardVariant ?? raw.ui?.card_variant ?? raw.cardVariant ?? raw.card_variant ?? "meal_builder",
     },
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     createdAt: raw.createdAt ?? raw.created_at,
@@ -169,27 +199,15 @@ export function normalizeMealCategoryDetailResponse(
 // â”€â”€ Protein Normalizer â”€â”€
 
 function normalizeProtein(raw: any): MenuProtein {
-  if (raw.name && typeof raw.name === "object" && "ar" in raw.name) {
-    return {
-      ...(raw as MenuProtein),
-      id: raw.id ?? raw._id ?? "",
-      imageUrl: raw.imageUrl ?? raw.image ?? raw.imageUrl,
-      isAvailable:
-        raw.isAvailable ?? raw.availableForOrder ?? raw.available ?? raw.isActive ?? true,
-      isVisible: raw.isVisible ?? raw.visible ?? true,
-      categoryId: raw.categoryId ?? raw.category_id ?? raw.category?._id ?? raw.category?.id ?? "",
-    };
-  }
-
   return {
     id: raw.id ?? raw._id ?? "",
     name: {
-      ar: raw.nameAr ?? raw.name_ar ?? raw.name?.ar ?? "",
-      en: raw.nameEn ?? raw.name_en ?? raw.name?.en ?? "",
+      ar: raw.name?.ar ?? raw.nameAr ?? raw.name_ar ?? "",
+      en: raw.name?.en ?? raw.nameEn ?? raw.name_en ?? "",
     },
     description: {
-      ar: raw.descriptionAr ?? raw.description_ar ?? raw.description?.ar ?? "",
-      en: raw.descriptionEn ?? raw.description_en ?? raw.description?.en ?? "",
+      ar: raw.description?.ar ?? raw.descriptionAr ?? raw.description_ar ?? "",
+      en: raw.description?.en ?? raw.descriptionEn ?? raw.description_en ?? "",
     },
     imageUrl: raw.imageUrl ?? raw.image ?? "",
     categoryId: raw.categoryId ?? raw.category_id ?? raw.category?._id ?? raw.category?.id ?? "",
@@ -197,12 +215,11 @@ function normalizeProtein(raw: any): MenuProtein {
     proteinGrams: raw.proteinGrams ?? raw.protein_grams ?? 0,
     carbGrams: raw.carbGrams ?? raw.carb_grams ?? 0,
     fatGrams: raw.fatGrams ?? raw.fat_grams ?? 0,
-    isActive: raw.isActive ?? raw.active ?? true,
-    isAvailable:
-      raw.isAvailable ?? raw.availableForOrder ?? raw.available ?? raw.isActive ?? true,
-    isVisible: raw.isVisible ?? raw.visible ?? true,
-    availableForOrder: raw.availableForOrder ?? raw.isAvailable ?? raw.available ?? true,
-    availableForSubscription: raw.availableForSubscription ?? true,
+    isActive: raw.isActive ?? raw.active ?? raw.is_active ?? true,
+    isAvailable: raw.isAvailable ?? raw.availableForOrder ?? raw.available ?? raw.is_available ?? raw.active ?? true,
+    isVisible: raw.isVisible ?? raw.visible ?? raw.is_visible ?? true,
+    availableForOrder: raw.availableForOrder ?? raw.isAvailable ?? raw.available ?? raw.is_available ?? true,
+    availableForSubscription: raw.availableForSubscription ?? raw.available_for_subscription ?? true,
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     createdAt: raw.createdAt ?? raw.created_at,
     updatedAt: raw.updatedAt ?? raw.updated_at,
@@ -259,48 +276,45 @@ export function normalizePremiumProteinDetailResponse(
 // ── Product Normalizer ──
 
 function normalizeProduct(raw: any): MenuProduct {
-  if (raw.name && typeof raw.name === "object" && "ar" in raw.name) {
-    const normalized = raw as MenuProduct;
-    return {
-      ...normalized,
-      id: raw.id ?? raw._id ?? "",
-      categoryId: raw.categoryId ?? raw.category_id ?? raw.category ?? normalized.categoryId ?? "",
-      imageUrl: raw.imageUrl ?? raw.image ?? normalized.imageUrl ?? "",
-      availableFor: normalizeAvailableForFromApi(normalized.availableFor),
-    };
-  }
-
   return {
     id: raw.id ?? raw._id ?? "",
-    categoryId: raw.categoryId ?? raw.category_id ?? raw.category ?? "",
+    categoryId:
+      idFromRef(raw.categoryId) ||
+      idFromRef(raw.category_id) ||
+      idFromRef(raw.category),
     key: raw.key ?? "",
-    itemType: raw.itemType ?? raw.item_type ?? raw.type ?? "",
+    itemType: firstNonEmptyString(raw.itemType, raw.item_type, raw.type) || "product",
     name: {
-      ar: raw.nameAr ?? raw.name_ar ?? raw.name?.ar ?? "",
-      en: raw.nameEn ?? raw.name_en ?? raw.name?.en ?? "",
+      ar: raw.name?.ar ?? raw.nameAr ?? raw.name_ar ?? "",
+      en: raw.name?.en ?? raw.nameEn ?? raw.name_en ?? "",
     },
     description: {
-      ar: raw.descriptionAr ?? raw.description_ar ?? raw.description?.ar ?? "",
-      en: raw.descriptionEn ?? raw.description_en ?? raw.description?.en ?? "",
+      ar: raw.description?.ar ?? raw.descriptionAr ?? raw.description_ar ?? "",
+      en: raw.description?.en ?? raw.descriptionEn ?? raw.description_en ?? "",
     },
     imageUrl: raw.imageUrl ?? raw.image ?? "",
     pricingModel: raw.pricingModel ?? raw.pricing_model ?? raw.pricingType ?? "fixed",
-    priceHalala: raw.priceHalala ?? raw.price_halala ?? raw.price ?? 0,
+    priceHalala: productPriceHalala(raw),
     baseUnitGrams: raw.baseUnitGrams ?? raw.base_unit_grams ?? undefined,
     defaultWeightGrams: raw.defaultWeightGrams ?? raw.default_weight_grams ?? undefined,
     minWeightGrams: raw.minWeightGrams ?? raw.min_weight_grams ?? undefined,
     maxWeightGrams: raw.maxWeightGrams ?? raw.max_weight_grams ?? undefined,
     weightStepGrams: raw.weightStepGrams ?? raw.weight_step_grams ?? undefined,
-    isActive: raw.isActive ?? raw.active ?? true,
-    isAvailable: raw.isAvailable ?? raw.available ?? true,
-    isVisible: raw.isVisible ?? raw.visible ?? true,
-    availableFor: normalizeAvailableForFromApi(raw.availableFor),
-    availableForSubscription: raw.availableForSubscription ?? raw.available_for_subscription ?? true,
-    ui: raw.ui ?? {
-      cardVariant: raw.cardVariant ?? raw.card_variant,
-      badge: raw.badge ?? "",
-      ctaLabel: raw.ctaLabel ?? raw.cta_label ?? "",
-      imageRatio: raw.imageRatio ?? raw.image_ratio ?? "",
+    isActive: raw.isActive ?? raw.active ?? raw.is_active ?? true,
+    isAvailable: raw.isAvailable ?? raw.available ?? raw.is_available ?? true,
+    isVisible: raw.isVisible ?? raw.visible ?? raw.is_visible ?? true,
+    availableFor: normalizeAvailableForFromApi(raw.availableFor ?? raw.available_for),
+    availableForSubscription:
+      raw.availableForSubscription ??
+      raw.available_for_subscription ??
+      normalizeAvailableForFromApi(raw.availableFor ?? raw.available_for).includes(
+        "subscription"
+      ),
+    ui: {
+      cardVariant: raw.ui?.cardVariant ?? raw.ui?.card_variant ?? raw.cardVariant ?? raw.card_variant ?? "standard",
+      badge: raw.ui?.badge ?? raw.badge ?? "",
+      ctaLabel: raw.ui?.ctaLabel ?? raw.ui?.cta_label ?? raw.ctaLabel ?? raw.cta_label ?? "",
+      imageRatio: raw.ui?.imageRatio ?? raw.ui?.image_ratio ?? raw.imageRatio ?? raw.image_ratio ?? "square",
     },
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     groups: raw.groups,
@@ -329,26 +343,22 @@ export function normalizeProductDetailResponse(raw: any): MenuProductDetailRespo
 // ── Option Group Normalizer ──
 
 function normalizeOptionGroup(raw: any): MenuOptionGroup {
-  if (raw.name && typeof raw.name === "object" && "ar" in raw.name) {
-    return raw as MenuOptionGroup;
-  }
-
   return {
     id: raw.id ?? raw._id ?? "",
     key: raw.key ?? "",
     name: {
-      ar: raw.nameAr ?? raw.name_ar ?? raw.name?.ar ?? "",
-      en: raw.nameEn ?? raw.name_en ?? raw.name?.en ?? "",
+      ar: raw.name?.ar ?? raw.nameAr ?? raw.name_ar ?? "",
+      en: raw.name?.en ?? raw.nameEn ?? raw.name_en ?? "",
     },
     description: {
-      ar: raw.descriptionAr ?? raw.description_ar ?? raw.description?.ar ?? "",
-      en: raw.descriptionEn ?? raw.description_en ?? raw.description?.en ?? "",
+      ar: raw.description?.ar ?? raw.descriptionAr ?? raw.description_ar ?? "",
+      en: raw.description?.en ?? raw.descriptionEn ?? raw.description_en ?? "",
     },
-    isActive: raw.isActive ?? raw.active ?? true,
-    isAvailable: raw.isAvailable ?? raw.available ?? true,
-    isVisible: raw.isVisible ?? raw.visible ?? true,
-    ui: raw.ui ?? {
-      displayStyle: raw.displayStyle ?? raw.display_style,
+    isActive: raw.isActive ?? raw.active ?? raw.is_active ?? true,
+    isAvailable: raw.isAvailable ?? raw.available ?? raw.is_available ?? true,
+    isVisible: raw.isVisible ?? raw.visible ?? raw.is_visible ?? true,
+    ui: {
+      displayStyle: raw.ui?.displayStyle ?? raw.ui?.display_style ?? raw.displayStyle ?? raw.display_style ?? "chips",
     },
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     createdAt: raw.createdAt ?? raw.created_at,
@@ -375,46 +385,32 @@ export function normalizeOptionGroupDetailResponse(raw: any): MenuOptionGroupDet
 // ── Option Normalizer ──
 
 function normalizeOption(raw: any): MenuOption {
-  if (raw.name && typeof raw.name === "object" && "ar" in raw.name) {
-    const normalized = raw as MenuOption;
-    return {
-      ...normalized,
-      displayCategoryKey: normalized.displayCategoryKey ?? (normalized as any).display_category_key,
-      proteinFamilyKey: normalized.proteinFamilyKey ?? (normalized as any).protein_family_key,
-      premiumKey: normalized.premiumKey ?? (normalized as any).premium_key,
-      extraFeeHalala: normalized.extraFeeHalala ?? (normalized as any).extra_fee_halala,
-      ruleTags: normalized.ruleTags ?? (normalized as any).rule_tags,
-      selectionType: normalized.selectionType ?? (normalized as any).selection_type,
-      availableFor: normalizeAvailableForFromApi(normalized.availableFor),
-    };
-  }
-
   return {
     id: raw.id ?? raw._id ?? "",
     groupId: raw.groupId ?? raw.group_id ?? raw.group ?? "",
     key: raw.key ?? "",
     name: {
-      ar: raw.nameAr ?? raw.name_ar ?? raw.name?.ar ?? "",
-      en: raw.nameEn ?? raw.name_en ?? raw.name?.en ?? "",
+      ar: raw.name?.ar ?? raw.nameAr ?? raw.name_ar ?? "",
+      en: raw.name?.en ?? raw.nameEn ?? raw.name_en ?? "",
     },
     description: {
-      ar: raw.descriptionAr ?? raw.description_ar ?? raw.description?.ar ?? "",
-      en: raw.descriptionEn ?? raw.description_en ?? raw.description?.en ?? "",
+      ar: raw.description?.ar ?? raw.descriptionAr ?? raw.description_ar ?? "",
+      en: raw.description?.en ?? raw.descriptionEn ?? raw.description_en ?? "",
     },
     imageUrl: raw.imageUrl ?? raw.image ?? "",
     extraPriceHalala: raw.extraPriceHalala ?? raw.extra_price_halala ?? raw.extraPrice ?? 0,
     extraWeightUnitGrams: raw.extraWeightUnitGrams ?? raw.extra_weight_unit_grams ?? undefined,
     extraWeightPriceHalala: raw.extraWeightPriceHalala ?? raw.extra_weight_price_halala ?? undefined,
-    isActive: raw.isActive ?? raw.active ?? true,
-    isAvailable: raw.isAvailable ?? raw.available ?? true,
-    isVisible: raw.isVisible ?? raw.visible ?? true,
-    displayCategoryKey: raw.displayCategoryKey ?? raw.display_category_key ?? undefined,
-    proteinFamilyKey: raw.proteinFamilyKey ?? raw.protein_family_key ?? undefined,
+    isActive: raw.isActive ?? raw.active ?? raw.is_active ?? true,
+    isAvailable: raw.isAvailable ?? raw.available ?? raw.is_available ?? true,
+    isVisible: raw.isVisible ?? raw.visible ?? raw.is_visible ?? true,
+    displayCategoryKey: raw.displayCategoryKey ?? raw.display_category_key ?? raw.displayCategory ?? undefined,
+    proteinFamilyKey: raw.proteinFamilyKey ?? raw.protein_family_key ?? raw.proteinFamily ?? undefined,
     premiumKey: raw.premiumKey ?? raw.premium_key ?? undefined,
-    extraFeeHalala: raw.extraFeeHalala ?? raw.extra_fee_halala ?? undefined,
+    extraFeeHalala: raw.extraFeeHalala ?? raw.extra_fee_halala ?? raw.extraFee ?? undefined,
     ruleTags: raw.ruleTags ?? raw.rule_tags ?? undefined,
     selectionType: raw.selectionType ?? raw.selection_type ?? undefined,
-    availableFor: normalizeAvailableForFromApi(raw.availableFor),
+    availableFor: normalizeAvailableForFromApi(raw.availableFor ?? raw.available_for),
     availableForSubscription: raw.availableForSubscription ?? raw.available_for_subscription ?? true,
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     createdAt: raw.createdAt ?? raw.created_at,

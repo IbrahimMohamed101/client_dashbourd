@@ -188,6 +188,18 @@ export const getProductColumns = ({
     },
   },
   {
+    id: "productImage",
+    header: "الصورة",
+    cell: ({ row }) => {
+      const product = row.original;
+      return (
+        <div className="flex min-w-44 flex-col gap-1">
+          <img src={product.imageUrl} alt={product.name?.ar} className="w-15 h-15 object-cover rounded-lg" />
+        </div>
+      );
+    },
+  },
+  {
     accessorKey: "itemType",
     header: "النوع",
     cell: ({ row }) => <Badge variant="outline">{row.original.itemType}</Badge>,

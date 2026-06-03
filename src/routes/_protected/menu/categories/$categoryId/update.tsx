@@ -1,4 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import menuCategorySchema, {
@@ -14,8 +15,9 @@ import { Loader } from "@/components/global/loader";
 import { MenuCategoryFormFields } from "@/components/pages/menu/categories/MenuCategoryFormFields";
 import { useQuery } from "@tanstack/react-query";
 import { toUpdateMenuCategoryPayload } from "@/utils/menuPayloadMappers";
-import { fetchUploadImage } from "@/utils/fetchUploadImage";
+import { fetchUploadImage, resolveUploadedImageUrl } from "@/utils/fetchUploadImage";
 import { ToastMessage } from "@/components/global/ToastMessage";
+import { getMenuCategoryCreateDefaults, getMenuCategoryFormValues } from "@/utils/menuFormValues";
 
 export const Route = createFileRoute(
   "/_protected/menu/categories/$categoryId/update"
@@ -45,27 +47,21 @@ function UpdateMenuCategoryPage() {
     MenuCategorySchemaType
   >({
     resolver: zodResolver(menuCategorySchema),
-    values: category
-      ? {
-          key: category.key,
-          name: category.name,
-          description: category.description || { ar: "", en: "" },
-          imageUrl: category.imageUrl || "",
-          isActive: category.isActive,
-          isAvailable: category.isAvailable,
-          isVisible: category.isVisible ?? true,
-          ui: { cardVariant: category.ui?.cardVariant },
-          sortOrder: category.sortOrder,
-        }
-      : undefined,
+    defaultValues: getMenuCategoryCreateDefaults(),
   });
+
+  useEffect(() => {
+    if (category) {
+      form.reset(getMenuCategoryFormValues(category));
+    }
+  }, [form, category]);
 
   const onSubmit = async (data: MenuCategorySchemaType) => {
     try {
       let imageUrl = data.imageUrl;
       if (data.imageFile instanceof File) {
         const uploadRes = await fetchUploadImage(data.imageFile);
-        imageUrl = uploadRes.data.url;
+        imageUrl = resolveUploadedImageUrl(uploadRes);
       }
       await mutation.mutateAsync({
         id: categoryId,

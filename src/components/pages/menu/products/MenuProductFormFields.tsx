@@ -18,17 +18,25 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Package } from "lucide-react";
 import { Controller } from "react-hook-form";
-import type { UseFormReturn } from "react-hook-form";
+import type {
+  FieldPath,
+  UseFormRegisterReturn,
+  UseFormReturn,
+} from "react-hook-form";
 import type {
   MenuProductSchemaInput,
   MenuProductSchemaType,
 } from "@/lib/validations/menuProductSchema";
-import { useMenuCategoriesQuery } from "@/hooks/useMenuQuery";
+import {
+  useMenuCategoriesQuery,
+  useMenuCategoryDetailQuery,
+} from "@/hooks/useMenuQuery";
 import {
   DEFAULT_MENU_AVAILABLE_FOR,
   MENU_ITEM_TYPE_OPTIONS,
   type MenuAvailableChannel,
 } from "@/constants/menuCatalog";
+import type { MenuCategory } from "@/types/menuTypes";
 
 const CARD_VARIANTS = [
   { value: "standard", label: "قياسي" },
@@ -44,16 +52,24 @@ interface Props {
 
 export function MenuProductFormFields({ form, isEdit }: Props) {
   const pricingModel = form.watch("pricingModel");
+  const selectedCategoryId = form.watch("categoryId") ?? "";
   const isActive = form.watch("isActive") ?? true;
   const isAvailable = form.watch("isAvailable") ?? true;
   const isVisible = form.watch("isVisible") ?? true;
   const availableFor =
     form.watch("availableFor") ?? [...DEFAULT_MENU_AVAILABLE_FOR];
+  const numberInput = (
+    name: FieldPath<MenuProductSchemaInput>
+  ): UseFormRegisterReturn =>
+    form.register(name, {
+      setValueAs: (value) => (value === "" ? undefined : Number(value)),
+    });
 
+  
+// Directly use itemType from form watch; ensure it's set via schema defaults
+// No additional normalization needed
   const normalizeChannels = (channels: string[]): MenuAvailableChannel[] =>
-    channels.map((item) =>
-      item === "order" ? "one_time" : item
-    ) as MenuAvailableChannel[];
+    channels.map((item) => (item === "order" ? "one_time" : item)) as MenuAvailableChannel[];
 
   const setChannel = (channel: MenuAvailableChannel, checked: boolean) => {
     const current = normalizeChannels(availableFor);
@@ -71,9 +87,15 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
     });
   };
 
-  const { data: catsData } = useMenuCategoriesQuery({});
-  const categories = catsData?.data?.items || [];
-
+  const { data: catsData } = useMenuCategoriesQuery({ limit: 100 });
+  const { data: selectedCatData } = useMenuCategoryDetailQuery(selectedCategoryId);
+  
+  const categories = mergeCategoriesWithSelected(
+    catsData?.data?.items || [],
+    selectedCatData?.data,
+    selectedCategoryId
+  )
+  
   return (
     <div className="space-y-6">
       <Card>
@@ -104,51 +126,49 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>التصنيف</Label>
-              <Controller
-                control={form.control}
-                name="categoryId"
-                render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                    <SelectTrigger className="min-w-full" dir="rtl">
-                      <SelectValue placeholder="اختر التصنيف" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name.ar}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {form.formState.errors.categoryId ? (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.categoryId.message}
-                </p>
-              ) : null}
+                <Controller
+                  control={form.control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                      <SelectTrigger className="min-w-full" dir="rtl">
+                        <SelectValue placeholder="اختر التصنيف" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name.ar || category.name.en || category.key || category.id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
             </div>
 
             <div className="space-y-2">
               <Label>نوع العنصر</Label>
-              <Controller
-                control={form.control}
-                name="itemType"
-                render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                    <SelectTrigger className="min-w-full" dir="rtl">
-                      <SelectValue placeholder="اختر النوع" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MENU_ITEM_TYPE_OPTIONS.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+                <Controller
+                  control={form.control}
+                  name="itemType"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ?? "product"}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="min-w-full" dir="rtl">
+                        <SelectValue placeholder="اختر النوع" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MENU_ITEM_TYPE_OPTIONS.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               {form.formState.errors.itemType ? (
                 <p className="text-xs text-destructive">
                   {form.formState.errors.itemType.message}
@@ -306,11 +326,11 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
 
           {pricingModel === "per_100g" ? (
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-5">
-              <Field label="وحدة الوزن (جم)" type="number" min="1" inputProps={form.register("baseUnitGrams")} />
-              <Field label="الوزن الافتراضي" type="number" min="0" inputProps={form.register("defaultWeightGrams")} />
-              <Field label="الحد الأدنى" type="number" min="0" inputProps={form.register("minWeightGrams")} />
-              <Field label="الحد الأقصى" type="number" min="0" inputProps={form.register("maxWeightGrams")} />
-              <Field label="خطوة الوزن" type="number" min="1" inputProps={form.register("weightStepGrams")} />
+              <Field label="وحدة الوزن (جم)" type="number" min="1" inputProps={numberInput("baseUnitGrams")} />
+              <Field label="الوزن الافتراضي" type="number" min="0" inputProps={numberInput("defaultWeightGrams")} />
+              <Field label="الحد الأدنى" type="number" min="0" inputProps={numberInput("minWeightGrams")} />
+              <Field label="الحد الأقصى" type="number" min="0" inputProps={numberInput("maxWeightGrams")} />
+              <Field label="خطوة الوزن" type="number" min="1" inputProps={numberInput("weightStepGrams")} />
             </div>
           ) : null}
         </CardContent>
@@ -375,6 +395,33 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
   );
 }
 
+function mergeCategoriesWithSelected(
+  categories: MenuCategory[],
+  selectedCategory: MenuCategory | undefined,
+  selectedCategoryId: string
+): MenuCategory[] {
+  const byId = new Map<string, MenuCategory>();
+  categories.forEach((category) => {
+    if (category.id) byId.set(category.id, category);
+  });
+
+  if (selectedCategory?.id) {
+    byId.set(selectedCategory.id, selectedCategory);
+  } else if (selectedCategoryId && !byId.has(selectedCategoryId)) {
+    byId.set(selectedCategoryId, {
+      id: selectedCategoryId,
+      key: selectedCategoryId,
+      name: { ar: selectedCategoryId, en: selectedCategoryId },
+      isActive: true,
+      isAvailable: true,
+      isVisible: true,
+      sortOrder: 0,
+    });
+  }
+
+  return Array.from(byId.values());
+}
+
 function Field({
   label,
   error,
@@ -384,7 +431,7 @@ function Field({
 }: React.ComponentProps<typeof Input> & {
   label: string;
   error?: string;
-  inputProps: ReturnType<UseFormReturn["register"]>;
+  inputProps: UseFormRegisterReturn;
 }) {
   return (
     <div className="space-y-1.5">

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { FolderOpen, Save, Loader2 } from "lucide-react";
 import { MenuCategoryFormFields } from "@/components/pages/menu/categories/MenuCategoryFormFields";
 import { toCreateMenuCategoryPayload } from "@/utils/menuPayloadMappers";
-import { fetchUploadImage } from "@/utils/fetchUploadImage";
+import { fetchUploadImage, resolveUploadedImageUrl } from "@/utils/fetchUploadImage";
 import { ToastMessage } from "@/components/global/ToastMessage";
 
 export const Route = createFileRoute("/_protected/menu/categories/create")({
@@ -46,7 +46,7 @@ function CreateMenuCategoryPage() {
       let imageUrl = data.imageUrl;
       if (data.imageFile instanceof File) {
         const uploadRes = await fetchUploadImage(data.imageFile);
-        imageUrl = uploadRes.data.url;
+        imageUrl = resolveUploadedImageUrl(uploadRes);
       }
       await mutation.mutateAsync(toCreateMenuCategoryPayload({ ...data, imageUrl }));
       ToastMessage("تم إنشاء التصنيف بنجاح", "success");

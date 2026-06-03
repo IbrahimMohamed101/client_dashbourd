@@ -31,11 +31,14 @@ export const menuCategoryDetailQueryOptions = (id: string) =>
   queryOptions({
     queryKey: [CATEGORIES_KEY, "detail", id],
     queryFn: () => fetchMenuCategoryById(id),
-    enabled: !!id,
+    staleTime: 1000 * 60 * 2,
   });
 
 export const useMenuCategoryDetailQuery = (id: string) =>
-  useQuery(menuCategoryDetailQueryOptions(id));
+  useQuery({
+    ...menuCategoryDetailQueryOptions(id),
+    enabled: !!id && id !== "undefined" && id !== "null",
+  });
 
 export const useCreateMenuCategoryMutation = () =>
   useMutationWithToast({

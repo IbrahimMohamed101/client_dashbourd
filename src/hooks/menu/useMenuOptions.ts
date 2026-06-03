@@ -33,11 +33,14 @@ export const menuOptionDetailQueryOptions = (id: string) =>
   queryOptions({
     queryKey: [OPTIONS_KEY, "detail", id],
     queryFn: () => fetchMenuOptionById(id),
-    enabled: !!id,
+    staleTime: 1000 * 60 * 2,
   });
 
 export const useMenuOptionDetailQuery = (id: string) =>
-  useQuery(menuOptionDetailQueryOptions(id));
+  useQuery({
+    ...menuOptionDetailQueryOptions(id),
+    enabled: !!id && id !== "undefined" && id !== "null",
+  });
 
 export const useCreateMenuOptionMutation = () =>
   useMutationWithToast({

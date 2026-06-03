@@ -38,6 +38,7 @@ import type {
   MenuOptionGroup,
   MenuOption,
 } from "@/types/menuTypes";
+import { parseOptionalSelectionLimit } from "@/utils/menuPayloadMappers";
 
 /* ─── helpers ─── */
 const toHalala = (sar: string) => Math.round((Number(sar) || 0) * 100);
@@ -52,7 +53,7 @@ const getLinkedGroups = (
 const normalizeGroupRule = (group: MenuProductLinkedGroup): ProductGroupRule => ({
   groupId: group.groupId || group.group?.id || "",
   minSelections: group.minSelections ?? 0,
-  maxSelections: group.maxSelections ?? 1,
+  maxSelections: group.maxSelections ?? null,
   isRequired: group.isRequired ?? false,
   sortOrder: group.sortOrder ?? 0,
   isActive: group.isActive ?? true,
@@ -128,7 +129,10 @@ function formReducer(state: FormState, action: FormAction): FormState {
           groupId: id,
           optionId: "",
           minSelections: String(linkedGroup.minSelections ?? 0),
-          maxSelections: String(linkedGroup.maxSelections ?? 1),
+          maxSelections:
+            linkedGroup.maxSelections === null
+              ? ""
+              : String(linkedGroup.maxSelections ?? ""),
           groupSortOrder: String(linkedGroup.sortOrder ?? 0),
           isRequired: linkedGroup.isRequired ?? false,
           extraPriceSar: "0",
@@ -442,7 +446,7 @@ function LinkedGroupsPreview({
                     {group.group?.name?.ar || group.groupId}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {group.minSelections ?? 0} - {group.maxSelections ?? 1} اختيارات
+                    {group.minSelections ?? 0} - {group.maxSelections ?? "غير محدود"} اختيارات
                   </p>
                 </div>
                 <Badge variant={group.isRequired ? "default" : "outline"}>
@@ -546,7 +550,7 @@ export function MenuProductRelationsTab() {
     const nextRule: ProductGroupRule = {
       groupId: state.groupId,
       minSelections: Number(state.minSelections) || 0,
-      maxSelections: state.maxSelections.trim() === "" ? 1 : Number(state.maxSelections),
+      maxSelections: parseOptionalSelectionLimit(state.maxSelections),
       isRequired: state.isRequired,
       sortOrder: Number(state.groupSortOrder) || 0,
       isActive: true,
@@ -658,7 +662,7 @@ export function MenuProductRelationsTab() {
                   groupId: state.groupId,
                   data: {
                     minSelections: Number(state.minSelections) || 0,
-                    maxSelections: state.maxSelections.trim() === "" ? 1 : Number(state.maxSelections),
+                    maxSelections: parseOptionalSelectionLimit(state.maxSelections),
                     isRequired: state.isRequired,
                   },
                 })

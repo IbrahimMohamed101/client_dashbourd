@@ -1,25 +1,26 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import menuProductSchema, {
   type MenuProductSchemaInput,
   type MenuProductSchemaType,
 } from "@/lib/validations/menuProductSchema";
-import { useUpdateMenuProductMutation } from "@/hooks/useMenuQuery";
-import { fetchMenuProductById } from "@/utils/fetchMenuProducts";
+import {
+  useMenuProductDetailQuery,
+  useUpdateMenuProductMutation,
+} from "@/hooks/useMenuQuery";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Package, Save, Loader2 } from "lucide-react";
 import { Loader } from "@/components/global/loader";
 import { MenuProductFormFields } from "@/components/pages/menu/products/MenuProductFormFields";
-import { useQuery } from "@tanstack/react-query";
-import {
-  normalizeAvailableForFromApi,
-  normalizeMenuItemTypeFromApi,
-} from "@/constants/menuCatalog";
 import { toUpdateMenuProductPayload } from "@/utils/menuPayloadMappers";
-import { fetchUploadImage } from "@/utils/fetchUploadImage";
+import { fetchUploadImage, resolveUploadedImageUrl } from "@/utils/fetchUploadImage";
 import { ToastMessage } from "@/components/global/ToastMessage";
+import { getMenuProductFormValues } from "@/utils/menuFormValues";
+import type { MenuProduct } from "@/types/menuTypes";
 
 export const Route = createFileRoute(
   "/_protected/menu/products/$productId/update"
@@ -32,81 +33,76 @@ export const Route = createFileRoute(
 
 function UpdateMenuProductPage() {
   const { productId } = Route.useParams();
+  const {
+    data: prodData,
+    isLoading,
+    isError,
+    error,
+  } = useMenuProductDetailQuery(productId);
+
+  if (isLoading) {
+    return <Loader variant="full-screen" label="جاري تحميل المنتج..." />;
+  }
+
+  if (isError || !prodData?.data) {
+    ToastMessage(
+      (error as any)?.response?.data?.message || "خطأ في جلب معلومات المنتج",
+      "error"
+    );
+    return null;
+  }
+
+  return (
+    <UpdateMenuProductForm product={prodData.data} productId={productId} />
+  );
+}
+
+function UpdateMenuProductForm({
+  product,
+  productId,
+}: {
+  product: MenuProduct;
+  productId: string;
+}) {
   const router = useRouter();
   const mutation = useUpdateMenuProductMutation();
 
-  const { data: prodData, isLoading } = useQuery({
-    queryKey: ["menu", "products", "detail", productId],
-    queryFn: () => fetchMenuProductById(productId),
-    enabled: !!productId,
-  });
-
-  const product = prodData?.data;
-  
-
   const form = useForm<MenuProductSchemaInput, unknown, MenuProductSchemaType>({
     resolver: zodResolver(menuProductSchema),
-    values: product
-      ? {
-          categoryId: product.categoryId || "",
-          key: product.key,
-          itemType: normalizeMenuItemTypeFromApi(product.itemType),
-          name: product.name,
-          description: product.description || { ar: "", en: "" },
-          imageUrl: product.imageUrl || "",
-          pricingModel: product.pricingModel,
-          priceSar: product.priceHalala / 100,
-          baseUnitGrams: product.baseUnitGrams,
-          defaultWeightGrams: product.defaultWeightGrams,
-          minWeightGrams: product.minWeightGrams,
-          maxWeightGrams: product.maxWeightGrams,
-          weightStepGrams: product.weightStepGrams,
-          isActive: product.isActive,
-          isAvailable: product.isAvailable,
-          isVisible: product.isVisible ?? true,
-          availableFor: normalizeAvailableForFromApi(product.availableFor),
-          availableForSubscription:
-            product.availableForSubscription ??
-            product.availableFor?.includes("subscription") ??
-            true,
-          ui: {
-            cardVariant: product.ui?.cardVariant,
-            badge: product.ui?.badge ?? "",
-            ctaLabel: product.ui?.ctaLabel ?? "",
-            imageRatio: product.ui?.imageRatio ?? "",
-          },
-          sortOrder: product.sortOrder,
-        }
-      : undefined,
+    defaultValues: getMenuProductFormValues(product),
   });
 
-  const onSubmit = async (data: MenuProductSchemaType) => {
-    try {
-      let imageUrl = data.imageUrl;
-      if (data.imageFile instanceof File) {
-        const uploadRes = await fetchUploadImage(data.imageFile);
-        imageUrl = uploadRes.data.url;
+  const onSubmit = useCallback(
+    async (data: MenuProductSchemaType) => {
+      try {
+        let imageUrl = data.imageUrl;
+        if (data.imageFile instanceof File) {
+          const uploadRes = await fetchUploadImage(data.imageFile);
+          imageUrl = resolveUploadedImageUrl(uploadRes);
+        }
+        await mutation.mutateAsync({
+          id: productId,
+          data: toUpdateMenuProductPayload({ ...data, imageUrl }),
+        });
+        ToastMessage("تم تحديث المنتج بنجاح", "success");
+        router.navigate({
+          to: "/menu",
+          search: { tab: "products" },
+        });
+      } catch (submitError: unknown) {
+        ToastMessage(
+          (submitError as { response?: { data?: { message?: string } } })
+            ?.response?.data?.message || "حدث خطأ أثناء الحفظ",
+          "error"
+        );
       }
-      await mutation.mutateAsync({
-        id: productId,
-        data: toUpdateMenuProductPayload({ ...data, imageUrl }),
-      });
-      ToastMessage("تم تحديث المنتج بنجاح", "success");
-      router.navigate({
-        to: "/menu",
-        search: { tab: "products" }
-      });
-    } catch (error: unknown) {
-      ToastMessage(
-        (error as { response?: { data?: { message?: string } } })?.response
-          ?.data?.message || "حدث خطأ أثناء الحفظ",
-        "error"
-      );
-    }
-  };
+    },
+    [mutation, router, productId]
+  );
 
-  if (isLoading)
-    return <Loader variant="full-screen" label="جاري تحميل المنتج..." />;
+  const onInvalidSubmit = useCallback(() => {
+    ToastMessage("يرجى مراجعة الحقول المطلوبة قبل الحفظ", "error");
+  }, []);
 
   return (
     <div className="w-full px-4 py-8 lg:px-8">
@@ -118,13 +114,13 @@ function UpdateMenuProductPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">تعديل المنتج</h1>
             <p className="text-sm text-muted-foreground">
-              تعديل بيانات "{product?.name.ar}"
+              تعديل بيانات "{product.name.ar || product.name.en || product.key}"
             </p>
           </div>
         </div>
       </div>
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, onInvalidSubmit)}
         className="space-y-6"
         noValidate
       >
@@ -138,10 +134,10 @@ function UpdateMenuProductPage() {
               <Button
                 type="submit"
                 size="lg"
-                disabled={mutation.isPending}
+                disabled={mutation.isPending || form.formState.isSubmitting}
                 className="w-full gap-2 px-10 text-base font-semibold shadow-md sm:w-auto"
               >
-                {mutation.isPending ? (
+                {mutation.isPending || form.formState.isSubmitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
                     جارٍ الحفظ...
