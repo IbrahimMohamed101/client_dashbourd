@@ -21,7 +21,7 @@ export const menuCategoriesQueryOptions = (params: MenuListParams = {}) =>
   queryOptions({
     queryKey: [CATEGORIES_KEY, params],
     queryFn: () => fetchMenuCategories(params),
-    staleTime: 1000 * 60 * 2,
+    staleTime: Infinity,
   });
 
 export const useMenuCategoriesQuery = (params: MenuListParams = {}) =>
@@ -31,7 +31,7 @@ export const menuCategoryDetailQueryOptions = (id: string) =>
   queryOptions({
     queryKey: [CATEGORIES_KEY, "detail", id],
     queryFn: () => fetchMenuCategoryById(id),
-    staleTime: 1000 * 60 * 2,
+    staleTime: Infinity,
   });
 
 export const useMenuCategoryDetailQuery = (id: string) =>

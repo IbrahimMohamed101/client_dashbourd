@@ -14,7 +14,7 @@ import type {
 } from "@/types/menuTypes";
 
 const PRODUCTS_KEY = "menu.products";
-const PRODUCTS_DETAIL_KEY = "menu.products.detail";
+const PRODUCTS_DETAIL_KEY = [PRODUCTS_KEY, "detail"];
 
 export const useLinkGroupsToProductMutation = () =>
   useMutationWithToast({
@@ -26,7 +26,7 @@ export const useLinkGroupsToProductMutation = () =>
       data: LinkGroupsPayload;
     }) => fetchLinkGroupsToProduct(productId, data),
     successMessage: "تم تحديث مجموعات المنتج",
-    invalidateKeys: [[PRODUCTS_KEY], [PRODUCTS_DETAIL_KEY]],
+    invalidateKeys: [[PRODUCTS_KEY], PRODUCTS_DETAIL_KEY],
   });
 
 export const useUpdateSelectionRulesMutation = () =>
@@ -41,7 +41,7 @@ export const useUpdateSelectionRulesMutation = () =>
       data: UpdateSelectionRulesPayload;
     }) => fetchUpdateSelectionRules(productId, groupId, data),
     successMessage: "تم تحديث قواعد الاختيار",
-    invalidateKeys: [[PRODUCTS_DETAIL_KEY]],
+    invalidateKeys: [PRODUCTS_DETAIL_KEY],
   });
 
 export const useLinkOptionsToGroupMutation = () =>
@@ -56,7 +56,7 @@ export const useLinkOptionsToGroupMutation = () =>
       data: LinkOptionsPayload;
     }) => fetchLinkOptionsToGroup(productId, groupId, data),
     successMessage: "تم تحديث خيارات المنتج",
-    invalidateKeys: [[PRODUCTS_DETAIL_KEY]],
+    invalidateKeys: [PRODUCTS_DETAIL_KEY],
   });
 
 export const useUpdateOptionOverrideMutation = () =>
@@ -73,7 +73,7 @@ export const useUpdateOptionOverrideMutation = () =>
       data: UpdateOptionOverridePayload;
     }) => fetchUpdateOptionOverride(productId, groupId, optionId, data),
     successMessage: "تم تحديث إعدادات الخيار داخل المنتج",
-    invalidateKeys: [[PRODUCTS_DETAIL_KEY]],
+    invalidateKeys: [PRODUCTS_DETAIL_KEY],
   });
 
 export const useUpdateOptionAvailabilityInProductMutation = () =>
@@ -90,5 +90,5 @@ export const useUpdateOptionAvailabilityInProductMutation = () =>
       isAvailable: boolean;
     }) => fetchUpdateOptionAvailabilityInProduct(productId, groupId, optionId, isAvailable),
     successMessage: "تم تحديث توفر الخيار داخل المنتج",
-    invalidateKeys: [[PRODUCTS_DETAIL_KEY]],
+    invalidateKeys: [PRODUCTS_DETAIL_KEY],
   });

@@ -7,8 +7,9 @@ import menuOptionSchema, {
 } from "@/lib/validations/menuOptionSchema";
 import { useCreateMenuOptionMutation } from "@/hooks/useMenuQuery";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Settings2, Save, Loader2 } from "lucide-react";
+import { Settings2, Save, Loader2, AlertCircle } from "lucide-react";
 import { MenuOptionFormFields } from "@/components/pages/menu/options/MenuOptionFormFields";
 import { DEFAULT_MENU_AVAILABLE_FOR } from "@/constants/menuCatalog";
 import { toCreateMenuOptionPayload } from "@/utils/menuPayloadMappers";
@@ -70,6 +71,11 @@ function CreateOptionPage() {
     }
   };
 
+
+
+  const showValidationSummary =
+    form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0;
+
   return (
     <div className="w-full px-4 py-8 lg:px-8">
       {/* ── Page Header ── */}
@@ -100,10 +106,20 @@ function CreateOptionPage() {
         {/* ── Sticky Save Bar ── */}
         <div className="sticky bottom-6 z-10 pt-2">
           <Card className="border-primary/30 bg-card/95 shadow-2xl ring-1 shadow-primary/10 ring-primary/10 backdrop-blur-md">
-            <CardContent className="flex items-center justify-between p-4 sm:px-6">
-              <p className="hidden text-sm font-medium text-muted-foreground sm:block">
-                تأكد من المراجعة
-              </p>
+            <CardContent className="space-y-3 p-4 sm:px-6">
+              {showValidationSummary ? (
+                <Alert variant="destructive" className="text-right">
+                  <AlertCircle className="size-4" />
+                  <AlertTitle>بيانات مطلوبة ناقصة</AlertTitle>
+                  <AlertDescription>
+                    اكتب الاسم بالعربية والإنجليزية وحدد المجموعة ثم حاول الإضافة مرة أخرى.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <div className="flex items-center justify-between gap-4">
+                <p className="hidden text-sm font-medium text-muted-foreground sm:block">
+                  تأكد من المراجعة
+                </p>
               <Button
                 type="submit"
                 size="lg"
@@ -122,6 +138,7 @@ function CreateOptionPage() {
                   </>
                 )}
               </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

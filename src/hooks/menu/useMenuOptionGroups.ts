@@ -23,7 +23,7 @@ export const menuOptionGroupsQueryOptions = (params: MenuListParams = {}) =>
   queryOptions({
     queryKey: [OPTION_GROUPS_KEY, params],
     queryFn: () => fetchMenuOptionGroups(params),
-    staleTime: 1000 * 60 * 2,
+    staleTime: Infinity,
   });
 
 export const useMenuOptionGroupsQuery = (params: MenuListParams = {}) =>
@@ -33,7 +33,7 @@ export const menuOptionGroupDetailQueryOptions = (id: string) =>
   queryOptions({
     queryKey: [OPTION_GROUPS_KEY, "detail", id],
     queryFn: () => fetchMenuOptionGroupById(id),
-    staleTime: 1000 * 60 * 2,
+    staleTime: Infinity,
   });
 
 export const useMenuOptionGroupDetailQuery = (id: string) =>

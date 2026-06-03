@@ -14,8 +14,8 @@ const optionalGeneratedKey = z
 const menuCategorySchema = z.object({
   key: optionalGeneratedKey,
   name: z.object({
-    ar: z.string({ message: "الاسم بالعربية مطلوب" }).min(1, "الاسم بالعربية مطلوب").trim(),
-    en: z.string({ message: "الاسم بالإنجليزية مطلوب" }).min(1, "الاسم بالإنجليزية مطلوب").trim(),
+    ar: z.string({ message: "الاسم بالعربية مطلوب" }).trim().min(1, "الاسم بالعربية مطلوب"),
+    en: z.string({ message: "الاسم بالإنجليزية مطلوب" }).trim().min(1, "الاسم بالإنجليزية مطلوب"),
   }),
   description: z.object({
     ar: z.string().default(""),

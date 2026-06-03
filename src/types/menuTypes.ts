@@ -413,6 +413,7 @@ export interface MenuOption {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
+  proteinFamilyNameI18n?: LocalizedText;
   premiumKey?: string;
   extraFeeHalala?: number;
   ruleTags?: string[];
@@ -445,6 +446,7 @@ export interface CreateMenuOptionPayload {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
+  proteinFamilyNameI18n?: LocalizedText;
   premiumKey?: string;
   extraFeeHalala?: number;
   ruleTags?: string[];
@@ -466,6 +468,7 @@ export interface UpdateMenuOptionPayload {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
+  proteinFamilyNameI18n?: LocalizedText;
   premiumKey?: string;
   extraFeeHalala?: number;
   ruleTags?: string[];

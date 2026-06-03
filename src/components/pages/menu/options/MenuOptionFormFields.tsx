@@ -144,7 +144,7 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
               <Label>الاسم (إنجليزي)</Label>
               <Input
                 dir="ltr"
-                placeholder="e.g. Salmon"
+                placeholder="مثال: سمك السلمون"
                 {...form.register("name.en")}
               />
               {form.formState.errors.name?.en && (
@@ -207,39 +207,57 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Display category key</Label>
+                <Label>مفتاح فئة العرض</Label>
+                <Input
+                  dir="ltr"
+                  placeholder="بروتين"
+                  {...form.register("displayCategoryKey")}
+                />
+            </div>
+            <div className="space-y-1.5">
+                <Label>مفتاح عائلة البروتين</Label>
+                <Input
+                  dir="ltr"
+                  placeholder="دجاج"
+                  {...form.register("proteinFamilyKey")}
+                />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>اسم عائلة البروتين بالعربية (Protein Family Name AR)</Label>
               <Input
-                dir="ltr"
-                placeholder="protein"
-                {...form.register("displayCategoryKey")}
+                placeholder="مثال: دجاج"
+                {...form.register("proteinFamilyNameI18n.ar")}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Protein family key</Label>
+              <Label>اسم عائلة البروتين بالإنجليزية (Protein Family Name EN)</Label>
               <Input
                 dir="ltr"
-                placeholder="chicken"
-                {...form.register("proteinFamilyKey")}
+                placeholder="e.g. Chicken"
+                {...form.register("proteinFamilyNameI18n.en")}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>مفتاح الاشتراك المميز (Premium Key)</Label>
-              <Input
-                dir="ltr"
-                placeholder="premium_chicken"
-                {...form.register("premiumKey")}
-              />
+                <Label>مفتاح الاشتراك المميز (Premium Key)</Label>
+                <Input
+                  dir="ltr"
+                  placeholder="مفتاح_بروتين_مميز"
+                  {...form.register("premiumKey")}
+                />
             </div>
             <div className="space-y-1.5">
-              <Label>نوع الاختيار (Selection Type)</Label>
-              <Input
-                dir="ltr"
-                placeholder="double_protein"
-                {...form.register("selectionType")}
-              />
+                <Label>نوع الاختيار (Selection Type)</Label>
+                <Input
+                  dir="ltr"
+                  placeholder="بروتين_مضاعف"
+                  {...form.register("selectionType")}
+                />
             </div>
           </div>
 
@@ -247,7 +265,7 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
             <Label>وسوم التحكم بالاشتراكات (Rule Tags - مفصولة بفاصلة)</Label>
             <Input
               dir="ltr"
-              placeholder="beef, double, premium"
+              placeholder="لحم_بقر, مضاعف, مميز"
               {...form.register("ruleTags")}
             />
             <p className="text-xs text-muted-foreground">

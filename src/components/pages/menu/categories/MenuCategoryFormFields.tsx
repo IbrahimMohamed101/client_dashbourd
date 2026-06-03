@@ -218,7 +218,7 @@ function Field({
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <Input dir={dir} {...props} {...inputProps} />
+      <Input aria-invalid={!!error} dir={dir} {...props} {...inputProps} />
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );

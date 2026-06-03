@@ -81,6 +81,14 @@ export const getCategoryColumns = ({
     ),
   },
   {
+    id: "catImage ",
+    accessorFn: (row) => row.imageUrl,
+    header: "صورة التصنيف",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground"><img src={row.original.imageUrl} alt={row.original.name.ar} className="w-15 h-15 object-cover rounded-lg" /></span>
+    ),
+  },
+  {
     accessorKey: "isActive",
     header: () => <div className="text-center">الحالة</div>,
     cell: ({ row }) => (

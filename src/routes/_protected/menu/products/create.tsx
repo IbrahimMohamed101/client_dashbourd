@@ -7,8 +7,9 @@ import menuProductSchema, {
 } from "@/lib/validations/menuProductSchema";
 import { useCreateMenuProductMutation } from "@/hooks/useMenuQuery";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Package, Save, Loader2 } from "lucide-react";
+import { Package, Save, Loader2, AlertCircle } from "lucide-react";
 import { MenuProductFormFields } from "@/components/pages/menu/products/MenuProductFormFields";
 import { toCreateMenuProductPayload } from "@/utils/menuPayloadMappers";
 import { fetchUploadImage, resolveUploadedImageUrl } from "@/utils/fetchUploadImage";
@@ -50,6 +51,9 @@ function CreateMenuProductPage() {
     }
   };
 
+  const showValidationSummary =
+    form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0;
+
   return (
     <div className="w-full px-4 py-8 lg:px-8">
       <div className="mb-8">
@@ -75,10 +79,20 @@ function CreateMenuProductPage() {
         <MenuProductFormFields form={form} />
         <div className="sticky bottom-6 z-10 pt-2">
           <Card className="border-primary/30 bg-card/95 shadow-2xl ring-1 shadow-primary/10 ring-primary/10 backdrop-blur-md">
-            <CardContent className="flex items-center justify-between p-4 sm:px-6">
-              <p className="hidden text-sm font-medium text-muted-foreground sm:block">
-                تأكد من مراجعة جميع البيانات
-              </p>
+            <CardContent className="space-y-3 p-4 sm:px-6">
+              {showValidationSummary ? (
+                <Alert variant="destructive" className="text-right">
+                  <AlertCircle className="size-4" />
+                  <AlertTitle>بيانات مطلوبة ناقصة أو غير صحيحة</AlertTitle>
+                  <AlertDescription>
+                    يرجى مراجعة الحقول الحمراء وتعبئة الحقول المطلوبة بشكل صحيح ثم حاول الإضافة مرة أخرى.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <div className="flex items-center justify-between gap-4">
+                <p className="hidden text-sm font-medium text-muted-foreground sm:block">
+                  تأكد من مراجعة جميع البيانات
+                </p>
               <Button
                 type="submit"
                 size="lg"
@@ -97,6 +111,7 @@ function CreateMenuProductPage() {
                   </>
                 )}
               </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

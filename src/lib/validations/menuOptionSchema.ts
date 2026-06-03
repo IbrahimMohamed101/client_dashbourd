@@ -55,6 +55,12 @@ const menuOptionSchema = z.object({
   isVisible: z.boolean().default(true),
   displayCategoryKey: z.string().trim().optional(),
   proteinFamilyKey: z.string().trim().optional(),
+  proteinFamilyNameI18n: z
+    .object({
+      ar: z.string().default(""),
+      en: z.string().default(""),
+    })
+    .optional(),
   premiumKey: z.string().trim().optional().default(""),
   extraFeeSar: z.coerce
     .number()

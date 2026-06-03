@@ -406,6 +406,7 @@ function normalizeOption(raw: any): MenuOption {
     isVisible: raw.isVisible ?? raw.visible ?? raw.is_visible ?? true,
     displayCategoryKey: raw.displayCategoryKey ?? raw.display_category_key ?? raw.displayCategory ?? undefined,
     proteinFamilyKey: raw.proteinFamilyKey ?? raw.protein_family_key ?? raw.proteinFamily ?? undefined,
+    proteinFamilyNameI18n: raw.proteinFamilyNameI18n ?? raw.protein_family_name_i18n ?? undefined,
     premiumKey: raw.premiumKey ?? raw.premium_key ?? undefined,
     extraFeeHalala: raw.extraFeeHalala ?? raw.extra_fee_halala ?? raw.extraFee ?? undefined,
     ruleTags: raw.ruleTags ?? raw.rule_tags ?? undefined,
