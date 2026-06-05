@@ -4,3 +4,4 @@ export * from "./useMenuOptionGroups";
 export * from "./useMenuOptions";
 export * from "./useMenuProductRelations";
 export * from "./useMenuActions";
+export * from "./usePublicMenuPreview";

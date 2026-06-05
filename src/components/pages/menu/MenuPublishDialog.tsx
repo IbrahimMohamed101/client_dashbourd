@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { CheckCircle2, Loader2, Upload } from "lucide-react";
+
 import { usePublishMenuMutation } from "@/hooks/useMenuQuery";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Upload, Loader2, CheckCircle2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import type { MenuPublishResult } from "@/types/menuTypes";
 
 export function MenuPublishDialog() {
@@ -25,23 +26,23 @@ export function MenuPublishDialog() {
     setNotes("");
   };
 
-  const formatDate = (d: string) => {
+  const formatDate = (date: string) => {
     try {
       return new Intl.DateTimeFormat("ar-SA", {
         dateStyle: "full",
         timeStyle: "short",
-      }).format(new Date(d));
+      }).format(new Date(date));
     } catch {
-      return d;
+      return date;
     }
   };
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(v) => {
-        setOpen(v);
-        if (!v) setResult(null);
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (!value) setResult(null);
       }}
     >
       <DialogTrigger asChild>
@@ -50,7 +51,7 @@ export function MenuPublishDialog() {
           نشر القائمة
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader>
           <DialogTitle>نشر القائمة</DialogTitle>
         </DialogHeader>
@@ -58,12 +59,12 @@ export function MenuPublishDialog() {
           {!result ? (
             <>
               <p className="text-sm text-muted-foreground">
-                سيتم نشر القائمة الحالية للمستخدمين. تأكد من تشغيل التحقق أولاً.
+                سيتم نشر القائمة الحالية للمستخدمين. تأكد من تشغيل التحقق أولا.
               </p>
               <Textarea
                 placeholder="ملاحظات النشر (اختياري)..."
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={(event) => setNotes(event.target.value)}
                 className="resize-none"
                 rows={3}
               />
@@ -77,27 +78,27 @@ export function MenuPublishDialog() {
                 ) : (
                   <Upload className="size-4" />
                 )}
-                {mutation.isPending ? "جارٍ النشر..." : "نشر الآن"}
+                {mutation.isPending ? "جار النشر..." : "نشر الآن"}
               </Button>
             </>
           ) : (
             <>
               <div className="flex items-center gap-3 rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-4">
                 <CheckCircle2 className="size-5 text-emerald-600" />
-                <span className="font-semibold">تم النشر بنجاح! 🎉</span>
+                <span className="font-semibold">تم النشر بنجاح</span>
               </div>
               <div className="space-y-2 rounded-lg border p-4 text-sm">
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-4">
                   <span>رقم النسخة:</span>
                   <span className="font-mono font-semibold">
                     {result.versionId}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-4">
                   <span>الحالة:</span>
                   <span className="font-semibold">{result.status}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-4">
                   <span>تاريخ النشر:</span>
                   <span>{formatDate(result.publishedAt)}</span>
                 </div>

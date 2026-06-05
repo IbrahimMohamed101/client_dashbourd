@@ -647,3 +647,44 @@ export interface MenuRollbackResponse {
     rollback?: Record<string, unknown>;
   };
 }
+
+export interface MenuProductComposerValidation {
+  errors: string[];
+  warnings: string[];
+}
+
+export interface MenuProductComposer {
+  contractVersion: "dashboard_product_composer.v1" | string;
+  product: MenuProduct;
+  category: MenuCategory | null;
+  publishState: {
+    isPublished: boolean;
+    publishedAt: string | null;
+    versionId: string | null;
+  };
+  availability: {
+    isActive: boolean;
+    isVisible: boolean;
+    isAvailable: boolean;
+    availableFor: string[];
+    branchAvailability: string[];
+  };
+  pricing: {
+    pricingModel: PricingModel;
+    priceHalala: number;
+    baseUnitGrams: number;
+    defaultWeightGrams: number;
+    minWeightGrams: number;
+    maxWeightGrams: number;
+    weightStepGrams: number;
+    currency: string;
+  };
+  ui: NonNullable<MenuProduct["ui"]>;
+  linkedOptionGroups: MenuProductLinkedGroup[];
+  validation: MenuProductComposerValidation;
+}
+
+export interface MenuProductComposerResponse {
+  status: boolean;
+  data: MenuProductComposer;
+}

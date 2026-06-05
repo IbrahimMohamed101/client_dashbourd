@@ -22,6 +22,12 @@ import {
 } from "@/components/pages/menu/MenuTabScaffold";
 import type { MenuVersion } from "@/types/menuTypes";
 
+const STATUS_LABELS: Record<string, string> = {
+  saved: "محفوظ",
+  published: "منشور",
+  rolled_back: "مسترجع",
+};
+
 const formatDate = (date?: string) => {
   if (!date) return "-";
 
@@ -80,68 +86,74 @@ export function MenuVersionsTab() {
   };
 
   const handleRollback = (versionId: string) => {
-    if (!window.confirm("Rollback menu to this version?")) return;
+    if (!window.confirm("هل تريد استرجاع القائمة إلى هذا الإصدار؟")) return;
     rollback.mutate(versionId);
   };
 
   return (
     <MenuSectionCard
-      title="Menu versions"
-      description="Review published menu versions and restore a confirmed version when needed."
+      title="إصدارات القائمة"
+      description="راجع الإصدارات المنشورة واسترجع إصدارا مؤكدا عند الحاجة."
     >
       <div className="overflow-hidden rounded-lg border bg-card">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="py-4 text-right">Version</TableHead>
-              <TableHead className="py-4 text-right">Status</TableHead>
-              <TableHead className="py-4 text-right">Published</TableHead>
-              <TableHead className="py-4 text-right">Notes</TableHead>
-              <TableHead className="py-4 text-center">Actions</TableHead>
+              <TableHead className="py-4 text-right">الإصدار</TableHead>
+              <TableHead className="py-4 text-right">الحالة</TableHead>
+              <TableHead className="py-4 text-right">تاريخ النشر</TableHead>
+              <TableHead className="py-4 text-right">الملاحظات</TableHead>
+              <TableHead className="py-4 text-center">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
-                  Loading versions...
+                  جار تحميل الإصدارات...
                 </TableCell>
               </TableRow>
             ) : versions.length ? (
-              versions.map((version) => (
-                <TableRow key={version.id}>
-                  <TableCell className="font-medium">
-                    {version.version ?? version.id}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{version.status ?? "saved"}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {formatDate(version.publishedAt ?? version.createdAt)}
-                  </TableCell>
-                  <TableCell className="max-w-[320px] truncate">
-                    {version.notes ?? "-"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={rollback.isPending}
-                      onClick={() => handleRollback(version.id)}
-                    >
-                      <RotateCcw data-icon="inline-start" />
-                      Rollback
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              versions.map((version) => {
+                const status = version.status ?? "saved";
+
+                return (
+                  <TableRow key={version.id}>
+                    <TableCell className="font-medium">
+                      {version.version ?? version.id}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {STATUS_LABELS[status] || status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {formatDate(version.publishedAt ?? version.createdAt)}
+                    </TableCell>
+                    <TableCell className="max-w-[320px] truncate">
+                      {version.notes ?? "-"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={rollback.isPending}
+                        onClick={() => handleRollback(version.id)}
+                      >
+                        <RotateCcw data-icon="inline-start" />
+                        استرجاع
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
                   <MenuEmptyState
-                    title="No versions yet"
-                    description="Published menu versions will appear here."
+                    title="لا توجد إصدارات بعد"
+                    description="ستظهر إصدارات القائمة المنشورة هنا."
                   />
                 </TableCell>
               </TableRow>
@@ -153,7 +165,7 @@ export function MenuVersionsTab() {
       <DataTablePagination
         table={table as never}
         totalItems={meta.total}
-        itemsLabel="versions"
+        itemsLabel="إصدارات"
       />
     </MenuSectionCard>
   );

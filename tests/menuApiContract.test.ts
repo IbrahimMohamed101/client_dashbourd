@@ -3,6 +3,7 @@ import {
   menuRollbackUrl,
   menuOptionGroupVisibilityUrl,
   menuOptionVisibilityUrl,
+  menuProductComposerUrl,
   menuVersionsUrl,
 } from "../src/utils/menuApiContract";
 
@@ -14,6 +15,11 @@ assert.equal(
 assert.equal(
   menuOptionGroupVisibilityUrl("group-1"),
   "/api/dashboard/menu/option-groups/group-1/visibility"
+);
+
+assert.equal(
+  menuProductComposerUrl("product-1"),
+  "/api/dashboard/menu/products/product-1/composer"
 );
 
 assert.equal(menuVersionsUrl(), "/api/dashboard/menu/versions");

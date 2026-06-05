@@ -2,15 +2,15 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
 import { Copy, Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MenuKeyBadge, MenuStatusBadge } from "./MenuTabScaffold";
 import type {
-  MenuCategory,
-  MenuProduct,
-  MenuOptionGroup,
-  MenuOption,
   MenuAuditLog,
+  MenuCategory,
+  MenuOption,
+  MenuOptionGroup,
+  MenuProduct,
 } from "@/types/menuTypes";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -29,6 +29,12 @@ const ENTITY_LABELS: Record<string, string> = {
   menu: "القائمة",
 };
 
+const ITEM_TYPE_LABELS: Record<string, string> = {
+  one_time: "طلب مرة واحدة",
+  subscription: "اشتراك",
+  meal: "وجبة",
+};
+
 const formatDate = (dateStr: string) => {
   try {
     return new Intl.DateTimeFormat("ar-SA", {
@@ -40,7 +46,7 @@ const formatDate = (dateStr: string) => {
   }
 };
 
-const formatPrice = (halala: number) => (halala / 100).toFixed(2);
+const formatPrice = (halala: number) => (Number(halala || 0) / 100).toFixed(2);
 
 interface CategoryActions {
   onDelete: (id: string) => void;
@@ -81,12 +87,19 @@ export const getCategoryColumns = ({
     ),
   },
   {
-    id: "catImage ",
+    id: "image",
     accessorFn: (row) => row.imageUrl,
-    header: "صورة التصنيف",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground"><img src={row.original.imageUrl} alt={row.original.name.ar} className="w-15 h-15 object-cover rounded-lg" /></span>
-    ),
+    header: "الصورة",
+    cell: ({ row }) =>
+      row.original.imageUrl ? (
+        <img
+          src={row.original.imageUrl}
+          alt={row.original.name.ar}
+          className="size-14 rounded-lg object-cover"
+        />
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
   },
   {
     accessorKey: "isActive",
@@ -127,13 +140,13 @@ export const getCategoryColumns = ({
     id: "actions",
     header: () => <div className="text-center">الإجراءات</div>,
     cell: ({ row }) => {
-      const cat = row.original;
+      const category = row.original;
       return (
         <div className="flex items-center justify-center gap-1">
           <Button variant="ghost" size="sm" asChild>
             <Link
               to="/menu/categories/$categoryId/update"
-              params={{ categoryId: cat.id }}
+              params={{ categoryId: category.id }}
             >
               <Pencil data-icon="inline-start" />
               تعديل
@@ -142,7 +155,7 @@ export const getCategoryColumns = ({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onDelete(cat.id)}
+            onClick={() => onDelete(category.id)}
             className="text-destructive hover:text-destructive"
           >
             <Trash2 />
@@ -196,21 +209,29 @@ export const getProductColumns = ({
     },
   },
   {
-    id: "productImage",
+    id: "image",
     header: "الصورة",
     cell: ({ row }) => {
       const product = row.original;
-      return (
-        <div className="flex min-w-44 flex-col gap-1">
-          <img src={product.imageUrl} alt={product.name?.ar} className="w-15 h-15 object-cover rounded-lg" />
-        </div>
+      return product.imageUrl ? (
+        <img
+          src={product.imageUrl}
+          alt={product.name?.ar}
+          className="size-14 rounded-lg object-cover"
+        />
+      ) : (
+        <span className="text-muted-foreground">-</span>
       );
     },
   },
   {
     accessorKey: "itemType",
     header: "النوع",
-    cell: ({ row }) => <Badge variant="outline">{row.original.itemType}</Badge>,
+    cell: ({ row }) => (
+      <Badge variant="outline">
+        {ITEM_TYPE_LABELS[row.original.itemType] || row.original.itemType}
+      </Badge>
+    ),
   },
   {
     accessorKey: "pricingModel",
@@ -252,7 +273,9 @@ export const getProductColumns = ({
             variant="ghost"
             size="sm"
             className="cursor-pointer"
-            onClick={() => onToggleAvailability(product.id, !product.isAvailable)}
+            onClick={() =>
+              onToggleAvailability(product.id, !product.isAvailable)
+            }
           >
             {product.isAvailable ? (
               <Eye data-icon="inline-start" />
@@ -448,10 +471,10 @@ export const getOptionColumns = ({
     accessorKey: "extraPriceHalala",
     header: () => <div className="text-center">السعر الإضافي</div>,
     cell: ({ row }) => {
-      const val = row.original.extraPriceHalala;
+      const value = row.original.extraPriceHalala;
       return (
         <div className="text-center font-medium">
-          {val > 0 ? `+${formatPrice(val)} ر.س` : "—"}
+          {value > 0 ? `+${formatPrice(value)} ر.س` : "-"}
         </div>
       );
     },

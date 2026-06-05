@@ -2,6 +2,7 @@ import api from "@/lib/apis";
 import type {
   MenuProductsResponse,
   MenuProductDetailResponse,
+  MenuProductComposerResponse,
   CreateMenuProductPayload,
   UpdateMenuProductPayload,
   ReorderItem,
@@ -12,6 +13,7 @@ import {
   normalizeProductDetailResponse,
 } from "@/utils/menuResponseNormalizers";
 import { buildListQuery } from "@/utils/buildListQuery";
+import { menuProductComposerUrl } from "@/utils/menuApiContract";
 
 // ── List Products ──
 // GET /api/dashboard/menu/products
@@ -32,6 +34,13 @@ export const fetchMenuProductById = async (
 ): Promise<MenuProductDetailResponse> => {
   const response = await api.get(`/api/dashboard/menu/products/${id}`);
   return normalizeProductDetailResponse(response.data);
+};
+
+export const fetchMenuProductComposer = async (
+  id: string
+): Promise<MenuProductComposerResponse> => {
+  const response = await api.get(menuProductComposerUrl(id));
+  return response.data;
 };
 
 // ── Create Product ──

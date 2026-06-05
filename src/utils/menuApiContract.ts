@@ -7,6 +7,9 @@ export const menuOptionVisibilityUrl = (id: string) =>
 export const menuOptionGroupVisibilityUrl = (id: string) =>
   `/api/dashboard/menu/option-groups/${id}/visibility`;
 
+export const menuProductComposerUrl = (productId: string) =>
+  `/api/dashboard/menu/products/${productId}/composer`;
+
 export const menuVersionsUrl = (params: MenuVersionListParams = {}) =>
   `/api/dashboard/menu/versions${buildListQuery(params)}`;
 

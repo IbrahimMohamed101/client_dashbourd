@@ -4,6 +4,7 @@ import {
   Layers,
   Link2,
   Package,
+  PanelTopOpen,
   RotateCcw,
   Settings2,
 } from "lucide-react";
@@ -12,7 +13,7 @@ const workflowSteps = [
   {
     value: "categories",
     label: "التصنيفات",
-    description: "تنظيم أقسام المنيو",
+    description: "أقسام القائمة",
     icon: FolderOpen,
   },
   {
@@ -23,8 +24,8 @@ const workflowSteps = [
   },
   {
     value: "option-groups",
-    label: "المجموعات",
-    description: "قواعد الإضافات",
+    label: "مجموعات الخيارات",
+    description: "قواعد الاختيار",
     icon: Layers,
   },
   {
@@ -36,8 +37,14 @@ const workflowSteps = [
   {
     value: "relations",
     label: "الربط",
-    description: "قواعد المنتج وخياراته",
+    description: "خيارات كل منتج",
     icon: Link2,
+  },
+  {
+    value: "public-preview",
+    label: "معاينة العميل",
+    description: "العقد الجديد",
+    icon: PanelTopOpen,
   },
   {
     value: "audit",
@@ -47,8 +54,8 @@ const workflowSteps = [
   },
   {
     value: "versions",
-    label: "Versions",
-    description: "Publish history and rollback",
+    label: "الإصدارات",
+    description: "النشر والاسترجاع",
     icon: RotateCcw,
   },
 ];

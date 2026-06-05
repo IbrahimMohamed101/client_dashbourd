@@ -1,4 +1,12 @@
 import { useState } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
+
 import { useValidateMenuMutation } from "@/hooks/useMenuQuery";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,13 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  ShieldCheck,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-} from "lucide-react";
 import type { MenuValidationResult } from "@/types/menuTypes";
 
 export function MenuValidationDialog() {
@@ -36,12 +37,12 @@ export function MenuValidationDialog() {
           تحقق
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" dir="rtl">
         <DialogHeader>
           <DialogTitle>التحقق من القائمة</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          {!result && (
+          {!result ? (
             <Button
               onClick={handleValidate}
               disabled={mutation.isPending}
@@ -52,13 +53,16 @@ export function MenuValidationDialog() {
               ) : (
                 <ShieldCheck className="size-4" />
               )}
-              {mutation.isPending ? "جارٍ التحقق..." : "بدء التحقق"}
+              {mutation.isPending ? "جار التحقق..." : "بدء التحقق"}
             </Button>
-          )}
-          {result && (
+          ) : (
             <>
               <div
-                className={`flex items-center gap-3 rounded-lg border p-4 ${result.ok ? "border-emerald-500/50 bg-emerald-500/10" : "border-destructive/50 bg-destructive/10"}`}
+                className={`flex items-center gap-3 rounded-lg border p-4 ${
+                  result.ok
+                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    : "border-destructive/50 bg-destructive/10"
+                }`}
               >
                 {result.ok ? (
                   <CheckCircle2 className="size-5 text-emerald-600" />
@@ -67,37 +71,43 @@ export function MenuValidationDialog() {
                 )}
                 <span className="font-semibold">
                   {result.ok
-                    ? "القائمة جاهزة للنشر ✓"
+                    ? "القائمة جاهزة للنشر"
                     : "يوجد أخطاء يجب إصلاحها"}
                 </span>
               </div>
-              {result.errors.length > 0 && (
+
+              {result.errors.length > 0 ? (
                 <div className="space-y-2">
                   <h4 className="flex items-center gap-2 font-semibold text-destructive">
                     <XCircle className="size-4" />
                     أخطاء ({result.errors.length})
                   </h4>
-                  {result.errors.map((e, i) => (
-                    <p key={i} className="rounded bg-destructive/5 p-2 text-sm">
-                      {e.message}
+                  {result.errors.map((error, index) => (
+                    <p
+                      key={index}
+                      className="rounded bg-destructive/5 p-2 text-sm"
+                    >
+                      {error.message}
                     </p>
                   ))}
                 </div>
-              )}
-              {result.warnings.length > 0 && (
+              ) : null}
+
+              {result.warnings.length > 0 ? (
                 <div className="space-y-2">
                   <h4 className="flex items-center gap-2 font-semibold text-yellow-600">
                     <AlertTriangle className="size-4" />
                     تحذيرات ({result.warnings.length})
                   </h4>
-                  {result.warnings.map((w, i) => (
-                    <p key={i} className="rounded bg-yellow-500/5 p-2 text-sm">
-                      {w.message}
+                  {result.warnings.map((warning, index) => (
+                    <p key={index} className="rounded bg-yellow-500/5 p-2 text-sm">
+                      {warning.message}
                     </p>
                   ))}
                 </div>
-              )}
-              {result.summary && (
+              ) : null}
+
+              {result.summary ? (
                 <div className="grid grid-cols-2 gap-2 rounded-lg border p-4 text-sm">
                   <span>التصنيفات:</span>
                   <span className="font-semibold">
@@ -118,7 +128,8 @@ export function MenuValidationDialog() {
                     {result.summary.activeProducts}
                   </span>
                 </div>
-              )}
+              ) : null}
+
               <Button
                 variant="outline"
                 onClick={() => setResult(null)}

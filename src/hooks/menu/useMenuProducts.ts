@@ -3,6 +3,7 @@ import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import {
   fetchMenuProducts,
   fetchMenuProductById,
+  fetchMenuProductComposer,
   fetchCreateMenuProduct,
   fetchUpdateMenuProduct,
   fetchUpdateMenuProductAvailability,
@@ -12,6 +13,7 @@ import {
 } from "@/utils/fetchMenuProducts";
 import type {
   MenuProductListParams,
+  MenuProductComposerResponse,
   CreateMenuProductPayload,
   UpdateMenuProductPayload,
   ReorderItem,
@@ -39,6 +41,19 @@ export const menuProductDetailQueryOptions = (id: string) =>
 export const useMenuProductDetailQuery = (id: string) =>
   useQuery({
     ...menuProductDetailQueryOptions(id),
+    enabled: !!id && id !== "undefined" && id !== "null",
+  });
+
+export const menuProductComposerQueryOptions = (id: string) =>
+  queryOptions<MenuProductComposerResponse>({
+    queryKey: [PRODUCTS_KEY, "composer", id],
+    queryFn: () => fetchMenuProductComposer(id),
+    staleTime: 1000 * 30,
+  });
+
+export const useMenuProductComposerQuery = (id: string) =>
+  useQuery({
+    ...menuProductComposerQueryOptions(id),
     enabled: !!id && id !== "undefined" && id !== "null",
   });
 

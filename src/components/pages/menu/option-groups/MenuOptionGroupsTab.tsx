@@ -10,7 +10,7 @@ export function MenuOptionGroupsTab() {
   return (
     <MenuEntityTableTab<MenuOptionGroup>
       title="مجموعات الخيارات"
-      description="حدد مجموعات الإضافات التي يمكن ربطها بالمنتجات مثل الحجم أو نوع البروتين."
+      description="أنشئ مجموعات قابلة لإعادة الاستخدام مثل اختيار البروتين أو الصوص أو الحجم."
       createTo="/menu/option-groups/create"
       createLabel="إضافة مجموعة"
       searchPlaceholder="بحث في المجموعات..."
