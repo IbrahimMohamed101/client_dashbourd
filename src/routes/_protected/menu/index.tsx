@@ -8,21 +8,22 @@ import { MenuValidationDialog } from "@/components/pages/menu/MenuValidationDial
 import { MenuOptionGroupsTab } from "@/components/pages/menu/option-groups/MenuOptionGroupsTab";
 import { MenuOptionsTab } from "@/components/pages/menu/options/MenuOptionsTab";
 import { MenuProductsTab } from "@/components/pages/menu/products/MenuProductsTab";
+import { MealPlannerMenuPreviewTab } from "@/components/pages/menu/meal-planner-preview/MealPlannerMenuPreviewTab";
 import { PublicMenuPreviewTab } from "@/components/pages/menu/public-preview/PublicMenuPreviewTab";
-import { MenuProductRelationsTab } from "@/components/pages/menu/relations/MenuProductRelationsTab";
 import { MenuVersionsTab } from "@/components/pages/menu/versions/MenuVersionsTab";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { workflowSteps } from "@/constants/menuData";
+import { legacyMenuTabMap, workflowSteps } from "@/constants/menuData";
 
 const menuTabValues = new Set(workflowSteps.map((step) => step.value));
 
 export const Route = createFileRoute("/_protected/menu/")({
   validateSearch: (search: Record<string, unknown>) => {
-    const tab = typeof search.tab === "string" ? search.tab : "categories";
+    const requestedTab = typeof search.tab === "string" ? search.tab : "catalog";
+    const tab = legacyMenuTabMap[requestedTab] || requestedTab;
 
     return {
-      tab: menuTabValues.has(tab) ? tab : "categories",
+      tab: menuTabValues.has(tab) ? tab : "catalog",
     };
   },
   component: MenuPage,
@@ -86,7 +87,7 @@ function MenuPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
         <div className="overflow-x-auto pb-1">
-          <TabsList className="grid h-auto min-w-[920px] grid-cols-8 gap-2 bg-muted/70 p-2">
+          <TabsList className="grid min-h-max min-w-[640px] grid-cols-4 gap-2 bg-muted/70 p-2">
             {workflowSteps.map((step, index) => {
               const Icon = step.icon;
               return (
@@ -113,29 +114,29 @@ function MenuPage() {
           </TabsList>
         </div>
 
-        <TabsContent value="categories" className="mt-5">
-          <MenuCategoriesTab />
+        <TabsContent value="catalog" className="mt-5">
+          <div className="grid gap-5">
+            <MenuCategoriesTab />
+            <MenuProductsTab />
+          </div>
         </TabsContent>
-        <TabsContent value="products" className="mt-5">
-          <MenuProductsTab />
+        <TabsContent value="builder" className="mt-5">
+          <div className="grid gap-5">
+            <MenuOptionGroupsTab />
+            <MenuOptionsTab />
+          </div>
         </TabsContent>
-        <TabsContent value="option-groups" className="mt-5">
-          <MenuOptionGroupsTab />
+        <TabsContent value="preview" className="mt-5">
+          <div className="grid gap-5">
+            <PublicMenuPreviewTab />
+            <MealPlannerMenuPreviewTab />
+          </div>
         </TabsContent>
-        <TabsContent value="options" className="mt-5">
-          <MenuOptionsTab />
-        </TabsContent>
-        <TabsContent value="relations" className="mt-5">
-          <MenuProductRelationsTab />
-        </TabsContent>
-        <TabsContent value="public-preview" className="mt-5">
-          <PublicMenuPreviewTab />
-        </TabsContent>
-        <TabsContent value="audit" className="mt-5">
-          <MenuAuditLogTab />
-        </TabsContent>
-        <TabsContent value="versions" className="mt-5">
-          <MenuVersionsTab />
+        <TabsContent value="release" className="mt-5">
+          <div className="grid gap-5">
+            <MenuVersionsTab />
+            <MenuAuditLogTab />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

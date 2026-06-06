@@ -46,10 +46,10 @@ const menuProductSchema = z
     isActive: z.boolean().default(true),
     isAvailable: z.boolean().default(true),
     isVisible: z.boolean().default(true),
+    isCustomizable: z.boolean().default(false),
     availableFor: z
       .array(z.enum(MENU_AVAILABLE_CHANNELS))
       .default([...DEFAULT_MENU_AVAILABLE_FOR]),
-    availableForSubscription: z.boolean().default(true),
     ui: z
       .object({
         cardVariant: z

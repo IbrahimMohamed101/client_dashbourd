@@ -11,22 +11,24 @@ import {
 import {
   useDeleteMenuProductMutation,
   useDuplicateMenuProductMutation,
+  useMenuCategoriesQuery,
   useMenuProductsQuery,
   useToggleMenuProductAvailabilityMutation,
 } from "@/hooks/useMenuQuery";
 import type {
   MenuProduct,
   MenuProductListParams,
-  PricingModel,
 } from "@/types/menuTypes";
 import { getProductColumns } from "../menu-columns";
 
-type PricingFilter = PricingModel | "all";
+type CategoryFilter = string | "all";
 
 export function MenuProductsTab() {
-  const [pricingFilter, setPricingFilter] = useState<PricingFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const { data: categoriesData } = useMenuCategoriesQuery({ limit: 100 });
   const toggleAvailability = useToggleMenuProductAvailabilityMutation();
   const duplicateProduct = useDuplicateMenuProductMutation();
+  const categories = categoriesData?.data.items ?? [];
 
   return (
     <MenuEntityTableTab<MenuProduct, MenuProductListParams>
@@ -51,24 +53,27 @@ export function MenuProductsTab() {
       useDeleteMutation={useDeleteMenuProductMutation}
       buildQueryParams={(params) => ({
         ...params,
-        pricingModel: pricingFilter !== "all" ? pricingFilter : undefined,
+        categoryId: categoryFilter !== "all" ? categoryFilter : undefined,
       })}
       renderToolbarFilters={(resetPagination) => (
         <Select
-          value={pricingFilter}
+          value={categoryFilter}
           onValueChange={(value) => {
-            setPricingFilter(value as PricingFilter);
+            setCategoryFilter(value as CategoryFilter);
             resetPagination();
           }}
         >
-          <SelectTrigger className="w-full md:w-44">
-            <SelectValue placeholder="نوع التسعير" />
+          <SelectTrigger className="w-full md:w-56">
+            <SelectValue placeholder="التصنيف" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="all">كل الأسعار</SelectItem>
-              <SelectItem value="fixed">سعر ثابت</SelectItem>
-              <SelectItem value="per_100g">حسب الوزن</SelectItem>
+              <SelectItem value="all">كل التصنيفات</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name.ar || category.name.en || category.key}
+                </SelectItem>
+              ))}
             </SelectGroup>
           </SelectContent>
         </Select>

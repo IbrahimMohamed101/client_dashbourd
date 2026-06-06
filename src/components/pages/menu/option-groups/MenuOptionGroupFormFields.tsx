@@ -43,8 +43,6 @@ const DISPLAY_STYLES = [
 
 export function MenuOptionGroupFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
-  const isAvailable = form.watch("isAvailable") ?? true;
-  const isVisible = form.watch("isVisible") ?? true;
 
   return (
     <div className="space-y-6">
@@ -146,27 +144,13 @@ export function MenuOptionGroupFormFields({ form, isEdit }: Props) {
             تحكم في تفعيل وظهور مجموعة الخيارات في التطبيق.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <CardContent>
           <ToggleCard
             label="نشط"
             note={isActive ? "مجموعة الخيارات مفعلة" : "مجموعة الخيارات معطلة"}
             name="isActive"
             form={form}
             className="data-[state=checked]:bg-green-500"
-          />
-          <ToggleCard
-            label="متوفر"
-            note={isAvailable ? "متاح للطلب" : "غير متوفر حالياً"}
-            name="isAvailable"
-            form={form}
-            className="data-[state=checked]:bg-emerald-500"
-          />
-          <ToggleCard
-            label="الظهور"
-            note={isVisible ? "مرئي للعملاء" : "مخفي عن العملاء"}
-            name="isVisible"
-            form={form}
-            className="data-[state=checked]:bg-blue-500"
           />
         </CardContent>
       </Card>
@@ -220,7 +204,7 @@ function ToggleCard({
 }: {
   label: string;
   note: string;
-  name: "isActive" | "isAvailable" | "isVisible";
+  name: "isActive";
   form: UseFormReturn<
     MenuOptionGroupSchemaInput,
     unknown,
@@ -242,7 +226,11 @@ function ToggleCard({
             type="button"
             checked={field.value ?? true}
             className={className}
-            onCheckedChange={field.onChange}
+            onCheckedChange={(checked) => {
+              field.onChange(checked);
+              form.setValue("isAvailable", checked, { shouldDirty: true });
+              form.setValue("isVisible", checked, { shouldDirty: true });
+            }}
           />
         )}
       />

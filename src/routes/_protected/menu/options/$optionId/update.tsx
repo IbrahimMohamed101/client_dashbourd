@@ -76,7 +76,7 @@ function UpdateOptionForm({
       ToastMessage("تم تحديث الخيار بنجاح", "success");
       router.navigate({
         to: "/menu",
-        search: { tab: "options" }
+        search: { tab: "builder" }
       });
     } catch (error: unknown) {
       ToastMessage(

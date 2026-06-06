@@ -111,10 +111,8 @@ export const getMenuProductFormValues = (
   isActive: product?.isActive ?? true,
   isAvailable: product?.isAvailable ?? true,
   isVisible: product?.isVisible ?? true,
+  isCustomizable: product?.isCustomizable ?? false,
   availableFor: normalizeAvailableForFromApi(product?.availableFor),
-  availableForSubscription:
-    product?.availableForSubscription ??
-    normalizeAvailableForFromApi(product?.availableFor).includes("subscription"),
   ui: {
     cardVariant: product?.ui?.cardVariant ?? (product?.ui as any)?.card_variant ?? "standard",
     badge: product?.ui?.badge ?? (product as any)?.badge ?? "",
@@ -143,7 +141,6 @@ export const getMenuOptionFormValues = (
   isVisible: option?.isVisible ?? true,
   displayCategoryKey: option?.displayCategoryKey ?? "",
   proteinFamilyKey: option?.proteinFamilyKey ?? "",
-  proteinFamilyNameI18n: option?.proteinFamilyNameI18n ?? { ar: "", en: "" },
   premiumKey: option?.premiumKey ?? "",
   extraFeeSar: option?.extraFeeHalala !== undefined && option.extraFeeHalala !== null ? option.extraFeeHalala / 100 : 0,
   ruleTags: Array.isArray(option?.ruleTags) ? option.ruleTags.join(", ") : "",
@@ -166,8 +163,8 @@ export const getMenuProductCreateDefaults = (): MenuProductSchemaInput => ({
   isActive: true,
   isAvailable: true,
   isVisible: true,
+  isCustomizable: false,
   availableFor: [...DEFAULT_MENU_AVAILABLE_FOR],
-  availableForSubscription: true,
   ui: {
     cardVariant: "standard",
     badge: "",
@@ -216,7 +213,6 @@ export const getMenuOptionCreateDefaults = (): MenuOptionSchemaInput => ({
   isVisible: true,
   displayCategoryKey: "",
   proteinFamilyKey: "",
-  proteinFamilyNameI18n: { ar: "", en: "" },
   premiumKey: "",
   extraFeeSar: 0,
   ruleTags: "",

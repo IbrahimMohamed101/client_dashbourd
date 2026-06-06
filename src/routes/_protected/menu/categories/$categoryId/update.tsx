@@ -5,7 +5,7 @@ import menuCategorySchema, {
   type MenuCategorySchemaInput,
   type MenuCategorySchemaType,
 } from "@/lib/validations/menuCategorySchema";
-import type { MenuCategory } from "@/types/menuTypes";
+import type { MenuCategoryDetail } from "@/types/menuTypes";
 import { useUpdateMenuCategoryMutation, useMenuCategoryDetailQuery } from "@/hooks/useMenuQuery";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, FolderOpen, Save, Loader2 } from "lucide-react";
 import { Loader } from "@/components/global/loader";
 import { MenuCategoryFormFields } from "@/components/pages/menu/categories/MenuCategoryFormFields";
+import { CategoryProductsPanel } from "@/components/pages/menu/categories/CategoryProductsPanel";
 import { toUpdateMenuCategoryPayload } from "@/utils/menuPayloadMappers";
 import { fetchUploadImage, resolveUploadedImageUrl } from "@/utils/fetchUploadImage";
 import { ToastMessage } from "@/components/global/ToastMessage";
@@ -53,7 +54,7 @@ function UpdateMenuCategoryForm({
   category,
   categoryId,
 }: {
-  category: MenuCategory;
+  category: MenuCategoryDetail;
   categoryId: string;
 }) {
   const router = useRouter();
@@ -84,7 +85,7 @@ function UpdateMenuCategoryForm({
       ToastMessage("تم تحديث التصنيف بنجاح", "success");
       router.navigate({
         to: "/menu",
-        search: { tab: "categories" }
+        search: { tab: "catalog" }
       });
     } catch (error: unknown) {
       ToastMessage(
@@ -119,6 +120,7 @@ function UpdateMenuCategoryForm({
         noValidate
       >
         <MenuCategoryFormFields form={form} isEdit />
+        <CategoryProductsPanel category={category} categoryId={categoryId} />
         <div className="sticky bottom-6 z-10 pt-2">
           <Card className="border-primary/30 bg-card/95 shadow-2xl ring-1 shadow-primary/10 ring-primary/10 backdrop-blur-md">
             <CardContent className="space-y-3 p-4 sm:px-6">

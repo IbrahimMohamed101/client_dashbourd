@@ -72,7 +72,7 @@ function UpdateOptionGroupForm({
       });
       router.navigate({
         to: "/menu",
-        search: { tab: "option-groups" }
+        search: { tab: "builder" }
       });
     } catch (error: unknown) {
       console.error(error);

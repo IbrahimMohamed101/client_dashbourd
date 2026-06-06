@@ -40,8 +40,9 @@ export const fetchMenuOptionGroupById = async (
 
 export const fetchCreateMenuOptionGroup = async (
   data: CreateMenuOptionGroupPayload
-): Promise<void> => {
-  await api.post("/api/dashboard/menu/option-groups", data);
+): Promise<MenuOptionGroupDetailResponse> => {
+  const response = await api.post("/api/dashboard/menu/option-groups", data);
+  return normalizeOptionGroupDetailResponse(response.data);
 };
 
 // ── Update Option Group ──

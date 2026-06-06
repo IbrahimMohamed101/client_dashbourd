@@ -12,6 +12,10 @@ export interface LocalizedText {
 export type MenuCategoryCardVariant =
   | "meal_builder"
   | "light_collection"
+  | "hero_builder_collection"
+  | "compact_builder_collection"
+  | "meal_collection"
+  | "compact_product_collection"
   | "sandwich_collection"
   | "addon_collection";
 
@@ -19,7 +23,14 @@ export type MenuProductCardVariant =
   | "standard"
   | "premium"
   | "large_salad"
-  | "addon";
+  | "addon"
+  | "hero_builder"
+  | "compact_builder"
+  | "ready_meal"
+  | "ready_meal_customizable"
+  | "compact_product"
+  | "sandwich_card"
+  | "addon_card";
 
 export type MenuOptionGroupDisplayStyle =
   | "chips"
@@ -54,10 +65,11 @@ export interface MenuCategory {
   isActive: boolean;
   isAvailable: boolean;
   isVisible?: boolean;
-  availableFor?: string[];
-  availableForSubscription?: boolean;
   ui?: {
     cardVariant?: MenuCategoryCardVariant;
+  };
+  availability?: {
+    branchIds?: string[];
   };
   sortOrder: number;
   createdAt?: string;
@@ -197,7 +209,39 @@ export interface UpdateMenuPremiumProteinPayload extends UpdateMenuProteinPayloa
 
 export interface MenuCategoryDetailResponse {
   status: boolean;
-  data: MenuCategory;
+  data: MenuCategoryDetail;
+}
+
+export interface MenuCategoryDetail extends MenuCategory {
+  contractVersion?: "dashboard_category_detail.v3" | string;
+  category?: MenuCategory;
+  products?: MenuProduct[];
+  assignment?: {
+    relationOwner?: "product.categoryId" | string;
+    bulkAssignmentEndpoint?: string;
+  };
+  actions?: {
+    canBulkAssignProducts?: boolean;
+    canReorderProducts?: boolean;
+  };
+}
+
+export interface BulkAssignProductsToCategoryPayload {
+  mode?: "assign";
+  productIds: string[];
+}
+
+export interface CategoryProductAssignmentResult {
+  contractVersion: "dashboard_category_product_assignment.v3" | string;
+  category: MenuCategory;
+  assignedCount: number;
+  products: MenuProduct[];
+  relationOwner: "product.categoryId" | string;
+}
+
+export interface CategoryProductAssignmentResponse {
+  status: boolean;
+  data: CategoryProductAssignmentResult;
 }
 
 export interface CreateMenuCategoryPayload {
@@ -208,6 +252,9 @@ export interface CreateMenuCategoryPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  availability?: {
+    branchIds?: string[];
+  };
   ui?: {
     cardVariant?: MenuCategoryCardVariant;
   };
@@ -221,6 +268,9 @@ export interface UpdateMenuCategoryPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  availability?: {
+    branchIds?: string[];
+  };
   ui?: {
     cardVariant?: MenuCategoryCardVariant;
   };
@@ -269,8 +319,10 @@ export interface MenuProduct {
   isActive: boolean;
   isAvailable: boolean;
   isVisible?: boolean;
+  isCustomizable?: boolean;
   availableFor?: string[];
-  availableForSubscription?: boolean;
+  branchAvailability?: string[];
+  catalogItemId?: string | null;
   ui?: {
     cardVariant?: MenuProductCardVariant;
     badge?: string;
@@ -288,7 +340,37 @@ export type MenuProductsResponse = PaginatedResponse<MenuProduct>;
 
 export interface MenuProductDetailResponse {
   status: boolean;
-  data: MenuProduct;
+  data: MenuProductDetail;
+}
+
+export interface MenuProductDetail extends MenuProduct {
+  contractVersion?: "dashboard_product_detail.v3" | string;
+  product?: MenuProduct;
+  category?: MenuCategory | null;
+  groupSummary?: {
+    linkedGroupCount: number;
+    composerEndpoint: string;
+    linkEndpoint: string;
+  };
+}
+
+export interface BulkUpdateProductsPayload {
+  action: "move_to_category";
+  productIds: string[];
+  categoryId: string;
+}
+
+export interface BulkUpdateProductsResult {
+  action: "move_to_category" | string;
+  category: MenuCategory;
+  count: number;
+  products: MenuProduct[];
+  relationOwner: "product.categoryId" | string;
+}
+
+export interface BulkUpdateProductsResponse {
+  status: boolean;
+  data: BulkUpdateProductsResult;
 }
 
 export interface CreateMenuProductPayload {
@@ -308,8 +390,10 @@ export interface CreateMenuProductPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  isCustomizable?: boolean;
   availableFor?: string[];
-  availableForSubscription?: boolean;
+  branchAvailability?: string[];
+  catalogItemId?: string | null;
   ui?: {
     cardVariant?: MenuProductCardVariant;
     badge?: string;
@@ -335,8 +419,10 @@ export interface UpdateMenuProductPayload {
   isActive?: boolean;
   isAvailable?: boolean;
   isVisible?: boolean;
+  isCustomizable?: boolean;
   availableFor?: string[];
-  availableForSubscription?: boolean;
+  branchAvailability?: string[];
+  catalogItemId?: string | null;
   ui?: {
     cardVariant?: MenuProductCardVariant;
     badge?: string;
@@ -368,7 +454,20 @@ export type MenuOptionGroupsResponse = PaginatedResponse<MenuOptionGroup>;
 
 export interface MenuOptionGroupDetailResponse {
   status: boolean;
-  data: MenuOptionGroup;
+  data: MenuOptionGroupDetail;
+}
+
+export interface MenuOptionGroupDetail extends MenuOptionGroup {
+  contractVersion?: "dashboard_option_group_detail.v3" | string;
+  optionGroup?: MenuOptionGroup;
+  options?: MenuOption[];
+  usage?: {
+    linkedProductsCount?: number;
+  };
+  actions?: {
+    canAddOptions?: boolean;
+    canReorderOptions?: boolean;
+  };
 }
 
 export interface CreateMenuOptionGroupPayload {
@@ -413,7 +512,6 @@ export interface MenuOption {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
-  proteinFamilyNameI18n?: LocalizedText;
   premiumKey?: string;
   extraFeeHalala?: number;
   ruleTags?: string[];
@@ -429,7 +527,13 @@ export type MenuOptionsResponse = PaginatedResponse<MenuOption>;
 
 export interface MenuOptionDetailResponse {
   status: boolean;
-  data: MenuOption;
+  data: MenuOptionDetail;
+}
+
+export interface MenuOptionDetail extends MenuOption {
+  contractVersion?: "dashboard_option_detail.v3" | string;
+  option?: MenuOption;
+  optionGroup?: MenuOptionGroup | null;
 }
 
 export interface CreateMenuOptionPayload {
@@ -446,7 +550,6 @@ export interface CreateMenuOptionPayload {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
-  proteinFamilyNameI18n?: LocalizedText;
   premiumKey?: string;
   extraFeeHalala?: number;
   ruleTags?: string[];
@@ -468,7 +571,6 @@ export interface UpdateMenuOptionPayload {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
-  proteinFamilyNameI18n?: LocalizedText;
   premiumKey?: string;
   extraFeeHalala?: number;
   ruleTags?: string[];
@@ -649,12 +751,12 @@ export interface MenuRollbackResponse {
 }
 
 export interface MenuProductComposerValidation {
-  errors: string[];
-  warnings: string[];
+  errors: Array<MenuValidationError | string>;
+  warnings: Array<MenuValidationError | string>;
 }
 
 export interface MenuProductComposer {
-  contractVersion: "dashboard_product_composer.v1" | string;
+  contractVersion: "dashboard_product_composer.v3" | string;
   product: MenuProduct;
   category: MenuCategory | null;
   publishState: {
@@ -663,6 +765,7 @@ export interface MenuProductComposer {
     versionId: string | null;
   };
   availability: {
+    isCustomizable?: boolean;
     isActive: boolean;
     isVisible: boolean;
     isAvailable: boolean;
@@ -681,6 +784,16 @@ export interface MenuProductComposer {
   };
   ui: NonNullable<MenuProduct["ui"]>;
   linkedOptionGroups: MenuProductLinkedGroup[];
+  customization?: {
+    isCustomizable?: boolean;
+    linkedGroups?: MenuProductLinkedGroup[];
+  };
+  availableActions?: {
+    canAttachGroups?: boolean;
+    canDetachGroups?: boolean;
+    canEditRules?: boolean;
+    canEditOptionOverrides?: boolean;
+  };
   validation: MenuProductComposerValidation;
 }
 

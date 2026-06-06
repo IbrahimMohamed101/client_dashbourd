@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MENU_CATEGORY_CARD_VARIANTS } from "@/constants/menuCatalog";
 
 const optionalGeneratedKey = z
   .string()
@@ -29,12 +30,7 @@ const menuCategorySchema = z.object({
   ui: z
     .object({
       cardVariant: z
-        .enum([
-          "meal_builder",
-          "light_collection",
-          "sandwich_collection",
-          "addon_collection",
-        ])
+        .enum(MENU_CATEGORY_CARD_VARIANTS)
         .optional(),
     })
     .default({}),

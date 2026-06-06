@@ -1,63 +1,47 @@
 import {
-  FileText,
   FolderOpen,
   Layers,
-  Link2,
-  Package,
   PanelTopOpen,
   RotateCcw,
-  Settings2,
 } from "lucide-react";
 
 const workflowSteps = [
   {
-    value: "categories",
-    label: "التصنيفات",
-    description: "أقسام القائمة",
+    value: "catalog",
+    label: "القائمة",
+    description: "التصنيفات والمنتجات",
     icon: FolderOpen,
   },
   {
-    value: "products",
-    label: "المنتجات",
-    description: "الأطباق والأسعار",
-    icon: Package,
-  },
-  {
-    value: "option-groups",
-    label: "مجموعات الخيارات",
-    description: "قواعد الاختيار",
+    value: "builder",
+    label: "التخصيص",
+    description: "الخيارات والربط",
     icon: Layers,
   },
   {
-    value: "options",
-    label: "الخيارات",
-    description: "الإضافات والبدائل",
-    icon: Settings2,
-  },
-  {
-    value: "relations",
-    label: "الربط",
-    description: "خيارات كل منتج",
-    icon: Link2,
-  },
-  {
-    value: "public-preview",
-    label: "معاينة العميل",
-    description: "العقد الجديد",
+    value: "preview",
+    label: "المعاينة",
+    description: "العميل والاشتراكات",
     icon: PanelTopOpen,
   },
   {
-    value: "audit",
-    label: "السجل",
-    description: "آخر التغييرات",
-    icon: FileText,
-  },
-  {
-    value: "versions",
-    label: "الإصدارات",
-    description: "النشر والاسترجاع",
+    value: "release",
+    label: "النشر والسجل",
+    description: "الإصدارات والتغييرات",
     icon: RotateCcw,
   },
 ];
 
-export { workflowSteps };
+const legacyMenuTabMap: Record<string, string> = {
+  categories: "catalog",
+  products: "catalog",
+  "option-groups": "builder",
+  options: "builder",
+  relations: "builder",
+  "public-preview": "preview",
+  "meal-planner-preview": "preview",
+  audit: "release",
+  versions: "release",
+};
+
+export { legacyMenuTabMap, workflowSteps };

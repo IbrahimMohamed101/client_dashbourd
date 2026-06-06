@@ -3,14 +3,18 @@ import type {
   MenuProductsResponse,
   MenuProductDetailResponse,
   MenuProductComposerResponse,
+  BulkUpdateProductsResponse,
   CreateMenuProductPayload,
   UpdateMenuProductPayload,
+  BulkUpdateProductsPayload,
   ReorderItem,
   MenuProductListParams,
 } from "@/types/menuTypes";
 import {
   normalizeProductsResponse,
   normalizeProductDetailResponse,
+  normalizeProductComposerResponse,
+  normalizeBulkUpdateProductsResponse,
 } from "@/utils/menuResponseNormalizers";
 import { buildListQuery } from "@/utils/buildListQuery";
 import { menuProductComposerUrl } from "@/utils/menuApiContract";
@@ -40,7 +44,7 @@ export const fetchMenuProductComposer = async (
   id: string
 ): Promise<MenuProductComposerResponse> => {
   const response = await api.get(menuProductComposerUrl(id));
-  return response.data;
+  return normalizeProductComposerResponse(response.data);
 };
 
 // ── Create Product ──
@@ -60,6 +64,13 @@ export const fetchUpdateMenuProduct = async (
   data: UpdateMenuProductPayload
 ): Promise<void> => {
   await api.patch(`/api/dashboard/menu/products/${id}`, data);
+};
+
+export const fetchBulkUpdateMenuProducts = async (
+  data: BulkUpdateProductsPayload
+): Promise<BulkUpdateProductsResponse> => {
+  const response = await api.patch("/api/dashboard/menu/products/bulk", data);
+  return normalizeBulkUpdateProductsResponse(response.data);
 };
 
 // ── Update Product Availability ──

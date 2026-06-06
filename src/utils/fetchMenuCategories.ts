@@ -2,14 +2,17 @@ import api from "@/lib/apis";
 import type {
   MenuCategoriesResponse,
   MenuCategoryDetailResponse,
+  CategoryProductAssignmentResponse,
   CreateMenuCategoryPayload,
   UpdateMenuCategoryPayload,
+  BulkAssignProductsToCategoryPayload,
   ReorderItem,
   MenuListParams,
 } from "@/types/menuTypes";
 import {
   normalizeCategoriesResponse,
   normalizeCategoryDetailResponse,
+  normalizeCategoryProductAssignmentResponse,
 } from "@/utils/menuResponseNormalizers";
 import { buildListQuery } from "@/utils/buildListQuery";
 
@@ -51,6 +54,17 @@ export const fetchUpdateMenuCategory = async (
   data: UpdateMenuCategoryPayload
 ): Promise<void> => {
   await api.patch(`/api/dashboard/menu/categories/${id}`, data);
+};
+
+export const fetchBulkAssignProductsToCategory = async (
+  categoryId: string,
+  data: BulkAssignProductsToCategoryPayload
+): Promise<CategoryProductAssignmentResponse> => {
+  const response = await api.post(
+    `/api/dashboard/menu/categories/${categoryId}/products`,
+    data
+  );
+  return normalizeCategoryProductAssignmentResponse(response.data);
 };
 
 // ── Soft Delete Category ──

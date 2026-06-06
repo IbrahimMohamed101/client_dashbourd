@@ -53,7 +53,7 @@ function CreateMenuCategoryPage() {
       ToastMessage("تم إنشاء التصنيف بنجاح", "success");
       router.navigate({
         to: "/menu",
-        search: { tab: "categories" }
+        search: { tab: "catalog" }
       });
     } catch (error: unknown) {
       ToastMessage(

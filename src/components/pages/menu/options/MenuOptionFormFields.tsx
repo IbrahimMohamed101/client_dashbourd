@@ -226,24 +226,6 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>اسم عائلة البروتين بالعربية (Protein Family Name AR)</Label>
-              <Input
-                placeholder="مثال: دجاج"
-                {...form.register("proteinFamilyNameI18n.ar")}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>اسم عائلة البروتين بالإنجليزية (Protein Family Name EN)</Label>
-              <Input
-                dir="ltr"
-                placeholder="e.g. Chicken"
-                {...form.register("proteinFamilyNameI18n.en")}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
                 <Label>مفتاح الاشتراك المميز (Premium Key)</Label>
                 <Input
                   dir="ltr"

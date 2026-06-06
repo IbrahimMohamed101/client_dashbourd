@@ -5,8 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertCircle,
-  CheckCircle2,
-  Link2,
   Loader2,
   Package,
   Save,
@@ -22,10 +20,10 @@ import {
 } from "@/hooks/useMenuQuery";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/global/loader";
 import { MenuProductFormFields } from "@/components/pages/menu/products/MenuProductFormFields";
+import { ProductCustomizationPanel } from "@/components/pages/menu/products/ProductCustomizationPanel";
 import { toUpdateMenuProductPayload } from "@/utils/menuPayloadMappers";
 import {
   fetchUploadImage,
@@ -69,7 +67,6 @@ function UpdateMenuProductPage() {
     <UpdateMenuProductForm composer={composerData.data} productId={productId} />
   );
 }
-
 function UpdateMenuProductForm({
   composer,
   productId,
@@ -101,7 +98,7 @@ function UpdateMenuProductForm({
         ToastMessage("تم تحديث المنتج بنجاح", "success");
         router.navigate({
           to: "/menu",
-          search: { tab: "products" },
+          search: { tab: "catalog" },
         });
       } catch (submitError: unknown) {
         ToastMessage(
@@ -116,6 +113,7 @@ function UpdateMenuProductForm({
 
   const showValidationSummary =
     form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0;
+  const isCustomizable = form.watch("isCustomizable") ?? false;
 
   return (
     <div className="w-full px-4 py-8 lg:px-8" dir="rtl">
@@ -138,8 +136,17 @@ function UpdateMenuProductForm({
         className="space-y-6"
         noValidate
       >
-        <ProductComposerSummary composer={composer} />
         <MenuProductFormFields form={form} isEdit />
+        <ProductCustomizationPanel
+          productId={productId}
+          isCustomizable={isCustomizable}
+          onEnableCustomization={() =>
+            form.setValue("isCustomizable", true, {
+              shouldDirty: true,
+              shouldValidate: true,
+            })
+          }
+        />
 
         <div className="sticky bottom-6 z-10 pt-2">
           <Card className="border-primary/30 bg-card/95 shadow-2xl ring-1 shadow-primary/10 ring-primary/10 backdrop-blur-md">
@@ -185,10 +192,7 @@ function UpdateMenuProductForm({
   );
 }
 
-function formatSar(halala?: number, currency = "SAR") {
-  return `${(Number(halala || 0) / 100).toFixed(2)} ${currency}`;
-}
-
+/*
 function ProductComposerSummary({
   composer,
 }: {
@@ -256,3 +260,4 @@ function ProductComposerSummary({
     </Card>
   );
 }
+*/

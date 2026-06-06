@@ -31,11 +31,7 @@ import {
   useMenuCategoriesQuery,
   useMenuCategoryDetailQuery,
 } from "@/hooks/useMenuQuery";
-import {
-  DEFAULT_MENU_AVAILABLE_FOR,
-  MENU_ITEM_TYPE_OPTIONS,
-  type MenuAvailableChannel,
-} from "@/constants/menuCatalog";
+import { MENU_ITEM_TYPE_OPTIONS } from "@/constants/menuCatalog";
 import type { MenuCategory } from "@/types/menuTypes";
 
 const CARD_VARIANTS = [
@@ -43,6 +39,13 @@ const CARD_VARIANTS = [
   { value: "premium", label: "مميز" },
   { value: "large_salad", label: "سلطة كبيرة" },
   { value: "addon", label: "إضافة" },
+  { value: "hero_builder", label: "منشئ بارز" },
+  { value: "compact_builder", label: "منشئ مختصر" },
+  { value: "ready_meal", label: "وجبة جاهزة" },
+  { value: "ready_meal_customizable", label: "وجبة جاهزة قابلة للتخصيص" },
+  { value: "compact_product", label: "منتج مختصر" },
+  { value: "sandwich_card", label: "بطاقة ساندويتش" },
+  { value: "addon_card", label: "بطاقة إضافة" },
 ];
 
 interface Props {
@@ -55,37 +58,12 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
   const selectedCategoryId = form.watch("categoryId") ?? "";
   const isActive = form.watch("isActive") ?? true;
   const isAvailable = form.watch("isAvailable") ?? true;
-  const isVisible = form.watch("isVisible") ?? true;
-  const availableFor =
-    form.watch("availableFor") ?? [...DEFAULT_MENU_AVAILABLE_FOR];
   const numberInput = (
     name: FieldPath<MenuProductSchemaInput>
   ): UseFormRegisterReturn =>
     form.register(name, {
       setValueAs: (value) => (value === "" ? undefined : Number(value)),
     });
-
-  
-// Directly use itemType from form watch; ensure it's set via schema defaults
-// No additional normalization needed
-  const normalizeChannels = (channels: string[]): MenuAvailableChannel[] =>
-    channels.map((item) => (item === "order" ? "one_time" : item)) as MenuAvailableChannel[];
-
-  const setChannel = (channel: MenuAvailableChannel, checked: boolean) => {
-    const current = normalizeChannels(availableFor);
-    const next = checked
-      ? Array.from(new Set([...current, channel]))
-      : current.filter((item) => item !== channel);
-
-    form.setValue("availableFor", next, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-    form.setValue("availableForSubscription", next.includes("subscription"), {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  };
 
   const { data: catsData } = useMenuCategoriesQuery({ limit: 100 });
   const { data: selectedCatData } = useMenuCategoryDetailQuery(selectedCategoryId);
@@ -352,21 +330,6 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
           />
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <ChannelToggle
-              label="قناة الطلب الفردي"
-              note="يظهر في طلبات المرة الواحدة"
-              checked={normalizeChannels(availableFor).includes("one_time")}
-              onChange={(checked) => setChannel("one_time", checked)}
-            />
-            <ChannelToggle
-              label="قناة الاشتراكات"
-              note="يظهر في منشئ الاشتراك"
-              checked={availableFor.includes("subscription")}
-              onChange={(checked) => setChannel("subscription", checked)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <ToggleCard
               label="نشط"
               note={isActive ? "المنتج مفعل" : "المنتج معطل"}
@@ -380,13 +343,6 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
               name="isAvailable"
               form={form}
               className="data-[state=checked]:bg-emerald-500"
-            />
-            <ToggleCard
-              label="الظهور"
-              note={isVisible ? "مرئي للعملاء" : "مخفي عن العملاء"}
-              name="isVisible"
-              form={form}
-              className="data-[state=checked]:bg-blue-500"
             />
           </div>
         </CardContent>
@@ -459,40 +415,20 @@ function TextAreaField({
   );
 }
 
-function ChannelToggle({
-  label,
-  note,
-  checked,
-  onChange,
-}: {
-  label: string;
-  note: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-      <div className="space-y-0.5">
-        <Label className="text-base font-bold">{label}</Label>
-        <p className="text-xs text-muted-foreground">{note}</p>
-      </div>
-      <Switch type="button" checked={checked} onCheckedChange={onChange} />
-    </div>
-  );
-}
-
 function ToggleCard({
   label,
   note,
   name,
   form,
   className,
+  defaultChecked = true,
 }: {
   label: string;
   note: string;
-  name: "isActive" | "isAvailable" | "isVisible";
+  name: "isActive" | "isAvailable";
   form: UseFormReturn<MenuProductSchemaInput, unknown, MenuProductSchemaType>;
   className: string;
+  defaultChecked?: boolean;
 }) {
   return (
     <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
@@ -506,7 +442,7 @@ function ToggleCard({
         render={({ field }) => (
           <Switch
             type="button"
-            checked={field.value ?? true}
+            checked={field.value ?? defaultChecked}
             className={className}
             onCheckedChange={field.onChange}
           />

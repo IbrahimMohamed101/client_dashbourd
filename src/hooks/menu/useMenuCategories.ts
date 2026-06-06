@@ -5,6 +5,7 @@ import {
   fetchMenuCategoryById,
   fetchCreateMenuCategory,
   fetchUpdateMenuCategory,
+  fetchBulkAssignProductsToCategory,
   fetchDeleteMenuCategory,
   fetchReorderMenuCategories,
 } from "@/utils/fetchMenuCategories";
@@ -12,6 +13,7 @@ import type {
   MenuListParams,
   CreateMenuCategoryPayload,
   UpdateMenuCategoryPayload,
+  BulkAssignProductsToCategoryPayload,
   ReorderItem,
 } from "@/types/menuTypes";
 
@@ -53,6 +55,19 @@ export const useUpdateMenuCategoryMutation = () =>
       fetchUpdateMenuCategory(id, data),
     successMessage: "تم تحديث التصنيف بنجاح",
     invalidateKeys: [[CATEGORIES_KEY]],
+  });
+
+export const useBulkAssignProductsToCategoryMutation = () =>
+  useMutationWithToast({
+    mutationFn: ({
+      categoryId,
+      data,
+    }: {
+      categoryId: string;
+      data: BulkAssignProductsToCategoryPayload;
+    }) => fetchBulkAssignProductsToCategory(categoryId, data),
+    successMessage: "تم تحديث منتجات التصنيف بنجاح",
+    invalidateKeys: [[CATEGORIES_KEY], ["menu.products"]],
   });
 
 export const useDeleteMenuCategoryMutation = () =>

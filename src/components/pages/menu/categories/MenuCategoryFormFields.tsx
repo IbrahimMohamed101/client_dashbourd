@@ -32,14 +32,16 @@ interface Props {
 const CARD_VARIANTS = [
   { value: "meal_builder", label: "منشئ الوجبات" },
   { value: "light_collection", label: "مجموعة خفيفة" },
+  { value: "hero_builder_collection", label: "مجموعة منشئ بارزة" },
+  { value: "compact_builder_collection", label: "مجموعة منشئ مختصرة" },
+  { value: "meal_collection", label: "مجموعة وجبات" },
+  { value: "compact_product_collection", label: "مجموعة منتجات مختصرة" },
   { value: "sandwich_collection", label: "مجموعة ساندويتشات" },
   { value: "addon_collection", label: "مجموعة إضافات" },
 ];
 
 export function MenuCategoryFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
-  const isAvailable = form.watch("isAvailable") ?? true;
-  const isVisible = form.watch("isVisible") ?? true;
 
   return (
     <div className="space-y-6">
@@ -176,27 +178,13 @@ export function MenuCategoryFormFields({ form, isEdit }: Props) {
           <CardTitle>إعدادات الحالة والظهور</CardTitle>
           <CardDescription>تحكم في ظهور وتفعيل التصنيف في التطبيق</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <CardContent>
           <ToggleCard
             label="نشط"
             note={isActive ? "التصنيف مفعل" : "التصنيف معطل"}
             name="isActive"
             form={form}
             className="data-[state=checked]:bg-green-500"
-          />
-          <ToggleCard
-            label="متوفر"
-            note={isAvailable ? "متاح للطلب" : "غير متوفر حالياً"}
-            name="isAvailable"
-            form={form}
-            className="data-[state=checked]:bg-emerald-500"
-          />
-          <ToggleCard
-            label="الظهور"
-            note={isVisible ? "مرئي للعملاء" : "مخفي عن العملاء"}
-            name="isVisible"
-            form={form}
-            className="data-[state=checked]:bg-blue-500"
           />
         </CardContent>
       </Card>
@@ -233,7 +221,7 @@ function ToggleCard({
 }: {
   label: string;
   note: string;
-  name: "isActive" | "isAvailable" | "isVisible";
+  name: "isActive";
   form: UseFormReturn<MenuCategorySchemaInput, unknown, MenuCategorySchemaType>;
   className: string;
 }) {
@@ -251,7 +239,11 @@ function ToggleCard({
             type="button"
             checked={field.value ?? true}
             className={className}
-            onCheckedChange={field.onChange}
+            onCheckedChange={(checked) => {
+              field.onChange(checked);
+              form.setValue("isAvailable", checked, { shouldDirty: true });
+              form.setValue("isVisible", checked, { shouldDirty: true });
+            }}
           />
         )}
       />

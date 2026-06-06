@@ -40,7 +40,7 @@ function CreateMenuProductPage() {
       ToastMessage("تم إنشاء المنتج بنجاح", "success");
       router.navigate({
         to: "/menu",
-        search: { tab: "products" }
+        search: { tab: "catalog" }
       });
     } catch (error: unknown) {
       ToastMessage(

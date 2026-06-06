@@ -6,6 +6,7 @@ import {
   fetchMenuProductComposer,
   fetchCreateMenuProduct,
   fetchUpdateMenuProduct,
+  fetchBulkUpdateMenuProducts,
   fetchUpdateMenuProductAvailability,
   fetchDuplicateMenuProduct,
   fetchDeleteMenuProduct,
@@ -16,6 +17,7 @@ import type {
   MenuProductComposerResponse,
   CreateMenuProductPayload,
   UpdateMenuProductPayload,
+  BulkUpdateProductsPayload,
   ReorderItem,
 } from "@/types/menuTypes";
 
@@ -48,7 +50,9 @@ export const menuProductComposerQueryOptions = (id: string) =>
   queryOptions<MenuProductComposerResponse>({
     queryKey: [PRODUCTS_KEY, "composer", id],
     queryFn: () => fetchMenuProductComposer(id),
-    staleTime: 1000 * 30,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
   });
 
 export const useMenuProductComposerQuery = (id: string) =>
@@ -70,6 +74,14 @@ export const useUpdateMenuProductMutation = () =>
       fetchUpdateMenuProduct(id, data),
     successMessage: "تم تحديث المنتج بنجاح",
     invalidateKeys: [[PRODUCTS_KEY]],
+  });
+
+export const useBulkUpdateMenuProductsMutation = () =>
+  useMutationWithToast({
+    mutationFn: (data: BulkUpdateProductsPayload) =>
+      fetchBulkUpdateMenuProducts(data),
+    successMessage: "تم تحديث المنتجات المحددة بنجاح",
+    invalidateKeys: [[PRODUCTS_KEY], ["menu.categories"]],
   });
 
 export const useToggleMenuProductAvailabilityMutation = () =>

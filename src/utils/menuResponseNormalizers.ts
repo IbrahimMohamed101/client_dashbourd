@@ -33,6 +33,9 @@ import type {
   MenuProductDetailResponse,
   MenuOptionGroupDetailResponse,
   MenuOptionDetailResponse,
+  MenuProductComposerResponse,
+  CategoryProductAssignmentResponse,
+  BulkUpdateProductsResponse,
   PaginationMeta,
 } from "@/types/menuTypes";
 
@@ -125,6 +128,7 @@ function productPriceHalala(raw: any): number {
 // ── Category Normalizer ──
 
 function normalizeCategory(raw: any): MenuCategory {
+  const availability = raw.availability ?? {};
   return {
     id: raw.id ?? raw._id ?? "",
     key: raw.key ?? "",
@@ -140,10 +144,11 @@ function normalizeCategory(raw: any): MenuCategory {
     isActive: raw.isActive ?? raw.active ?? raw.is_active ?? true,
     isAvailable: raw.isAvailable ?? raw.available ?? raw.is_available ?? true,
     isVisible: raw.isVisible ?? raw.visible ?? raw.is_visible ?? true,
-    availableFor: normalizeAvailableForFromApi(raw.availableFor ?? raw.available_for),
-    availableForSubscription: raw.availableForSubscription ?? raw.available_for_subscription ?? true,
     ui: {
       cardVariant: raw.ui?.cardVariant ?? raw.ui?.card_variant ?? raw.cardVariant ?? raw.card_variant ?? "meal_builder",
+    },
+    availability: {
+      branchIds: raw.branchIds ?? availability.branchIds ?? availability.branch_ids ?? [],
     },
     sortOrder: raw.sortOrder ?? raw.order ?? raw.sort_order ?? 0,
     createdAt: raw.createdAt ?? raw.created_at,
@@ -161,9 +166,39 @@ export function normalizeCategoriesResponse(raw: any): MenuCategoriesResponse {
 
 export function normalizeCategoryDetailResponse(raw: any): MenuCategoryDetailResponse {
   const data = raw.data ?? raw;
+  const category = normalizeCategory(data.category ?? data);
+  const products = Array.isArray(data.products)
+    ? data.products.map(normalizeProduct)
+    : undefined;
+
   return {
     status: raw.status ?? true,
-    data: normalizeCategory(data),
+    data: {
+      ...category,
+      contractVersion: data.contractVersion,
+      category,
+      products,
+      assignment: data.assignment,
+      actions: data.actions,
+    },
+  };
+}
+
+export function normalizeCategoryProductAssignmentResponse(
+  raw: any
+): CategoryProductAssignmentResponse {
+  const data = raw.data ?? raw;
+  return {
+    status: raw.status ?? true,
+    data: {
+      contractVersion: data.contractVersion,
+      category: normalizeCategory(data.category ?? {}),
+      assignedCount: data.assignedCount ?? data.products?.length ?? 0,
+      products: Array.isArray(data.products)
+        ? data.products.map(normalizeProduct)
+        : [],
+      relationOwner: data.relationOwner ?? "product.categoryId",
+    },
   };
 }
 
@@ -303,13 +338,10 @@ function normalizeProduct(raw: any): MenuProduct {
     isActive: raw.isActive ?? raw.active ?? raw.is_active ?? true,
     isAvailable: raw.isAvailable ?? raw.available ?? raw.is_available ?? true,
     isVisible: raw.isVisible ?? raw.visible ?? raw.is_visible ?? true,
+    isCustomizable: raw.isCustomizable ?? raw.is_customizable ?? false,
     availableFor: normalizeAvailableForFromApi(raw.availableFor ?? raw.available_for),
-    availableForSubscription:
-      raw.availableForSubscription ??
-      raw.available_for_subscription ??
-      normalizeAvailableForFromApi(raw.availableFor ?? raw.available_for).includes(
-        "subscription"
-      ),
+    branchAvailability: raw.branchAvailability ?? raw.branch_availability ?? raw.branchIds ?? [],
+    catalogItemId: idFromRef(raw.catalogItemId ?? raw.catalog_item_id) || null,
     ui: {
       cardVariant: raw.ui?.cardVariant ?? raw.ui?.card_variant ?? raw.cardVariant ?? raw.card_variant ?? "standard",
       badge: raw.ui?.badge ?? raw.badge ?? "",
@@ -334,9 +366,146 @@ export function normalizeProductsResponse(raw: any): MenuProductsResponse {
 
 export function normalizeProductDetailResponse(raw: any): MenuProductDetailResponse {
   const data = raw.data ?? raw;
+  const product = normalizeProduct(data.product ?? data);
+
   return {
     status: raw.status ?? true,
-    data: normalizeProduct(data),
+    data: {
+      ...product,
+      contractVersion: data.contractVersion,
+      product,
+      category: data.category ? normalizeCategory(data.category) : null,
+      groupSummary: data.groupSummary,
+    },
+  };
+}
+
+export function normalizeBulkUpdateProductsResponse(raw: any): BulkUpdateProductsResponse {
+  const data = raw.data ?? raw;
+  return {
+    status: raw.status ?? true,
+    data: {
+      action: data.action ?? "move_to_category",
+      category: normalizeCategory(data.category ?? {}),
+      count: data.count ?? data.products?.length ?? 0,
+      products: Array.isArray(data.products)
+        ? data.products.map(normalizeProduct)
+        : [],
+      relationOwner: data.relationOwner ?? "product.categoryId",
+    },
+  };
+}
+
+function normalizeComposerLinkedOption(raw: any): any {
+  const optionId = raw.optionId ?? raw.option_id ?? raw.option?.id ?? raw.option?._id ?? "";
+  return {
+    id: raw.relationId ?? raw.id,
+    optionId,
+    option: raw.option
+      ? normalizeOption(raw.option)
+      : {
+          id: optionId,
+          groupId: "",
+          key: raw.key ?? "",
+          name: raw.name ?? { ar: "", en: "" },
+          extraPriceHalala: raw.defaultPricing?.extraPriceHalala ?? 0,
+          isActive: raw.status?.isActive ?? true,
+          isAvailable: raw.status?.isAvailable ?? true,
+          isVisible: raw.status?.isVisible ?? true,
+          sortOrder: raw.sortOrder ?? 0,
+        },
+    extraPriceHalala: raw.overridePricing?.extraPriceHalala ?? raw.extraPriceHalala ?? undefined,
+    extraWeightUnitGrams:
+      raw.overridePricing?.extraWeightUnitGrams ?? raw.extraWeightUnitGrams ?? undefined,
+    extraWeightPriceHalala:
+      raw.overridePricing?.extraWeightPriceHalala ?? raw.extraWeightPriceHalala ?? undefined,
+    isActive: raw.status?.isActive ?? raw.isActive ?? true,
+    isAvailable: raw.status?.isAvailable ?? raw.isAvailable ?? true,
+    isVisible: raw.status?.isVisible ?? raw.isVisible ?? true,
+    sortOrder: raw.sortOrder ?? 0,
+  };
+}
+
+function normalizeComposerLinkedGroup(raw: any): any {
+  const groupId = raw.groupId ?? raw.group_id ?? raw.group?.id ?? raw.group?._id ?? "";
+  const normalizedGroup = raw.group
+    ? normalizeOptionGroup(raw.group)
+    : {
+        id: groupId,
+        key: raw.key ?? "",
+        name: raw.name ?? { ar: "", en: "" },
+        description: { ar: "", en: "" },
+        isActive: raw.status?.isActive ?? true,
+        isAvailable: raw.status?.isAvailable ?? true,
+        isVisible: raw.status?.isVisible ?? true,
+        ui: raw.ui ?? { displayStyle: "chips" },
+        sortOrder: raw.sortOrder ?? 0,
+      };
+
+  return {
+    id: raw.relationId ?? raw.id,
+    groupId,
+    group: normalizedGroup,
+    minSelections: raw.rules?.minSelections ?? raw.minSelections ?? 0,
+    maxSelections: raw.rules?.maxSelections ?? raw.maxSelections ?? null,
+    isRequired: raw.rules?.isRequired ?? raw.isRequired ?? false,
+    isActive: raw.status?.isActive ?? raw.isActive ?? true,
+    isAvailable: raw.status?.isAvailable ?? raw.isAvailable ?? true,
+    isVisible: raw.status?.isVisible ?? raw.isVisible ?? true,
+    sortOrder: raw.sortOrder ?? 0,
+    options: Array.isArray(raw.options)
+      ? raw.options.map(normalizeComposerLinkedOption)
+      : [],
+  };
+}
+
+export function normalizeProductComposerResponse(raw: any): MenuProductComposerResponse {
+  const data = raw.data ?? raw;
+  const product = normalizeProduct(data.product ?? {});
+  const linkedOptionGroups = Array.isArray(data.customization?.linkedGroups)
+    ? data.customization.linkedGroups.map(normalizeComposerLinkedGroup)
+    : Array.isArray(data.linkedOptionGroups)
+      ? data.linkedOptionGroups.map(normalizeComposerLinkedGroup)
+      : [];
+
+  return {
+    status: raw.status ?? true,
+    data: {
+      contractVersion: data.contractVersion ?? "dashboard_product_composer.v3",
+      product,
+      category: data.category ? normalizeCategory(data.category) : null,
+      publishState: data.publishState ?? {
+        isPublished: Boolean((product as any).publishedAt),
+        publishedAt: (product as any).publishedAt ?? null,
+        versionId: (product as any).versionId ?? null,
+      },
+      availability: data.availability ?? {
+        isCustomizable: data.customization?.isCustomizable ?? product.isCustomizable,
+        isActive: product.isActive,
+        isVisible: product.isVisible ?? true,
+        isAvailable: product.isAvailable,
+        availableFor: product.availableFor ?? [],
+        branchAvailability: product.branchAvailability ?? [],
+      },
+      pricing: data.pricing ?? {
+        pricingModel: product.pricingModel,
+        priceHalala: product.priceHalala,
+        baseUnitGrams: product.baseUnitGrams ?? 0,
+        defaultWeightGrams: product.defaultWeightGrams ?? 0,
+        minWeightGrams: product.minWeightGrams ?? 0,
+        maxWeightGrams: product.maxWeightGrams ?? 0,
+        weightStepGrams: product.weightStepGrams ?? 0,
+        currency: "SAR",
+      },
+      ui: data.ui ?? product.ui ?? { cardVariant: "standard" },
+      linkedOptionGroups,
+      customization: {
+        isCustomizable: data.customization?.isCustomizable ?? product.isCustomizable,
+        linkedGroups: linkedOptionGroups,
+      },
+      availableActions: data.availableActions,
+      validation: data.validation ?? { errors: [], warnings: [] },
+    },
   };
 }
 
@@ -376,9 +545,21 @@ export function normalizeOptionGroupsResponse(raw: any): MenuOptionGroupsRespons
 
 export function normalizeOptionGroupDetailResponse(raw: any): MenuOptionGroupDetailResponse {
   const data = raw.data ?? raw;
+  const optionGroup = normalizeOptionGroup(data.optionGroup ?? data);
+  const options = Array.isArray(data.options)
+    ? data.options.map(normalizeOption)
+    : undefined;
+
   return {
     status: raw.status ?? true,
-    data: normalizeOptionGroup(data),
+    data: {
+      ...optionGroup,
+      contractVersion: data.contractVersion,
+      optionGroup,
+      options,
+      usage: data.usage,
+      actions: data.actions,
+    },
   };
 }
 
@@ -406,7 +587,6 @@ function normalizeOption(raw: any): MenuOption {
     isVisible: raw.isVisible ?? raw.visible ?? raw.is_visible ?? true,
     displayCategoryKey: raw.displayCategoryKey ?? raw.display_category_key ?? raw.displayCategory ?? undefined,
     proteinFamilyKey: raw.proteinFamilyKey ?? raw.protein_family_key ?? raw.proteinFamily ?? undefined,
-    proteinFamilyNameI18n: raw.proteinFamilyNameI18n ?? raw.protein_family_name_i18n ?? undefined,
     premiumKey: raw.premiumKey ?? raw.premium_key ?? undefined,
     extraFeeHalala: raw.extraFeeHalala ?? raw.extra_fee_halala ?? raw.extraFee ?? undefined,
     ruleTags: raw.ruleTags ?? raw.rule_tags ?? undefined,
@@ -429,9 +609,16 @@ export function normalizeOptionsResponse(raw: any): MenuOptionsResponse {
 
 export function normalizeOptionDetailResponse(raw: any): MenuOptionDetailResponse {
   const data = raw.data ?? raw;
+  const option = normalizeOption(data.option ?? data);
+
   return {
     status: raw.status ?? true,
-    data: normalizeOption(data),
+    data: {
+      ...option,
+      contractVersion: data.contractVersion,
+      option,
+      optionGroup: data.optionGroup ? normalizeOptionGroup(data.optionGroup) : null,
+    },
   };
 }
 

@@ -49,11 +49,22 @@ export const MENU_PRODUCT_CARD_VARIANTS = [
   "premium",
   "large_salad",
   "addon",
+  "hero_builder",
+  "compact_builder",
+  "ready_meal",
+  "ready_meal_customizable",
+  "compact_product",
+  "sandwich_card",
+  "addon_card",
 ] as const;
 
 export const MENU_CATEGORY_CARD_VARIANTS = [
   "meal_builder",
   "light_collection",
+  "hero_builder_collection",
+  "compact_builder_collection",
+  "meal_collection",
+  "compact_product_collection",
   "sandwich_collection",
   "addon_collection",
 ] as const;
