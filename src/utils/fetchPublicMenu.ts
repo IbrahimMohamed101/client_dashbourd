@@ -6,7 +6,9 @@ export const publicMenuPreviewUrl = () =>
   "/api/orders/menu?includePublicV2=true";
 
 export const fetchPublicMenuPreview = async (): Promise<PublicMenuResponse> => {
-  const response = await api.get(publicMenuPreviewUrl());
+  const response = await api.get(publicMenuPreviewUrl(), {
+    skipAuthRedirect: true,
+  });
   return {
     status: response.data?.status ?? true,
     data: mapPublicMenuResponse(response.data),

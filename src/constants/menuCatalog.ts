@@ -1,81 +1,15 @@
-export const MENU_ITEM_TYPES = [
-  "basic_salad",
-  "basic_meal",
-  "fruit_salad",
-  "greek_yogurt",
-  "green_salad",
-  "cold_sandwich",
-  "sourdough",
-  "dessert",
-  "juice",
-  "drink",
-  "ice_cream",
-  "product",
-] as const;
+export const MENU_PRODUCT_CARD_SIZES = ["large", "medium", "small"] as const;
 
-export type MenuItemType = (typeof MENU_ITEM_TYPES)[number];
+export type MenuProductCardSize = (typeof MENU_PRODUCT_CARD_SIZES)[number];
 
-const MENU_ITEM_TYPE_SET = new Set<string>(MENU_ITEM_TYPES);
-
-export const normalizeMenuItemTypeFromApi = (
-  itemType?: string | null
-): MenuItemType => {
-  if (itemType && MENU_ITEM_TYPE_SET.has(itemType)) {
-    return itemType as MenuItemType;
-  }
-  return "product";
-};
-
-export const MENU_ITEM_TYPE_OPTIONS: ReadonlyArray<{
-  value: MenuItemType;
+export const MENU_PRODUCT_CARD_SIZE_OPTIONS: ReadonlyArray<{
+  value: MenuProductCardSize;
   label: string;
 }> = [
-  { value: "basic_salad", label: "سلطة أساسية" },
-  { value: "basic_meal", label: "وجبة أساسية" },
-  { value: "fruit_salad", label: "سلطة فواكه" },
-  { value: "greek_yogurt", label: "زبادي يوناني" },
-  { value: "green_salad", label: "سلطة خضراء" },
-  { value: "cold_sandwich", label: "ساندويتش بارد" },
-  { value: "sourdough", label: "ساوردو" },
-  { value: "dessert", label: "حلويات" },
-  { value: "juice", label: "عصير" },
-  { value: "drink", label: "مشروب" },
-  { value: "ice_cream", label: "آيس كريم" },
-  { value: "product", label: "منتج" },
+  { value: "large", label: "كبير" },
+  { value: "medium", label: "متوسط" },
+  { value: "small", label: "صغير" },
 ];
-
-export const MENU_PRODUCT_CARD_VARIANTS = [
-  "standard",
-  "premium",
-  "large_salad",
-  "addon",
-  "hero_builder",
-  "compact_builder",
-  "ready_meal",
-  "ready_meal_customizable",
-  "compact_product",
-  "sandwich_card",
-  "addon_card",
-] as const;
-
-export const MENU_CATEGORY_CARD_VARIANTS = [
-  "meal_builder",
-  "light_collection",
-  "hero_builder_collection",
-  "compact_builder_collection",
-  "meal_collection",
-  "compact_product_collection",
-  "sandwich_collection",
-  "addon_collection",
-] as const;
-
-export const MENU_OPTION_GROUP_DISPLAY_STYLES = [
-  "chips",
-  "radio_cards",
-  "checkbox_grid",
-  "dropdown",
-  "stepper",
-] as const;
 
 export const MENU_AVAILABLE_CHANNELS = ["one_time", "subscription"] as const;
 

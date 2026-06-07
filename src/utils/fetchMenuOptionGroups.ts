@@ -31,7 +31,9 @@ export const fetchMenuOptionGroups = async (
 export const fetchMenuOptionGroupById = async (
   id: string
 ): Promise<MenuOptionGroupDetailResponse> => {
-  const response = await api.get(`/api/dashboard/menu/option-groups/${id}`);
+  const response = await api.get(
+    `/api/dashboard/menu/option-groups/${id}?includeInactive=true`
+  );
   return normalizeOptionGroupDetailResponse(response.data);
 };
 

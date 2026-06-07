@@ -32,6 +32,9 @@ export interface PublicMenuOption {
   extraWeightUnitGrams: number;
   extraWeightPriceHalala: number;
   sortOrder: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
   proteinFamilyKey?: string;
   displayCategoryKey?: string;
 }
@@ -46,6 +49,9 @@ export interface PublicMenuOptionGroup {
   maxSelections: number | null;
   isRequired: boolean;
   sortOrder: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
   ui: Record<string, unknown>;
   options: PublicMenuOption[];
 }
@@ -62,6 +68,10 @@ export interface PublicMenuProduct {
   descriptionI18n?: PublicMenuLocalizedText;
   imageUrl: string;
   sortOrder: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
+  isCustomizable?: boolean;
   pricing: PublicMenuPricing;
   action: PublicMenuAction;
   ui: Record<string, unknown>;
@@ -78,6 +88,9 @@ export interface PublicMenuSection {
   descriptionI18n?: PublicMenuLocalizedText;
   imageUrl: string;
   sortOrder: number;
+  isActive?: boolean;
+  isAvailable?: boolean;
+  isVisible?: boolean;
   ui: Record<string, unknown>;
   products: PublicMenuProduct[];
 }

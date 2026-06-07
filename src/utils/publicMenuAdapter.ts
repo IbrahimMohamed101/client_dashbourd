@@ -74,6 +74,9 @@ function normalizeOption(raw: unknown): PublicMenuOption {
     extraWeightUnitGrams: asNumber(option.extraWeightUnitGrams),
     extraWeightPriceHalala: asNumber(option.extraWeightPriceHalala),
     sortOrder: asNumber(option.sortOrder),
+    isActive: option.isActive,
+    isAvailable: option.isAvailable,
+    isVisible: option.isVisible,
     proteinFamilyKey: option.proteinFamilyKey,
     displayCategoryKey: option.displayCategoryKey,
   };
@@ -96,6 +99,9 @@ function normalizeOptionGroup(raw: unknown): PublicMenuOptionGroup {
     maxSelections,
     isRequired: Boolean(group.isRequired),
     sortOrder: asNumber(group.sortOrder),
+    isActive: group.isActive,
+    isAvailable: group.isAvailable,
+    isVisible: group.isVisible,
     ui: asRecord(group.ui),
     options: asArray(group.options).map(normalizeOption),
   };
@@ -117,6 +123,10 @@ function normalizeProduct(raw: unknown, section: Record<string, any>): PublicMen
     descriptionI18n: product.descriptionI18n,
     imageUrl: asString(product.imageUrl),
     sortOrder: asNumber(product.sortOrder),
+    isActive: product.isActive,
+    isAvailable: product.isAvailable,
+    isVisible: product.isVisible,
+    isCustomizable: product.isCustomizable,
     pricing: normalizePricing(pricingSource),
     action: normalizeAction(actionSource),
     ui: asRecord(product.ui),
@@ -136,6 +146,9 @@ function normalizeSection(raw: unknown): PublicMenuSection {
     descriptionI18n: section.descriptionI18n,
     imageUrl: asString(section.imageUrl),
     sortOrder: asNumber(section.sortOrder),
+    isActive: section.isActive,
+    isAvailable: section.isAvailable,
+    isVisible: section.isVisible,
     ui: asRecord(section.ui),
     products: asArray(section.products).map((product) =>
       normalizeProduct(product, section)

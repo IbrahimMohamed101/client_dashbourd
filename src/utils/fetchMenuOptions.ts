@@ -21,7 +21,10 @@ export const fetchMenuOptions = async (
   params: MenuOptionListParams = {}
 ): Promise<MenuOptionsResponse> => {
   const response = await api.get(
-    `/api/dashboard/menu/options${buildListQuery(params)}`
+    `/api/dashboard/menu/options${buildListQuery({
+      includeInactive: true,
+      ...params,
+    })}`
   );
   return normalizeOptionsResponse(response.data);
 };
@@ -53,6 +56,17 @@ export const fetchUpdateMenuOption = async (
   data: UpdateMenuOptionPayload
 ): Promise<void> => {
   await api.patch(`/api/dashboard/menu/options/${id}`, data);
+};
+
+export const fetchAssignMenuOptionsToGroup = async (
+  groupId: string,
+  optionIds: string[]
+): Promise<void> => {
+  await Promise.all(
+    optionIds.map((optionId) =>
+      api.patch(`/api/dashboard/menu/options/${optionId}`, { groupId })
+    )
+  );
 };
 
 // ── Soft Delete Option ──

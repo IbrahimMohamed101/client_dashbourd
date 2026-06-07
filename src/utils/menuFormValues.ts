@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { DEFAULT_MENU_AVAILABLE_FOR, normalizeAvailableForFromApi, normalizeMenuItemTypeFromApi } from "@/constants/menuCatalog";
+import { DEFAULT_MENU_AVAILABLE_FOR, normalizeAvailableForFromApi } from "@/constants/menuCatalog";
 import type { MenuCategory, MenuOption, MenuOptionGroup, MenuProduct } from "@/types/menuTypes";
 import type { MenuCategorySchemaInput } from "@/lib/validations/menuCategorySchema";
 import type { MenuOptionGroupSchemaInput } from "@/lib/validations/menuOptionGroupSchema";
@@ -65,9 +65,6 @@ export const getMenuCategoryFormValues = (
   isActive: category?.isActive ?? true,
   isAvailable: category?.isAvailable ?? true,
   isVisible: category?.isVisible ?? true,
-  ui: {
-    cardVariant: category?.ui?.cardVariant ?? "meal_builder",
-  },
   sortOrder: category?.sortOrder ?? 0,
 });
 
@@ -95,9 +92,9 @@ export const getMenuProductFormValues = (
     product?.category
   ),
   key: product?.key ?? "",
-  itemType: normalizeMenuItemTypeFromApi(
-    firstNonEmptyString(product?.itemType, product?.item_type, product?.type)
-  ),
+  itemType:
+    firstNonEmptyString(product?.itemType, product?.item_type, product?.type) ||
+    "product",
   pricingModel: product?.pricingModel ?? "fixed",
   name: product?.name ?? emptyLocalizedText,
   description: product?.description ?? emptyLocalizedText,
@@ -114,10 +111,8 @@ export const getMenuProductFormValues = (
   isCustomizable: product?.isCustomizable ?? false,
   availableFor: normalizeAvailableForFromApi(product?.availableFor),
   ui: {
-    cardVariant: product?.ui?.cardVariant ?? (product?.ui as any)?.card_variant ?? "standard",
-    badge: product?.ui?.badge ?? (product as any)?.badge ?? "",
-    ctaLabel: product?.ui?.ctaLabel ?? (product?.ui as any)?.cta_label ?? (product as any)?.ctaLabel ?? (product as any)?.cta_label ?? "",
-    imageRatio: product?.ui?.imageRatio ?? (product?.ui as any)?.image_ratio ?? (product as any)?.imageRatio ?? (product as any)?.image_ratio ?? "square",
+    cardSize:
+      product?.ui?.cardSize ?? (product?.ui as any)?.card_size ?? "medium",
   },
   sortOrder: product?.sortOrder ?? 0,
 });
@@ -139,12 +134,7 @@ export const getMenuOptionFormValues = (
   isActive: option?.isActive ?? true,
   isAvailable: option?.isAvailable ?? true,
   isVisible: option?.isVisible ?? true,
-  displayCategoryKey: option?.displayCategoryKey ?? "",
-  proteinFamilyKey: option?.proteinFamilyKey ?? "",
-  premiumKey: option?.premiumKey ?? "",
   extraFeeSar: option?.extraFeeHalala !== undefined && option.extraFeeHalala !== null ? option.extraFeeHalala / 100 : 0,
-  ruleTags: Array.isArray(option?.ruleTags) ? option.ruleTags.join(", ") : "",
-  selectionType: option?.selectionType ?? "",
   availableFor: normalizeAvailableForFromApi(option?.availableFor),
   availableForSubscription:
     option?.availableForSubscription ?? option?.availableFor?.includes("subscription") ?? true,
@@ -166,10 +156,7 @@ export const getMenuProductCreateDefaults = (): MenuProductSchemaInput => ({
   isCustomizable: false,
   availableFor: [...DEFAULT_MENU_AVAILABLE_FOR],
   ui: {
-    cardVariant: "standard",
-    badge: "",
-    ctaLabel: "",
-    imageRatio: "square",
+    cardSize: "medium",
   },
   sortOrder: 0,
 });
@@ -182,9 +169,6 @@ export const getMenuCategoryCreateDefaults = (): MenuCategorySchemaInput => ({
   isActive: true,
   isAvailable: true,
   isVisible: true,
-  ui: {
-    cardVariant: "meal_builder",
-  },
   sortOrder: 0,
 });
 
@@ -211,12 +195,7 @@ export const getMenuOptionCreateDefaults = (): MenuOptionSchemaInput => ({
   isActive: true,
   isAvailable: true,
   isVisible: true,
-  displayCategoryKey: "",
-  proteinFamilyKey: "",
-  premiumKey: "",
   extraFeeSar: 0,
-  ruleTags: "",
-  selectionType: "",
   availableFor: [...DEFAULT_MENU_AVAILABLE_FOR],
   availableForSubscription: true,
   sortOrder: 0,

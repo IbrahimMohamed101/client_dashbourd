@@ -25,10 +25,6 @@ import type {
 } from "@/lib/validations/menuOptionSchema";
 import { useMenuOptionGroupsQuery } from "@/hooks/useMenuQuery";
 import type { MenuOptionGroup } from "@/types/menuTypes";
-import {
-  DEFAULT_MENU_AVAILABLE_FOR,
-  type MenuAvailableChannel,
-} from "@/constants/menuCatalog";
 
 interface Props {
   form: UseFormReturn<MenuOptionSchemaInput, unknown, MenuOptionSchemaType>;
@@ -37,36 +33,11 @@ interface Props {
 
 export function MenuOptionFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
-  const isAvailable = form.watch("isAvailable") ?? true;
-  const isVisible = form.watch("isVisible") ?? true;
-  const availableFor =
-    form.watch("availableFor") ?? [...DEFAULT_MENU_AVAILABLE_FOR];
   const { data: groupsData } = useMenuOptionGroupsQuery({});
   const responseData = groupsData?.data;
   const groups = (
     Array.isArray(responseData) ? responseData : responseData?.items || []
   ) as MenuOptionGroup[];
-
-  const normalizeChannels = (channels: string[]): MenuAvailableChannel[] =>
-    channels.map((item) =>
-      item === "order" ? "one_time" : item
-    ) as MenuAvailableChannel[];
-
-  const setChannel = (channel: MenuAvailableChannel, checked: boolean) => {
-    const current = normalizeChannels(availableFor);
-    const next = checked
-      ? Array.from(new Set([...current, channel]))
-      : current.filter((item) => item !== channel);
-
-    form.setValue("availableFor", next, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-    form.setValue("availableForSubscription", next.includes("subscription"), {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -107,7 +78,7 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
                       value={field.value ?? ""}
                       onValueChange={field.onChange}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="min-w-36">
                         <SelectValue placeholder="اختر المجموعة" />
                       </SelectTrigger>
                       <SelectContent>
@@ -205,56 +176,6 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
-                <Label>مفتاح فئة العرض</Label>
-                <Input
-                  dir="ltr"
-                  placeholder="بروتين"
-                  {...form.register("displayCategoryKey")}
-                />
-            </div>
-            <div className="space-y-1.5">
-                <Label>مفتاح عائلة البروتين</Label>
-                <Input
-                  dir="ltr"
-                  placeholder="دجاج"
-                  {...form.register("proteinFamilyKey")}
-                />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-1.5">
-                <Label>مفتاح الاشتراك المميز (Premium Key)</Label>
-                <Input
-                  dir="ltr"
-                  placeholder="مفتاح_بروتين_مميز"
-                  {...form.register("premiumKey")}
-                />
-            </div>
-            <div className="space-y-1.5">
-                <Label>نوع الاختيار (Selection Type)</Label>
-                <Input
-                  dir="ltr"
-                  placeholder="بروتين_مضاعف"
-                  {...form.register("selectionType")}
-                />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>وسوم التحكم بالاشتراكات (Rule Tags - مفصولة بفاصلة)</Label>
-            <Input
-              dir="ltr"
-              placeholder="لحم_بقر, مضاعف, مميز"
-              {...form.register("ruleTags")}
-            />
-            <p className="text-xs text-muted-foreground">
-              أدخل الكلمات المفتاحية للتحكم بالاشتراك، مفصولة بفاصلة إنجليزية (,)
-            </p>
-          </div>
-
         </CardContent>
       </Card>
 
@@ -318,7 +239,7 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
       <Card>
         <CardHeader>
           <CardTitle>إعدادات الحالة والظهور</CardTitle>
-          <CardDescription>تحكم في ترتيب وتفعيل وظهور الخيار في التطبيق</CardDescription>
+          <CardDescription>تحكم في ترتيب الخيار وتفعيله في التطبيق</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -331,44 +252,11 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
                 {...form.register("sortOrder")}
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-              <div className="space-y-0.5">
-                <Label className="text-base font-bold">قناة الطلب الفردي</Label>
-                <p className="text-xs text-muted-foreground">
-                  يظهر في طلبات المرة الواحدة
-                </p>
-              </div>
-              <Switch
-                type="button"
-                checked={normalizeChannels(availableFor).includes("one_time")}
-                onCheckedChange={(checked) => setChannel("one_time", checked)}
-              />
-            </div>
-
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-              <div className="space-y-0.5">
-                <Label className="text-base font-bold">قناة الاشتراكات</Label>
-                <p className="text-xs text-muted-foreground">
-                  يظهر في منشئ الاشتراك
-                </p>
-              </div>
-              <Switch
-                type="button"
-                checked={availableFor.includes("subscription")}
-                onCheckedChange={(checked) => setChannel("subscription", checked)}
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
               <div className="space-y-0.5">
                 <Label className="text-base font-bold">نشط</Label>
                 <p className="text-xs text-muted-foreground">
-                  {isActive ? "الخيار مفعل" : "الخيار معطل"}
+                  {isActive ? "الخيار ظاهر ومتاح للعملاء" : "الخيار معطل وغير متاح للعملاء"}
                 </p>
               </div>
               <Controller
@@ -379,49 +267,17 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
                     type="button"
                     checked={field.value ?? true}
                     className="data-[state=checked]:bg-green-500"
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
-
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-              <div className="space-y-0.5">
-                <Label className="text-base font-bold">متوفر</Label>
-                <p className="text-xs text-muted-foreground">
-                  {isAvailable ? "متاح للطلب" : "غير متوفر حالياً"}
-                </p>
-              </div>
-              <Controller
-                control={form.control}
-                name="isAvailable"
-                render={({ field }) => (
-                  <Switch
-                    type="button"
-                    checked={field.value ?? true}
-                    className="data-[state=checked]:bg-emerald-500"
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-            </div>
-
-            <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
-              <div className="space-y-0.5">
-                <Label className="text-base font-bold">الظهور</Label>
-                <p className="text-xs text-muted-foreground">
-                  {isVisible ? "مرئي للعملاء" : "مخفي عن العملاء"}
-                </p>
-              </div>
-              <Controller
-                control={form.control}
-                name="isVisible"
-                render={({ field }) => (
-                  <Switch
-                    type="button"
-                    checked={field.value ?? true}
-                    className="data-[state=checked]:bg-blue-500"
-                    onCheckedChange={field.onChange}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      form.setValue("isAvailable", checked, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                      form.setValue("isVisible", checked, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }}
                   />
                 )}
               />

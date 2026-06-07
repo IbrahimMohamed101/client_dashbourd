@@ -8,7 +8,6 @@ import { MenuValidationDialog } from "@/components/pages/menu/MenuValidationDial
 import { MenuOptionGroupsTab } from "@/components/pages/menu/option-groups/MenuOptionGroupsTab";
 import { MenuOptionsTab } from "@/components/pages/menu/options/MenuOptionsTab";
 import { MenuProductsTab } from "@/components/pages/menu/products/MenuProductsTab";
-import { MealPlannerMenuPreviewTab } from "@/components/pages/menu/meal-planner-preview/MealPlannerMenuPreviewTab";
 import { PublicMenuPreviewTab } from "@/components/pages/menu/public-preview/PublicMenuPreviewTab";
 import { MenuVersionsTab } from "@/components/pages/menu/versions/MenuVersionsTab";
 import { Separator } from "@/components/ui/separator";
@@ -129,7 +128,6 @@ function MenuPage() {
         <TabsContent value="preview" className="mt-5">
           <div className="grid gap-5">
             <PublicMenuPreviewTab />
-            <MealPlannerMenuPreviewTab />
           </div>
         </TabsContent>
         <TabsContent value="release" className="mt-5">

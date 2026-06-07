@@ -3,6 +3,12 @@ import Cookies from "js-cookie";
 import { toast } from "sonner";
 import { parseApiError } from "./apiErrors";
 
+declare module "axios" {
+  interface AxiosRequestConfig {
+    skipAuthRedirect?: boolean;
+  }
+}
+
 const api = axios.create({
   baseURL: import.meta.env?.VITE_BACKEND_URL || "",
   headers: {
@@ -39,7 +45,7 @@ api.interceptors.response.use(
     const parsedError = parseApiError(error);
     const message = parsedError.message;
 
-    if (parsedError.status === 401) {
+    if (parsedError.status === 401 && !error.config?.skipAuthRedirect) {
       Cookies.remove("dashboardToken");
       window.location.href = "/";
     }

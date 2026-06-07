@@ -29,12 +29,6 @@ const ENTITY_LABELS: Record<string, string> = {
   menu: "القائمة",
 };
 
-const ITEM_TYPE_LABELS: Record<string, string> = {
-  one_time: "طلب مرة واحدة",
-  subscription: "اشتراك",
-  meal: "وجبة",
-};
-
 const formatDate = (dateStr: string) => {
   try {
     return new Intl.DateTimeFormat("ar-SA", {
@@ -223,15 +217,6 @@ export const getProductColumns = ({
         <span className="text-muted-foreground">-</span>
       );
     },
-  },
-  {
-    accessorKey: "itemType",
-    header: "النوع",
-    cell: ({ row }) => (
-      <Badge variant="outline">
-        {ITEM_TYPE_LABELS[row.original.itemType] || row.original.itemType}
-      </Badge>
-    ),
   },
   {
     accessorKey: "pricingModel",

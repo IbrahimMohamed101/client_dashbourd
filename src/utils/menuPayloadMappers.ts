@@ -39,8 +39,6 @@ const withOptionalKey = <T extends object>(payload: T, key?: string): T & { key?
   return normalizedKey ? { ...payload, key: normalizedKey } : payload;
 };
 
-const clearableString = (value?: string) => value?.trim() ?? "";
-
 const mapAvailableFor = normalizeAvailableForToApi;
 
 export const toCreateMenuCategoryPayload = (
@@ -52,7 +50,6 @@ export const toCreateMenuCategoryPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
-  ui: data.ui,
   sortOrder: data.sortOrder,
 }, data.key);
 
@@ -65,7 +62,6 @@ export const toUpdateMenuCategoryPayload = (
   isActive: data.isActive,
   isAvailable: data.isAvailable,
   isVisible: data.isVisible,
-  ui: data.ui,
   sortOrder: data.sortOrder,
 });
 
@@ -165,7 +161,9 @@ export const toCreateMenuProductPayload = (
   isVisible: data.isVisible,
   isCustomizable: data.isCustomizable,
   availableFor: mapAvailableFor(data.availableFor),
-  ui: data.ui,
+  ui: {
+    cardSize: data.ui.cardSize,
+  },
   sortOrder: data.sortOrder,
 }, data.key);
 
@@ -189,7 +187,9 @@ export const toUpdateMenuProductPayload = (
   isVisible: data.isVisible,
   isCustomizable: data.isCustomizable,
   availableFor: mapAvailableFor(data.availableFor),
-  ui: data.ui,
+  ui: {
+    cardSize: data.ui.cardSize,
+  },
   sortOrder: data.sortOrder,
 });
 
@@ -228,14 +228,9 @@ export const toCreateMenuOptionPayload = (
   extraWeightUnitGrams: data.extraWeightUnitGrams,
   extraWeightPriceHalala: optionalSarToHalala(data.extraWeightPriceSar),
   isActive: data.isActive,
-  isAvailable: data.isAvailable,
-  isVisible: data.isVisible,
-  displayCategoryKey: optionalKey(data.displayCategoryKey),
-  proteinFamilyKey: optionalKey(data.proteinFamilyKey),
-  premiumKey: clearableString(data.premiumKey),
+  isAvailable: data.isActive,
+  isVisible: data.isActive,
   extraFeeHalala: data.extraFeeSar ? sarToHalala(data.extraFeeSar) : 0,
-  ruleTags: data.ruleTags ? data.ruleTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-  selectionType: clearableString(data.selectionType),
   availableFor: mapAvailableFor(data.availableFor),
   availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,
@@ -251,14 +246,9 @@ export const toUpdateMenuOptionPayload = (
   extraWeightUnitGrams: data.extraWeightUnitGrams,
   extraWeightPriceHalala: optionalSarToHalala(data.extraWeightPriceSar),
   isActive: data.isActive,
-  isAvailable: data.isAvailable,
-  isVisible: data.isVisible,
-  displayCategoryKey: optionalKey(data.displayCategoryKey),
-  proteinFamilyKey: optionalKey(data.proteinFamilyKey),
-  premiumKey: clearableString(data.premiumKey),
+  isAvailable: data.isActive,
+  isVisible: data.isActive,
   extraFeeHalala: data.extraFeeSar ? sarToHalala(data.extraFeeSar) : 0,
-  ruleTags: data.ruleTags ? data.ruleTags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-  selectionType: clearableString(data.selectionType),
   availableFor: mapAvailableFor(data.availableFor),
   availableForSubscription: data.availableForSubscription,
   sortOrder: data.sortOrder,

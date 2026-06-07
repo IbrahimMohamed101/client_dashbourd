@@ -1,4 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import menuOptionGroupSchema, {
@@ -12,9 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Layers, Save, Loader2, AlertCircle } from "lucide-react";
 import { Loader } from "@/components/global/loader";
 import { MenuOptionGroupFormFields } from "@/components/pages/menu/option-groups/MenuOptionGroupFormFields";
+import { OptionGroupOptionsPanel } from "@/components/pages/menu/option-groups/OptionGroupOptionsPanel";
 import { toUpdateMenuOptionGroupPayload } from "@/utils/menuPayloadMappers";
 import { getMenuOptionGroupFormValues } from "@/utils/menuFormValues";
-import type { MenuOptionGroup } from "@/types/menuTypes";
+import { fetchAssignMenuOptionsToGroup } from "@/utils/fetchMenuOptions";
+import type { MenuOptionGroupDetail } from "@/types/menuTypes";
 
 export const Route = createFileRoute(
   "/_protected/menu/option-groups/$groupId/update"
@@ -49,11 +53,13 @@ function UpdateOptionGroupForm({
   group,
   groupId,
 }: {
-  group: MenuOptionGroup;
+  group: MenuOptionGroupDetail;
   groupId: string;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const mutation = useUpdateMenuOptionGroupMutation();
+  const [isAssigningOptions, setIsAssigningOptions] = useState(false);
 
   const form = useForm<
     MenuOptionGroupSchemaInput,
@@ -82,6 +88,20 @@ function UpdateOptionGroupForm({
   const showValidationSummary =
     form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0;
 
+  const handleAssignOptions = async (optionIds: string[]) => {
+    if (!optionIds.length) return;
+    setIsAssigningOptions(true);
+    try {
+      await fetchAssignMenuOptionsToGroup(groupId, optionIds);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["menu.optionGroups"] }),
+        queryClient.invalidateQueries({ queryKey: ["menu.options"] }),
+      ]);
+    } finally {
+      setIsAssigningOptions(false);
+    }
+  };
+
   return (
     <div className="w-full px-4 py-8 lg:px-8">
       {/* ── Page Header ── */}
@@ -108,6 +128,11 @@ function UpdateOptionGroupForm({
         noValidate
       >
         <MenuOptionGroupFormFields form={form} isEdit />
+        <OptionGroupOptionsPanel
+          assignedOptions={group.options ?? []}
+          onAssignExistingOptions={handleAssignOptions}
+          isAssigning={isAssigningOptions}
+        />
 
         {/* ── Sticky Save Bar ── */}
         <div className="sticky bottom-6 z-10 pt-2">

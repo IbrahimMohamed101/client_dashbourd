@@ -1,28 +1,11 @@
 import { redirect } from "@tanstack/react-router";
 import type { AuthResponse, UserRole } from "@/types/auth";
-import { UserRoles } from "@/types/auth";
 import {
-  KITCHEN_ROUTES,
-  SUPERADMIN_ROUTES,
-  ADMIN_ROUTES,
   AUTH_ROUTES,
-  COURIER_ROUTES,
-  CASHIER_ROUTES,
   ROLE_DEFAULTS,
+  ROLE_ROUTES,
+  isRouteMatch,
 } from "@/constants/routes";
-
-const isRouteMatch = (routes: string[], pathName: string) =>
-  routes.some(
-    (route) => pathName === route || pathName.startsWith(`${route}/`)
-  );
-
-const ROLE_ROUTES: Record<UserRole, string[]> = {
-  [UserRoles.SUPERADMIN]: SUPERADMIN_ROUTES,
-  [UserRoles.ADMIN]: ADMIN_ROUTES,
-  [UserRoles.KITCHEN]: KITCHEN_ROUTES,
-  [UserRoles.COURIER]: COURIER_ROUTES,
-  [UserRoles.CASHIER]: CASHIER_ROUTES,
-};
 
 export const authMiddleware = (
   session: AuthResponse | null | undefined,

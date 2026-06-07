@@ -31,22 +31,10 @@ import {
   useMenuCategoriesQuery,
   useMenuCategoryDetailQuery,
 } from "@/hooks/useMenuQuery";
-import { MENU_ITEM_TYPE_OPTIONS } from "@/constants/menuCatalog";
+import {
+  MENU_PRODUCT_CARD_SIZE_OPTIONS,
+} from "@/constants/menuCatalog";
 import type { MenuCategory } from "@/types/menuTypes";
-
-const CARD_VARIANTS = [
-  { value: "standard", label: "قياسي" },
-  { value: "premium", label: "مميز" },
-  { value: "large_salad", label: "سلطة كبيرة" },
-  { value: "addon", label: "إضافة" },
-  { value: "hero_builder", label: "منشئ بارز" },
-  { value: "compact_builder", label: "منشئ مختصر" },
-  { value: "ready_meal", label: "وجبة جاهزة" },
-  { value: "ready_meal_customizable", label: "وجبة جاهزة قابلة للتخصيص" },
-  { value: "compact_product", label: "منتج مختصر" },
-  { value: "sandwich_card", label: "بطاقة ساندويتش" },
-  { value: "addon_card", label: "بطاقة إضافة" },
-];
 
 interface Props {
   form: UseFormReturn<MenuProductSchemaInput, unknown, MenuProductSchemaType>;
@@ -125,33 +113,31 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label>نوع العنصر</Label>
-                <Controller
-                  control={form.control}
-                  name="itemType"
-                  render={({ field }) => (
-                    <Select
-                      value={field.value ?? "product"}
-                      onValueChange={field.onChange}
-                    >
-                      <SelectTrigger className="min-w-full" dir="rtl">
-                        <SelectValue placeholder="اختر النوع" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MENU_ITEM_TYPE_OPTIONS.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              {form.formState.errors.itemType ? (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.itemType.message}
-                </p>
-              ) : null}
+              <Label>حجم بطاقة المنتج</Label>
+              <Controller
+                control={form.control}
+                name="ui.cardSize"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? "medium"}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger className="min-w-full" dir="rtl">
+                      <SelectValue placeholder="اختر حجم البطاقة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MENU_PRODUCT_CARD_SIZE_OPTIONS.map((size) => (
+                        <SelectItem key={size.value} value={size.value}>
+                          {size.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                يستخدمه تطبيق الجوال لتحديد شكل بطاقة المنتج.
+              </p>
             </div>
           </div>
 
@@ -217,52 +203,6 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>بيانات العرض في التطبيق</CardTitle>
-          <CardDescription>حقول `ui` المطلوبة من عقد القائمة في الخادم</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>شكل بطاقة المنتج</Label>
-            <Controller
-              control={form.control}
-              name="ui.cardVariant"
-              render={({ field }) => (
-                <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                  <SelectTrigger className="min-w-full" dir="rtl">
-                    <SelectValue placeholder="اختر شكل البطاقة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CARD_VARIANTS.map((variant) => (
-                      <SelectItem key={variant.value} value={variant.value}>
-                        {variant.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
-          <Field
-            label="شارة المنتج"
-            placeholder="مثال: جديد"
-            inputProps={form.register("ui.badge")}
-          />
-          <Field
-            label="نص زر الإجراء"
-            placeholder="مثال: أضف للسلة"
-            inputProps={form.register("ui.ctaLabel")}
-          />
-          <Field
-            label="نسبة الصورة"
-            placeholder="مثال: 4/3"
-            dir="ltr"
-            inputProps={form.register("ui.imageRatio")}
-          />
         </CardContent>
       </Card>
 

@@ -68,7 +68,6 @@ export function CategoryProductsPanel({
       product.name?.ar,
       product.name?.en,
       product.key,
-      product.itemType,
     ]
       .filter(Boolean)
       .join(" ")
@@ -158,7 +157,7 @@ export function CategoryProductsPanel({
                         )}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {product.name?.en || product.itemType}
+                        {product.name?.en || product.key}
                       </p>
                     </div>
                     <MenuStatusBadge
@@ -245,7 +244,7 @@ export function CategoryProductsPanel({
                             {product.name?.ar || product.name?.en || product.key}
                           </span>
                           <span className="block text-xs text-muted-foreground">
-                            {product.key} · {product.itemType}
+                            {product.key}
                           </span>
                         </span>
                         {checked ? <Check className="size-4 text-primary" /> : null}

@@ -7,13 +7,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { FolderOpen } from "lucide-react";
@@ -28,17 +21,6 @@ interface Props {
   form: UseFormReturn<MenuCategorySchemaInput, unknown, MenuCategorySchemaType>;
   isEdit?: boolean;
 }
-
-const CARD_VARIANTS = [
-  { value: "meal_builder", label: "منشئ الوجبات" },
-  { value: "light_collection", label: "مجموعة خفيفة" },
-  { value: "hero_builder_collection", label: "مجموعة منشئ بارزة" },
-  { value: "compact_builder_collection", label: "مجموعة منشئ مختصرة" },
-  { value: "meal_collection", label: "مجموعة وجبات" },
-  { value: "compact_product_collection", label: "مجموعة منتجات مختصرة" },
-  { value: "sandwich_collection", label: "مجموعة ساندويتشات" },
-  { value: "addon_collection", label: "مجموعة إضافات" },
-];
 
 export function MenuCategoryFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
@@ -139,37 +121,14 @@ export function MenuCategoryFormFields({ form, isEdit }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <Field
-              label="ترتيب العرض"
-              type="number"
-              min="0"
-              placeholder="0"
-              error={form.formState.errors.sortOrder?.message}
-              inputProps={form.register("sortOrder")}
-            />
-            <div className="space-y-1.5">
-              <Label>شكل بطاقة التصنيف</Label>
-              <Controller
-                control={form.control}
-                name="ui.cardVariant"
-                render={({ field }) => (
-                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                    <SelectTrigger className="min-w-full" dir="rtl">
-                      <SelectValue placeholder="اختر شكل البطاقة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CARD_VARIANTS.map((variant) => (
-                        <SelectItem key={variant.value} value={variant.value}>
-                          {variant.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-          </div>
+          <Field
+            label="ترتيب العرض"
+            type="number"
+            min="0"
+            placeholder="0"
+            error={form.formState.errors.sortOrder?.message}
+            inputProps={form.register("sortOrder")}
+          />
         </CardContent>
       </Card>
 

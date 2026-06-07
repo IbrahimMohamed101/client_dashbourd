@@ -70,6 +70,24 @@ const ROLE_DEFAULTS: Record<UserRole, string> = {
   [UserRoles.CASHIER]: "/dashboard",
 };
 
+const ROLE_ROUTES: Record<UserRole, string[]> = {
+  [UserRoles.SUPERADMIN]: SUPERADMIN_ROUTES,
+  [UserRoles.ADMIN]: ADMIN_ROUTES,
+  [UserRoles.KITCHEN]: KITCHEN_ROUTES,
+  [UserRoles.COURIER]: COURIER_ROUTES,
+  [UserRoles.CASHIER]: CASHIER_ROUTES,
+};
+
+const isRouteMatch = (routes: string[], pathName: string) =>
+  routes.some(
+    (route) => pathName === route || pathName.startsWith(`${route}/`)
+  );
+
+const canRoleAccessRoute = (role: UserRole | undefined, pathName: string) => {
+  if (!role) return false;
+  return isRouteMatch(ROLE_ROUTES[role] ?? [], pathName);
+};
+
 export {
   SUPERADMIN_ROUTES,
   ADMIN_ROUTES,
@@ -78,4 +96,7 @@ export {
   CASHIER_ROUTES,
   AUTH_ROUTES,
   ROLE_DEFAULTS,
+  ROLE_ROUTES,
+  canRoleAccessRoute,
+  isRouteMatch,
 };

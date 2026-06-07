@@ -2,8 +2,7 @@ import { z } from "zod";
 import {
   DEFAULT_MENU_AVAILABLE_FOR,
   MENU_AVAILABLE_CHANNELS,
-  MENU_ITEM_TYPES,
-  MENU_PRODUCT_CARD_VARIANTS,
+  MENU_PRODUCT_CARD_SIZES,
 } from "@/constants/menuCatalog";
 
 const optionalGeneratedKey = z
@@ -21,7 +20,7 @@ const menuProductSchema = z
   .object({
     categoryId: z.string({ message: "التصنيف مطلوب" }).min(1, "التصنيف مطلوب"),
     key: optionalGeneratedKey,
-    itemType: z.enum(MENU_ITEM_TYPES, { message: "نوع العنصر مطلوب" }),
+    itemType: z.string().trim().optional().default("product"),
     name: z.object({
       ar: z.string({ message: "الاسم بالعربية مطلوب" }).min(1, "الاسم بالعربية مطلوب").trim(),
       en: z.string({ message: "الاسم بالإنجليزية مطلوب" }).min(1, "الاسم بالإنجليزية مطلوب").trim(),
@@ -52,15 +51,9 @@ const menuProductSchema = z
       .default([...DEFAULT_MENU_AVAILABLE_FOR]),
     ui: z
       .object({
-        cardVariant: z
-          .enum(MENU_PRODUCT_CARD_VARIANTS)
-          .optional()
-          .default("standard"),
-        badge: z.string().trim().optional().default(""),
-        ctaLabel: z.string().trim().optional().default(""),
-        imageRatio: z.string().trim().optional().default("square"),
+        cardSize: z.enum(MENU_PRODUCT_CARD_SIZES).default("medium"),
       })
-      .default({ cardVariant: "standard", badge: "", ctaLabel: "", imageRatio: "square" }),
+      .default({ cardSize: "medium" }),
     sortOrder: z.coerce
       .number({ message: "ترتيب العرض يجب أن يكون رقماً" })
       .int("ترتيب العرض يجب أن يكون رقماً صحيحاً")

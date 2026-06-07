@@ -32,6 +32,8 @@ export type MenuProductCardVariant =
   | "sandwich_card"
   | "addon_card";
 
+export type MenuProductCardSize = "large" | "medium" | "small";
+
 export type MenuOptionGroupDisplayStyle =
   | "chips"
   | "radio_cards"
@@ -286,20 +288,7 @@ export interface ReorderItem {
 
 export type PricingModel = "fixed" | "per_100g";
 
-export type ItemType =
-  | "basic_salad"
-  | "basic_meal"
-  | "fruit_salad"
-  | "greek_yogurt"
-  | "green_salad"
-  | "cold_sandwich"
-  | "sourdough"
-  | "dessert"
-  | "juice"
-  | "drink"
-  | "ice_cream"
-  | "product"
-  | string; // allow other item types
+export type ItemType = string;
 
 export interface MenuProduct {
   id: string;
@@ -325,6 +314,7 @@ export interface MenuProduct {
   catalogItemId?: string | null;
   ui?: {
     cardVariant?: MenuProductCardVariant;
+    cardSize?: MenuProductCardSize;
     badge?: string;
     ctaLabel?: string;
     imageRatio?: string;
@@ -396,6 +386,7 @@ export interface CreateMenuProductPayload {
   catalogItemId?: string | null;
   ui?: {
     cardVariant?: MenuProductCardVariant;
+    cardSize?: MenuProductCardSize;
     badge?: string;
     ctaLabel?: string;
     imageRatio?: string;
@@ -425,6 +416,7 @@ export interface UpdateMenuProductPayload {
   catalogItemId?: string | null;
   ui?: {
     cardVariant?: MenuProductCardVariant;
+    cardSize?: MenuProductCardSize;
     badge?: string;
     ctaLabel?: string;
     imageRatio?: string;
@@ -560,6 +552,7 @@ export interface CreateMenuOptionPayload {
 }
 
 export interface UpdateMenuOptionPayload {
+  groupId?: string;
   name?: LocalizedText;
   description?: LocalizedText;
   imageUrl?: string;
@@ -703,7 +696,9 @@ export interface MenuListParams {
   limit?: number;
   q?: string;
   isActive?: boolean;
+  isVisible?: boolean;
   isAvailable?: boolean;
+  includeInactive?: boolean;
 }
 
 export interface MenuProductListParams extends MenuListParams {

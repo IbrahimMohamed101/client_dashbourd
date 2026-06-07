@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { MENU_CATEGORY_CARD_VARIANTS } from "@/constants/menuCatalog";
 
 const optionalGeneratedKey = z
   .string()
@@ -27,13 +26,6 @@ const menuCategorySchema = z.object({
   isActive: z.boolean().default(true),
   isAvailable: z.boolean().default(true),
   isVisible: z.boolean().default(true),
-  ui: z
-    .object({
-      cardVariant: z
-        .enum(MENU_CATEGORY_CARD_VARIANTS)
-        .optional(),
-    })
-    .default({}),
   sortOrder: z.coerce
     .number({ message: "ترتيب العرض يجب أن يكون رقماً" })
     .int("ترتيب العرض يجب أن يكون رقماً صحيحاً")
