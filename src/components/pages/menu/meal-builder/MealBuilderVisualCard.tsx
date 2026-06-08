@@ -101,8 +101,22 @@ export function MealBuilderVisualCard({
                     <Badge variant="outline">
                       {item.kind === "product" ? "منتج" : "خيار"}
                     </Badge>
-                    <Badge variant={item.active ? "secondary" : "destructive"}>
-                      {item.active ? "متاح" : "غير متاح"}
+                    {item.selected ? <Badge variant="default">مختار</Badge> : null}
+                    {item.eligible ? <Badge variant="secondary">مؤهل</Badge> : null}
+                    <Badge variant={item.linked ? "outline" : "destructive"}>
+                      {item.linked ? "مرتبط" : "غير مرتبط"}
+                    </Badge>
+                    <Badge variant={item.available ? "outline" : "destructive"}>
+                      {item.available ? "متاح" : "غير متاح"}
+                    </Badge>
+                    <Badge variant={item.published ? "outline" : "secondary"}>
+                      {item.published ? "منشور" : "غير منشور"}
+                    </Badge>
+                    <Badge variant={item.subscriptionEnabled ? "outline" : "destructive"}>
+                      {item.subscriptionEnabled ? "للاشتراك" : "ليس للاشتراك"}
+                    </Badge>
+                    <Badge variant={item.catalogItemAvailable ? "outline" : "destructive"}>
+                      {item.catalogItemAvailable ? "CatalogItem متاح" : "CatalogItem غير متاح"}
                     </Badge>
                     <Badge variant="outline">{sourceKindLabel(item.sourceSectionType)}</Badge>
                     {item.kind === "product" ? (
@@ -124,7 +138,21 @@ export function MealBuilderVisualCard({
                         <Badge variant="outline">يستخدم تسعير الباكند</Badge>
                       </>
                     ) : null}
+                    {item.reasonCodes.slice(0, 4).map((code) => (
+                      <Badge key={code} variant="outline">
+                        {reasonCodeLabel(code)}
+                      </Badge>
+                    ))}
                   </div>
+                  {item.errors.length || item.warnings.length ? (
+                    <div className="space-y-1 pt-1">
+                      {[...item.errors, ...item.warnings].slice(0, 3).map((issue, index) => (
+                        <p key={`${issue.code ?? "issue"}-${index}`} className="text-xs text-muted-foreground">
+                          {reasonCodeLabel(String(issue.code ?? "")) || issue.message}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -179,4 +207,23 @@ function isPremiumVisualItem(cardKey: string, itemKey: string) {
     itemKey === "salmon" ||
     itemKey === "premium_large_salad"
   );
+}
+
+function reasonCodeLabel(code: string) {
+  const labels: Record<string, string> = {
+    SELECTED: "مختار",
+    ELIGIBLE: "مؤهل",
+    NOT_LINKED_TO_PRODUCT_GROUP: "غير مرتبط بالمنتج/المجموعة",
+    PRODUCT_GROUP_RELATION_MISSING: "علاقة المجموعة مفقودة",
+    PRODUCT_OPTION_RELATION_UNAVAILABLE: "علاقة الخيار غير متاحة",
+    OPTION_UNPUBLISHED: "الخيار غير منشور",
+    OPTION_UNAVAILABLE: "الخيار غير متاح",
+    PRODUCT_UNPUBLISHED: "المنتج غير منشور",
+    PRODUCT_UNAVAILABLE: "المنتج غير متاح",
+    WRONG_VISUAL_FAMILY: "تصنيف غير صحيح",
+    PREMIUM_REQUIRED_KEY: "بريميوم مطلوب",
+    PREMIUM_LARGE_SALAD_MISSING: "سلطة بريميوم مفقودة",
+    CATALOG_ITEM_UNAVAILABLE: "غير متاح في الكتالوج العام",
+  };
+  return labels[code] ?? code;
 }

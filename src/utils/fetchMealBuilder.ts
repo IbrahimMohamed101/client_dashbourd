@@ -3,6 +3,9 @@ import { fetchMealPlannerMenuPreview } from "@/utils/fetchMealPlannerMenu";
 import type {
   MealBuilderConfigResponse,
   MealBuilderDraftPayload,
+  MealBuilderHydratedDraftResponse,
+  MealBuilderPickerParams,
+  MealBuilderPickerResponse,
   MealBuilderPublishResponse,
   MealBuilderReadinessResponse,
   MealBuilderStateResponse,
@@ -12,6 +15,30 @@ import type {
 export const getMealBuilder = async (): Promise<MealBuilderStateResponse> => {
   const response = await api.get("/api/dashboard/meal-builder");
   logMealBuilderDev("GET /api/dashboard/meal-builder", response.data);
+  return response.data;
+};
+
+export const getMealBuilderHydratedDraft =
+  async (): Promise<MealBuilderHydratedDraftResponse> => {
+    const response = await api.get("/api/dashboard/meal-builder/draft/hydrated");
+    logMealBuilderDev("GET /api/dashboard/meal-builder/draft/hydrated", response.data);
+    return response.data;
+  };
+
+export const getMealBuilderPicker = async (
+  sectionKey: string,
+  params: MealBuilderPickerParams = {}
+): Promise<MealBuilderPickerResponse> => {
+  const response = await api.get(`/api/dashboard/meal-builder/pickers/${sectionKey}`, {
+    params: {
+      q: params.q || undefined,
+      includeUnavailable: params.includeUnavailable,
+      includeNotLinked: params.includeNotLinked,
+      page: params.page,
+      limit: params.limit,
+    },
+  });
+  logMealBuilderDev(`GET /api/dashboard/meal-builder/pickers/${sectionKey}`, response.data);
   return response.data;
 };
 

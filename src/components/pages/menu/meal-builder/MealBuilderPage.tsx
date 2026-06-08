@@ -35,8 +35,10 @@ import {
 } from "@/components/pages/menu/MenuTabScaffold";
 import {
   MEAL_BUILDER_KEY,
+  MEAL_BUILDER_HYDRATED_KEY,
   MEAL_BUILDER_READINESS_KEY,
   useCreateMealBuilderDraftMutation,
+  useMealBuilderHydratedQuery,
   useMealBuilderQuery,
   useMealBuilderReadinessQuery,
   useMealPlannerMenuPreviewQuery,
@@ -80,6 +82,7 @@ type EditorState = {
 export function MealBuilderPage() {
   const queryClient = useQueryClient();
   const builderQuery = useMealBuilderQuery();
+  const hydratedQuery = useMealBuilderHydratedQuery();
   const readinessQuery = useMealBuilderReadinessQuery();
   const plannerPreviewQuery = useMealPlannerMenuPreviewQuery();
   const productsQuery = useMenuProductsQuery({ limit: 500, includeInactive: true });
@@ -89,9 +92,10 @@ export function MealBuilderPage() {
   const createDraft = useCreateMealBuilderDraftMutation();
 
   const state = builderQuery.data?.data;
-  const draft = state?.draft ?? null;
+  const hydrated = hydratedQuery.data?.data ?? null;
+  const draft = hydrated?.draft ?? state?.draft ?? null;
   const published = state?.published ?? null;
-  const readiness = readinessQuery.data?.data ?? null;
+  const readiness = readinessQuery.data?.data ?? hydrated?.validation ?? null;
   const catalog = {
     products: productsQuery.data?.data.items ?? [],
     categories: categoriesQuery.data?.data.items ?? [],
@@ -100,6 +104,7 @@ export function MealBuilderPage() {
   };
   const loading =
     builderQuery.isLoading ||
+    hydratedQuery.isLoading ||
     readinessQuery.isLoading ||
     productsQuery.isLoading ||
     categoriesQuery.isLoading ||
@@ -108,6 +113,7 @@ export function MealBuilderPage() {
 
   function refresh() {
     queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_KEY] });
+    queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_HYDRATED_KEY] });
     queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_READINESS_KEY] });
     queryClient.invalidateQueries({ queryKey: ["menu.mealPlannerPreview"] });
   }
@@ -123,7 +129,7 @@ export function MealBuilderPage() {
           key={`${draft.id}:${draft.updatedAt ?? ""}`}
           draft={draft}
           readiness={readiness}
-          initialValidation={state?.validation.draft ?? null}
+          initialValidation={hydrated?.validation ?? state?.validation.draft ?? null}
           plannerPreview={plannerPreviewQuery.data?.data ?? null}
           plannerLoading={plannerPreviewQuery.isLoading}
           catalog={catalog}

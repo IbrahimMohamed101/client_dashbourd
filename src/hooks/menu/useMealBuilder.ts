@@ -4,15 +4,19 @@ import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import {
   createMealBuilderDraft,
   getMealBuilder,
+  getMealBuilderHydratedDraft,
+  getMealBuilderPicker,
   getMealBuilderReadiness,
   publishMealBuilderDraft,
   updateMealBuilderDraft,
   validateMealBuilderDraft,
 } from "@/utils/fetchMealBuilder";
-import type { MealBuilderDraftPayload } from "@/types/mealBuilderTypes";
+import type { MealBuilderDraftPayload, MealBuilderPickerParams } from "@/types/mealBuilderTypes";
 
 export const MEAL_BUILDER_KEY = "dashboard.meal-builder";
+export const MEAL_BUILDER_HYDRATED_KEY = "dashboard.meal-builder.hydrated";
 export const MEAL_BUILDER_READINESS_KEY = "dashboard.meal-builder.readiness";
+export const MEAL_BUILDER_PICKER_KEY = "dashboard.meal-builder.picker";
 
 export const mealBuilderQueryOptions = () =>
   queryOptions({
@@ -28,7 +32,33 @@ export const mealBuilderReadinessQueryOptions = () =>
     staleTime: 1000 * 30,
   });
 
+export const mealBuilderHydratedQueryOptions = () =>
+  queryOptions({
+    queryKey: [MEAL_BUILDER_HYDRATED_KEY],
+    queryFn: getMealBuilderHydratedDraft,
+    staleTime: 1000 * 20,
+  });
+
+export const mealBuilderPickerQueryOptions = (
+  sectionKey: string,
+  params: MealBuilderPickerParams
+) =>
+  queryOptions({
+    queryKey: [MEAL_BUILDER_PICKER_KEY, sectionKey, params],
+    queryFn: () => getMealBuilderPicker(sectionKey, params),
+    enabled: Boolean(sectionKey),
+    staleTime: 1000 * 15,
+  });
+
 export const useMealBuilderQuery = () => useQuery(mealBuilderQueryOptions());
+
+export const useMealBuilderHydratedQuery = () =>
+  useQuery(mealBuilderHydratedQueryOptions());
+
+export const useMealBuilderPickerQuery = (
+  sectionKey: string,
+  params: MealBuilderPickerParams
+) => useQuery(mealBuilderPickerQueryOptions(sectionKey, params));
 
 export const useMealBuilderReadinessQuery = () =>
   useQuery(mealBuilderReadinessQueryOptions());
@@ -37,14 +67,14 @@ export const useCreateMealBuilderDraftMutation = () =>
   useMutationWithToast({
     mutationFn: createMealBuilderDraft,
     successMessage: "تم إنشاء مسودة منشئ الوجبات",
-    invalidateKeys: [[MEAL_BUILDER_KEY], [MEAL_BUILDER_READINESS_KEY]],
+    invalidateKeys: [[MEAL_BUILDER_KEY], [MEAL_BUILDER_HYDRATED_KEY], [MEAL_BUILDER_READINESS_KEY]],
   });
 
 export const useSaveMealBuilderDraftMutation = () =>
   useMutationWithToast({
     mutationFn: updateMealBuilderDraft,
     successMessage: "تم حفظ مسودة منشئ الوجبات",
-    invalidateKeys: [[MEAL_BUILDER_KEY], [MEAL_BUILDER_READINESS_KEY]],
+    invalidateKeys: [[MEAL_BUILDER_KEY], [MEAL_BUILDER_HYDRATED_KEY], [MEAL_BUILDER_READINESS_KEY]],
   });
 
 export const useValidateMealBuilderDraftMutation = () => {
@@ -59,6 +89,7 @@ export const useValidateMealBuilderDraftMutation = () => {
         : "تم التحقق، توجد ملاحظات تحتاج مراجعة",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_KEY] });
+      queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_HYDRATED_KEY] });
       queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_READINESS_KEY] });
     },
   });
@@ -68,5 +99,5 @@ export const usePublishMealBuilderDraftMutation = () =>
   useMutationWithToast({
     mutationFn: publishMealBuilderDraft,
     successMessage: "تم نشر منشئ الوجبات للموبايل",
-    invalidateKeys: [[MEAL_BUILDER_KEY], [MEAL_BUILDER_READINESS_KEY], ["menu.mealPlannerPreview"]],
+    invalidateKeys: [[MEAL_BUILDER_KEY], [MEAL_BUILDER_HYDRATED_KEY], [MEAL_BUILDER_READINESS_KEY], ["menu.mealPlannerPreview"]],
   });

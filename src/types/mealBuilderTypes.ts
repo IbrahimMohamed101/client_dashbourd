@@ -21,7 +21,9 @@ export type MealBuilderSelectionType =
 
 export interface MealBuilderSection {
   id?: string;
+  key?: string;
   sectionType: MealBuilderSectionType;
+  sourceKind?: string;
   productContextId?: string | null;
   sourceGroupId?: string | null;
   sourceCategoryId?: string | null;
@@ -37,6 +39,17 @@ export interface MealBuilderSection {
   multiSelect: boolean;
   visible: boolean;
   availableFor: string[];
+  metadata?: Record<string, unknown>;
+  rules?: Record<string, unknown>;
+  selectedOptions?: MealBuilderHydratedItem[];
+  selectedProducts?: MealBuilderHydratedItem[];
+  items?: MealBuilderHydratedItem[];
+  hydration?: {
+    selectedOptionCount?: number;
+    selectedProductCount?: number;
+    errorCount?: number;
+    warningCount?: number;
+  };
 }
 
 export interface MealBuilderConfig {
@@ -66,6 +79,40 @@ export interface MealBuilderCheck {
   groupId?: string | null;
   optionId?: string | null;
   [key: string]: unknown;
+}
+
+export interface MealBuilderHydratedItem {
+  id: string | null;
+  optionId?: string | null;
+  productId?: string | null;
+  type: "option" | "product" | "missing_option" | "missing_product" | string;
+  key?: string;
+  name?: LocalizedText;
+  label?: string;
+  familyKey?: string;
+  premiumKey?: string | null;
+  itemType?: string;
+  categoryId?: string | null;
+  categoryKey?: string;
+  selectionType?: string;
+  configurable?: boolean;
+  selected?: boolean;
+  required?: boolean;
+  eligible?: boolean;
+  linked?: boolean;
+  available?: boolean;
+  active?: boolean;
+  visible?: boolean;
+  published?: boolean;
+  subscriptionEnabled?: boolean;
+  relationExists?: boolean;
+  catalogItemAvailable?: boolean;
+  reasonCodes?: string[];
+  warnings?: MealBuilderCheck[];
+  errors?: MealBuilderCheck[];
+  state?: "selected" | "eligible" | "not_linked" | "unavailable" | "invalid" | string;
+  pricing?: Record<string, unknown>;
+  relation?: Record<string, unknown> | null;
 }
 
 export interface MealBuilderValidation {
@@ -166,6 +213,51 @@ export interface MealBuilderPublishResponse {
 export interface MealBuilderReadinessResponse {
   status: boolean;
   data: MealBuilderValidation;
+}
+
+export interface MealBuilderHydratedDraft {
+  contractVersion: string;
+  draft: MealBuilderConfig | null;
+  ready: boolean;
+  errors: MealBuilderCheck[];
+  warnings: MealBuilderCheck[];
+  sections: MealBuilderSection[];
+  validation?: MealBuilderValidation;
+}
+
+export interface MealBuilderHydratedDraftResponse {
+  status: boolean;
+  data: MealBuilderHydratedDraft;
+}
+
+export interface MealBuilderPickerParams {
+  q?: string;
+  includeUnavailable?: boolean;
+  includeNotLinked?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+export interface MealBuilderPickerResponseData {
+  contractVersion: string;
+  sectionKey: string;
+  candidateType: "option" | "product" | "mixed" | string;
+  product?: { id: string; key: string; name: LocalizedText } | null;
+  group?: { id: string; key: string; name: LocalizedText } | null;
+  category?: { id: string; key: string; name: LocalizedText } | null;
+  rules?: Record<string, unknown>;
+  candidates: MealBuilderHydratedItem[];
+  meta?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface MealBuilderPickerResponse {
+  status: boolean;
+  data: MealBuilderPickerResponseData;
 }
 
 export interface MealBuilderDraftPayload {

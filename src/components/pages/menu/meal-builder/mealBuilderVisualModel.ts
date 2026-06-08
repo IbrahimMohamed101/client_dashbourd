@@ -5,6 +5,7 @@ import type {
 } from "@/types/menuTypes";
 import type {
   MealBuilderCheck,
+  MealBuilderHydratedItem,
   MealBuilderSection,
   MealBuilderSectionType,
 } from "@/types/mealBuilderTypes";
@@ -23,6 +24,18 @@ export type MealBuilderVisualItem =
       kind: "option";
       name: string;
       active: boolean;
+      selected: boolean;
+      eligible: boolean;
+      linked: boolean;
+      available: boolean;
+      published: boolean;
+      subscriptionEnabled: boolean;
+      relationExists: boolean;
+      catalogItemAvailable: boolean;
+      state: string;
+      reasonCodes: string[];
+      warnings: MealBuilderCheck[];
+      errors: MealBuilderCheck[];
       sourceSectionIndex: number;
       sourceSectionType: MealBuilderSectionType;
     }
@@ -32,6 +45,18 @@ export type MealBuilderVisualItem =
       kind: "product";
       name: string;
       active: boolean;
+      selected: boolean;
+      eligible: boolean;
+      linked: boolean;
+      available: boolean;
+      published: boolean;
+      subscriptionEnabled: boolean;
+      relationExists: boolean;
+      catalogItemAvailable: boolean;
+      state: string;
+      reasonCodes: string[];
+      warnings: MealBuilderCheck[];
+      errors: MealBuilderCheck[];
       sourceSectionIndex: number;
       sourceSectionType: MealBuilderSectionType;
       selectionType: string;
@@ -101,6 +126,11 @@ export function buildMealBuilderVisualCards({
   const productsById = new Map(products.map((product) => [product.id, product]));
 
   sections.forEach((section, index) => {
+    if (section.key && REQUIRED_SECTION_ORDER.includes(section.key) && Array.isArray(section.items)) {
+      hydrateVisualCardFromBackend(cards[section.key], section, index);
+      return;
+    }
+
     const sectionIssues = issues.filter(
       (issue) => Number(issue.sectionIndex) === index || issue.sectionType === section.sectionType
     );
@@ -213,6 +243,18 @@ function addOption(
     kind: "option",
     name: nameOf(option),
     active: option.isActive !== false && option.isVisible !== false && option.isAvailable !== false,
+    selected: true,
+    eligible: true,
+    linked: true,
+    available: option.isAvailable !== false,
+    published: true,
+    subscriptionEnabled: option.availableForSubscription !== false,
+    relationExists: true,
+    catalogItemAvailable: true,
+    state: "selected",
+    reasonCodes: ["SELECTED"],
+    warnings: [],
+    errors: [],
     sourceSectionIndex,
     sourceSectionType: section.sectionType,
   });
@@ -232,12 +274,79 @@ function addProduct(
     kind: "product",
     name: nameOf(product),
     active: product.isActive !== false && product.isVisible !== false && product.isAvailable !== false,
+    selected: true,
+    eligible: true,
+    linked: true,
+    available: product.isAvailable !== false,
+    published: true,
+    subscriptionEnabled: product.availableFor?.includes("subscription") !== false,
+    relationExists: true,
+    catalogItemAvailable: true,
+    state: "selected",
+    reasonCodes: ["SELECTED"],
+    warnings: [],
+    errors: [],
     sourceSectionIndex,
     sourceSectionType: section.sectionType,
     selectionType: section.selectionType,
     requiresBuilder: meta.requiresBuilder,
     treatAsFullMeal: meta.treatAsFullMeal,
   });
+}
+
+function hydrateVisualCardFromBackend(
+  card: MealBuilderVisualCard,
+  section: MealBuilderSection,
+  sourceSectionIndex: number
+) {
+  card.sourceKinds.push(section.sourceKind || section.sectionType);
+  (section.items ?? []).forEach((item) => {
+    const kind = item.type?.includes("product") ? "product" : "option";
+    const base = {
+      id: item.id || item.optionId || item.productId || `${section.key}:${item.key}`,
+      key: item.key || "",
+      name: hydratedName(item),
+      active: item.active !== false && item.visible !== false,
+      selected: item.selected === true,
+      eligible: item.eligible === true,
+      linked: item.linked === true,
+      available: item.available === true,
+      published: item.published === true,
+      subscriptionEnabled: item.subscriptionEnabled === true,
+      relationExists: item.relationExists === true,
+      catalogItemAvailable: item.catalogItemAvailable === true,
+      state: item.state || "invalid",
+      reasonCodes: item.reasonCodes ?? [],
+      warnings: item.warnings ?? [],
+      errors: item.errors ?? [],
+      sourceSectionIndex,
+      sourceSectionType: section.sectionType,
+    };
+
+    if (kind === "product") {
+      card.items.push({
+        ...base,
+        kind: "product",
+        selectionType: item.selectionType || section.selectionType,
+        requiresBuilder: item.configurable === true && section.key !== "sandwich",
+        treatAsFullMeal: section.key === "sandwich" || item.selectionType === "sandwich",
+      });
+      return;
+    }
+
+    card.items.push({
+      ...base,
+      kind: "option",
+    });
+  });
+  card.backendIssues.push(...(section.items ?? []).flatMap((item) => [
+    ...(item.errors ?? []),
+    ...(item.warnings ?? []),
+  ]));
+}
+
+function hydratedName(item: MealBuilderHydratedItem) {
+  return item.label || item.name?.ar || item.name?.en || item.key || "عنصر غير معروف";
 }
 
 export function optionFamily(option: MenuOption, section?: Pick<MealBuilderSection, "selectionType">) {

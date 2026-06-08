@@ -46,7 +46,9 @@ export function emptySection(type: MealBuilderSectionType): MealBuilderSection {
 
 export function toBackendSections(sections: MealBuilderSection[]) {
   return orderSections(sections).map((section, index) => ({
+    key: section.key,
     sectionType: section.sectionType,
+    sourceKind: section.sourceKind,
     productContextId: section.productContextId || null,
     sourceGroupId: section.sourceGroupId || null,
     sourceCategoryId: section.sourceCategoryId || null,
@@ -62,6 +64,8 @@ export function toBackendSections(sections: MealBuilderSection[]) {
     multiSelect: section.multiSelect,
     visible: section.visible,
     availableFor: ["subscription"],
+    metadata: section.metadata,
+    rules: section.rules,
   }));
 }
 

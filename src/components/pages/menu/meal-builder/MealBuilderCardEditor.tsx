@@ -27,10 +27,7 @@ import {
   VISUAL_SECTION_LABELS,
 } from "./mealBuilderConstants";
 import {
-  availableLabel,
   emptySection,
-  matches,
-  nameOf,
   orderSections,
   toggle,
 } from "./mealBuilderUtils";
@@ -40,9 +37,9 @@ import type {
 } from "./mealBuilderVisualModel";
 import {
   buildMealBuilderVisualCards,
-  optionMatchesVisualCard,
-  productMatchesVisualCard,
 } from "./mealBuilderVisualModel";
+import { useMealBuilderPickerQuery } from "@/hooks/menu";
+import type { MealBuilderHydratedItem } from "@/types/mealBuilderTypes";
 
 type Catalog = {
   products: MenuProduct[];
@@ -69,12 +66,20 @@ export function MealBuilderCardEditor({
   const [draftSections, setDraftSections] = useState(() => orderSections(sections));
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [includeUnavailable, setIncludeUnavailable] = useState(false);
+  const [includeNotLinked, setIncludeNotLinked] = useState(true);
   const liveCard = rebuildCard(card.key, draftSections, catalog, card);
   const primaryIndex = findPrimarySectionIndex(liveCard.key, draftSections, catalog);
   const primarySection = primaryIndex == null ? null : draftSections[primaryIndex];
-  const candidates = getCandidates(liveCard.key, draftSections, catalog).filter((item) =>
-    matches(item, query)
-  );
+  const pickerQuery = useMealBuilderPickerQuery(liveCard.key, {
+    q: query,
+    includeUnavailable,
+    includeNotLinked,
+    page: 1,
+    limit: 80,
+  });
+  const picker = pickerQuery.data?.data ?? null;
+  const candidates = (picker?.candidates ?? []).filter((item) => item.id);
 
   function patchPrimary(change: Partial<MealBuilderSection>) {
     setDraftSections((current) => {
@@ -216,25 +221,56 @@ export function MealBuilderCardEditor({
             </Button>
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SwitchLine
+              label="إظهار غير المتاح"
+              checked={includeUnavailable}
+              onChange={setIncludeUnavailable}
+            />
+            <SwitchLine
+              label="إظهار غير المرتبط"
+              checked={includeNotLinked}
+              onChange={setIncludeNotLinked}
+            />
+          </div>
+
+          {picker?.rules ? (
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(picker.rules).map(([key, value]) => (
+                <Badge key={key} variant="outline">
+                  {key}={String(value)}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
+
           <div className="max-h-72 overflow-auto rounded-lg border">
-            {candidates.length ? (
+            {pickerQuery.isLoading ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                جاري تحميل العناصر المناسبة لهذه البطاقة...
+              </p>
+            ) : candidates.length ? (
               <div className="divide-y">
                 {candidates.map((item) => (
                   <button
-                    key={`${item.kind}:${item.id}`}
+                    key={`${item.type}:${item.id}`}
                     type="button"
-                    className="flex w-full items-center gap-3 px-4 py-3 text-right hover:bg-muted/50"
+                    disabled={!item.id}
+                    className="flex w-full items-start gap-3 px-4 py-3 text-right hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={() => setSelectedIds((current) => toggle(current, encodeItem(item)))}
                   >
                     <Checkbox checked={selectedIds.includes(encodeItem(item))} />
                     <span className="min-w-0 flex-1">
-                      <span className="block font-medium">{nameOf(item)}</span>
+                      <span className="block font-medium">{hydratedItemName(item)}</span>
                       <span className="block text-xs text-muted-foreground">
-                        {item.key} · {availableLabel(item)}
+                        {item.key} · {pickerStateLabel(item.state)}
+                      </span>
+                      <span className="mt-2 flex flex-wrap gap-1">
+                        <ItemStateBadges item={item} />
                       </span>
                     </span>
                     <Badge variant="outline">
-                      {item.kind === "product" ? "منتج" : "خيار"}
+                      {item.type?.includes("product") ? "منتج" : "خيار"}
                     </Badge>
                   </button>
                 ))}
@@ -282,9 +318,7 @@ function SelectedItemRow({
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline">{item.kind === "product" ? "منتج" : "خيار"}</Badge>
-          <Badge variant={item.active ? "secondary" : "destructive"}>
-            {item.active ? "متاح" : "غير متاح"}
-          </Badge>
+          <VisualItemStateBadges item={item} />
           {item.kind === "product" ? (
             <Badge variant="outline">selectionType={item.selectionType}</Badge>
           ) : null}
@@ -303,42 +337,6 @@ function SelectedItemRow({
       </div>
     </div>
   );
-}
-
-type Candidate =
-  | (MenuOption & { kind: "option" })
-  | (MenuProduct & { kind: "product" });
-
-function getCandidates(
-  cardKey: string,
-  sections: MealBuilderSection[],
-  catalog: Catalog
-): Candidate[] {
-  const selected = selectedKeysForCard(cardKey, sections, catalog);
-  const optionCandidates =
-    ["premium", "chicken", "beef", "fish", "eggs", "carbs"].includes(cardKey)
-      ? catalog.options
-          .filter((option) => optionMatchesVisualCard(option, cardKey))
-          .filter((option) => !selected.has(`option:${option.id}`))
-          .map((option) => ({ ...option, kind: "option" as const }))
-      : [];
-  const productCandidates =
-    ["premium", "sandwich"].includes(cardKey)
-      ? catalog.products
-          .filter((product) => productMatchesVisualCard(product, cardKey, catalog.categories))
-          .filter((product) => !selected.has(`product:${product.id}`))
-          .map((product) => ({ ...product, kind: "product" as const }))
-      : [];
-  return [...optionCandidates, ...productCandidates].sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
-function selectedKeysForCard(
-  cardKey: string,
-  sections: MealBuilderSection[],
-  catalog: Catalog
-) {
-  const card = rebuildCard(cardKey, sections, catalog);
-  return new Set(card.items.map((item) => `${item.kind}:${item.id}`));
 }
 
 function rebuildCard(
@@ -478,6 +476,11 @@ function ensureOptionSectionIndex(
   cardKey: string,
   catalog: Catalog
 ) {
+  const byKeyIndex = sections.findIndex(
+    (section) => section.key === cardKey && section.sectionType === "option_group"
+  );
+  if (byKeyIndex >= 0) return { sections, index: byKeyIndex };
+
   const groupKey = cardKey === "carbs" ? "carbs" : "proteins";
   const selectionType = cardKey === "premium" ? "premium_meal" : "standard_meal";
   const existingIndex = sections.findIndex(
@@ -493,6 +496,8 @@ function ensureOptionSectionIndex(
   const label = VISUAL_SECTION_LABELS[cardKey];
   const nextSection: MealBuilderSection = {
     ...emptySection("option_group"),
+    key: cardKey,
+    sourceKind: cardKey === "premium" ? "premium_visual" : "visual_family",
     productContextId: product?.id ?? null,
     sourceGroupId: group?.id ?? null,
     selectionType,
@@ -502,6 +507,12 @@ function ensureOptionSectionIndex(
     minSelections: cardKey === "premium" ? 0 : 1,
     maxSelections: cardKey === "carbs" ? 2 : 1,
     multiSelect: cardKey === "carbs",
+    metadata: cardKey === "carbs"
+      ? { visualRole: "carbs", appliesTo: ["configurable_plate_meal"], excludesSelectionTypes: ["sandwich"] }
+      : { visualRole: "protein_family", proteinFamilyKey: cardKey },
+    rules: cardKey === "carbs"
+      ? { ruleKey: "carb_split", maxTypes: 2, maxTotalGrams: 300, unit: "grams" }
+      : {},
   };
   return { sections: [...sections, nextSection], index: sections.length };
 }
@@ -511,6 +522,15 @@ function ensureProductSectionIndex(
   cardKey: string,
   catalog: Catalog
 ) {
+  const byKeyIndex = sections.findIndex(
+    (section) =>
+      section.key === cardKey &&
+      (section.sectionType === "product_category" ||
+        section.sectionType === "product_list" ||
+        section.sectionType === "option_group")
+  );
+  if (byKeyIndex >= 0) return { sections, index: byKeyIndex };
+
   const selectionType = cardKey === "premium" ? "premium_large_salad" : "sandwich";
   const existingIndex = sections.findIndex(
     (section) =>
@@ -524,6 +544,8 @@ function ensureProductSectionIndex(
   const type = cardKey === "sandwich" ? "product_category" : "product_list";
   const nextSection: MealBuilderSection = {
     ...emptySection(type),
+    key: cardKey,
+    sourceKind: cardKey === "sandwich" ? "product_list" : "premium_visual",
     sourceCategoryId: cardKey === "sandwich" ? sandwichCategory?.id ?? null : null,
     includeMode: "selected",
     selectionType,
@@ -533,6 +555,10 @@ function ensureProductSectionIndex(
     minSelections: 0,
     maxSelections: 1,
     multiSelect: false,
+    metadata: cardKey === "sandwich"
+      ? { requiresBuilder: false, treatAsFullMeal: true }
+      : { visualRole: "premium" },
+    rules: cardKey === "sandwich" ? { carbsRequired: false } : {},
   };
   return { sections: [...sections, nextSection], index: sections.length };
 }
@@ -551,8 +577,79 @@ function findPrimarySectionIndex(
   return null;
 }
 
-function encodeItem(item: Candidate) {
-  return `${item.kind}:${item.id}`;
+function encodeItem(item: MealBuilderHydratedItem) {
+  const kind = item.type?.includes("product") ? "product" : "option";
+  return `${kind}:${item.id}`;
+}
+
+function hydratedItemName(item: MealBuilderHydratedItem) {
+  return item.label || item.name?.ar || item.name?.en || item.key || "عنصر غير معروف";
+}
+
+function pickerStateLabel(state?: string) {
+  if (state === "selected") return "مختار";
+  if (state === "eligible") return "مؤهل";
+  if (state === "not_linked") return "غير مرتبط";
+  if (state === "unavailable") return "غير متاح";
+  return "يحتاج مراجعة";
+}
+
+function ItemStateBadges({ item }: { item: MealBuilderHydratedItem }) {
+  return (
+    <>
+      {item.selected ? <Badge variant="default">مختار</Badge> : null}
+      {item.eligible ? <Badge variant="secondary">مؤهل</Badge> : null}
+      <Badge variant={item.linked ? "outline" : "destructive"}>
+        {item.linked ? "مرتبط" : "غير مرتبط"}
+      </Badge>
+      <Badge variant={item.available ? "outline" : "destructive"}>
+        {item.available ? "متاح" : "غير متاح"}
+      </Badge>
+      <Badge variant={item.published ? "outline" : "secondary"}>
+        {item.published ? "منشور" : "غير منشور"}
+      </Badge>
+      {item.required ? <Badge variant="secondary">مطلوب</Badge> : null}
+      {(item.reasonCodes ?? []).slice(0, 4).map((code) => (
+        <Badge key={code} variant="outline">
+          {reasonCodeLabel(code)}
+        </Badge>
+      ))}
+    </>
+  );
+}
+
+function VisualItemStateBadges({ item }: { item: MealBuilderVisualItem }) {
+  return (
+    <>
+      {item.selected ? <Badge variant="default">مختار</Badge> : null}
+      {item.eligible ? <Badge variant="secondary">مؤهل</Badge> : null}
+      <Badge variant={item.linked ? "outline" : "destructive"}>
+        {item.linked ? "مرتبط" : "غير مرتبط"}
+      </Badge>
+      <Badge variant={item.available ? "outline" : "destructive"}>
+        {item.available ? "متاح" : "غير متاح"}
+      </Badge>
+    </>
+  );
+}
+
+function reasonCodeLabel(code: string) {
+  const labels: Record<string, string> = {
+    SELECTED: "مختار",
+    ELIGIBLE: "مؤهل",
+    NOT_LINKED_TO_PRODUCT_GROUP: "غير مرتبط بالمنتج/المجموعة",
+    PRODUCT_GROUP_RELATION_MISSING: "علاقة المجموعة مفقودة",
+    PRODUCT_OPTION_RELATION_UNAVAILABLE: "علاقة الخيار غير متاحة",
+    OPTION_UNPUBLISHED: "الخيار غير منشور",
+    OPTION_UNAVAILABLE: "الخيار غير متاح",
+    PRODUCT_UNPUBLISHED: "المنتج غير منشور",
+    PRODUCT_UNAVAILABLE: "المنتج غير متاح",
+    WRONG_VISUAL_FAMILY: "تصنيف غير صحيح",
+    PREMIUM_REQUIRED_KEY: "بريميوم مطلوب",
+    PREMIUM_LARGE_SALAD_MISSING: "سلطة بريميوم مفقودة",
+    CATALOG_ITEM_UNAVAILABLE: "غير متاح في الكتالوج العام",
+  };
+  return labels[code] ?? code;
 }
 
 function TextField({
