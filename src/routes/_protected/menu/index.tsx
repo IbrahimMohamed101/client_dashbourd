@@ -3,6 +3,7 @@ import { BookOpen, CheckCircle2, FileText, Layers } from "lucide-react";
 
 import { MenuAuditLogTab } from "@/components/pages/menu/audit/MenuAuditLogTab";
 import { MenuCategoriesTab } from "@/components/pages/menu/categories/MenuCategoriesTab";
+import { MealBuilderPage } from "@/components/pages/menu/meal-builder/MealBuilderPage";
 import { MenuPublishDialog } from "@/components/pages/menu/MenuPublishDialog";
 import { MenuValidationDialog } from "@/components/pages/menu/MenuValidationDialog";
 import { MenuOptionGroupsTab } from "@/components/pages/menu/option-groups/MenuOptionGroupsTab";
@@ -86,7 +87,7 @@ function MenuPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
         <div className="overflow-x-auto pb-1">
-          <TabsList className="grid min-h-max min-w-[640px] grid-cols-4 gap-2 bg-muted/70 p-2">
+          <TabsList className="grid min-h-max min-w-[760px] grid-cols-5 gap-2 bg-muted/70 p-2">
             {workflowSteps.map((step, index) => {
               const Icon = step.icon;
               return (
@@ -124,6 +125,9 @@ function MenuPage() {
             <MenuOptionGroupsTab />
             <MenuOptionsTab />
           </div>
+        </TabsContent>
+        <TabsContent value="meal-builder" className="mt-5">
+          <MealBuilderPage />
         </TabsContent>
         <TabsContent value="preview" className="mt-5">
           <div className="grid gap-5">

@@ -7,3 +7,4 @@ export * from "./useMenuCustomization";
 export * from "./useMenuActions";
 export * from "./usePublicMenuPreview";
 export * from "./useMealPlannerMenuPreview";
+export * from "./useMealBuilder";

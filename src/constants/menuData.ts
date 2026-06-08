@@ -1,6 +1,7 @@
 import {
   FolderOpen,
   Layers,
+  LayoutTemplate,
   PanelTopOpen,
   RotateCcw,
 } from "lucide-react";
@@ -17,6 +18,12 @@ const workflowSteps = [
     label: "التخصيص",
     description: "الخيارات والربط",
     icon: Layers,
+  },
+  {
+    value: "meal-builder",
+    label: "منشئ الوجبات",
+    description: "ترتيب وجبات الاشتراك",
+    icon: LayoutTemplate,
   },
   {
     value: "preview",
@@ -38,6 +45,7 @@ const legacyMenuTabMap: Record<string, string> = {
   "option-groups": "builder",
   options: "builder",
   relations: "builder",
+  "meal-builder": "meal-builder",
   "public-preview": "preview",
   "meal-planner-preview": "preview",
   audit: "release",
