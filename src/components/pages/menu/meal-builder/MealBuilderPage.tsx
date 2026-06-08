@@ -68,10 +68,7 @@ import { MealBuilderStatusCards } from "./MealBuilderStatusCards";
 import { MealBuilderSectionEditor } from "./MealBuilderSectionEditor";
 import { MealBuilderVisualCard } from "./MealBuilderVisualCard";
 import { PreviewPanel, ValidationPanel } from "./MealBuilderPanels";
-import {
-  orderSections,
-  toBackendSections,
-} from "./mealBuilderUtils";
+import { orderSections, toBackendSections } from "./mealBuilderUtils";
 import { buildMealBuilderVisualCards } from "./mealBuilderVisualModel";
 
 type EditorState = {
@@ -85,10 +82,22 @@ export function MealBuilderPage() {
   const hydratedQuery = useMealBuilderHydratedQuery();
   const readinessQuery = useMealBuilderReadinessQuery();
   const plannerPreviewQuery = useMealPlannerMenuPreviewQuery();
-  const productsQuery = useMenuProductsQuery({ limit: 500, includeInactive: true });
-  const categoriesQuery = useMenuCategoriesQuery({ limit: 500, includeInactive: true });
-  const groupsQuery = useMenuOptionGroupsQuery({ limit: 500, includeInactive: true });
-  const optionsQuery = useMenuOptionsQuery({ limit: 1000, includeInactive: true });
+  const productsQuery = useMenuProductsQuery({
+    limit: 500,
+    includeInactive: true,
+  });
+  const categoriesQuery = useMenuCategoriesQuery({
+    limit: 500,
+    includeInactive: true,
+  });
+  const groupsQuery = useMenuOptionGroupsQuery({
+    limit: 500,
+    includeInactive: true,
+  });
+  const optionsQuery = useMenuOptionsQuery({
+    limit: 1000,
+    includeInactive: true,
+  });
   const createDraft = useCreateMealBuilderDraftMutation();
 
   const state = builderQuery.data?.data;
@@ -120,8 +129,16 @@ export function MealBuilderPage() {
 
   return (
     <div className="grid gap-5" dir="rtl">
-      <HeaderCard onCreateDraft={() => createDraft.mutate()} onRefresh={refresh} pending={createDraft.isPending} />
-      <MealBuilderStatusCards draft={draft} published={published} readiness={readiness} />
+      <HeaderCard
+        onCreateDraft={() => createDraft.mutate()}
+        onRefresh={refresh}
+        pending={createDraft.isPending}
+      />
+      <MealBuilderStatusCards
+        draft={draft}
+        published={published}
+        readiness={readiness}
+      />
       <BootstrapMeta draft={draft} />
 
       {draft ? (
@@ -129,7 +146,9 @@ export function MealBuilderPage() {
           key={`${draft.id}:${draft.updatedAt ?? ""}`}
           draft={draft}
           readiness={readiness}
-          initialValidation={hydrated?.validation ?? state?.validation.draft ?? null}
+          initialValidation={
+            hydrated?.validation ?? state?.validation.draft ?? null
+          }
           plannerPreview={plannerPreviewQuery.data?.data ?? null}
           plannerLoading={plannerPreviewQuery.isLoading}
           catalog={catalog}
@@ -143,7 +162,11 @@ export function MealBuilderPage() {
               description="ابدأ من النسخة المنشورة الحالية أو من الإعداد الافتراضي."
             />
             <div className="flex justify-center">
-              <Button type="button" onClick={() => createDraft.mutate()} disabled={createDraft.isPending}>
+              <Button
+                type="button"
+                onClick={() => createDraft.mutate()}
+                disabled={createDraft.isPending}
+              >
                 <Plus data-icon="inline-start" />
                 إنشاء مسودة
               </Button>
@@ -178,11 +201,21 @@ function HeaderCard({
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" disabled={pending} onClick={onCreateDraft}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={onCreateDraft}
+            >
               <Plus data-icon="inline-start" />
               إنشاء مسودة
             </Button>
-            <Button type="button" variant="outline" disabled={pending} onClick={onRefresh}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={onRefresh}
+            >
               <RefreshCw data-icon="inline-start" />
               تحديث
             </Button>
@@ -225,7 +258,9 @@ function MealBuilderWorkspace({
   const [editor, setEditor] = useState<EditorState>(null);
   const [cardEditorKey, setCardEditorKey] = useState<string | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
-  const [validation, setValidation] = useState<MealBuilderValidation | null>(initialValidation);
+  const [validation, setValidation] = useState<MealBuilderValidation | null>(
+    initialValidation
+  );
 
   const currentValidation = validation ?? initialValidation;
   const visualCards = buildMealBuilderVisualCards({
@@ -239,8 +274,10 @@ function MealBuilderWorkspace({
     ],
   });
   const hasErrors =
-    Boolean(currentValidation?.errors.length) || Boolean(readiness?.errors.length);
-  const pending = saveDraft.isPending || validateDraft.isPending || publishDraft.isPending;
+    Boolean(currentValidation?.errors.length) ||
+    Boolean(readiness?.errors.length);
+  const pending =
+    saveDraft.isPending || validateDraft.isPending || publishDraft.isPending;
   const payload = { sections: toBackendSections(sections), notes };
 
   useEffect(() => {
@@ -269,7 +306,12 @@ function MealBuilderWorkspace({
   }, [visualCards]);
 
   function replaceSections(next: MealBuilderSection[]) {
-    setSections(orderSections(next).map((item, index) => ({ ...item, sortOrder: index + 1 })));
+    setSections(
+      orderSections(next).map((item, index) => ({
+        ...item,
+        sortOrder: index + 1,
+      }))
+    );
     setDirty(true);
   }
 
@@ -282,14 +324,38 @@ function MealBuilderWorkspace({
               <div>
                 <CardTitle>بطاقات منشئ الوجبات</CardTitle>
                 <CardDescription>
-                  العرض التحريري يستخدم قالب العائلات السبعة من بيانات المسودة والكتالوج فقط.
+                  العرض التحريري يستخدم قالب العائلات السبعة من بيانات المسودة
+                  والكتالوج فقط.
                 </CardDescription>
               </div>
               <div className="flex flex-wrap gap-2">
-                {dirty ? <Badge variant="secondary">تغييرات غير محفوظة</Badge> : null}
-                <ToolbarButton icon={Plus} label="مجموعة خيارات" onClick={() => setEditor({ type: "option_group", index: null })} variant="secondary" />
-                <ToolbarButton icon={Plus} label="تصنيف منتجات" onClick={() => setEditor({ type: "product_category", index: null })} variant="secondary" />
-                <ToolbarButton icon={Plus} label="قائمة منتجات" onClick={() => setEditor({ type: "product_list", index: null })} variant="secondary" />
+                {dirty ? (
+                  <Badge variant="secondary">تغييرات غير محفوظة</Badge>
+                ) : null}
+                <ToolbarButton
+                  icon={Plus}
+                  label="مجموعة خيارات"
+                  onClick={() =>
+                    setEditor({ type: "option_group", index: null })
+                  }
+                  variant="secondary"
+                />
+                <ToolbarButton
+                  icon={Plus}
+                  label="تصنيف منتجات"
+                  onClick={() =>
+                    setEditor({ type: "product_category", index: null })
+                  }
+                  variant="secondary"
+                />
+                <ToolbarButton
+                  icon={Plus}
+                  label="قائمة منتجات"
+                  onClick={() =>
+                    setEditor({ type: "product_list", index: null })
+                  }
+                  variant="secondary"
+                />
               </div>
             </div>
           </CardHeader>
@@ -298,8 +364,14 @@ function MealBuilderWorkspace({
               dirty={dirty}
               hasErrors={hasErrors}
               pending={pending}
-              onSave={() => saveDraft.mutate(payload, { onSuccess: () => setDirty(false) })}
-              onValidate={() => validateDraft.mutate(payload, { onSuccess: (result) => setValidation(result.data) })}
+              onSave={() =>
+                saveDraft.mutate(payload, { onSuccess: () => setDirty(false) })
+              }
+              onValidate={() =>
+                validateDraft.mutate(payload, {
+                  onSuccess: (result) => setValidation(result.data),
+                })
+              }
               onPublish={() => setPublishOpen(true)}
             />
 
@@ -310,7 +382,8 @@ function MealBuilderWorkspace({
             ) : null}
 
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">
-              مصدر التحرير هو مسودة Dashboard Meal Builder. معاينة plannerCatalog في اللوحة الجانبية فقط ولا تستبدل هذه البطاقات.
+              مصدر التحرير هو مسودة Dashboard Meal Builder. معاينة
+              plannerCatalog في اللوحة الجانبية فقط ولا تستبدل هذه البطاقات.
             </div>
 
             {visualCards.map((card) => (
@@ -355,7 +428,9 @@ function MealBuilderWorkspace({
           key={`${editor.type}:${editor.index ?? "new"}:${sections[editor.index ?? -1]?.id ?? ""}`}
           open
           type={editor.type}
-          initial={editor.index == null ? null : sections[editor.index] ?? null}
+          initial={
+            editor.index == null ? null : (sections[editor.index] ?? null)
+          }
           products={catalog.products}
           categories={catalog.categories}
           groups={catalog.groups}
@@ -363,9 +438,16 @@ function MealBuilderWorkspace({
           onClose={() => setEditor(null)}
           onSave={(section) => {
             if (editor.index == null) {
-              replaceSections([...sections, { ...section, sortOrder: sections.length + 1 }]);
+              replaceSections([
+                ...sections,
+                { ...section, sortOrder: sections.length + 1 },
+              ]);
             } else {
-              replaceSections(sections.map((item, index) => (index === editor.index ? section : item)));
+              replaceSections(
+                sections.map((item, index) =>
+                  index === editor.index ? section : item
+                )
+              );
             }
             setEditor(null);
           }}
@@ -376,7 +458,10 @@ function MealBuilderWorkspace({
         <MealBuilderCardEditor
           key={cardEditorKey}
           open
-          card={visualCards.find((card) => card.key === cardEditorKey) ?? visualCards[0]}
+          card={
+            visualCards.find((card) => card.key === cardEditorKey) ??
+            visualCards[0]
+          }
           sections={sections}
           catalog={catalog}
           onClose={() => setCardEditorKey(null)}
@@ -423,9 +508,25 @@ function DraftActions({
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <ToolbarButton icon={Save} label="حفظ" onClick={onSave} disabled={pending} />
-      <ToolbarButton icon={CheckCircle2} label="تحقق" onClick={onValidate} disabled={pending} variant="secondary" />
-      <ToolbarButton icon={Send} label="نشر" onClick={onPublish} disabled={pending || dirty || hasErrors} />
+      <ToolbarButton
+        icon={Save}
+        label="حفظ"
+        onClick={onSave}
+        disabled={pending}
+      />
+      <ToolbarButton
+        icon={CheckCircle2}
+        label="تحقق"
+        onClick={onValidate}
+        disabled={pending}
+        variant="secondary"
+      />
+      <ToolbarButton
+        icon={Send}
+        label="نشر"
+        onClick={onPublish}
+        disabled={pending || dirty || hasErrors}
+      />
     </div>
   );
 }
@@ -444,7 +545,12 @@ function ToolbarButton({
   variant?: "outline" | "secondary";
 }) {
   return (
-    <Button type="button" variant={variant} disabled={disabled} onClick={onClick}>
+    <Button
+      type="button"
+      variant={variant}
+      disabled={disabled}
+      onClick={onClick}
+    >
       <Icon data-icon="inline-start" />
       {label}
     </Button>
@@ -456,7 +562,8 @@ function PremiumNotice() {
     <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
       <ShieldAlert className="mt-0.5 size-4 shrink-0" />
       <p>
-        أسعار البريميوم هنا للعرض فقط. حساب الرصيد والدفع يتم في الباكند عند حفظ يوم الاشتراك، ولا توجد هنا أي أداة تجعل الترقية مجانية.
+        أسعار البريميوم هنا للعرض فقط. حساب الرصيد والدفع يتم في الباكند عند حفظ
+        يوم الاشتراك، ولا توجد هنا أي أداة تجعل الترقية مجانية.
       </p>
     </div>
   );
@@ -467,9 +574,16 @@ function BootstrapMeta({ draft }: { draft: MealBuilderConfig | null }) {
   return (
     <Card className="border-border/80 shadow-none">
       <CardContent className="flex flex-wrap gap-2 pt-6 text-sm">
-        <Badge variant="outline">المصدر: {draft.source === "bootstrap" ? "بيانات أولية" : "لوحة التحكم"}</Badge>
-        {draft.createdBySystem ? <Badge variant="secondary">تم إنشاؤه تلقائيا</Badge> : null}
-        {draft.bootstrapKey ? <MenuKeyBadge value={draft.bootstrapKey} /> : null}
+        <Badge variant="outline">
+          المصدر:{" "}
+          {draft.source === "bootstrap" ? "بيانات أولية" : "لوحة التحكم"}
+        </Badge>
+        {draft.createdBySystem ? (
+          <Badge variant="secondary">تم إنشاؤه تلقائيا</Badge>
+        ) : null}
+        {draft.bootstrapKey ? (
+          <MenuKeyBadge value={draft.bootstrapKey} />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -490,7 +604,10 @@ function PublishDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent dir="rtl">
+      <DialogContent
+        className="max-h-[85dvh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto"
+        dir="rtl"
+      >
         <DialogHeader>
           <DialogTitle>نشر منشئ الوجبات</DialogTitle>
           <DialogDescription>

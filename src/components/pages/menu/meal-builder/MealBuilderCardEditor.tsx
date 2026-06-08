@@ -23,21 +23,13 @@ import type {
 } from "@/types/menuTypes";
 import type { MealBuilderSection } from "@/types/mealBuilderTypes";
 import { MenuKeyBadge } from "@/components/pages/menu/MenuTabScaffold";
-import {
-  VISUAL_SECTION_LABELS,
-} from "./mealBuilderConstants";
-import {
-  emptySection,
-  orderSections,
-  toggle,
-} from "./mealBuilderUtils";
+import { VISUAL_SECTION_LABELS } from "./mealBuilderConstants";
+import { emptySection, orderSections, toggle } from "./mealBuilderUtils";
 import type {
   MealBuilderVisualCard,
   MealBuilderVisualItem,
 } from "./mealBuilderVisualModel";
-import {
-  buildMealBuilderVisualCards,
-} from "./mealBuilderVisualModel";
+import { buildMealBuilderVisualCards } from "./mealBuilderVisualModel";
 import { useMealBuilderPickerQuery } from "@/hooks/menu";
 import type { MealBuilderHydratedItem } from "@/types/mealBuilderTypes";
 
@@ -63,14 +55,21 @@ export function MealBuilderCardEditor({
   onClose: () => void;
   onSave: (sections: MealBuilderSection[]) => void;
 }) {
-  const [draftSections, setDraftSections] = useState(() => orderSections(sections));
+  const [draftSections, setDraftSections] = useState(() =>
+    orderSections(sections)
+  );
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [includeUnavailable, setIncludeUnavailable] = useState(false);
   const [includeNotLinked, setIncludeNotLinked] = useState(true);
   const liveCard = rebuildCard(card.key, draftSections, catalog, card);
-  const primaryIndex = findPrimarySectionIndex(liveCard.key, draftSections, catalog);
-  const primarySection = primaryIndex == null ? null : draftSections[primaryIndex];
+  const primaryIndex = findPrimarySectionIndex(
+    liveCard.key,
+    draftSections,
+    catalog
+  );
+  const primarySection =
+    primaryIndex == null ? null : draftSections[primaryIndex];
   const pickerQuery = useMealBuilderPickerQuery(liveCard.key, {
     q: query,
     includeUnavailable,
@@ -93,197 +92,232 @@ export function MealBuilderCardEditor({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-4xl overflow-auto" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>
-            تعديل بطاقة {liveCard.labelAr}
-          </DialogTitle>
+      <DialogContent
+        className="grid max-h-[85dvh] w-[calc(100%-1.5rem)] max-w-4xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[min(720px,calc(100dvh-4rem))] lg:max-h-[min(760px,calc(100dvh-5rem))]"
+        dir="rtl"
+      >
+        <DialogHeader className="border-b px-5 py-4 sm:px-6">
+          <DialogTitle>تعديل بطاقة {liveCard.labelAr}</DialogTitle>
           <DialogDescription>
-            يتم تعديل بيانات المسودة الحقيقية فقط، ثم يرسل زر الحفظ نفس شكل الباكند.
+            يتم تعديل بيانات المسودة الحقيقية فقط، ثم يرسل زر الحفظ نفس شكل
+            الباكند.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <ReadonlyField label="المفتاح" value={liveCard.key} />
-          <ReadonlyField label="الترتيب المرئي" value={String(liveCard.sortOrder)} />
-          <TextField
-            label="عنوان القسم بالعربي"
-            value={primarySection?.titleOverride.ar ?? VISUAL_SECTION_LABELS[liveCard.key]?.ar ?? ""}
-            onChange={(value) =>
-              patchPrimary({
-                titleOverride: {
-                  ar: value,
-                  en: primarySection?.titleOverride.en ?? "",
-                },
-              })
-            }
-            disabled={!primarySection}
-          />
-          <TextField
-            label="عنوان القسم بالإنجليزي"
-            value={primarySection?.titleOverride.en ?? VISUAL_SECTION_LABELS[liveCard.key]?.en ?? ""}
-            onChange={(value) =>
-              patchPrimary({
-                titleOverride: {
-                  ar: primarySection?.titleOverride.ar ?? "",
-                  en: value,
-                },
-              })
-            }
-            disabled={!primarySection}
-          />
-          <NumberField
-            label="الحد الأدنى"
-            value={primarySection?.minSelections ?? 0}
-            disabled={!primarySection}
-            onChange={(value) => patchPrimary({ minSelections: value === "" ? 0 : value })}
-          />
-          <NumberField
-            label="الحد الأقصى"
-            value={primarySection?.maxSelections ?? ""}
-            disabled={!primarySection}
-            onChange={(value) => patchPrimary({ maxSelections: value === "" ? null : value })}
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <SwitchLine
-            label="ظاهر"
-            checked={primarySection?.visible ?? true}
-            disabled={!primarySection}
-            onChange={(visible) => patchPrimary({ visible })}
-          />
-          <SwitchLine
-            label="إجباري"
-            checked={primarySection?.required ?? false}
-            disabled={!primarySection}
-            onChange={(required) => patchPrimary({ required })}
-          />
-          <SwitchLine
-            label="اختيار متعدد"
-            checked={primarySection?.multiSelect ?? false}
-            disabled={!primarySection}
-            onChange={(multiSelect) => patchPrimary({ multiSelect })}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>العناصر المختارة</Label>
-          <div className="divide-y rounded-lg border">
-            {liveCard.items.length ? (
-              liveCard.items.map((item, index) => (
-                <SelectedItemRow
-                  key={`${item.kind}:${item.id}`}
-                  item={item}
-                  first={index === 0}
-                  last={index === liveCard.items.length - 1}
-                  onMove={(direction) =>
-                    setDraftSections((current) =>
-                      moveItem(current, liveCard.items, item, direction, catalog)
-                    )
-                  }
-                  onRemove={() =>
-                    setDraftSections((current) => removeItem(current, item, catalog))
-                  }
-                />
-              ))
-            ) : (
-              <p className="p-4 text-sm text-muted-foreground">
-                لا توجد عناصر مختارة داخل هذه البطاقة.
-              </p>
-            )}
+        <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-4 sm:px-6">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ReadonlyField label="المفتاح" value={liveCard.key} />
+            <ReadonlyField
+              label="الترتيب المرئي"
+              value={String(liveCard.sortOrder)}
+            />
+            <TextField
+              label="عنوان القسم بالعربي"
+              value={
+                primarySection?.titleOverride.ar ??
+                VISUAL_SECTION_LABELS[liveCard.key]?.ar ??
+                ""
+              }
+              onChange={(value) =>
+                patchPrimary({
+                  titleOverride: {
+                    ar: value,
+                    en: primarySection?.titleOverride.en ?? "",
+                  },
+                })
+              }
+              disabled={!primarySection}
+            />
+            <TextField
+              label="عنوان القسم بالإنجليزي"
+              value={
+                primarySection?.titleOverride.en ??
+                VISUAL_SECTION_LABELS[liveCard.key]?.en ??
+                ""
+              }
+              onChange={(value) =>
+                patchPrimary({
+                  titleOverride: {
+                    ar: primarySection?.titleOverride.ar ?? "",
+                    en: value,
+                  },
+                })
+              }
+              disabled={!primarySection}
+            />
+            <NumberField
+              label="الحد الأدنى"
+              value={primarySection?.minSelections ?? 0}
+              disabled={!primarySection}
+              onChange={(value) =>
+                patchPrimary({ minSelections: value === "" ? 0 : value })
+              }
+            />
+            <NumberField
+              label="الحد الأقصى"
+              value={primarySection?.maxSelections ?? ""}
+              disabled={!primarySection}
+              onChange={(value) =>
+                patchPrimary({ maxSelections: value === "" ? null : value })
+              }
+            />
           </div>
-        </div>
 
-        <div className="space-y-3 rounded-lg border p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Label>إضافة عناصر من الكتالوج</Label>
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="ابحث بالاسم أو المفتاح"
+          <div className="grid gap-3 sm:grid-cols-3">
+            <SwitchLine
+              label="ظاهر"
+              checked={primarySection?.visible ?? true}
+              disabled={!primarySection}
+              onChange={(visible) => patchPrimary({ visible })}
+            />
+            <SwitchLine
+              label="إجباري"
+              checked={primarySection?.required ?? false}
+              disabled={!primarySection}
+              onChange={(required) => patchPrimary({ required })}
+            />
+            <SwitchLine
+              label="اختيار متعدد"
+              checked={primarySection?.multiSelect ?? false}
+              disabled={!primarySection}
+              onChange={(multiSelect) => patchPrimary({ multiSelect })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>العناصر المختارة</Label>
+            <div className="max-h-[min(18rem,34dvh)] divide-y overflow-auto rounded-lg border">
+              {liveCard.items.length ? (
+                liveCard.items.map((item, index) => (
+                  <SelectedItemRow
+                    key={`${item.kind}:${item.id}`}
+                    item={item}
+                    first={index === 0}
+                    last={index === liveCard.items.length - 1}
+                    onMove={(direction) =>
+                      setDraftSections((current) =>
+                        moveItem(
+                          current,
+                          liveCard.items,
+                          item,
+                          direction,
+                          catalog
+                        )
+                      )
+                    }
+                    onRemove={() =>
+                      setDraftSections((current) =>
+                        removeItem(current, item, catalog)
+                      )
+                    }
+                  />
+                ))
+              ) : (
+                <p className="p-4 text-sm text-muted-foreground">
+                  لا توجد عناصر مختارة داخل هذه البطاقة.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Label>إضافة عناصر من الكتالوج</Label>
+                <Input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="ابحث بالاسم أو المفتاح"
+                />
+              </div>
+              <Button
+                type="button"
+                disabled={!selectedIds.length}
+                onClick={() => {
+                  setDraftSections((current) =>
+                    addItemsToCard(current, liveCard.key, selectedIds, catalog)
+                  );
+                  setSelectedIds([]);
+                  setQuery("");
+                }}
+              >
+                <Plus data-icon="inline-start" />
+                إضافة
+              </Button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SwitchLine
+                label="إظهار غير المتاح"
+                checked={includeUnavailable}
+                onChange={setIncludeUnavailable}
+              />
+              <SwitchLine
+                label="إظهار غير المرتبط"
+                checked={includeNotLinked}
+                onChange={setIncludeNotLinked}
               />
             </div>
-            <Button
-              type="button"
-              disabled={!selectedIds.length}
-              onClick={() => {
-                setDraftSections((current) =>
-                  addItemsToCard(current, liveCard.key, selectedIds, catalog)
-                );
-                setSelectedIds([]);
-                setQuery("");
-              }}
-            >
-              <Plus data-icon="inline-start" />
-              إضافة
-            </Button>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SwitchLine
-              label="إظهار غير المتاح"
-              checked={includeUnavailable}
-              onChange={setIncludeUnavailable}
-            />
-            <SwitchLine
-              label="إظهار غير المرتبط"
-              checked={includeNotLinked}
-              onChange={setIncludeNotLinked}
-            />
-          </div>
-
-          {picker?.rules ? (
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(picker.rules).map(([key, value]) => (
-                <Badge key={key} variant="outline">
-                  {key}={String(value)}
-                </Badge>
-              ))}
-            </div>
-          ) : null}
-
-          <div className="max-h-72 overflow-auto rounded-lg border">
-            {pickerQuery.isLoading ? (
-              <p className="p-4 text-sm text-muted-foreground">
-                جاري تحميل العناصر المناسبة لهذه البطاقة...
-              </p>
-            ) : candidates.length ? (
-              <div className="divide-y">
-                {candidates.map((item) => (
-                  <button
-                    key={`${item.type}:${item.id}`}
-                    type="button"
-                    disabled={!item.id}
-                    className="flex w-full items-start gap-3 px-4 py-3 text-right hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => setSelectedIds((current) => toggle(current, encodeItem(item)))}
-                  >
-                    <Checkbox checked={selectedIds.includes(encodeItem(item))} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-medium">{hydratedItemName(item)}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {item.key} · {pickerStateLabel(item.state)}
-                      </span>
-                      <span className="mt-2 flex flex-wrap gap-1">
-                        <ItemStateBadges item={item} />
-                      </span>
-                    </span>
-                    <Badge variant="outline">
-                      {item.type?.includes("product") ? "منتج" : "خيار"}
-                    </Badge>
-                  </button>
+            {picker?.rules ? (
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(picker.rules).map(([key, value]) => (
+                  <Badge key={key} variant="outline">
+                    {key}={String(value)}
+                  </Badge>
                 ))}
               </div>
-            ) : (
-              <p className="p-4 text-sm text-muted-foreground">
-                لا توجد عناصر مؤهلة لهذه البطاقة.
-              </p>
-            )}
+            ) : null}
+
+            <div className="max-h-[min(20rem,38dvh)] overflow-auto rounded-lg border">
+              {pickerQuery.isLoading ? (
+                <p className="p-4 text-sm text-muted-foreground">
+                  جاري تحميل العناصر المناسبة لهذه البطاقة...
+                </p>
+              ) : candidates.length ? (
+                <div className="divide-y">
+                  {candidates.map((item) => (
+                    <button
+                      key={`${item.type}:${item.id}`}
+                      type="button"
+                      disabled={!item.id}
+                      className="flex w-full items-start gap-3 px-4 py-3 text-right hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() =>
+                        setSelectedIds((current) =>
+                          toggle(current, encodeItem(item))
+                        )
+                      }
+                    >
+                      <Checkbox
+                        checked={selectedIds.includes(encodeItem(item))}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-medium">
+                          {hydratedItemName(item)}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {item.key} · {pickerStateLabel(item.state)}
+                        </span>
+                        <span className="mt-2 flex flex-wrap gap-1">
+                          <ItemStateBadges item={item} />
+                        </span>
+                      </span>
+                      <Badge variant="outline">
+                        {item.type?.includes("product") ? "منتج" : "خيار"}
+                      </Badge>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="p-4 text-sm text-muted-foreground">
+                  لا توجد عناصر مؤهلة لهذه البطاقة.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:justify-start">
+        <DialogFooter className="border-t bg-background px-5 py-4 sm:justify-start sm:px-6">
           <Button type="button" onClick={() => onSave(draftSections)}>
             حفظ تغييرات البطاقة
           </Button>
@@ -317,7 +351,9 @@ function SelectedItemRow({
           <MenuKeyBadge value={item.key} />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">{item.kind === "product" ? "منتج" : "خيار"}</Badge>
+          <Badge variant="outline">
+            {item.kind === "product" ? "منتج" : "خيار"}
+          </Badge>
           <VisualItemStateBadges item={item} />
           {item.kind === "product" ? (
             <Badge variant="outline">selectionType={item.selectionType}</Badge>
@@ -325,10 +361,22 @@ function SelectedItemRow({
         </div>
       </div>
       <div className="flex gap-2">
-        <Button type="button" variant="outline" size="icon" disabled={first} onClick={() => onMove("up")}>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={first}
+          onClick={() => onMove("up")}
+        >
           <ArrowUp className="size-4" />
         </Button>
-        <Button type="button" variant="outline" size="icon" disabled={last} onClick={() => onMove("down")}>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={last}
+          onClick={() => onMove("down")}
+        >
           <ArrowDown className="size-4" />
         </Button>
         <Button type="button" variant="outline" size="icon" onClick={onRemove}>
@@ -352,8 +400,7 @@ function rebuildCard(
       categories: catalog.categories,
       options: catalog.options,
       issues: [],
-    }).find((item) => item.key === cardKey) ??
-    fallback!
+    }).find((item) => item.key === cardKey) ?? fallback!
   );
 }
 
@@ -365,7 +412,8 @@ function addItemsToCard(
 ): MealBuilderSection[] {
   return encodedIds.reduce<MealBuilderSection[]>((current, encoded) => {
     const [kind, id] = encoded.split(":");
-    if (kind === "option") return addOptionToCard(current, cardKey, id, catalog);
+    if (kind === "option")
+      return addOptionToCard(current, cardKey, id, catalog);
     return addProductToCard(current, cardKey, id, catalog);
   }, sections);
 }
@@ -417,13 +465,17 @@ function removeItem(
     if (item.kind === "option") {
       return {
         ...section,
-        selectedOptionIds: section.selectedOptionIds.filter((id) => id !== item.id),
+        selectedOptionIds: section.selectedOptionIds.filter(
+          (id) => id !== item.id
+        ),
       };
     }
     const selectedIds =
       section.includeMode === "all" && section.sourceCategoryId
         ? catalog.products
-            .filter((product) => product.categoryId === section.sourceCategoryId)
+            .filter(
+              (product) => product.categoryId === section.sourceCategoryId
+            )
             .map((product) => product.id)
         : section.selectedProductIds;
     return {
@@ -441,23 +493,38 @@ function moveItem(
   direction: "up" | "down",
   catalog: Catalog
 ): MealBuilderSection[] {
-  const cardIndex = cardItems.findIndex((entry) => entry.id === item.id && entry.kind === item.kind);
-  const targetCardItem = cardItems[direction === "up" ? cardIndex - 1 : cardIndex + 1];
-  if (!targetCardItem || targetCardItem.sourceSectionIndex !== item.sourceSectionIndex) return sections;
+  const cardIndex = cardItems.findIndex(
+    (entry) => entry.id === item.id && entry.kind === item.kind
+  );
+  const targetCardItem =
+    cardItems[direction === "up" ? cardIndex - 1 : cardIndex + 1];
+  if (
+    !targetCardItem ||
+    targetCardItem.sourceSectionIndex !== item.sourceSectionIndex
+  )
+    return sections;
 
   return sections.map((section, sectionIndex) => {
     if (sectionIndex !== item.sourceSectionIndex) return section;
     const ids =
-      item.kind === "product" && section.includeMode === "all" && section.sourceCategoryId
+      item.kind === "product" &&
+      section.includeMode === "all" &&
+      section.sourceCategoryId
         ? catalog.products
-            .filter((product) => product.categoryId === section.sourceCategoryId)
+            .filter(
+              (product) => product.categoryId === section.sourceCategoryId
+            )
             .map((product) => product.id)
         : item.kind === "product"
           ? section.selectedProductIds
           : section.selectedOptionIds;
     const nextIds = swapIds(ids, item.id, targetCardItem.id);
     return item.kind === "product"
-      ? { ...section, includeMode: "selected" as const, selectedProductIds: nextIds }
+      ? {
+          ...section,
+          includeMode: "selected" as const,
+          selectedProductIds: nextIds,
+        }
       : { ...section, selectedOptionIds: nextIds };
   });
 }
@@ -467,7 +534,10 @@ function swapIds(ids: string[], currentId: string, targetId: string) {
   const currentIndex = next.indexOf(currentId);
   const targetIndex = next.indexOf(targetId);
   if (currentIndex < 0 || targetIndex < 0) return ids;
-  [next[currentIndex], next[targetIndex]] = [next[targetIndex], next[currentIndex]];
+  [next[currentIndex], next[targetIndex]] = [
+    next[targetIndex],
+    next[currentIndex],
+  ];
   return next;
 }
 
@@ -477,22 +547,27 @@ function ensureOptionSectionIndex(
   catalog: Catalog
 ) {
   const byKeyIndex = sections.findIndex(
-    (section) => section.key === cardKey && section.sectionType === "option_group"
+    (section) =>
+      section.key === cardKey && section.sectionType === "option_group"
   );
   if (byKeyIndex >= 0) return { sections, index: byKeyIndex };
 
   const groupKey = cardKey === "carbs" ? "carbs" : "proteins";
-  const selectionType = cardKey === "premium" ? "premium_meal" : "standard_meal";
+  const selectionType =
+    cardKey === "premium" ? "premium_meal" : "standard_meal";
   const existingIndex = sections.findIndex(
     (section) =>
       section.sectionType === "option_group" &&
       section.selectionType === selectionType &&
-      catalog.groups.find((group) => group.id === section.sourceGroupId)?.key === groupKey
+      catalog.groups.find((group) => group.id === section.sourceGroupId)
+        ?.key === groupKey
   );
   if (existingIndex >= 0) return { sections, index: existingIndex };
 
   const group = catalog.groups.find((item) => item.key === groupKey);
-  const product = catalog.products.find((item) => item.key === "basic_meal") ?? catalog.products[0];
+  const product =
+    catalog.products.find((item) => item.key === "basic_meal") ??
+    catalog.products[0];
   const label = VISUAL_SECTION_LABELS[cardKey];
   const nextSection: MealBuilderSection = {
     ...emptySection("option_group"),
@@ -507,12 +582,23 @@ function ensureOptionSectionIndex(
     minSelections: cardKey === "premium" ? 0 : 1,
     maxSelections: cardKey === "carbs" ? 2 : 1,
     multiSelect: cardKey === "carbs",
-    metadata: cardKey === "carbs"
-      ? { visualRole: "carbs", appliesTo: ["configurable_plate_meal"], excludesSelectionTypes: ["sandwich"] }
-      : { visualRole: "protein_family", proteinFamilyKey: cardKey },
-    rules: cardKey === "carbs"
-      ? { ruleKey: "carb_split", maxTypes: 2, maxTotalGrams: 300, unit: "grams" }
-      : {},
+    metadata:
+      cardKey === "carbs"
+        ? {
+            visualRole: "carbs",
+            appliesTo: ["configurable_plate_meal"],
+            excludesSelectionTypes: ["sandwich"],
+          }
+        : { visualRole: "protein_family", proteinFamilyKey: cardKey },
+    rules:
+      cardKey === "carbs"
+        ? {
+            ruleKey: "carb_split",
+            maxTypes: 2,
+            maxTotalGrams: 300,
+            unit: "grams",
+          }
+        : {},
   };
   return { sections: [...sections, nextSection], index: sections.length };
 }
@@ -531,22 +617,27 @@ function ensureProductSectionIndex(
   );
   if (byKeyIndex >= 0) return { sections, index: byKeyIndex };
 
-  const selectionType = cardKey === "premium" ? "premium_large_salad" : "sandwich";
+  const selectionType =
+    cardKey === "premium" ? "premium_large_salad" : "sandwich";
   const existingIndex = sections.findIndex(
     (section) =>
-      (section.sectionType === "product_category" || section.sectionType === "product_list") &&
+      (section.sectionType === "product_category" ||
+        section.sectionType === "product_list") &&
       section.selectionType === selectionType
   );
   if (existingIndex >= 0) return { sections, index: existingIndex };
 
   const label = VISUAL_SECTION_LABELS[cardKey];
-  const sandwichCategory = catalog.categories.find((item) => item.key === "cold_sandwiches");
+  const sandwichCategory = catalog.categories.find(
+    (item) => item.key === "cold_sandwiches"
+  );
   const type = cardKey === "sandwich" ? "product_category" : "product_list";
   const nextSection: MealBuilderSection = {
     ...emptySection(type),
     key: cardKey,
     sourceKind: cardKey === "sandwich" ? "product_list" : "premium_visual",
-    sourceCategoryId: cardKey === "sandwich" ? sandwichCategory?.id ?? null : null,
+    sourceCategoryId:
+      cardKey === "sandwich" ? (sandwichCategory?.id ?? null) : null,
     includeMode: "selected",
     selectionType,
     titleOverride: { ar: label?.ar ?? "", en: label?.en ?? "" },
@@ -555,9 +646,10 @@ function ensureProductSectionIndex(
     minSelections: 0,
     maxSelections: 1,
     multiSelect: false,
-    metadata: cardKey === "sandwich"
-      ? { requiresBuilder: false, treatAsFullMeal: true }
-      : { visualRole: "premium" },
+    metadata:
+      cardKey === "sandwich"
+        ? { requiresBuilder: false, treatAsFullMeal: true }
+        : { visualRole: "premium" },
     rules: cardKey === "sandwich" ? { carbsRequired: false } : {},
   };
   return { sections: [...sections, nextSection], index: sections.length };
@@ -583,7 +675,9 @@ function encodeItem(item: MealBuilderHydratedItem) {
 }
 
 function hydratedItemName(item: MealBuilderHydratedItem) {
-  return item.label || item.name?.ar || item.name?.en || item.key || "عنصر غير معروف";
+  return (
+    item.label || item.name?.ar || item.name?.en || item.key || "عنصر غير معروف"
+  );
 }
 
 function pickerStateLabel(state?: string) {
@@ -666,7 +760,11 @@ function TextField({
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <Input value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+      <Input
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </div>
   );
 }
@@ -699,7 +797,9 @@ function NumberField({
         min="0"
         value={value}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))}
+        onChange={(event) =>
+          onChange(event.target.value === "" ? "" : Number(event.target.value))
+        }
       />
     </div>
   );
@@ -719,7 +819,11 @@ function SwitchLine({
   return (
     <div className="flex items-center justify-between rounded-lg border p-3">
       <span className="text-sm font-medium">{label}</span>
-      <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
+      <Switch
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onChange}
+      />
     </div>
   );
 }

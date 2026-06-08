@@ -13,9 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  useMenuProductComposerQuery,
-} from "@/hooks/menu";
+import { useMenuProductComposerQuery } from "@/hooks/menu";
 import type {
   MenuCategory,
   MenuOption,
@@ -58,14 +56,19 @@ export function MealBuilderSectionEditor({
   onClose: () => void;
   onSave: (section: MealBuilderSection) => void;
 }) {
-  const [section, setSection] = useState<MealBuilderSection>(initial ?? emptySection(type));
+  const [section, setSection] = useState<MealBuilderSection>(
+    initial ?? emptySection(type)
+  );
   const [query, setQuery] = useState("");
-  const composerQuery = useMenuProductComposerQuery(section.productContextId ?? "");
+  const composerQuery = useMenuProductComposerQuery(
+    section.productContextId ?? ""
+  );
 
   const composerGroup = composerQuery.data?.data.linkedOptionGroups.find(
     (item) => item.groupId === section.sourceGroupId
   );
-  const relationOptionIds = composerGroup?.options?.map((item) => item.optionId) ?? [];
+  const relationOptionIds =
+    composerGroup?.options?.map((item) => item.optionId) ?? [];
   const optionChoices = options
     .filter((option) =>
       relationOptionIds.length
@@ -87,106 +90,181 @@ export function MealBuilderSectionEditor({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-3xl overflow-auto" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>{initial ? "تعديل" : "إضافة"} {SECTION_LABELS[type]}</DialogTitle>
+      <DialogContent
+        className="grid max-h-[85dvh] w-[calc(100%-1.5rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[min(680px,calc(100dvh-4rem))] lg:max-h-[min(720px,calc(100dvh-5rem))]"
+        dir="rtl"
+      >
+        <DialogHeader className="border-b px-5 py-4 sm:px-6">
+          <DialogTitle>
+            {initial ? "تعديل" : "إضافة"} {SECTION_LABELS[type]}
+          </DialogTitle>
           <DialogDescription>
-            اختر من بيانات الكتالوج الموجودة. تعديل المنتجات أو الخيارات يتم من صفحات الكتالوج الأصلية.
+            اختر من بيانات الكتالوج الموجودة. تعديل المنتجات أو الخيارات يتم من
+            صفحات الكتالوج الأصلية.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Field label="العنوان بالعربي" value={section.titleOverride.ar} onChange={(value) => patch({ titleOverride: { ...section.titleOverride, ar: value } })} />
-          <Field label="العنوان بالإنجليزي" value={section.titleOverride.en} onChange={(value) => patch({ titleOverride: { ...section.titleOverride, en: value } })} />
+        <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-4 sm:px-6">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Field
+              label="العنوان بالعربي"
+              value={section.titleOverride.ar}
+              onChange={(value) =>
+                patch({
+                  titleOverride: { ...section.titleOverride, ar: value },
+                })
+              }
+            />
+            <Field
+              label="العنوان بالإنجليزي"
+              value={section.titleOverride.en}
+              onChange={(value) =>
+                patch({
+                  titleOverride: { ...section.titleOverride, en: value },
+                })
+              }
+            />
+
+            {type === "option_group" ? (
+              <>
+                <SelectField
+                  label="منتج السياق"
+                  value={section.productContextId ?? ""}
+                  onChange={(value) =>
+                    patch({
+                      productContextId: value,
+                      sourceGroupId: null,
+                      selectedOptionIds: [],
+                    })
+                  }
+                  options={products.map(toOption)}
+                />
+                <SelectField
+                  label="مجموعة الخيارات"
+                  value={section.sourceGroupId ?? ""}
+                  onChange={(value) =>
+                    patch({ sourceGroupId: value, selectedOptionIds: [] })
+                  }
+                  options={groups.map(toOption)}
+                />
+              </>
+            ) : null}
+
+            {type === "product_category" ? (
+              <SelectField
+                label="التصنيف"
+                value={section.sourceCategoryId ?? ""}
+                onChange={(value) =>
+                  patch({ sourceCategoryId: value, selectedProductIds: [] })
+                }
+                options={categories.map(toOption)}
+              />
+            ) : null}
+
+            {type !== "option_group" ? (
+              <SelectField
+                label="طريقة الإدراج"
+                value={section.includeMode}
+                onChange={(value) =>
+                  patch({ includeMode: value as "all" | "selected" })
+                }
+                options={[
+                  { value: "selected", label: "اختيار يدوي" },
+                  { value: "all", label: "كل المؤهلين" },
+                ]}
+              />
+            ) : null}
+
+            <SelectField
+              label="نوع الاختيار"
+              value={section.selectionType}
+              onChange={(value) => patch({ selectionType: value })}
+              options={SELECTION_TYPES}
+            />
+            <NumberField
+              label="الترتيب"
+              value={section.sortOrder}
+              onChange={(value) =>
+                patch({ sortOrder: value === "" ? 0 : value })
+              }
+            />
+            <NumberField
+              label="الحد الأدنى"
+              value={section.minSelections}
+              onChange={(value) =>
+                patch({ minSelections: value === "" ? 0 : value })
+              }
+            />
+            <NumberField
+              label="الحد الأقصى"
+              value={section.maxSelections ?? ""}
+              onChange={(value) =>
+                patch({ maxSelections: value === "" ? null : value })
+              }
+            />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <SwitchLine
+              label="إجباري"
+              checked={section.required}
+              onChange={(required) => patch({ required })}
+            />
+            <SwitchLine
+              label="اختيار متعدد"
+              checked={section.multiSelect}
+              onChange={(multiSelect) => patch({ multiSelect })}
+            />
+            <SwitchLine
+              label="ظاهر"
+              checked={section.visible}
+              onChange={(visible) => patch({ visible })}
+            />
+          </div>
+
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="ابحث بالاسم أو المفتاح"
+          />
 
           {type === "option_group" ? (
-            <>
-              <SelectField
-                label="منتج السياق"
-                value={section.productContextId ?? ""}
-                onChange={(value) => patch({ productContextId: value, sourceGroupId: null, selectedOptionIds: [] })}
-                options={products.map(toOption)}
-              />
-              <SelectField
-                label="مجموعة الخيارات"
-                value={section.sourceGroupId ?? ""}
-                onChange={(value) => patch({ sourceGroupId: value, selectedOptionIds: [] })}
-                options={groups.map(toOption)}
-              />
-            </>
-          ) : null}
-
-          {type === "product_category" ? (
-            <SelectField
-              label="التصنيف"
-              value={section.sourceCategoryId ?? ""}
-              onChange={(value) => patch({ sourceCategoryId: value, selectedProductIds: [] })}
-              options={categories.map(toOption)}
+            <Picker
+              title="خيارات المجموعة"
+              items={optionChoices}
+              selectedIds={section.selectedOptionIds}
+              onToggle={(id) =>
+                patch({
+                  selectedOptionIds: toggle(section.selectedOptionIds, id),
+                })
+              }
+              empty="لا توجد خيارات مرتبطة بهذا المنتج والمجموعة."
             />
           ) : null}
 
-          {type !== "option_group" ? (
-            <SelectField
-              label="طريقة الإدراج"
-              value={section.includeMode}
-              onChange={(value) => patch({ includeMode: value as "all" | "selected" })}
-              options={[
-                { value: "selected", label: "اختيار يدوي" },
-                { value: "all", label: "كل المؤهلين" },
-              ]}
+          {type !== "option_group" && section.includeMode === "selected" ? (
+            <Picker
+              title="المنتجات"
+              items={productChoices}
+              selectedIds={section.selectedProductIds}
+              onToggle={(id) =>
+                patch({
+                  selectedProductIds: toggle(section.selectedProductIds, id),
+                })
+              }
+              empty="لا توجد منتجات مناسبة."
             />
           ) : null}
 
-          <SelectField
-            label="نوع الاختيار"
-            value={section.selectionType}
-            onChange={(value) => patch({ selectionType: value })}
-            options={SELECTION_TYPES}
-          />
-          <NumberField label="الترتيب" value={section.sortOrder} onChange={(value) => patch({ sortOrder: value === "" ? 0 : value })} />
-          <NumberField label="الحد الأدنى" value={section.minSelections} onChange={(value) => patch({ minSelections: value === "" ? 0 : value })} />
-          <NumberField label="الحد الأقصى" value={section.maxSelections ?? ""} onChange={(value) => patch({ maxSelections: value === "" ? null : value })} />
+          {section.selectionType === "premium_large_salad" ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+              سلطة كبيرة بريميوم · ترقية مدفوعة · التسعير وقواعد البروتين
+              المسموح ومنع البروتين الإضافي كلها من الباكند.
+            </div>
+          ) : null}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <SwitchLine label="إجباري" checked={section.required} onChange={(required) => patch({ required })} />
-          <SwitchLine label="اختيار متعدد" checked={section.multiSelect} onChange={(multiSelect) => patch({ multiSelect })} />
-          <SwitchLine label="ظاهر" checked={section.visible} onChange={(visible) => patch({ visible })} />
-        </div>
-
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="ابحث بالاسم أو المفتاح"
-        />
-
-        {type === "option_group" ? (
-          <Picker
-            title="خيارات المجموعة"
-            items={optionChoices}
-            selectedIds={section.selectedOptionIds}
-            onToggle={(id) => patch({ selectedOptionIds: toggle(section.selectedOptionIds, id) })}
-            empty="لا توجد خيارات مرتبطة بهذا المنتج والمجموعة."
-          />
-        ) : null}
-
-        {type !== "option_group" && section.includeMode === "selected" ? (
-          <Picker
-            title="المنتجات"
-            items={productChoices}
-            selectedIds={section.selectedProductIds}
-            onToggle={(id) => patch({ selectedProductIds: toggle(section.selectedProductIds, id) })}
-            empty="لا توجد منتجات مناسبة."
-          />
-        ) : null}
-
-        {section.selectionType === "premium_large_salad" ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-            سلطة كبيرة بريميوم · ترقية مدفوعة · التسعير وقواعد البروتين المسموح ومنع البروتين الإضافي كلها من الباكند.
-          </div>
-        ) : null}
-
-        <DialogFooter className="gap-2 sm:justify-start">
+        <DialogFooter className="border-t bg-background px-5 py-4 sm:justify-start sm:px-6">
           <Button type="button" onClick={() => onSave(section)}>
             حفظ القسم
           </Button>
@@ -215,7 +293,7 @@ function Picker<T extends MenuProduct | MenuOption>({
   return (
     <div className="space-y-2">
       <Label>{title}</Label>
-      <div className="max-h-72 overflow-auto rounded-lg border">
+      <div className="max-h-[min(18rem,38dvh)] overflow-auto rounded-lg border">
         {items.length ? (
           <div className="divide-y">
             {items.map((item) => (
@@ -232,7 +310,10 @@ function Picker<T extends MenuProduct | MenuOption>({
                     {item.key} · {availableLabel(item)}
                   </span>
                 </span>
-                <PremiumBadge item={item} selectionType={(item as MenuOption).selectionType ?? ""} />
+                <PremiumBadge
+                  item={item}
+                  selectionType={(item as MenuOption).selectionType ?? ""}
+                />
               </button>
             ))}
           </div>
