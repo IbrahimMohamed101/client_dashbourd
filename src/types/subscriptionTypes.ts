@@ -103,6 +103,8 @@ export interface Subscription {
   canceledAt: string | null;
   totalMeals: number;
   remainingMeals: number;
+  remainingRegularMeals?: number;
+  remainingPremiumMeals?: number;
   premiumRemaining: number;
   premiumPrice: number;
   addonSubscriptions: AddonSubscription[];

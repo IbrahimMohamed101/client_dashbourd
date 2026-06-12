@@ -40,14 +40,23 @@ export interface UnifiedQueueItem {
 
   // ── Delivery / Pickup details ──
   delivery?: {
+    deliveryId?: string | null;
     method?: string;
+    date?: string | null;
+    status?: string | null;
     address?: unknown;
+    addressSummary?: string | null;
     zone?: { id: string; name: string } | null;
     zoneId?: string | null;
+    courierId?: string | null;
+    window?: string | null;
     deliveryWindow?: string;
     pickupLocationId?: string | null;
   };
   pickup?: {
+    pickupRequestId?: string | null;
+    branchId?: string | null;
+    locationId?: string | null;
     pickupLocationId?: string | null;
     pickupRequested?: boolean;
     pickupPreparedAt?: string | null;
@@ -55,6 +64,12 @@ export interface UnifiedQueueItem {
     pickupVerifiedAt?: string | null;
     pickupNoShowAt?: string | null;
     pickupCode?: string | null;
+    pickupCodeState?: string | null;
+    mealCount?: number | null;
+    remainingMeals?: number | null;
+    reserved?: boolean | null;
+    consumed?: boolean | null;
+    released?: boolean | null;
   };
 
   // ── Items (orders) ──
@@ -68,6 +83,36 @@ export interface UnifiedQueueItem {
   materializedMeals?: unknown[];
   addonSelections?: unknown[];
   premiumUpgradeSelections?: unknown[];
+  fulfillmentType?: string | null;
+  plan?: {
+    id?: string | null;
+    key?: string | null;
+    name?: string | null;
+    daysCount?: number | null;
+    durationDays?: number | null;
+    totalMeals?: number | null;
+    remainingMeals?: number | null;
+    selectedMealsPerDay?: number | null;
+    deliveryMode?: string | null;
+    proteinGrams?: number | null;
+    portionSize?: string | null;
+  } | null;
+  kitchenDetails?: {
+    mealSlots?: unknown[];
+    addons?: unknown[];
+    [key: string]: unknown;
+  } | null;
+  paymentValidity?: {
+    paymentRequired?: boolean | null;
+    paymentStatus?: string | null;
+    paymentApplied?: boolean | null;
+    pendingUnpaid?: boolean | null;
+    superseded?: boolean | null;
+    revisionMismatch?: boolean | null;
+    canPrepare?: boolean | null;
+    canFulfill?: boolean | null;
+    reason?: string | null;
+  } | null;
   subscriptionDayId?: string | null;
   subscriptionId?: string | null;
 
@@ -86,6 +131,7 @@ export interface UnifiedQueueItem {
     createdAt: string | null;
     updatedAt: string | null;
   };
+  rawData?: unknown;
 }
 
 export interface UnifiedOperationalDTO {

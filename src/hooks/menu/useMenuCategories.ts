@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import {
   fetchMenuCategories,
@@ -9,8 +9,10 @@ import {
   fetchDeleteMenuCategory,
   fetchReorderMenuCategories,
 } from "@/utils/fetchMenuCategories";
+import { removePaginatedCacheItem } from "@/utils/removePaginatedCacheItem";
 import type {
   MenuListParams,
+  MenuCategoriesResponse,
   CreateMenuCategoryPayload,
   UpdateMenuCategoryPayload,
   BulkAssignProductsToCategoryPayload,
@@ -70,12 +72,21 @@ export const useBulkAssignProductsToCategoryMutation = () =>
     invalidateKeys: [[CATEGORIES_KEY], ["menu.products"]],
   });
 
-export const useDeleteMenuCategoryMutation = () =>
-  useMutationWithToast({
+export const useDeleteMenuCategoryMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutationWithToast({
     mutationFn: (id: string) => fetchDeleteMenuCategory(id),
     successMessage: "تم حذف التصنيف بنجاح",
     invalidateKeys: [[CATEGORIES_KEY]],
+    onSuccess: (_, id) => {
+      queryClient.setQueriesData<MenuCategoriesResponse>(
+        { queryKey: [CATEGORIES_KEY] },
+        (current) => removePaginatedCacheItem(current, id)
+      );
+    },
   });
+};
 
 export const useReorderMenuCategoriesMutation = () =>
   useMutationWithToast({

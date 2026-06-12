@@ -175,30 +175,30 @@ export function OperationsKitchenBoard({
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5 sm:gap-6">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {cards.map((card, idx) => (
           <Card
             key={idx}
             className={`border-l-4 ${card.color} flex flex-col justify-between`}
           >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
+              <CardTitle className="text-sm font-medium leading-5 text-muted-foreground">
                 {card.title}
               </CardTitle>
               {card.icon}
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
+            <CardContent className="pt-0">
+              <div className="text-xl font-bold sm:text-2xl">{card.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm xl:flex-row xl:items-center xl:justify-between">
-        <div className="relative w-full max-w-sm shrink-0">
+      <div className="flex flex-col gap-4 rounded-xl border bg-card p-3 shadow-sm sm:p-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="relative w-full shrink-0 xl:max-w-sm">
           <Input
             placeholder="ابحث في عناصر المطبخ..."
             value={localSearch}
@@ -208,7 +208,7 @@ export function OperationsKitchenBoard({
           <Search className="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         </div>
 
-        <div className="flex w-full items-center gap-1.5 overflow-x-auto pb-1 xl:w-auto">
+        <div className="-mx-1 flex w-full items-center gap-1.5 overflow-x-auto px-1 pb-1 xl:mx-0 xl:w-auto xl:px-0">
           {statusOptions.map((opt) => {
             const count = items.filter((i) =>
               matchesKitchenFilter(i.status, opt.value)
@@ -220,7 +220,7 @@ export function OperationsKitchenBoard({
                 key={opt.value}
                 data-state={isActive ? "active" : "inactive"}
                 onClick={() => setStatusFilter(opt.value)}
-                className={`group flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-all ${
+                className={`group flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-medium transition-all ${
                   isActive
                     ? "scale-100 border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20"
                     : "scale-100 border-transparent bg-muted text-muted-foreground hover:scale-[1.02] hover:bg-muted/80 hover:text-foreground"

@@ -4,7 +4,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Minus, Calendar, Package } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -62,6 +68,11 @@ export const DeductionForm: React.FC<DeductionFormProps> = ({
   onCancel,
   isPending,
 }) => {
+  const regularRemaining =
+    subscription.remainingRegularMeals ?? subscription.remainingMeals;
+  const premiumRemaining =
+    subscription.remainingPremiumMeals ?? subscription.premiumRemaining ?? 0;
+
   const form = useForm<DeductionFormValues>({
     resolver: zodResolver(deductionSchema) as any,
     defaultValues: { regularMeals: 0, premiumMeals: 0, reason: "", notes: "" },
@@ -86,19 +97,26 @@ export const DeductionForm: React.FC<DeductionFormProps> = ({
       <CardContent className="space-y-6">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <BalanceCard
-            label="الوجبات العادية"
+            label="الرصيد الكلي"
             value={subscription.remainingMeals}
             icon={<Package className="h-4 w-4" />}
           />
           <BalanceCard
+            label="الوجبات العادية"
+            value={regularRemaining}
+            icon={<Package className="h-4 w-4" />}
+          />
+          <BalanceCard
             label="الوجبات المميزة"
-            value={subscription.premiumRemaining || 0}
+            value={premiumRemaining}
             icon={<Package className="h-4 w-4" />}
           />
           {subscription.startDate && (
             <BalanceCard
               label="تاريخ البداية"
-              value={new Date(subscription.startDate).toLocaleDateString("ar-EG")}
+              value={new Date(subscription.startDate).toLocaleDateString(
+                "ar-EG"
+              )}
               icon={<Calendar className="h-4 w-4" />}
             />
           )}
@@ -114,7 +132,10 @@ export const DeductionForm: React.FC<DeductionFormProps> = ({
         <Separator />
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control as any}
@@ -126,12 +147,12 @@ export const DeductionForm: React.FC<DeductionFormProps> = ({
                       <Input
                         type="number"
                         min={0}
-                        max={subscription.remainingMeals}
+                        max={regularRemaining}
                         {...field}
                       />
                     </FormControl>
                     <p className="text-xs text-muted-foreground">
-                      الرصيد المتاح: {subscription.remainingMeals}
+                      الرصيد المتاح: {regularRemaining}
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -148,12 +169,12 @@ export const DeductionForm: React.FC<DeductionFormProps> = ({
                       <Input
                         type="number"
                         min={0}
-                        max={subscription.premiumRemaining || 0}
+                        max={premiumRemaining}
                         {...field}
                       />
                     </FormControl>
                     <p className="text-xs text-muted-foreground">
-                      الرصيد المتاح: {subscription.premiumRemaining || 0}
+                      الرصيد المتاح: {premiumRemaining}
                     </p>
                     <FormMessage />
                   </FormItem>

@@ -35,6 +35,45 @@ const ROLE_SCREEN_MAP: Record<string, OperationsScreenConfig> = {
   },
 };
 
+type RawQueueRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): RawQueueRecord | null {
+  return value && typeof value === "object" ? (value as RawQueueRecord) : null;
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function asBoolean(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function buildAddressSummary(value: unknown): string | null {
+  const address = asRecord(value);
+  if (!address) return null;
+
+  return [
+    address.line1,
+    address.line2,
+    address.district,
+    address.street,
+    address.building,
+    address.apartment,
+    address.city,
+  ]
+    .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
+    .join("، ") || null;
+}
+
 export function getScreensForRole(
   role: string | null | undefined
 ): OperationsScreenConfig {
@@ -104,12 +143,6 @@ export function getCourierItems(
   );
 }
 
-type RawQueueRecord = Record<string, unknown>;
-
-function asRecord(value: unknown): RawQueueRecord | null {
-  return value && typeof value === "object" ? (value as RawQueueRecord) : null;
-}
-
 function normalizeAllowedActions(raw: unknown): UnifiedQueueItem["allowedActions"] {
   if (!Array.isArray(raw)) return [];
 
@@ -126,16 +159,14 @@ function normalizeAllowedActions(raw: unknown): UnifiedQueueItem["allowedActions
       }
 
       const action = asRecord(entry);
-      if (!action) return null;
-
-      const id = String(action.id || "");
-      if (!id) return null;
+      const id = asString(action?.id);
+      if (!action || !id) return null;
 
       return {
         id,
-        label: String(action.label || id),
-        color: String(action.color || "default"),
-        icon: String(action.icon || ""),
+        label: asString(action.label) || id,
+        color: asString(action.color) || "default",
+        icon: asString(action.icon) || "",
         requiresReason: Boolean(action.requiresReason),
       };
     })
@@ -148,9 +179,9 @@ function normalizeCustomer(raw: RawQueueRecord): UnifiedQueueItem["customer"] {
   const source = customer || user;
 
   return {
-    id: String(source?.id || raw.userId || ""),
-    name: String(source?.name || "—"),
-    phone: String(source?.phone || ""),
+    id: asString(source?.id) || asString(raw.userId) || "",
+    name: asString(source?.name) || "—",
+    phone: asString(source?.phone) || "",
   };
 }
 
@@ -166,18 +197,33 @@ function normalizeMealSlots(raw: unknown): UnifiedQueueItem["mealSlots"] {
 
   return raw.map((slot, index) => {
     const record = asRecord(slot) || {};
-    const slotItems = Array.isArray(record.items) ? record.items : [];
+    const slotItems = asArray(record.items);
 
     return {
-      slot: String(record.slot || `slot-${index + 1}`),
-      items: slotItems.map((entry) => {
-        const item = asRecord(entry) || {};
-        return {
-          name: String(item.name || "عنصر"),
-          quantity: Number(item.quantity || item.qty || 1),
-          notes: typeof item.notes === "string" ? item.notes : undefined,
-        };
-      }),
+      slot: String(record.slot || record.slotKey || `slot-${index + 1}`),
+      items: slotItems.length
+        ? slotItems.map((entry) => {
+          const item = asRecord(entry) || {};
+          return {
+            name: String(item.name || "عنصر"),
+            quantity: Number(item.quantity || item.qty || 1),
+            notes: asString(item.notes) || undefined,
+          };
+        })
+        : [
+          {
+            name: String(
+              record.productName ||
+              record.proteinName ||
+              record.sandwichId ||
+              record.operationalSku ||
+              record.selectionType ||
+              "وجبة"
+            ),
+            quantity: Number(record.quantity || 1),
+            notes: asString(record.notes) || undefined,
+          },
+        ],
     };
   });
 }
@@ -191,9 +237,56 @@ function normalizeLineItems(raw: unknown): UnifiedQueueItem["items"] {
       id: String(item.id || item._id || index),
       name: String(item.name || "عنصر"),
       quantity: Number(item.quantity || item.qty || 1),
-      notes: typeof item.notes === "string" ? item.notes : undefined,
+      notes: asString(item.notes) || undefined,
     };
   });
+}
+
+function normalizePlan(raw: unknown): UnifiedQueueItem["plan"] {
+  const plan = asRecord(raw);
+  if (!plan) return null;
+
+  return {
+    id: asString(plan.id),
+    key: asString(plan.key),
+    name: asString(plan.name),
+    daysCount: asNumber(plan.daysCount),
+    durationDays: asNumber(plan.durationDays),
+    totalMeals: asNumber(plan.totalMeals),
+    remainingMeals: asNumber(plan.remainingMeals),
+    selectedMealsPerDay: asNumber(plan.selectedMealsPerDay),
+    deliveryMode: asString(plan.deliveryMode),
+    proteinGrams: asNumber(plan.proteinGrams),
+    portionSize: asString(plan.portionSize),
+  };
+}
+
+function normalizeKitchenDetails(raw: unknown): UnifiedQueueItem["kitchenDetails"] {
+  const details = asRecord(raw);
+  if (!details) return null;
+
+  return {
+    ...details,
+    mealSlots: asArray(details.mealSlots),
+    addons: asArray(details.addons),
+  };
+}
+
+function normalizePaymentValidity(raw: unknown): UnifiedQueueItem["paymentValidity"] {
+  const payment = asRecord(raw);
+  if (!payment) return null;
+
+  return {
+    paymentRequired: asBoolean(payment.paymentRequired),
+    paymentStatus: asString(payment.paymentStatus),
+    paymentApplied: asBoolean(payment.paymentApplied),
+    pendingUnpaid: asBoolean(payment.pendingUnpaid),
+    superseded: asBoolean(payment.superseded),
+    revisionMismatch: asBoolean(payment.revisionMismatch),
+    canPrepare: asBoolean(payment.canPrepare),
+    canFulfill: asBoolean(payment.canFulfill),
+    reason: asString(payment.reason),
+  };
 }
 
 /** Maps heterogeneous kitchen/pickup/courier queue rows to UnifiedQueueItem. */
@@ -217,6 +310,13 @@ export function normalizeOperationsQueueItem(raw: unknown): UnifiedQueueItem {
         : "subscription")) as UnifiedQueueItem["source"];
   const mode = normalizeMode(record);
   const status = String(record.status || "open");
+  const addressSummary =
+    asString(context?.addressSummary) ||
+    asString(delivery?.addressSummary) ||
+    buildAddressSummary(delivery?.address) ||
+    buildAddressSummary(context?.address);
+  const plan = normalizePlan(record.plan);
+  const paymentValidity = normalizePaymentValidity(record.paymentValidity);
 
   return {
     id: String(record.id || entityId),
@@ -225,121 +325,96 @@ export function normalizeOperationsQueueItem(raw: unknown): UnifiedQueueItem {
     source,
     type: (record.type || entityType) as UnifiedQueueItem["type"],
     mode,
-    reference: String(
-      record.reference || record.orderNumber || entityId.slice(-6) || "—"
-    ),
+    reference: String(record.reference || record.orderNumber || entityId.slice(-6) || "—"),
     status,
     statusLabel: String(record.statusLabel || status),
     ui: {
       label: String(ui?.label || record.statusLabel || status),
       color: String(ui?.color || "default"),
       icon: String(ui?.icon || ""),
-      badgeText:
-        typeof ui?.badgeText === "string" ? ui.badgeText : undefined,
+      badgeText: asString(ui?.badgeText) || undefined,
     },
     customer: normalizeCustomer(record),
     context: {
-      date:
-        (typeof context?.date === "string" ? context.date : null) ||
-        (typeof record.date === "string" ? record.date : null),
+      date: asString(context?.date) || asString(record.date),
       window:
-        (typeof context?.window === "string" ? context.window : undefined) ||
-        (typeof delivery?.deliveryWindow === "string"
-          ? delivery.deliveryWindow
-          : undefined),
-      address: context?.address,
-      addressSummary:
-        typeof context?.addressSummary === "string"
-          ? context.addressSummary
-          : null,
-      branch:
-        typeof context?.branch === "string" ? context.branch : null,
-      pickupCode:
-        (typeof context?.pickupCode === "string" ? context.pickupCode : null) ||
-        (typeof pickup?.pickupCode === "string" ? pickup.pickupCode : null),
-      notes:
-        (typeof context?.notes === "string" ? context.notes : null) ||
-        (typeof record.notes === "string" ? record.notes : null),
-      mealCount:
-        typeof context?.mealCount === "number" ? context.mealCount : undefined,
+        asString(context?.window) ||
+        asString(delivery?.window) ||
+        asString(delivery?.deliveryWindow) ||
+        undefined,
+      address: context?.address || delivery?.address,
+      addressSummary,
+      branch: asString(context?.branch) || asString(pickup?.branchId),
+      pickupCode: asString(context?.pickupCode) || asString(pickup?.pickupCode),
+      notes: asString(context?.notes) || asString(record.notes),
+      mealCount: asNumber(context?.mealCount) ?? asNumber(pickup?.mealCount) ?? undefined,
       requiredMealCount:
-        typeof context?.requiredMealCount === "number"
-          ? context.requiredMealCount
-          : undefined,
+        asNumber(context?.requiredMealCount) ??
+        asNumber(plan?.selectedMealsPerDay) ??
+        undefined,
     },
     delivery: delivery
       ? {
-        method: typeof delivery.method === "string" ? delivery.method : mode,
+        deliveryId: asString(delivery.deliveryId),
+        method: asString(delivery.method) || mode,
+        date: asString(delivery.date),
+        status: asString(delivery.status),
         address: delivery.address,
+        addressSummary,
         zone:
           delivery.zone && typeof delivery.zone === "object"
             ? (delivery.zone as { id: string; name: string })
             : null,
-        zoneId:
-          typeof delivery.zoneId === "string" ? delivery.zoneId : null,
-        deliveryWindow:
-          typeof delivery.deliveryWindow === "string"
-            ? delivery.deliveryWindow
-            : undefined,
-        pickupLocationId:
-          typeof delivery.pickupLocationId === "string"
-            ? delivery.pickupLocationId
-            : null,
+        zoneId: asString(delivery.zoneId),
+        courierId: asString(delivery.courierId),
+        window: asString(delivery.window),
+        deliveryWindow: asString(delivery.deliveryWindow) || undefined,
+        pickupLocationId: asString(delivery.pickupLocationId),
       }
       : undefined,
     pickup: pickup
       ? {
-        pickupLocationId:
-          typeof pickup.pickupLocationId === "string"
-            ? pickup.pickupLocationId
-            : null,
+        pickupRequestId: asString(pickup.pickupRequestId),
+        branchId: asString(pickup.branchId),
+        locationId: asString(pickup.locationId),
+        pickupLocationId: asString(pickup.pickupLocationId),
         pickupRequested: Boolean(pickup.pickupRequested),
-        pickupPreparedAt:
-          typeof pickup.pickupPreparedAt === "string"
-            ? pickup.pickupPreparedAt
-            : null,
-        pickupCodeIssuedAt:
-          typeof pickup.pickupCodeIssuedAt === "string"
-            ? pickup.pickupCodeIssuedAt
-            : null,
-        pickupVerifiedAt:
-          typeof pickup.pickupVerifiedAt === "string"
-            ? pickup.pickupVerifiedAt
-            : null,
-        pickupNoShowAt:
-          typeof pickup.pickupNoShowAt === "string"
-            ? pickup.pickupNoShowAt
-            : null,
-        pickupCode:
-          typeof pickup.pickupCode === "string" ? pickup.pickupCode : null,
+        pickupPreparedAt: asString(pickup.pickupPreparedAt),
+        pickupCodeIssuedAt: asString(pickup.pickupCodeIssuedAt),
+        pickupVerifiedAt: asString(pickup.pickupVerifiedAt),
+        pickupNoShowAt: asString(pickup.pickupNoShowAt),
+        pickupCode: asString(pickup.pickupCode),
+        pickupCodeState: asString(pickup.pickupCodeState),
+        mealCount: asNumber(pickup.mealCount),
+        remainingMeals: asNumber(pickup.remainingMeals),
+        reserved: asBoolean(pickup.reserved),
+        consumed: asBoolean(pickup.consumed),
+        released: asBoolean(pickup.released),
       }
       : undefined,
     items: normalizeLineItems(record.items),
-    paymentStatus:
-      typeof record.paymentStatus === "string" ? record.paymentStatus : null,
-    orderNumber:
-      typeof record.orderNumber === "string" ? record.orderNumber : null,
+    pricing: record.pricing,
+    paymentStatus: asString(record.paymentStatus) || paymentValidity?.paymentStatus || null,
+    orderNumber: asString(record.orderNumber),
     mealSlots: normalizeMealSlots(record.mealSlots),
+    materializedMeals: asArray(record.materializedMeals),
+    addonSelections: asArray(record.addonSelections),
+    premiumUpgradeSelections: asArray(record.premiumUpgradeSelections),
+    fulfillmentType: asString(record.fulfillmentType),
+    plan,
+    kitchenDetails: normalizeKitchenDetails(record.kitchenDetails),
+    paymentValidity,
     subscriptionDayId:
-      typeof record.subscriptionDayId === "string"
-        ? record.subscriptionDayId
-        : entityType === "subscription_day"
-          ? entityId
-          : null,
-    subscriptionId:
-      typeof record.subscriptionId === "string"
-        ? record.subscriptionId
-        : null,
+      asString(record.subscriptionDayId) ||
+      (entityType === "subscription_day" ? entityId : null),
+    subscriptionId: asString(record.subscriptionId),
     allowedActions: normalizeAllowedActions(record.allowedActions),
-    notes: typeof record.notes === "string" ? record.notes : null,
+    notes: asString(record.notes),
     timestamps: {
-      createdAt:
-        (typeof record.createdAt === "string" ? record.createdAt : null) ||
-        null,
-      updatedAt:
-        (typeof record.updatedAt === "string" ? record.updatedAt : null) ||
-        null,
+      createdAt: asString(record.createdAt),
+      updatedAt: asString(record.updatedAt),
     },
+    rawData: record,
   };
 }
 
@@ -354,8 +429,8 @@ export function extractOperationsQueueItems(
     ? nested.items
     : Array.isArray(payload.items)
       ? payload.items
-      : Array.isArray(payload)
-        ? payload
+      : Array.isArray(response)
+        ? response
         : [];
 
   return rawItems.map(normalizeOperationsQueueItem);

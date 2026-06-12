@@ -21,10 +21,7 @@ export const fetchMenuOptions = async (
   params: MenuOptionListParams = {}
 ): Promise<MenuOptionsResponse> => {
   const response = await api.get(
-    `/api/dashboard/menu/options${buildListQuery({
-      includeInactive: true,
-      ...params,
-    })}`
+    `/api/dashboard/menu/options${buildListQuery(params)}`
   );
   return normalizeOptionsResponse(response.data);
 };

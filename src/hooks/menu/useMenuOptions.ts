@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import {
   fetchMenuOptions,
@@ -10,8 +10,10 @@ import {
   fetchUpdateMenuOptionAvailability,
   fetchToggleMenuOptionActive,
 } from "@/utils/fetchMenuOptions";
+import { removePaginatedCacheItem } from "@/utils/removePaginatedCacheItem";
 import type {
   MenuOptionListParams,
+  MenuOptionsResponse,
   CreateMenuOptionPayload,
   UpdateMenuOptionPayload,
   ReorderItem,
@@ -57,12 +59,21 @@ export const useUpdateMenuOptionMutation = () =>
     invalidateKeys: [[OPTIONS_KEY]],
   });
 
-export const useDeleteMenuOptionMutation = () =>
-  useMutationWithToast({
+export const useDeleteMenuOptionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutationWithToast({
     mutationFn: (id: string) => fetchDeleteMenuOption(id),
     successMessage: "تم حذف الخيار بنجاح",
     invalidateKeys: [[OPTIONS_KEY]],
+    onSuccess: (_, id) => {
+      queryClient.setQueriesData<MenuOptionsResponse>(
+        { queryKey: [OPTIONS_KEY] },
+        (current) => removePaginatedCacheItem(current, id)
+      );
+    },
   });
+};
 
 export const useReorderMenuOptionsMutation = () =>
   useMutationWithToast({

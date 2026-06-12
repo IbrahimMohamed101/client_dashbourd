@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import {
   fetchMenuProducts,
@@ -12,8 +12,10 @@ import {
   fetchDeleteMenuProduct,
   fetchReorderMenuProducts,
 } from "@/utils/fetchMenuProducts";
+import { removePaginatedCacheItem } from "@/utils/removePaginatedCacheItem";
 import type {
   MenuProductListParams,
+  MenuProductsResponse,
   MenuProductComposerResponse,
   CreateMenuProductPayload,
   UpdateMenuProductPayload,
@@ -99,12 +101,21 @@ export const useDuplicateMenuProductMutation = () =>
     invalidateKeys: [[PRODUCTS_KEY]],
   });
 
-export const useDeleteMenuProductMutation = () =>
-  useMutationWithToast({
+export const useDeleteMenuProductMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutationWithToast({
     mutationFn: (id: string) => fetchDeleteMenuProduct(id),
     successMessage: "تم حذف المنتج بنجاح",
     invalidateKeys: [[PRODUCTS_KEY]],
+    onSuccess: (_, id) => {
+      queryClient.setQueriesData<MenuProductsResponse>(
+        { queryKey: [PRODUCTS_KEY] },
+        (current) => removePaginatedCacheItem(current, id)
+      );
+    },
   });
+};
 
 export const useReorderMenuProductsMutation = () =>
   useMutationWithToast({

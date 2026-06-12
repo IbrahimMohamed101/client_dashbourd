@@ -3,6 +3,8 @@ import {
   CheckCircle2,
   ChefHat,
   Clock,
+  Eye,
+  Hash,
   PackageCheck,
   PackageOpen,
   Phone,
@@ -38,6 +40,7 @@ import {
 } from "@/components/ui/table";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrder, isPickupRequest } from "@/types/dashboardOpsTypes";
+import { OperationsOrderDetailsDialog } from "./OperationsOrderDetailsDialog";
 
 interface OperationsQueueTableProps {
   items: UnifiedQueueItem[];
@@ -149,6 +152,174 @@ function getItemNames(item: UnifiedQueueItem) {
 
 const columnHelper = createColumnHelper<UnifiedQueueItem>();
 
+function ActionButtons({
+  item,
+  isPending,
+  onAction,
+  onFulfill,
+  onDetails,
+  className = "",
+}: {
+  item: UnifiedQueueItem;
+  isPending: boolean;
+  onAction: OperationsQueueTableProps["onAction"];
+  onFulfill?: OperationsQueueTableProps["onFulfill"];
+  onDetails: (item: UnifiedQueueItem) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-9 px-3 text-xs font-semibold sm:h-8"
+        onClick={() => onDetails(item)}
+      >
+        <Eye className="ml-1.5 h-3.5 w-3.5" />
+        تفاصيل
+      </Button>
+      {item.allowedActions?.map((action) => (
+        <Button
+          key={action.id}
+          variant={getActionVariant(action.color)}
+          size="sm"
+          className="h-9 px-3 text-xs font-semibold sm:h-8"
+          disabled={isPending}
+          onClick={() => {
+            if (action.id === "fulfill" && item.mode === "pickup" && onFulfill) {
+              onFulfill(item);
+              return;
+            }
+
+            onAction(
+              item,
+              action.id,
+              action.label,
+              action.color === "red" || action.color === "danger"
+            );
+          }}
+        >
+          {actionIcons[action.id]}
+          {action.label}
+        </Button>
+      )) || null}
+    </div>
+  );
+}
+
+function OperationsMobileCard({
+  item,
+  isPending,
+  onAction,
+  onFulfill,
+  onDetails,
+}: {
+  item: UnifiedQueueItem;
+  isPending: boolean;
+  onAction: OperationsQueueTableProps["onAction"];
+  onFulfill?: OperationsQueueTableProps["onFulfill"];
+  onDetails: (item: UnifiedQueueItem) => void;
+}) {
+  const itemNames = getItemNames(item);
+  const reference = item.orderNumber || item.reference || item.entityId;
+  const time =
+    item.context?.window || item.delivery?.window || item.delivery?.deliveryWindow;
+
+  return (
+    <article className="rounded-2xl border bg-card p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/10 bg-primary/10 text-sm font-bold text-primary uppercase">
+            {item.customer?.name?.charAt(0) || "?"}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold">{item.customer?.name || "—"}</p>
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground" dir="ltr">
+              <Phone className="h-3 w-3" />
+              {item.customer?.phone || "—"}
+            </p>
+          </div>
+        </div>
+        <Badge
+          variant="outline"
+          className={`shrink-0 rounded-md ${getStatusClasses(item.status)}`}
+        >
+          {item.statusLabel || item.ui?.label || item.status}
+        </Badge>
+      </div>
+
+      <div className="mt-4 grid gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2">
+          <span className="inline-flex items-center gap-1.5">
+            <Hash className="h-3.5 w-3.5" />
+            المرجع
+          </span>
+          <span className="min-w-0 truncate font-mono text-foreground" dir="ltr">
+            {reference}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Badge variant="secondary" className="min-h-8 justify-center rounded-lg">
+            {getSourceLabel(item)}
+          </Badge>
+          <Badge
+            variant="outline"
+            className={
+              item.mode === "delivery"
+                ? "min-h-8 justify-center gap-1 rounded-lg border-sky-500/20 bg-sky-500/10 text-sky-700"
+                : "min-h-8 justify-center gap-1 rounded-lg border-purple-500/20 bg-purple-500/10 text-purple-700"
+            }
+          >
+            {item.mode === "delivery" ? (
+              <Truck className="h-3 w-3" />
+            ) : (
+              <Store className="h-3 w-3" />
+            )}
+            {getModeLabel(item.mode)}
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded-lg bg-muted/40 px-3 py-2">
+          <Clock className="h-3.5 w-3.5" />
+          <span>{time || "لا يوجد وقت محدد"}</span>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {itemNames.length ? (
+          <>
+            {itemNames.slice(0, 3).map((entry) => (
+              <span
+                key={entry.id}
+                className="rounded-md border border-secondary bg-secondary/50 px-2 py-1 text-[11px] font-medium"
+              >
+                {entry.name} ×{entry.quantity}
+              </span>
+            ))}
+            {itemNames.length > 3 ? (
+              <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                +{itemNames.length - 3}
+              </span>
+            ) : null}
+          </>
+        ) : (
+          <span className="text-xs text-muted-foreground">لا توجد عناصر مختصرة</span>
+        )}
+      </div>
+
+      <ActionButtons
+        item={item}
+        isPending={isPending}
+        onAction={onAction}
+        onFulfill={onFulfill}
+        onDetails={onDetails}
+        className="mt-4 [&>button]:flex-1 [&>button]:justify-center"
+      />
+    </article>
+  );
+}
+
 export function OperationsQueueTable({
   items = [],
   isPending,
@@ -157,6 +328,7 @@ export function OperationsQueueTable({
 }: OperationsQueueTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnVisibility, setColumnVisibility] = useState({});
+  const [detailsItem, setDetailsItem] = useState<UnifiedQueueItem | null>(null);
 
   const columns = [
     columnHelper.display({
@@ -294,20 +466,22 @@ export function OperationsQueueTable({
     }),
     columnHelper.display({
       id: "actions",
-      header: "الإجراءات",
+      header: "التفاصيل والإجراءات",
       enableHiding: true,
       cell: ({ row }) => {
         const item = row.original;
-        if (!item.allowedActions?.length) {
-          return (
-            <span className="inline-flex rounded-md bg-muted/30 px-3 py-1 text-sm text-muted-foreground">
-              —
-            </span>
-          );
-        }
         return (
           <div className="flex flex-wrap gap-2">
-            {item.allowedActions.map((action) => (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 text-xs font-semibold"
+              onClick={() => setDetailsItem(item)}
+            >
+              <Eye className="ml-1.5 h-3.5 w-3.5" />
+              تفاصيل
+            </Button>
+            {item.allowedActions?.map((action) => (
               <Button
                 key={action.id}
                 variant={getActionVariant(action.color)}
@@ -334,7 +508,7 @@ export function OperationsQueueTable({
                 {actionIcons[action.id]}
                 {action.label}
               </Button>
-            ))}
+            )) || null}
           </div>
         );
       },
@@ -373,6 +547,14 @@ export function OperationsQueueTable({
 
   return (
     <div className="flex flex-col gap-4">
+      <OperationsOrderDetailsDialog
+        item={detailsItem}
+        open={Boolean(detailsItem)}
+        onOpenChange={(open) => {
+          if (!open) setDetailsItem(null);
+        }}
+      />
+
       {/* Toolbar */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
@@ -384,11 +566,26 @@ export function OperationsQueueTable({
             className="pr-9"
           />
         </div>
-        <DataTableViewOptions table={table} />
+        <div className="hidden md:block">
+          <DataTableViewOptions table={table} />
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:hidden">
+        {table.getRowModel().rows.map((row) => (
+          <OperationsMobileCard
+            key={row.original.id}
+            item={row.original}
+            isPending={isPending}
+            onAction={onAction}
+            onFulfill={onFulfill}
+            onDetails={setDetailsItem}
+          />
+        ))}
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+      <div className="hidden overflow-hidden rounded-xl border bg-card shadow-sm md:block">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

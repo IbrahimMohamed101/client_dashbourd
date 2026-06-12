@@ -103,15 +103,15 @@ export function OperationsBoard() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6" dir="rtl">
+    <div className="flex flex-col gap-5 p-4 sm:gap-6 sm:p-6" dir="rtl">
       <div className="flex flex-col gap-4 border-b pb-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">لوحة العمليات</h1>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">لوحة العمليات</h1>
           <p className="text-sm text-muted-foreground">
             متابعة وتجهيز الطلبات اليومية وطلبات الاستلام والتوصيل
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="grid gap-3 sm:grid-cols-[11rem_minmax(16rem,18rem)] sm:items-center">
           <div className="relative">
             <CalendarIcon className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -134,9 +134,9 @@ export function OperationsBoard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="mb-4 h-auto flex-wrap gap-1 rounded-xl bg-muted/40 p-1">
+        <TabsList className="mb-4 h-auto max-w-full justify-start gap-1 overflow-x-auto rounded-xl bg-muted/40 p-1 sm:flex-wrap">
           {visibleScreens.includes("kitchen") && (
-            <TabsTrigger value="kitchen" className="flex items-center gap-2">
+            <TabsTrigger value="kitchen" className="flex shrink-0 items-center gap-2">
               <ChefHat className="h-4 w-4" />
               التحضير
               <Badge variant="secondary" className="mr-1 min-w-5 justify-center">
@@ -145,7 +145,7 @@ export function OperationsBoard() {
             </TabsTrigger>
           )}
           {visibleScreens.includes("pickup") && (
-            <TabsTrigger value="pickup" className="flex items-center gap-2">
+            <TabsTrigger value="pickup" className="flex shrink-0 items-center gap-2">
               <Store className="h-4 w-4" />
               استلام الفرع
               <Badge variant="secondary" className="mr-1 min-w-5 justify-center">
@@ -154,7 +154,7 @@ export function OperationsBoard() {
             </TabsTrigger>
           )}
           {visibleScreens.includes("courier") && (
-            <TabsTrigger value="courier" className="flex items-center gap-2">
+            <TabsTrigger value="courier" className="flex shrink-0 items-center gap-2">
               <Truck className="h-4 w-4" />
               التوصيل
               <Badge variant="secondary" className="mr-1 min-w-5 justify-center">

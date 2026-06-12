@@ -1,4 +1,5 @@
 import api from "@/lib/apis";
+import { extractOperationsQueueItems } from "@/lib/operationsBoard";
 import { type UnifiedQueueItem, isOneTimeOrder } from "@/types/dashboardOpsTypes";
 import type {
   DashboardOpsListResponse,
@@ -13,7 +14,7 @@ export interface GetPickupQueueParams {
 
 export const getPickupQueue = async (params: GetPickupQueueParams): Promise<UnifiedQueueItem[]> => {
   const { data } = await api.get("/api/dashboard/pickup/queue", { params });
-  return data.items || data;
+  return extractOperationsQueueItems(data);
 };
 
 export const executePickupAction = async ({
@@ -56,7 +57,7 @@ export interface GetCourierQueueParams {
 
 export const getCourierQueue = async (params: GetCourierQueueParams): Promise<UnifiedQueueItem[]> => {
   const { data } = await api.get("/api/dashboard/courier/queue", { params });
-  return data.items || data;
+  return extractOperationsQueueItems(data);
 };
 
 export const executeCourierAction = async ({
