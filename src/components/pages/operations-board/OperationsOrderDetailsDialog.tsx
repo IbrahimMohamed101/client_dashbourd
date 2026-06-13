@@ -300,6 +300,63 @@ function PaymentGate({ item }: { item: UnifiedQueueItem }) {
   );
 }
 
+function DataQualitySection({ item }: { item: UnifiedQueueItem }) {
+  const warnings = item.dataQuality?.warnings || [];
+
+  if (item.dataQuality?.isComplete !== false && warnings.length === 0) {
+    return null;
+  }
+
+  return (
+    <Section title="تنبيهات جودة البيانات" icon={<ShieldAlert className="h-4 w-4" />}>
+      <div className="space-y-2">
+        <Badge variant="outline" className="rounded-md border-amber-500/30 bg-amber-500/10 text-amber-800">
+          بيانات غير مكتملة
+        </Badge>
+        {warnings.map((warning, index) => (
+          <div key={`${warning.code}-${index}`} className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-900">
+            {getText(warning.messageAr || warning.messageEn || warning.code)}
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function OperationsActionsSummary({ item }: { item: UnifiedQueueItem }) {
+  const disabled = item.actions?.disabled || [];
+
+  if (!item.allowedActions?.length && !disabled.length) {
+    return <p className="text-sm text-muted-foreground">لا توجد إجراءات متاحة حالياً.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {item.allowedActions?.length ? (
+        <div className="flex flex-wrap gap-2">
+          {item.allowedActions.map((action) => (
+            <Badge key={action.id} variant="outline" className="rounded-md">
+              {action.label}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+      {disabled.length ? (
+        <div className="space-y-2">
+          {disabled.map((action) => (
+            <div key={action.id} className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{getText(action.label || action.id)}</span>
+              {action.reason || action.reasonLabel ? (
+                <span className="mr-2">- {getText(action.reasonLabel || action.reason)}</span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function OperationsOrderDetailsDialog({
   item,
   open,
@@ -397,22 +454,14 @@ export function OperationsOrderDetailsDialog({
               <Section title="الدفع والسماح بالإجراءات" icon={<CreditCard className="h-4 w-4" />}>
                 <PaymentGate item={item} />
               </Section>
+
+              <DataQualitySection item={item} />
             </div>
           </div>
  
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <Section title="الإجراءات المتاحة" icon={<CheckCircle2 className="h-4 w-4" />}>
-              {item.allowedActions?.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {item.allowedActions.map((action) => (
-                    <Badge key={action.id} variant="outline" className="rounded-md">
-                      {action.label}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">لا توجد إجراءات متاحة حالياً.</p>
-              )}
+              <OperationsActionsSummary item={item} />
               <p className="mt-3 text-xs leading-5 text-muted-foreground">
                 القائمة المعروضة مساعدة للمستخدم. عند تنفيذ أي إجراء يبقى backend هو المرجع النهائي لحالة الدفع، الدور، والانتقال الصحيح.
               </p>

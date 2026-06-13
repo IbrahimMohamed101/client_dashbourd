@@ -39,7 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { safeText } from "@/lib/operationsBoard";
-import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
+import type { QueueAction, UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrder, isPickupRequest } from "@/types/dashboardOpsTypes";
 import { OperationsOrderDetailsDialog } from "./OperationsOrderDetailsDialog";
 
@@ -163,15 +163,50 @@ function isActionDisabled(
 ) {
   if (isPending) return true;
 
-  if (["prepare", "start_preparation", "lock"].includes(actionId)) {
-    return item.payment?.canPrepare === false || item.paymentValidity?.canPrepare === false;
+  if (item.actions?.disabled?.some((action) => action.id === actionId)) {
+    return true;
   }
 
-  if (["fulfill", "dispatch", "ready_for_pickup"].includes(actionId)) {
-    return item.payment?.canFulfill === false || item.paymentValidity?.canFulfill === false;
+  switch (actionId) {
+    case "prepare":
+    case "start_preparation":
+      return item.actions?.canPrepare === false;
+    case "ready_for_pickup":
+      return item.actions?.canReadyForPickup === false;
+    case "fulfill":
+      return item.actions?.canFulfill === false;
+    case "cancel":
+      return item.actions?.canCancel === false;
+    case "no_show":
+      return item.actions?.canNoShow === false;
+    case "reopen":
+      return item.actions?.canReopen === false;
+    default:
+      return false;
   }
+}
 
-  return item.actions?.allowed?.some((action) => action.id === actionId) === false;
+function disabledReason(action: QueueAction) {
+  return safeText(action.reasonLabel || action.reason, "");
+}
+
+function getVisibleActions(item: UnifiedQueueItem) {
+  const allowedIds = new Set(item.allowedActions.map((action) => action.id));
+  const disabled = (item.actions?.disabled || [])
+    .filter((action) => !allowedIds.has(action.id))
+    .map((action) => ({
+      id: action.id,
+      label: safeText(action.label, action.id),
+      color: action.color || "gray",
+      icon: action.icon || "",
+      endpoint: action.endpoint,
+      method: action.method,
+      reason: action.reason,
+      reasonLabel: action.reasonLabel,
+      requiresReason: Boolean(action.requiresReason),
+    }));
+
+  return [...item.allowedActions, ...disabled];
 }
 
 const columnHelper = createColumnHelper<UnifiedQueueItem>();
@@ -202,14 +237,18 @@ function ActionButtons({
         <Eye className="ml-1.5 h-3.5 w-3.5" />
         تفاصيل
       </Button>
-      {item.allowedActions?.map((action) => (
+      {getVisibleActions(item).map((action) => {
+        const disabled = isActionDisabled(item, action.id, isPending);
+        return (
         <Button
           key={action.id}
           variant={getActionVariant(action.color)}
           size="sm"
           className="h-9 px-3 text-xs font-semibold sm:h-8"
-          disabled={isActionDisabled(item, action.id, isPending)}
+          disabled={disabled}
+          title={disabled ? disabledReason(action) : undefined}
           onClick={() => {
+            if (disabled) return;
             if (action.id === "fulfill" && item.mode === "pickup" && onFulfill) {
               onFulfill(item);
               return;
@@ -226,7 +265,8 @@ function ActionButtons({
           {actionIcons[action.id]}
           {action.label}
         </Button>
-      )) || null}
+        );
+      }) || null}
     </div>
   );
 }
@@ -517,34 +557,39 @@ export function OperationsQueueTable({
               <Eye className="ml-1.5 h-3.5 w-3.5" />
               تفاصيل
             </Button>
-            {item.allowedActions?.map((action) => (
-              <Button
-                key={action.id}
-                variant={getActionVariant(action.color)}
-                size="sm"
-                className="h-8 px-3 text-xs font-semibold"
-                disabled={isActionDisabled(item, action.id, isPending)}
-                onClick={() => {
-                  if (
-                    action.id === "fulfill" &&
-                    item.mode === "pickup" &&
-                    onFulfill
-                  ) {
-                    onFulfill(item);
-                    return;
-                  }
-                  onAction(
-                    item,
-                    action.id,
-                    action.label,
-                    action.color === "red" || action.color === "danger"
-                  );
-                }}
-              >
-                {actionIcons[action.id]}
-                {action.label}
-              </Button>
-            )) || null}
+            {getVisibleActions(item).map((action) => {
+              const disabled = isActionDisabled(item, action.id, isPending);
+              return (
+                <Button
+                  key={action.id}
+                  variant={getActionVariant(action.color)}
+                  size="sm"
+                  className="h-8 px-3 text-xs font-semibold"
+                  disabled={disabled}
+                  title={disabled ? disabledReason(action) : undefined}
+                  onClick={() => {
+                    if (disabled) return;
+                    if (
+                      action.id === "fulfill" &&
+                      item.mode === "pickup" &&
+                      onFulfill
+                    ) {
+                      onFulfill(item);
+                      return;
+                    }
+                    onAction(
+                      item,
+                      action.id,
+                      action.label,
+                      action.color === "red" || action.color === "danger"
+                    );
+                  }}
+                >
+                  {actionIcons[action.id]}
+                  {action.label}
+                </Button>
+              );
+            }) || null}
           </div>
         );
       },

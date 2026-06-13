@@ -54,6 +54,8 @@ export interface QueueAction {
   endpoint?: string;
   method?: string;
   requiresReason?: boolean;
+  reason?: string | null;
+  reasonLabel?: LocalizedText | null;
 }
 
 export interface DataQualityWarning {
@@ -311,6 +313,8 @@ export interface UnifiedQueueItem {
     icon: string;
     endpoint?: string;
     method?: string;
+    reason?: string | null;
+    reasonLabel?: LocalizedText | null;
     requiresReason: boolean;
   }[];
 

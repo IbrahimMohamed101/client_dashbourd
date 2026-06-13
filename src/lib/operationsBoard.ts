@@ -220,6 +220,8 @@ function normalizeAllowedActions(raw: unknown): UnifiedQueueItem["allowedActions
         icon: asString(action.icon) || "",
         endpoint: asString(action.endpoint) || undefined,
         method: asString(action.method) || undefined,
+        reason: asString(action.reason) || undefined,
+        reasonLabel: asRecord(action.reasonLabel) as never,
         requiresReason: Boolean(action.requiresReason),
       };
     })
