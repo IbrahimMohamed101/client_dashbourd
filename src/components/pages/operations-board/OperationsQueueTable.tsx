@@ -38,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { safeText } from "@/lib/operationsBoard";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrder, isPickupRequest } from "@/types/dashboardOpsTypes";
 import { OperationsOrderDetailsDialog } from "./OperationsOrderDetailsDialog";
@@ -103,12 +104,7 @@ function getModeLabel(mode: string) {
 }
 
 function getDisplayName(value: unknown) {
-  if (typeof value === "string") return value;
-  if (value && typeof value === "object") {
-    const localized = value as { ar?: string; en?: string; name?: string };
-    return localized.ar || localized.en || localized.name || "عنصر";
-  }
-  return "عنصر";
+  return safeText(value, "عنصر");
 }
 
 function getDisplayQuantity(entry: unknown) {
@@ -118,23 +114,33 @@ function getDisplayQuantity(entry: unknown) {
 }
 
 function getItemNames(item: UnifiedQueueItem) {
+  if (item.kitchen?.meals?.length || item.kitchen?.addons?.length) {
+    return [
+      ...(item.kitchen.meals || []).map((meal, index) => ({
+        id: String(meal.slotKey || meal.slotIndex || `meal-${index}`),
+        name: safeText(
+          meal.display?.titleAr ||
+            meal.sandwich?.displayName ||
+            meal.product?.displayName ||
+            meal.protein?.displayName,
+          "وجبة"
+        ),
+        quantity: Number(meal.quantity || 1),
+      })),
+      ...(item.kitchen.addons || []).map((addon, index) => ({
+        id: String(addon.id || addon.key || `addon-${index}`),
+        name: safeText(addon.display?.titleAr || addon.displayName, "إضافة"),
+        quantity: Number(addon.quantity || 1),
+      })),
+    ];
+  }
+
   if (Array.isArray(item.items) && item.items.length) {
     return item.items.map((entry, index) => ({
       id: String(entry.id || getDisplayName(entry.name) || index),
       name: getDisplayName(entry.name),
       quantity: getDisplayQuantity(entry),
     }));
-  }
-
-  if (item.mealSlots?.length) {
-    return item.mealSlots.flatMap((slot) => {
-      const slotItems = Array.isArray(slot.items) ? slot.items : [];
-      return slotItems.map((entry, index) => ({
-        id: `${slot.slot}-${getDisplayName(entry.name)}-${index}`,
-        name: getDisplayName(entry.name),
-        quantity: getDisplayQuantity(entry),
-      }));
-    });
   }
 
   if (item.context?.mealCount) {
@@ -148,6 +154,24 @@ function getItemNames(item: UnifiedQueueItem) {
   }
 
   return [];
+}
+
+function isActionDisabled(
+  item: UnifiedQueueItem,
+  actionId: string,
+  isPending: boolean
+) {
+  if (isPending) return true;
+
+  if (["prepare", "start_preparation", "lock"].includes(actionId)) {
+    return item.payment?.canPrepare === false || item.paymentValidity?.canPrepare === false;
+  }
+
+  if (["fulfill", "dispatch", "ready_for_pickup"].includes(actionId)) {
+    return item.payment?.canFulfill === false || item.paymentValidity?.canFulfill === false;
+  }
+
+  return item.actions?.allowed?.some((action) => action.id === actionId) === false;
 }
 
 const columnHelper = createColumnHelper<UnifiedQueueItem>();
@@ -184,7 +208,7 @@ function ActionButtons({
           variant={getActionVariant(action.color)}
           size="sm"
           className="h-9 px-3 text-xs font-semibold sm:h-8"
-          disabled={isPending}
+          disabled={isActionDisabled(item, action.id, isPending)}
           onClick={() => {
             if (action.id === "fulfill" && item.mode === "pickup" && onFulfill) {
               onFulfill(item);
@@ -247,6 +271,11 @@ function OperationsMobileCard({
           {item.statusLabel || item.ui?.label || item.status}
         </Badge>
       </div>
+      {item.dataQuality?.isComplete === false ? (
+        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-800">
+          بيانات غير مكتملة
+        </div>
+      ) : null}
 
       <div className="mt-4 grid gap-2 text-xs text-muted-foreground">
         <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2">
@@ -455,12 +484,19 @@ export function OperationsQueueTable({
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <Badge
-            variant="outline"
-            className={`rounded-md ${getStatusClasses(item.status)}`}
-          >
-            {item.statusLabel || item.ui?.label || item.status}
-          </Badge>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge
+              variant="outline"
+              className={`rounded-md ${getStatusClasses(item.status)}`}
+            >
+              {item.statusLabel || item.ui?.label || item.status}
+            </Badge>
+            {item.dataQuality?.isComplete === false ? (
+              <Badge variant="outline" className="rounded-md border-amber-500/30 bg-amber-500/10 text-amber-800">
+                بيانات غير مكتملة
+              </Badge>
+            ) : null}
+          </div>
         );
       },
     }),
@@ -487,7 +523,7 @@ export function OperationsQueueTable({
                 variant={getActionVariant(action.color)}
                 size="sm"
                 className="h-8 px-3 text-xs font-semibold"
-                disabled={isPending}
+                disabled={isActionDisabled(item, action.id, isPending)}
                 onClick={() => {
                   if (
                     action.id === "fulfill" &&

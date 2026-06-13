@@ -1,6 +1,7 @@
 import type {
   DashboardOpsActionRequest,
   DashboardOpsListResponse,
+  DashboardQueueItemV2,
   UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
 
@@ -12,6 +13,8 @@ export interface OperationsScreenConfig {
   label: string;
   screens: OperationsScreen[];
 }
+
+type RawQueueRecord = Record<string, unknown>;
 
 const ALL_OPERATIONS_SCREENS: OperationsScreen[] = [
   "kitchen",
@@ -35,10 +38,10 @@ const ROLE_SCREEN_MAP: Record<string, OperationsScreenConfig> = {
   },
 };
 
-type RawQueueRecord = Record<string, unknown>;
-
 function asRecord(value: unknown): RawQueueRecord | null {
-  return value && typeof value === "object" ? (value as RawQueueRecord) : null;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as RawQueueRecord)
+    : null;
 }
 
 function asString(value: unknown): string | null {
@@ -57,6 +60,33 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+export function safeText(value: unknown, fallback = "غير محدد"): string {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text || text === "[object Object]") return fallback;
+    return text;
+  }
+  if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return value ? "نعم" : "لا";
+
+  const record = asRecord(value);
+  if (record) {
+    return safeText(
+      record.displayName ??
+        record.ar ??
+        record.en ??
+        asRecord(record.name)?.ar ??
+        asRecord(record.name)?.en ??
+        record.key ??
+        record.id,
+      fallback
+    );
+  }
+
+  return fallback;
+}
+
 function buildAddressSummary(value: unknown): string | null {
   const address = asRecord(value);
   if (!address) return null;
@@ -72,6 +102,22 @@ function buildAddressSummary(value: unknown): string | null {
   ]
     .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
     .join("، ") || null;
+}
+
+function normalizeSourceType(value: string | null | undefined): UnifiedQueueItem["source"] {
+  if (value === "one_time_order" || value === "order") return "one_time_order";
+  if (value === "pickup_request" || value === "subscription_pickup_request") {
+    return "subscription_pickup_request";
+  }
+  return "subscription";
+}
+
+function normalizeEntityType(value: string | null | undefined): UnifiedQueueItem["entityType"] {
+  if (value === "order" || value === "one_time_order") return "order";
+  if (value === "pickup_request" || value === "subscription_pickup_request") {
+    return "subscription_pickup_request";
+  }
+  return "subscription_day";
 }
 
 export function getScreensForRole(
@@ -104,8 +150,8 @@ export function buildOperationsActionPayload(
   pickupCode?: string
 ): DashboardOpsActionRequest {
   return {
-    entityId: item.entityId,
-    entityType: item.entityType,
+    entityId: item.ids?.entityId || item.entityId,
+    entityType: item.ids?.entityType || item.entityType,
     source: item.source,
     action,
     reason,
@@ -144,9 +190,14 @@ export function getCourierItems(
 }
 
 function normalizeAllowedActions(raw: unknown): UnifiedQueueItem["allowedActions"] {
-  if (!Array.isArray(raw)) return [];
+  const actionsRecord = asRecord(raw);
+  const sourceActions = actionsRecord
+    ? actionsRecord.items || actionsRecord.allowedActions || actionsRecord.allowed
+    : raw;
 
-  return raw
+  if (!Array.isArray(sourceActions)) return [];
+
+  return sourceActions
     .map((entry) => {
       if (typeof entry === "string") {
         return {
@@ -164,9 +215,11 @@ function normalizeAllowedActions(raw: unknown): UnifiedQueueItem["allowedActions
 
       return {
         id,
-        label: asString(action.label) || id,
+        label: safeText(action.label, id),
         color: asString(action.color) || "default",
         icon: asString(action.icon) || "",
+        endpoint: asString(action.endpoint) || undefined,
+        method: asString(action.method) || undefined,
         requiresReason: Boolean(action.requiresReason),
       };
     })
@@ -180,16 +233,57 @@ function normalizeCustomer(raw: RawQueueRecord): UnifiedQueueItem["customer"] {
 
   return {
     id: asString(source?.id) || asString(raw.userId) || "",
-    name: asString(source?.name) || "—",
+    name: safeText(source?.name, "غير محدد"),
     phone: asString(source?.phone) || "",
   };
 }
 
 function normalizeMode(raw: RawQueueRecord): UnifiedQueueItem["mode"] {
+  const fulfillment = asRecord(raw.fulfillment);
   const candidate = String(
-    raw.mode || raw.deliveryMethod || raw.deliveryMode || "delivery"
+    raw.mode ||
+    raw.deliveryMethod ||
+    raw.deliveryMode ||
+    fulfillment?.type ||
+    "delivery"
   );
-  return candidate === "pickup" ? "pickup" : "delivery";
+  return candidate.includes("pickup") ? "pickup" : "delivery";
+}
+
+function normalizePlan(raw: unknown): UnifiedQueueItem["plan"] {
+  const plan = asRecord(raw);
+  if (!plan) return null;
+
+  return {
+    id: asString(plan.id),
+    key: asString(plan.key),
+    name: safeText(plan.displayName ?? plan.name, "غير محدد"),
+    daysCount: asNumber(plan.daysCount),
+    durationDays: asNumber(plan.durationDays),
+    totalMeals: asNumber(plan.totalMeals),
+    remainingMeals: asNumber(plan.remainingMeals),
+    selectedMealsPerDay: asNumber(plan.selectedMealsPerDay),
+    deliveryMode: asString(plan.deliveryMode),
+    proteinGrams: asNumber(plan.proteinGrams),
+    portionSize: asString(plan.portionSize),
+  };
+}
+
+function normalizePayment(raw: unknown): UnifiedQueueItem["paymentValidity"] {
+  const payment = asRecord(raw);
+  if (!payment) return null;
+
+  return {
+    paymentRequired: asBoolean(payment.paymentRequired),
+    paymentStatus: asString(payment.paymentStatus),
+    paymentApplied: asBoolean(payment.paymentApplied),
+    pendingUnpaid: asBoolean(payment.pendingUnpaid),
+    superseded: asBoolean(payment.superseded),
+    revisionMismatch: asBoolean(payment.revisionMismatch),
+    canPrepare: asBoolean(payment.canPrepare),
+    canFulfill: asBoolean(payment.canFulfill),
+    reason: asString(payment.reason),
+  };
 }
 
 function normalizeMealSlots(raw: unknown): UnifiedQueueItem["mealSlots"] {
@@ -205,19 +299,24 @@ function normalizeMealSlots(raw: unknown): UnifiedQueueItem["mealSlots"] {
         ? slotItems.map((entry) => {
           const item = asRecord(entry) || {};
           return {
-            name: String(item.name || "عنصر"),
+            name: safeText(item.displayName ?? item.name, "عنصر"),
             quantity: Number(item.quantity || item.qty || 1),
             notes: asString(item.notes) || undefined,
           };
         })
         : [
           {
-            name: String(
-              record.productName ||
-              record.proteinName ||
-              record.sandwichId ||
-              record.operationalSku ||
-              record.selectionType ||
+            name: safeText(
+              asRecord(record.display)?.titleAr ||
+                asRecord(record.product)?.displayName ||
+                asRecord(record.sandwich)?.displayName ||
+                asRecord(record.product)?.name ||
+                asRecord(record.protein)?.displayName ||
+                asRecord(record.protein)?.name ||
+                record.productName ||
+                record.proteinName ||
+                record.sandwichId ||
+                record.selectionType,
               "وجبة"
             ),
             quantity: Number(record.quantity || 1),
@@ -235,108 +334,76 @@ function normalizeLineItems(raw: unknown): UnifiedQueueItem["items"] {
     const item = asRecord(entry) || {};
     return {
       id: String(item.id || item._id || index),
-      name: String(item.name || "عنصر"),
+      name: safeText(item.displayName ?? item.name, "عنصر"),
       quantity: Number(item.quantity || item.qty || 1),
       notes: asString(item.notes) || undefined,
     };
   });
 }
 
-function normalizePlan(raw: unknown): UnifiedQueueItem["plan"] {
-  const plan = asRecord(raw);
-  if (!plan) return null;
-
-  return {
-    id: asString(plan.id),
-    key: asString(plan.key),
-    name: asString(plan.name),
-    daysCount: asNumber(plan.daysCount),
-    durationDays: asNumber(plan.durationDays),
-    totalMeals: asNumber(plan.totalMeals),
-    remainingMeals: asNumber(plan.remainingMeals),
-    selectedMealsPerDay: asNumber(plan.selectedMealsPerDay),
-    deliveryMode: asString(plan.deliveryMode),
-    proteinGrams: asNumber(plan.proteinGrams),
-    portionSize: asString(plan.portionSize),
-  };
-}
-
-function normalizeKitchenDetails(raw: unknown): UnifiedQueueItem["kitchenDetails"] {
-  const details = asRecord(raw);
-  if (!details) return null;
-
-  return {
-    ...details,
-    mealSlots: asArray(details.mealSlots),
-    addons: asArray(details.addons),
-  };
-}
-
-function normalizePaymentValidity(raw: unknown): UnifiedQueueItem["paymentValidity"] {
-  const payment = asRecord(raw);
-  if (!payment) return null;
-
-  return {
-    paymentRequired: asBoolean(payment.paymentRequired),
-    paymentStatus: asString(payment.paymentStatus),
-    paymentApplied: asBoolean(payment.paymentApplied),
-    pendingUnpaid: asBoolean(payment.pendingUnpaid),
-    superseded: asBoolean(payment.superseded),
-    revisionMismatch: asBoolean(payment.revisionMismatch),
-    canPrepare: asBoolean(payment.canPrepare),
-    canFulfill: asBoolean(payment.canFulfill),
-    reason: asString(payment.reason),
-  };
-}
-
-/** Maps heterogeneous kitchen/pickup/courier queue rows to UnifiedQueueItem. */
-export function normalizeOperationsQueueItem(raw: unknown): UnifiedQueueItem {
+export function normalizeOperationsQueueItem(
+  raw: unknown,
+  contractVersion?: string
+): UnifiedQueueItem {
   const record = asRecord(raw) || {};
-  const delivery = asRecord(record.delivery);
-  const pickup = asRecord(record.pickup);
+  const ids = asRecord(record.ids);
+  const sourceInfo = asRecord(record.source);
+  const subscription = asRecord(record.subscription);
+  const orderSummary = asRecord(record.orderSummary);
+  const kitchen = asRecord(record.kitchen);
+  const fulfillment = asRecord(record.fulfillment);
+  const delivery = asRecord(record.delivery) || asRecord(fulfillment?.delivery);
+  const pickup = asRecord(record.pickup) || asRecord(fulfillment?.pickup);
   const context = asRecord(record.context);
+  const timestamps = asRecord(record.timestamps);
   const ui = asRecord(record.ui);
-  const entityId = String(
-    record.entityId || record.id || record.subscriptionDayId || record.orderId || ""
+
+  const sourceType = asString(sourceInfo?.type) || asString(record.source);
+  const entityType = normalizeEntityType(
+    asString(ids?.entityType) || asString(record.entityType) || sourceType || asString(record.type)
   );
-  const entityType = (record.entityType ||
-    record.type ||
-    "subscription_day") as UnifiedQueueItem["entityType"];
-  const source = (record.source ||
-    (entityType === "order"
-      ? "one_time_order"
-      : entityType === "subscription_pickup_request"
-        ? "subscription_pickup_request"
-        : "subscription")) as UnifiedQueueItem["source"];
+  const source = normalizeSourceType(sourceType || entityType);
+  const entityId = String(
+    ids?.entityId ||
+    record.entityId ||
+    record.id ||
+    ids?.subscriptionDayId ||
+    record.subscriptionDayId ||
+    ids?.orderId ||
+    record.orderId ||
+    ""
+  );
   const mode = normalizeMode(record);
-  const status = String(record.status || "open");
+  const status = String(sourceInfo?.status || record.status || "open");
+  const plan = normalizePlan(asRecord(subscription?.plan) || record.plan);
+  const paymentValidity = normalizePayment(record.payment || record.paymentValidity);
   const addressSummary =
     asString(context?.addressSummary) ||
     asString(delivery?.addressSummary) ||
     buildAddressSummary(delivery?.address) ||
     buildAddressSummary(context?.address);
-  const plan = normalizePlan(record.plan);
-  const paymentValidity = normalizePaymentValidity(record.paymentValidity);
 
   return {
+    contractVersion,
+    ids: ids as UnifiedQueueItem["ids"],
     id: String(record.id || entityId),
     entityId,
     entityType,
     source,
-    type: (record.type || entityType) as UnifiedQueueItem["type"],
+    type: (entityType === "order" ? "order" : source) as UnifiedQueueItem["type"],
     mode,
-    reference: String(record.reference || record.orderNumber || entityId.slice(-6) || "—"),
+    reference: safeText(sourceInfo?.reference || record.reference || record.orderNumber || entityId.slice(-6), "—"),
     status,
-    statusLabel: String(record.statusLabel || status),
+    statusLabel: safeText(asRecord(sourceInfo?.statusLabel)?.ar || record.statusLabel || status, status),
     ui: {
-      label: String(ui?.label || record.statusLabel || status),
+      label: safeText(ui?.label || asRecord(sourceInfo?.statusLabel)?.ar || record.statusLabel || status, status),
       color: String(ui?.color || "default"),
       icon: String(ui?.icon || ""),
       badgeText: asString(ui?.badgeText) || undefined,
     },
     customer: normalizeCustomer(record),
     context: {
-      date: asString(context?.date) || asString(record.date),
+      date: asString(sourceInfo?.date) || asString(context?.date) || asString(record.date),
       window:
         asString(context?.window) ||
         asString(delivery?.window) ||
@@ -344,10 +411,14 @@ export function normalizeOperationsQueueItem(raw: unknown): UnifiedQueueItem {
         undefined,
       address: context?.address || delivery?.address,
       addressSummary,
-      branch: asString(context?.branch) || asString(pickup?.branchId),
+      branch: asString(context?.branch) || asString(pickup?.branchId) || asString(pickup?.locationId),
       pickupCode: asString(context?.pickupCode) || asString(pickup?.pickupCode),
-      notes: asString(context?.notes) || asString(record.notes),
-      mealCount: asNumber(context?.mealCount) ?? asNumber(pickup?.mealCount) ?? undefined,
+      notes: asString(context?.notes) || asString(orderSummary?.notes) || asString(record.notes),
+      mealCount:
+        asNumber(orderSummary?.mealCount) ??
+        asNumber(context?.mealCount) ??
+        asNumber(pickup?.mealCount) ??
+        undefined,
       requiredMealCount:
         asNumber(context?.requiredMealCount) ??
         asNumber(plan?.selectedMealsPerDay) ??
@@ -355,7 +426,7 @@ export function normalizeOperationsQueueItem(raw: unknown): UnifiedQueueItem {
     },
     delivery: delivery
       ? {
-        deliveryId: asString(delivery.deliveryId),
+        deliveryId: asString(delivery.deliveryId) || asString(ids?.deliveryId),
         method: asString(delivery.method) || mode,
         date: asString(delivery.date),
         status: asString(delivery.status),
@@ -374,11 +445,11 @@ export function normalizeOperationsQueueItem(raw: unknown): UnifiedQueueItem {
       : undefined,
     pickup: pickup
       ? {
-        pickupRequestId: asString(pickup.pickupRequestId),
+        pickupRequestId: asString(pickup.pickupRequestId) || asString(ids?.pickupRequestId),
         branchId: asString(pickup.branchId),
         locationId: asString(pickup.locationId),
         pickupLocationId: asString(pickup.pickupLocationId),
-        pickupRequested: Boolean(pickup.pickupRequested),
+        pickupRequested: Boolean(pickup.pickupRequested || mode === "pickup"),
         pickupPreparedAt: asString(pickup.pickupPreparedAt),
         pickupCodeIssuedAt: asString(pickup.pickupCodeIssuedAt),
         pickupVerifiedAt: asString(pickup.pickupVerifiedAt),
@@ -396,25 +467,59 @@ export function normalizeOperationsQueueItem(raw: unknown): UnifiedQueueItem {
     pricing: record.pricing,
     paymentStatus: asString(record.paymentStatus) || paymentValidity?.paymentStatus || null,
     orderNumber: asString(record.orderNumber),
-    mealSlots: normalizeMealSlots(record.mealSlots),
-    materializedMeals: asArray(record.materializedMeals),
+    mealSlots: normalizeMealSlots(kitchen?.meals),
     addonSelections: asArray(record.addonSelections),
     premiumUpgradeSelections: asArray(record.premiumUpgradeSelections),
-    fulfillmentType: asString(record.fulfillmentType),
+    fulfillmentType: asString(fulfillment?.type) || asString(record.fulfillmentType),
     plan,
-    kitchenDetails: normalizeKitchenDetails(record.kitchenDetails),
+    orderSummary: orderSummary as UnifiedQueueItem["orderSummary"],
+    kitchen: kitchen
+      ? {
+        meals: asArray(kitchen.meals) as DashboardQueueItemV2["kitchen"]["meals"],
+        addons: asArray(kitchen.addons) as DashboardQueueItemV2["kitchen"]["addons"],
+      }
+      : undefined,
+    fulfillment: fulfillment
+      ? (fulfillment as DashboardQueueItemV2["fulfillment"])
+      : undefined,
+    payment: asRecord(record.payment)
+      ? (record.payment as DashboardQueueItemV2["payment"])
+      : undefined,
+    actions: asRecord(record.actions)
+      ? (record.actions as DashboardQueueItemV2["actions"])
+      : undefined,
+    dataQuality: asRecord(record.dataQuality)
+      ? (record.dataQuality as DashboardQueueItemV2["dataQuality"])
+      : undefined,
+    kitchenDetails: kitchen
+      ? {
+        mealSlots: asArray(kitchen.meals),
+        addons: asArray(kitchen.addons),
+      }
+      : asRecord(record.kitchenDetails)
+        ? {
+          ...asRecord(record.kitchenDetails),
+          mealSlots: asArray(asRecord(record.kitchenDetails)?.mealSlots),
+          addons: asArray(asRecord(record.kitchenDetails)?.addons),
+        }
+        : null,
     paymentValidity,
     subscriptionDayId:
+      asString(ids?.subscriptionDayId) ||
       asString(record.subscriptionDayId) ||
       (entityType === "subscription_day" ? entityId : null),
-    subscriptionId: asString(record.subscriptionId),
-    allowedActions: normalizeAllowedActions(record.allowedActions),
-    notes: asString(record.notes),
+    subscriptionId:
+      asString(ids?.subscriptionId) ||
+      asString(subscription?.id) ||
+      asString(record.subscriptionId),
+    allowedActions: normalizeAllowedActions(record.actions || record.allowedActions),
+    notes: asString(orderSummary?.notes) || asString(record.notes),
     timestamps: {
-      createdAt: asString(record.createdAt),
-      updatedAt: asString(record.updatedAt),
+      createdAt: asString(timestamps?.createdAt) || asString(record.createdAt),
+      updatedAt: asString(timestamps?.updatedAt) || asString(record.updatedAt),
+      preparedAt: asString(timestamps?.preparedAt),
+      fulfilledAt: asString(timestamps?.fulfilledAt),
     },
-    rawData: record,
   };
 }
 
@@ -425,6 +530,7 @@ export function extractOperationsQueueItems(
   if (!payload) return [];
 
   const nested = asRecord(payload.data);
+  const contractVersion = asString(nested?.contractVersion);
   const rawItems = Array.isArray(nested?.items)
     ? nested.items
     : Array.isArray(payload.items)
@@ -433,5 +539,5 @@ export function extractOperationsQueueItems(
         ? response
         : [];
 
-  return rawItems.map(normalizeOperationsQueueItem);
+  return rawItems.map((item) => normalizeOperationsQueueItem(item, contractVersion || undefined));
 }

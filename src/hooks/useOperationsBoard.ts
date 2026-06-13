@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import api from "@/lib/apis";
 import {
   buildOperationsActionPayload,
-  extractOperationsQueueItems,
   getEndpointForAction,
   getScreensForRole,
   OPERATIONS_SCREENS,
@@ -12,9 +11,13 @@ import {
 } from "@/lib/operationsBoard";
 import type {
   DashboardOpsActionResponse,
-  DashboardOpsListResponse,
   UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
+import {
+  getCourierQueue,
+  getKitchenQueue,
+  getPickupQueue,
+} from "@/utils/fetchDashboardOpsData";
 
 interface UseOperationsBoardParams {
   date?: string;
@@ -33,16 +36,14 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     queryFn: async () => {
       const results = await Promise.all(
         visibleScreens.map(async (screen) => {
-          const { data } = await api.get<DashboardOpsListResponse>(
-            `/api/dashboard/${screen}/queue`,
-            {
-              params: {
-                date: params.date || undefined,
-                q: params.q || undefined,
-              },
-            }
-          );
-          const items = extractOperationsQueueItems(data);
+          const date = params.date || "";
+          const requestParams = { q: params.q || undefined };
+          const items =
+            screen === "kitchen"
+              ? await getKitchenQueue(date, requestParams)
+              : screen === "pickup"
+                ? await getPickupQueue(date, requestParams)
+                : await getCourierQueue(date, requestParams);
           return { screen, items };
         })
       );
@@ -84,7 +85,9 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
       notes?: string;
       pickupCode?: string;
     }) => {
-      const endpoint = getEndpointForAction(action);
+      const actionDef = item.allowedActions?.find((entry) => entry.id === action);
+      const endpoint = actionDef?.endpoint || getEndpointForAction(action);
+      const method = (actionDef?.method || "POST").toLowerCase();
       const payload = buildOperationsActionPayload(
         item,
         action,
@@ -92,10 +95,11 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
         notes,
         pickupCode
       );
-      const { data } = await api.post<DashboardOpsActionResponse>(
-        endpoint,
-        payload
-      );
+      const { data } = await api.request<DashboardOpsActionResponse>({
+        url: endpoint,
+        method,
+        data: payload,
+      });
       return data;
     },
     onSuccess: (_data, variables) => {
@@ -112,6 +116,7 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
           err?.message ||
           "حدث خطأ غير متوقع"
       );
+      queryClient.invalidateQueries({ queryKey: ["operations-board", "queue"] });
     },
   });
 

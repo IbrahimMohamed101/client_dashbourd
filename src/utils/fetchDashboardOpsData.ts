@@ -8,12 +8,81 @@ import type {
 } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrderActionAllowed } from "@/types/oneTimeOrderTypes";
 
+export interface QueueParams {
+  status?: string | string[];
+  method?: string;
+  q?: string;
+  zoneId?: string;
+  branchId?: string;
+  includeCanceled?: boolean;
+}
+
+export interface ManualDeductionHistoryItem {
+  id: string;
+  businessDate?: string | null;
+  deducted?: {
+    regularMeals?: number | null;
+    premiumMeals?: number | null;
+    total?: number | null;
+  };
+  before?: {
+    remainingRegularMeals?: number | null;
+    remainingPremiumMeals?: number | null;
+    remainingMeals?: number | null;
+  };
+  after?: {
+    remainingRegularMeals?: number | null;
+    remainingPremiumMeals?: number | null;
+    remainingMeals?: number | null;
+  };
+  fulfillmentMethod?: string | null;
+  actor?: {
+    id?: string | null;
+    role?: string | null;
+  };
+  reason?: string | null;
+  notes?: string | null;
+  createdAt?: string | null;
+}
+
+export interface ManualDeductionHistory {
+  contractVersion: "dashboard_manual_deductions.v1";
+  subscriptionId: string;
+  count: number;
+  items: ManualDeductionHistoryItem[];
+}
+
 export interface GetPickupQueueParams {
   date: string;
 }
 
-export const getPickupQueue = async (params: GetPickupQueueParams): Promise<UnifiedQueueItem[]> => {
-  const { data } = await api.get("/api/dashboard/pickup/queue", { params });
+function queueRequestParams(date: string, params: QueueParams = {}) {
+  return {
+    ...params,
+    date,
+    status: Array.isArray(params.status) ? params.status.join(",") : params.status,
+  };
+}
+
+export const getKitchenQueue = async (
+  date: string,
+  params: QueueParams = {}
+): Promise<UnifiedQueueItem[]> => {
+  const { data } = await api.get("/api/dashboard/kitchen/queue", {
+    params: queueRequestParams(date, params),
+  });
+  return extractOperationsQueueItems(data);
+};
+
+export const getPickupQueue = async (
+  dateOrParams: string | GetPickupQueueParams,
+  params: QueueParams = {}
+): Promise<UnifiedQueueItem[]> => {
+  const date =
+    typeof dateOrParams === "string" ? dateOrParams : dateOrParams.date;
+  const { data } = await api.get("/api/dashboard/pickup/queue", {
+    params: queueRequestParams(date, params),
+  });
   return extractOperationsQueueItems(data);
 };
 
@@ -55,8 +124,17 @@ export interface GetCourierQueueParams {
   method: "delivery";
 }
 
-export const getCourierQueue = async (params: GetCourierQueueParams): Promise<UnifiedQueueItem[]> => {
-  const { data } = await api.get("/api/dashboard/courier/queue", { params });
+export const getCourierQueue = async (
+  dateOrParams: string | GetCourierQueueParams,
+  params: QueueParams = {}
+): Promise<UnifiedQueueItem[]> => {
+  const date =
+    typeof dateOrParams === "string" ? dateOrParams : dateOrParams.date;
+  const mergedParams =
+    typeof dateOrParams === "string" ? params : { ...dateOrParams, ...params };
+  const { data } = await api.get("/api/dashboard/courier/queue", {
+    params: queueRequestParams(date, mergedParams),
+  });
   return extractOperationsQueueItems(data);
 };
 
@@ -106,6 +184,17 @@ export const executeManualDeduction = async ({
     notes,
   });
   return data;
+};
+
+export const fetchManualDeductionHistory = async (
+  subscriptionId: string,
+  limit = 5
+): Promise<ManualDeductionHistory> => {
+  const { data } = await api.get(
+    `/api/dashboard/subscriptions/${subscriptionId}/manual-deductions`,
+    { params: { limit } }
+  );
+  return data?.data || data;
 };
 
 // ── Fetch all ops for a date ──
