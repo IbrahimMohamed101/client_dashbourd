@@ -17,6 +17,7 @@ import type {
 } from "@/types/dashboardOpsTypes";
 import { matchesStatusFilter } from "@/types/dashboardOpsTypes";
 import { useDebounce } from "@/hooks/useDebounce";
+import { getCourierItems } from "@/lib/operationsBoard";
 
 // ── Route definition ──
 
@@ -47,10 +48,11 @@ function DeliveryDashboard() {
   const actionMutation = useDashboardOpsActionMutation();
 
   // ── Derived data ──
-  const baseData = listRes?.data?.items ?? [];
+  const baseData = getCourierItems(listRes?.data?.items ?? []);
 
   const getDisplayData = () => {
-    if (isSearching) return searchRes?.data?.items ?? [];
+    const searchData = getCourierItems(searchRes?.data?.items ?? []);
+    if (isSearching) return searchData;
     if (statusFilter === "all") return baseData;
     return baseData.filter((item) =>
       matchesStatusFilter(item.status, statusFilter),

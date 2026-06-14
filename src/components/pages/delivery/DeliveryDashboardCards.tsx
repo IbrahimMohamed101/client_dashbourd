@@ -1,7 +1,7 @@
 import { Package, Truck, CheckCircle, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
-  UnifiedOperationalDTO,
+  UnifiedQueueItem,
   DashboardOpsStatusFilter,
 } from "@/types/dashboardOpsTypes";
 import { countByFilter } from "@/types/dashboardOpsTypes";
@@ -57,7 +57,7 @@ const STAT_CARDS: StatCard[] = [
 // ── Props ──
 
 interface DeliveryDashboardCardsProps {
-  data: UnifiedOperationalDTO[];
+  data: UnifiedQueueItem[];
   isLoading: boolean;
 }
 

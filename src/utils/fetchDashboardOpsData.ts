@@ -204,7 +204,15 @@ export const fetchDashboardOpsList = async (
   const response = await api.get("/api/dashboard/ops/list", {
     params: { date },
   });
-  return response.data;
+  const items = extractOperationsQueueItems(response.data);
+  return {
+    ...response.data,
+    data: {
+      ...response.data?.data,
+      date: response.data?.data?.date ?? date,
+      items,
+    },
+  };
 };
 
 // ── Full-text search across ops ──
@@ -214,7 +222,15 @@ export const fetchDashboardOpsSearch = async (
   const response = await api.get("/api/dashboard/ops/search", {
     params: { q: query },
   });
-  return response.data;
+  const items = extractOperationsQueueItems(response.data);
+  return {
+    ...response.data,
+    data: {
+      ...response.data?.data,
+      date: response.data?.data?.date ?? "",
+      items,
+    },
+  };
 };
 
 export const fetchDeliverySchedule = async (

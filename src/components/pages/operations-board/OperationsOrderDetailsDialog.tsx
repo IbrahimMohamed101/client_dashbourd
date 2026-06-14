@@ -439,8 +439,9 @@ export function OperationsOrderDetailsDialog({
               <Section title="الاستلام / التوصيل" icon={item.mode === "delivery" ? <Truck className="h-4 w-4" /> : <Store className="h-4 w-4" />}>
                 <DetailGrid
                   rows={[
-                    { label: "الوقت", value: item.context?.window || delivery?.window || item.delivery?.deliveryWindow },
+                  { label: "الوقت", value: item.context?.window || delivery?.window || item.delivery?.deliveryWindow },
                     { label: "العنوان", value: item.mode === "delivery" ? item.context?.addressSummary || item.delivery?.addressSummary : null },
+                    { label: "ملاحظات العنوان", value: item.mode === "delivery" ? item.context?.addressNotes : null },
                     { label: "الفرع", value: pickup?.branchId || item.pickup?.branchId || item.context?.branch },
                     { label: "الموقع", value: pickup?.locationId || item.pickup?.locationId || item.pickup?.pickupLocationId },
                     { label: "كود الاستلام", value: item.context?.pickupCode || item.pickup?.pickupCode, ltr: true },

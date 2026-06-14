@@ -165,6 +165,9 @@ export interface DashboardQueueItemV2 {
     isComplete: boolean;
     warnings: DataQualityWarning[];
   };
+  selectionMode?: string | null;
+  selectionModeLabel?: LocalizedText | null;
+  selectionNotice?: LocalizedText | null;
 }
 
 export interface DashboardQueueV2Response {
@@ -214,6 +217,7 @@ export interface UnifiedQueueItem {
     window?: string;
     address?: unknown;
     addressSummary?: string | null;
+    addressNotes?: string | null;
     branch?: string | null;
     pickupCode?: string | null;
     notes?: string | null;
@@ -286,6 +290,9 @@ export interface UnifiedQueueItem {
   payment?: DashboardQueueItemV2["payment"];
   actions?: DashboardQueueItemV2["actions"];
   dataQuality?: DashboardQueueItemV2["dataQuality"];
+  selectionMode?: string | null;
+  selectionModeLabel?: LocalizedText | null;
+  selectionNotice?: LocalizedText | null;
   kitchenDetails?: {
     mealSlots?: unknown[];
     addons?: unknown[];

@@ -2,14 +2,14 @@ import { PackageX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeliveryCard } from "./DeliveryCard";
 import type {
-  UnifiedOperationalDTO,
+  UnifiedQueueItem,
   DashboardOpsActionRequest,
 } from "@/types/dashboardOpsTypes";
 
 // ── Props ──
 
 interface DeliveryListProps {
-  data: UnifiedOperationalDTO[];
+  data: UnifiedQueueItem[];
   isLoading: boolean;
   onActionClick: (action: string, payload: DashboardOpsActionRequest) => void;
   isActionLoading: boolean;

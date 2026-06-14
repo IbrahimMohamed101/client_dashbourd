@@ -91,9 +91,19 @@ function buildAddressSummary(value: unknown): string | null {
   const address = asRecord(value);
   if (!address) return null;
 
+  const display = asRecord(address.display);
+  const displayAddress =
+    asString(address.displayAddressAr) ||
+    asString(address.displayAddress) ||
+    asString(display?.ar) ||
+    asString(display?.en);
+
+  if (displayAddress) return displayAddress;
+
   return [
     address.line1,
     address.line2,
+    address.label,
     address.district,
     address.street,
     address.building,
@@ -102,6 +112,17 @@ function buildAddressSummary(value: unknown): string | null {
   ]
     .filter((part): part is string => typeof part === "string" && part.trim().length > 0)
     .join("، ") || null;
+}
+
+function extractAddressNotes(value: unknown): string | null {
+  const address = asRecord(value);
+  if (!address) return null;
+
+  return (
+    asString(address.notes) ||
+    asString(asRecord(address.display)?.notes) ||
+    null
+  );
 }
 
 function normalizeSourceType(value: string | null | undefined): UnifiedQueueItem["source"] {
@@ -310,6 +331,10 @@ function normalizeMealSlots(raw: unknown): UnifiedQueueItem["mealSlots"] {
           {
             name: safeText(
               asRecord(record.display)?.titleAr ||
+                asRecord(record.mealTypeLabel)?.ar ||
+                asRecord(record.product)?.displayName ||
+                asRecord(asRecord(record.product)?.name)?.ar ||
+                asRecord(asRecord(record.product)?.name)?.en ||
                 asRecord(record.product)?.displayName ||
                 asRecord(record.sandwich)?.displayName ||
                 asRecord(record.product)?.name ||
@@ -384,6 +409,10 @@ export function normalizeOperationsQueueItem(
     asString(delivery?.addressSummary) ||
     buildAddressSummary(delivery?.address) ||
     buildAddressSummary(context?.address);
+  const addressNotes =
+    asString(context?.addressNotes) ||
+    extractAddressNotes(context?.address) ||
+    extractAddressNotes(delivery?.address);
 
   return {
     contractVersion,
@@ -413,6 +442,7 @@ export function normalizeOperationsQueueItem(
         undefined,
       address: context?.address || delivery?.address,
       addressSummary,
+      addressNotes,
       branch: asString(context?.branch) || asString(pickup?.branchId) || asString(pickup?.locationId),
       pickupCode: asString(context?.pickupCode) || asString(pickup?.pickupCode),
       notes: asString(context?.notes) || asString(orderSummary?.notes) || asString(record.notes),
@@ -493,6 +523,13 @@ export function normalizeOperationsQueueItem(
     dataQuality: asRecord(record.dataQuality)
       ? (record.dataQuality as DashboardQueueItemV2["dataQuality"])
       : undefined,
+    selectionMode: asString(record.selectionMode),
+    selectionModeLabel: asRecord(record.selectionModeLabel) as
+      | DashboardQueueItemV2["selectionModeLabel"]
+      | undefined,
+    selectionNotice: asRecord(record.selectionNotice) as
+      | DashboardQueueItemV2["selectionNotice"]
+      | undefined,
     kitchenDetails: kitchen
       ? {
         mealSlots: asArray(kitchen.meals),
@@ -522,6 +559,7 @@ export function normalizeOperationsQueueItem(
       preparedAt: asString(timestamps?.preparedAt),
       fulfilledAt: asString(timestamps?.fulfilledAt),
     },
+    rawData: raw,
   };
 }
 

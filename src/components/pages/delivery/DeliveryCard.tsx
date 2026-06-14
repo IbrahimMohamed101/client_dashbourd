@@ -1,15 +1,24 @@
 import { useState } from "react";
-import { Phone, MapPin, ChevronDown, ChevronUp, Clock, Package } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  MapPin,
+  Package,
+  Phone,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { DeliveryTimeline } from "./DeliveryTimeline";
+import { Button } from "@/components/ui/button";
+import {
+  buildOperationsActionPayload,
+  safeText,
+} from "@/lib/operationsBoard";
 import type {
-  UnifiedOperationalDTO,
   DashboardOpsActionRequest,
+  UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
 import { getBadgeClasses } from "@/types/dashboardOpsTypes";
-
-// ── Action button config ──
+import { DeliveryTimeline } from "./DeliveryTimeline";
 
 type ButtonVariant =
   | "default"
@@ -29,7 +38,8 @@ const ACTION_CONFIG: Record<string, ActionConfig> = {
   dispatch: {
     label: "خروج للتوصيل",
     variant: "default",
-    className: "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20",
+    className:
+      "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20",
   },
   notify_arrival: {
     label: "قريب",
@@ -38,24 +48,61 @@ const ACTION_CONFIG: Record<string, ActionConfig> = {
   fulfill: {
     label: "تم التسليم",
     variant: "default",
-    className: "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20",
+    className:
+      "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20",
   },
   cancel: {
     label: "إلغاء",
     variant: "ghost",
-    className: "text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30",
+    className:
+      "text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30",
   },
 };
 
-// ── Props ──
-
 interface DeliveryCardProps {
-  item: UnifiedOperationalDTO;
+  item: UnifiedQueueItem;
   onActionClick: (action: string, payload: DashboardOpsActionRequest) => void;
   isActionLoading: boolean;
 }
 
-// ── Component ──
+function mealTitle(
+  meal: NonNullable<UnifiedQueueItem["kitchen"]>["meals"][number]
+) {
+  return safeText(
+    meal.display?.titleAr ||
+      meal.mealTypeLabel?.ar ||
+      meal.product?.displayName ||
+      meal.product?.name?.ar ||
+      meal.product?.name?.en ||
+      meal.sandwich?.displayName ||
+      meal.protein?.displayName,
+    "وجبة"
+  );
+}
+
+function getMealRows(item: UnifiedQueueItem) {
+  if (item.kitchen?.meals?.length) {
+    return item.kitchen.meals.map((meal, index) => ({
+      id: String(meal.slotKey || meal.slotIndex || `meal-${index}`),
+      title: mealTitle(meal),
+      quantity: Number(meal.quantity || 1),
+    }));
+  }
+
+  if (item.items?.length) {
+    return item.items.map((entry, index) => ({
+      id: entry.id || `item-${index}`,
+      title: safeText(entry.name, "وجبة"),
+      quantity: Number(entry.quantity || 1),
+    }));
+  }
+
+  return [];
+}
+
+function getActionLabel(actionId: string, fallback: string) {
+  return ACTION_CONFIG[actionId]?.label || safeText(fallback, actionId);
+}
 
 export function DeliveryCard({
   item,
@@ -64,32 +111,39 @@ export function DeliveryCard({
 }: DeliveryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleAction = (actionId: string) => {
-    onActionClick(actionId, {
-      action: actionId,
-      entityId: item.id,
-      entityType: item.type,
-      source: item.source,
-    });
-  };
-
+  const mealRows = getMealRows(item);
+  const mealCount =
+    item.orderSummary?.mealCount ??
+    item.context?.mealCount ??
+    item.plan?.selectedMealsPerDay ??
+    mealRows.length;
+  const selectionNotice =
+    item.selectionNotice?.ar || item.selectionNotice?.en || "";
+  const addressNotes = item.context.addressNotes || "";
+  const deliveryWindow =
+    item.context.window || item.delivery?.window || item.delivery?.deliveryWindow;
   const hasDetails =
-    item.context.notes || item.context.orderDetails || item.context.cancelInfo;
+    Boolean(item.context.notes || item.context.addressNotes || item.notes || selectionNotice) ||
+    mealRows.length > 0 ||
+    Boolean(item.dataQuality?.warnings?.length);
+
+  const handleAction = (actionId: string) => {
+    onActionClick(actionId, buildOperationsActionPayload(item, actionId));
+  };
 
   return (
     <div className="group flex h-full flex-col overflow-hidden rounded-3xl border border-muted-foreground/10 bg-card/50 p-5 shadow-sm backdrop-blur-sm transition-all hover:border-primary/20 hover:shadow-lg dark:hover:border-primary/30">
-      {/* ── Header ── */}
       <div className="mb-5 flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
               className="border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[10px] font-black text-primary"
             >
-              {item.type === "subscription" ? "اشتراك" : "طلب لمرة واحدة"}
+              {item.source === "one_time_order" ? "طلب لمرة واحدة" : "اشتراك"}
             </Badge>
-            <span className="font-mono text-[11px] font-bold tracking-tight text-muted-foreground/60">
-              #{item.reference}
+            <span className="truncate font-mono text-[11px] font-bold tracking-tight text-muted-foreground/60">
+              #{item.orderNumber || item.reference}
             </span>
           </div>
           <h3 className="line-clamp-1 text-lg font-black tracking-tight text-foreground">
@@ -97,23 +151,22 @@ export function DeliveryCard({
           </h3>
         </div>
 
-        {item.ui?.label && (
+        {item.ui?.label ? (
           <div
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold shadow-sm ${getBadgeClasses(item.ui.color)}`}
           >
-            {item.ui.label}
+            {item.statusLabel || item.ui.label}
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* ── Contact & Details ── */}
-      <div className="mb-6 flex flex-col gap-3.5">
+      <div className="mb-4 flex flex-col gap-3.5">
         <div className="flex items-center gap-3 text-sm">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
             <Phone className="h-4 w-4" />
           </div>
           <span dir="ltr" className="font-mono font-bold text-foreground/80">
-            {item.customer.phone}
+            {item.customer.phone || "—"}
           </span>
         </div>
 
@@ -121,27 +174,62 @@ export function DeliveryCard({
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <MapPin className="h-4 w-4" />
           </div>
-          <p className="mt-1.5 line-clamp-2 leading-relaxed text-muted-foreground font-medium">
+          <p className="mt-1.5 line-clamp-2 font-medium leading-relaxed text-muted-foreground">
             {item.context.addressSummary || "لا يوجد عنوان مسجل"}
           </p>
         </div>
 
-        {item.context.window && (
+        {deliveryWindow ? (
           <div className="flex items-center gap-3 text-sm">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500">
               <Clock className="h-4 w-4" />
             </div>
             <span className="font-bold text-orange-600 dark:text-orange-400">
-              {item.context.window}
+              {deliveryWindow}
             </span>
           </div>
+        ) : null}
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-muted-foreground/10 bg-muted/20 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="text-xs font-black text-muted-foreground">
+            الوجبات
+          </span>
+          <Badge variant="secondary" className="rounded-md">
+            {item.orderSummary?.mealCountTextAr || `${mealCount} وجبة`}
+          </Badge>
+        </div>
+        {item.selectionMode === "chef_choice" && selectionNotice ? (
+          <p className="mb-2 rounded-lg bg-amber-500/10 px-2 py-1.5 text-xs font-semibold text-amber-800">
+            {selectionNotice}
+          </p>
+        ) : null}
+        {mealRows.length ? (
+          <div className="flex flex-wrap gap-1.5">
+            {mealRows.slice(0, 4).map((meal) => (
+              <span
+                key={meal.id}
+                className="rounded-md border border-secondary bg-secondary/50 px-2 py-1 text-[11px] font-bold"
+              >
+                {meal.title} x{meal.quantity}
+              </span>
+            ))}
+            {mealRows.length > 4 ? (
+              <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                +{mealRows.length - 4}
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-xs font-semibold text-muted-foreground">
+            {mealCount > 0 ? `${mealCount} وجبة` : "لا توجد وجبات معروضة"}
+          </p>
         )}
       </div>
 
-      {/* ── Spacer to push footer down ── */}
       <div className="flex-1" />
 
-      {/* ── Status Track ── */}
       <div className="mb-6 space-y-2.5 rounded-2xl bg-muted/30 p-4">
         <DeliveryTimeline status={item.status} variant="compact" />
         <div className="flex justify-between px-0.5 text-[10px] font-black text-muted-foreground/60">
@@ -151,40 +239,41 @@ export function DeliveryCard({
         </div>
       </div>
 
-      {/* ── Footer Actions ── */}
       <div className="flex items-center gap-2 border-t border-muted-foreground/5 pt-4">
         <div className="flex flex-1 items-center gap-2">
-          {item.allowedActions && item.allowedActions.length > 0 ? (
+          {item.allowedActions?.length ? (
             item.allowedActions.map((action) => {
-              const actionId = action.id;
-              const config = ACTION_CONFIG[actionId];
+              const config = ACTION_CONFIG[action.id];
               if (!config) return null;
+
               return (
                 <Button
-                  key={actionId}
+                  key={action.id}
                   variant={config.variant}
                   size="sm"
                   className={`h-10 flex-1 rounded-xl px-3 text-xs font-bold transition-all active:scale-95 ${config.className ?? ""}`}
                   disabled={isActionLoading}
-                  onClick={() => handleAction(actionId)}
+                  onClick={() => handleAction(action.id)}
                 >
-                  {config.label || action.label}
+                  {getActionLabel(action.id, action.label)}
                 </Button>
               );
             })
           ) : (
-            <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-muted-foreground/20 py-2.5 bg-muted/10">
+            <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-muted-foreground/20 bg-muted/10 py-2.5">
               <Package className="h-4 w-4 text-muted-foreground/40" />
-              <span className="text-xs font-bold text-muted-foreground/50">لا توجد إجراءات متاحة</span>
+              <span className="text-xs font-bold text-muted-foreground/50">
+                لا توجد إجراءات متاحة
+              </span>
             </div>
           )}
         </div>
 
-        {hasDetails && (
+        {hasDetails ? (
           <Button
             variant="outline"
             size="icon"
-            className={`h-10 w-10 shrink-0 rounded-xl transition-all ${isExpanded ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground hover:text-foreground border-muted-foreground/20"}`}
+            className={`h-10 w-10 shrink-0 rounded-xl transition-all ${isExpanded ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/20 text-muted-foreground hover:text-foreground"}`}
             onClick={() => setIsExpanded(!isExpanded)}
           >
             {isExpanded ? (
@@ -193,44 +282,81 @@ export function DeliveryCard({
               <ChevronDown className="h-5 w-5" />
             )}
           </Button>
-        )}
+        ) : null}
       </div>
 
-      {/* ── Expanded Detail View ── */}
-      {isExpanded && (
+      {isExpanded ? (
         <div className="mt-4 animate-in space-y-3 rounded-2xl bg-muted/40 p-4 duration-200 fade-in slide-in-from-top-2">
-          {item.context.notes && (
+          {addressNotes ? (
+            <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-3 text-xs dark:border-sky-900/50 dark:bg-sky-950/30">
+              <span className="mb-1.5 block font-black text-sky-700 dark:text-sky-400">
+                ملاحظات العنوان:
+              </span>
+              <p className="font-medium leading-relaxed text-sky-800 dark:text-sky-300">
+                {addressNotes}
+              </p>
+            </div>
+          ) : null}
+
+          {item.context.notes || item.notes ? (
             <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 text-xs dark:border-blue-900/50 dark:bg-blue-950/30">
               <span className="mb-1.5 block font-black text-blue-700 dark:text-blue-400">
                 ملاحظة:
               </span>
               <p className="font-medium leading-relaxed text-blue-800 dark:text-blue-300">
-                {item.context.notes}
+                {item.context.notes || item.notes}
               </p>
             </div>
-          )}
-          {item.context.orderDetails && (
+          ) : null}
+
+          {selectionNotice ? (
+            <div className="rounded-xl border border-amber-100 bg-amber-50/70 p-3 text-xs dark:border-amber-900/50 dark:bg-amber-950/30">
+              <span className="mb-1.5 block font-black text-amber-700 dark:text-amber-400">
+                اختيار الوجبات:
+              </span>
+              <p className="font-medium leading-relaxed text-amber-800 dark:text-amber-300">
+                {selectionNotice}
+              </p>
+            </div>
+          ) : null}
+
+          {mealRows.length ? (
             <div className="rounded-xl border border-muted-foreground/10 bg-background/50 p-3 text-xs shadow-sm">
               <span className="mb-1.5 block font-black text-foreground/80">
-                تفاصيل الطلب:
+                تفاصيل الوجبات:
               </span>
-              <p className="whitespace-pre-wrap font-medium leading-relaxed text-muted-foreground">
-                {item.context.orderDetails}
-              </p>
+              <div className="space-y-1.5">
+                {mealRows.map((meal, index) => (
+                  <p
+                    key={meal.id}
+                    className="font-medium leading-relaxed text-muted-foreground"
+                  >
+                    {index + 1}. {meal.title} x{meal.quantity}
+                  </p>
+                ))}
+              </div>
             </div>
-          )}
-          {item.context.cancelInfo && (
-            <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-3 text-xs dark:border-rose-900/50 dark:bg-rose-950/30">
-              <span className="mb-1.5 block font-black text-rose-700 dark:text-rose-400">
-                سبب الإلغاء:
+          ) : null}
+
+          {item.dataQuality?.warnings?.length ? (
+            <div className="rounded-xl border border-muted-foreground/10 bg-background/50 p-3 text-xs shadow-sm">
+              <span className="mb-1.5 block font-black text-foreground/80">
+                تنبيهات:
               </span>
-              <p className="font-medium leading-relaxed text-rose-800 dark:text-rose-300">
-                {item.context.cancelInfo.reason}
-              </p>
+              <div className="space-y-1.5">
+                {item.dataQuality.warnings.map((warning, index) => (
+                  <p
+                    key={`${warning.code}-${index}`}
+                    className="font-medium leading-relaxed text-muted-foreground"
+                  >
+                    {warning.messageAr || warning.messageEn || warning.code}
+                  </p>
+                ))}
+              </div>
             </div>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
