@@ -4,7 +4,7 @@ import {
   ChefHat,
   Clock,
   Eye,
-  Hash,
+  Flame,
   PackageCheck,
   PackageOpen,
   Phone,
@@ -78,9 +78,13 @@ function getStatusClasses(status: string) {
     return "border-indigo-500/20 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300";
   }
   if (
-    ["canceled", "cancelled", "delivery_canceled", "canceled_at_branch", "no_show"].includes(
-      status
-    )
+    [
+      "canceled",
+      "cancelled",
+      "delivery_canceled",
+      "canceled_at_branch",
+      "no_show",
+    ].includes(status)
   ) {
     return "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300";
   }
@@ -113,25 +117,55 @@ function getDisplayQuantity(entry: unknown) {
   return Number(item.quantity || item.qty || 1);
 }
 
+function compactParts(parts: Array<string | null | undefined>) {
+  return parts.filter((part): part is string => Boolean(part && part.trim()));
+}
+
+function getMealDetail(
+  meal: NonNullable<UnifiedQueueItem["kitchen"]>["meals"][number],
+  index: number
+) {
+  const title = safeText(
+    meal.display?.titleAr ||
+      meal.sandwich?.displayName ||
+      meal.product?.displayName ||
+      meal.protein?.displayName,
+    `وجبة ${index + 1}`
+  );
+  const detailParts = compactParts([
+    meal.display?.preparationTextAr,
+    meal.display?.subtitleAr,
+    meal.mealTypeLabel?.ar,
+    meal.protein?.grams ? `${meal.protein.grams}g بروتين` : null,
+    meal.premium?.isPremium ? meal.premium.labelAr || "Premium" : null,
+    meal.notes || undefined,
+  ]);
+
+  return {
+    id: String(meal.slotKey || meal.slotIndex || `meal-${index}`),
+    name: title,
+    quantity: Number(meal.quantity || 1),
+    detail: detailParts.join(" | "),
+  };
+}
+
+function getAddonDetail(
+  addon: NonNullable<UnifiedQueueItem["kitchen"]>["addons"][number],
+  index: number
+) {
+  return {
+    id: String(addon.key || addon.displayName || `addon-${index}`),
+    name: safeText(addon.display?.titleAr || addon.displayName, "إضافة"),
+    quantity: Number(addon.quantity || 1),
+    detail: "إضافة",
+  };
+}
+
 function getItemNames(item: UnifiedQueueItem) {
   if (item.kitchen?.meals?.length || item.kitchen?.addons?.length) {
     return [
-      ...(item.kitchen.meals || []).map((meal, index) => ({
-        id: String(meal.slotKey || meal.slotIndex || `meal-${index}`),
-        name: safeText(
-          meal.display?.titleAr ||
-            meal.sandwich?.displayName ||
-            meal.product?.displayName ||
-            meal.protein?.displayName,
-          "وجبة"
-        ),
-        quantity: Number(meal.quantity || 1),
-      })),
-      ...(item.kitchen.addons || []).map((addon, index) => ({
-        id: String(addon.id || addon.key || `addon-${index}`),
-        name: safeText(addon.display?.titleAr || addon.displayName, "إضافة"),
-        quantity: Number(addon.quantity || 1),
-      })),
+      ...(item.kitchen.meals || []).map(getMealDetail),
+      ...(item.kitchen.addons || []).map(getAddonDetail),
     ];
   }
 
@@ -140,6 +174,7 @@ function getItemNames(item: UnifiedQueueItem) {
       id: String(entry.id || getDisplayName(entry.name) || index),
       name: getDisplayName(entry.name),
       quantity: getDisplayQuantity(entry),
+      detail: entry.notes,
     }));
   }
 
@@ -149,11 +184,51 @@ function getItemNames(item: UnifiedQueueItem) {
         id: "meal-count",
         name: "وجبات محجوزة",
         quantity: item.context.mealCount,
+        detail: compactParts([
+          item.plan?.name || undefined,
+          item.plan?.proteinGrams ? `${item.plan.proteinGrams}g بروتين` : null,
+          item.plan?.portionSize,
+        ]).join(" | "),
       },
     ];
   }
 
   return [];
+}
+
+function getPreparationSummary(item: UnifiedQueueItem) {
+  const mealCount =
+    item.orderSummary?.mealCount ??
+    item.context?.mealCount ??
+    item.pickup?.mealCount;
+  const addonCount = item.orderSummary?.addonCount;
+  const itemCount = item.orderSummary?.itemCount;
+  const planParts = compactParts([
+    item.plan?.name || undefined,
+    item.plan?.proteinGrams ? `${item.plan.proteinGrams}g بروتين` : null,
+    item.plan?.portionSize,
+  ]);
+  const titleParts = compactParts([
+    item.orderSummary?.display?.titleAr,
+    mealCount != null ? `${mealCount} وجبات` : null,
+    addonCount ? `${addonCount} إضافات` : null,
+    itemCount && !mealCount ? `${itemCount} عناصر` : null,
+  ]);
+  const warningParts = compactParts([
+    item.notes || item.context?.notes,
+    item.orderSummary?.allergies
+      ? `حساسية: ${item.orderSummary.allergies}`
+      : null,
+  ]);
+
+  return {
+    title:
+      titleParts.join(" | ") ||
+      item.orderSummary?.display?.subtitleAr ||
+      "تحضير طلب",
+    subtitle: planParts.join(" | "),
+    warnings: warningParts.join(" | "),
+  };
 }
 
 function isActionDisabled(
@@ -240,31 +315,35 @@ function ActionButtons({
       {getVisibleActions(item).map((action) => {
         const disabled = isActionDisabled(item, action.id, isPending);
         return (
-        <Button
-          key={action.id}
-          variant={getActionVariant(action.color)}
-          size="sm"
-          className="h-9 px-3 text-xs font-semibold sm:h-8"
-          disabled={disabled}
-          title={disabled ? disabledReason(action) : undefined}
-          onClick={() => {
-            if (disabled) return;
-            if (action.id === "fulfill" && item.mode === "pickup" && onFulfill) {
-              onFulfill(item);
-              return;
-            }
+          <Button
+            key={action.id}
+            variant={getActionVariant(action.color)}
+            size="sm"
+            className="h-9 px-3 text-xs font-semibold sm:h-8"
+            disabled={disabled}
+            title={disabled ? disabledReason(action) : undefined}
+            onClick={() => {
+              if (disabled) return;
+              if (
+                action.id === "fulfill" &&
+                item.mode === "pickup" &&
+                onFulfill
+              ) {
+                onFulfill(item);
+                return;
+              }
 
-            onAction(
-              item,
-              action.id,
-              action.label,
-              action.color === "red" || action.color === "danger"
-            );
-          }}
-        >
-          {actionIcons[action.id]}
-          {action.label}
-        </Button>
+              onAction(
+                item,
+                action.id,
+                action.label,
+                action.color === "red" || action.color === "danger"
+              );
+            }}
+          >
+            {actionIcons[action.id]}
+            {action.label}
+          </Button>
         );
       }) || null}
     </div>
@@ -285,9 +364,11 @@ function OperationsMobileCard({
   onDetails: (item: UnifiedQueueItem) => void;
 }) {
   const itemNames = getItemNames(item);
-  const reference = item.orderNumber || item.reference || item.entityId;
   const time =
-    item.context?.window || item.delivery?.window || item.delivery?.deliveryWindow;
+    item.context?.window ||
+    item.delivery?.window ||
+    item.delivery?.deliveryWindow;
+  const preparationSummary = getPreparationSummary(item);
 
   return (
     <article className="rounded-2xl border bg-card p-4 shadow-sm">
@@ -297,8 +378,13 @@ function OperationsMobileCard({
             {item.customer?.name?.charAt(0) || "?"}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold">{item.customer?.name || "—"}</p>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground" dir="ltr">
+            <p className="truncate text-sm font-bold">
+              {item.customer?.name || "—"}
+            </p>
+            <p
+              className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"
+              dir="ltr"
+            >
               <Phone className="h-3 w-3" />
               {item.customer?.phone || "—"}
             </p>
@@ -318,18 +404,11 @@ function OperationsMobileCard({
       ) : null}
 
       <div className="mt-4 grid gap-2 text-xs text-muted-foreground">
-        <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2">
-          <span className="inline-flex items-center gap-1.5">
-            <Hash className="h-3.5 w-3.5" />
-            المرجع
-          </span>
-          <span className="min-w-0 truncate font-mono text-foreground" dir="ltr">
-            {reference}
-          </span>
-        </div>
-
         <div className="grid grid-cols-2 gap-2">
-          <Badge variant="secondary" className="min-h-8 justify-center rounded-lg">
+          <Badge
+            variant="secondary"
+            className="min-h-8 justify-center rounded-lg"
+          >
             {getSourceLabel(item)}
           </Badge>
           <Badge
@@ -353,18 +432,40 @@ function OperationsMobileCard({
           <Clock className="h-3.5 w-3.5" />
           <span>{time || "لا يوجد وقت محدد"}</span>
         </div>
+
+        <div className="rounded-lg bg-muted/40 px-3 py-2">
+          <p className="flex items-center gap-1.5 font-semibold text-foreground">
+            <Flame className="h-3.5 w-3.5" />
+            {preparationSummary.title}
+          </p>
+          {preparationSummary.subtitle ? (
+            <p className="mt-1">{preparationSummary.subtitle}</p>
+          ) : null}
+          {preparationSummary.warnings ? (
+            <p className="mt-1 font-semibold text-amber-700">
+              {preparationSummary.warnings}
+            </p>
+          ) : null}
+        </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="mt-3 grid gap-2">
         {itemNames.length ? (
           <>
             {itemNames.slice(0, 3).map((entry) => (
-              <span
+              <div
                 key={entry.id}
-                className="rounded-md border border-secondary bg-secondary/50 px-2 py-1 text-[11px] font-medium"
+                className="rounded-md border border-secondary bg-secondary/50 px-2 py-1.5 text-[11px] font-medium"
               >
-                {entry.name} ×{entry.quantity}
-              </span>
+                <div>
+                  {entry.name} ×{entry.quantity}
+                </div>
+                {entry.detail ? (
+                  <div className="mt-0.5 text-muted-foreground">
+                    {entry.detail}
+                  </div>
+                ) : null}
+              </div>
             ))}
             {itemNames.length > 3 ? (
               <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
@@ -373,7 +474,9 @@ function OperationsMobileCard({
             ) : null}
           </>
         ) : (
-          <span className="text-xs text-muted-foreground">لا توجد عناصر مختصرة</span>
+          <span className="text-xs text-muted-foreground">
+            لا توجد عناصر مختصرة
+          </span>
         )}
       </div>
 
@@ -428,19 +531,6 @@ export function OperationsQueueTable({
       },
     }),
     columnHelper.display({
-      id: "reference",
-      header: "المرجع",
-      enableHiding: true,
-      cell: ({ row }) => {
-        const item = row.original;
-        return (
-          <span className="rounded-md bg-muted px-2 py-1 font-mono text-xs font-medium">
-            {item.orderNumber || item.reference || item.entityId}
-          </span>
-        );
-      },
-    }),
-    columnHelper.display({
       id: "type",
       header: "النوع",
       enableHiding: true,
@@ -482,7 +572,7 @@ export function OperationsQueueTable({
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 text-sm whitespace-nowrap text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
             {item.context?.window || item.delivery?.deliveryWindow || "—"}
           </span>
@@ -491,28 +581,68 @@ export function OperationsQueueTable({
     }),
     columnHelper.display({
       id: "items",
-      header: "العناصر",
+      header: "ما يجب تحضيره",
       enableHiding: true,
       cell: ({ row }) => {
-        const itemNames = getItemNames(row.original);
+        const item = row.original;
+        const itemNames = getItemNames(item);
+        const preparationSummary = getPreparationSummary(item);
         if (!itemNames.length) {
-          return <span className="text-sm text-muted-foreground">—</span>;
+          return (
+            <div className="max-w-md text-sm">
+              <p className="font-semibold">{preparationSummary.title}</p>
+              {preparationSummary.subtitle ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {preparationSummary.subtitle}
+                </p>
+              ) : null}
+              {preparationSummary.warnings ? (
+                <p className="mt-1 text-xs font-semibold text-amber-700">
+                  {preparationSummary.warnings}
+                </p>
+              ) : null}
+            </div>
+          );
         }
         return (
-          <div className="flex flex-wrap gap-1.5">
-            {itemNames.slice(0, 4).map((entry) => (
-              <span
-                key={entry.id}
-                className="rounded-md border border-secondary bg-secondary/50 px-2 py-1 text-[11px] font-medium"
-              >
-                {entry.name} x{entry.quantity}
-              </span>
-            ))}
-            {itemNames.length > 4 && (
-              <span className="text-xs text-muted-foreground">
-                +{itemNames.length - 4}
-              </span>
-            )}
+          <div className="max-w-md space-y-2">
+            <div>
+              <p className="text-sm font-semibold">
+                {preparationSummary.title}
+              </p>
+              {preparationSummary.subtitle ? (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {preparationSummary.subtitle}
+                </p>
+              ) : null}
+              {preparationSummary.warnings ? (
+                <p className="mt-0.5 text-xs font-semibold text-amber-700">
+                  {preparationSummary.warnings}
+                </p>
+              ) : null}
+            </div>
+            <div className="grid gap-1.5">
+              {itemNames.slice(0, 3).map((entry) => (
+                <div
+                  key={entry.id}
+                  className="rounded-md border border-secondary bg-secondary/50 px-2 py-1.5 text-[11px] font-medium"
+                >
+                  <div>
+                    {entry.name} x{entry.quantity}
+                  </div>
+                  {entry.detail ? (
+                    <div className="mt-0.5 text-muted-foreground">
+                      {entry.detail}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+              {itemNames.length > 3 ? (
+                <span className="text-xs text-muted-foreground">
+                  +{itemNames.length - 3}
+                </span>
+              ) : null}
+            </div>
           </div>
         );
       },
@@ -532,7 +662,10 @@ export function OperationsQueueTable({
               {item.statusLabel || item.ui?.label || item.status}
             </Badge>
             {item.dataQuality?.isComplete === false ? (
-              <Badge variant="outline" className="rounded-md border-amber-500/30 bg-amber-500/10 text-amber-800">
+              <Badge
+                variant="outline"
+                className="rounded-md border-amber-500/30 bg-amber-500/10 text-amber-800"
+              >
                 بيانات غير مكتملة
               </Badge>
             ) : null}
@@ -639,7 +772,7 @@ export function OperationsQueueTable({
       {/* Toolbar */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="بحث في الطلبات..."
             value={globalFilter}
