@@ -1,11 +1,5 @@
 import type { SectionCardsData } from "@/types/sectionCardsTypes";
-
-export type DashboardOverviewStats = {
-  activeSubscriptions?: number;
-  deliveriesToday?: number;
-  pendingOrders?: number;
-  appUsers?: number;
-};
+import type { DashboardOverviewStats } from "@/types/dashboardHomeTypes";
 
 const DASHBOARD_STAT_KEYS: (keyof DashboardOverviewStats)[] = [
   "activeSubscriptions",
@@ -21,8 +15,12 @@ export function mapDashboardStatsToCards(
   cards: SectionCardsData[],
   stats: DashboardOverviewStats | undefined
 ) {
-  return cards.map((card, index) => ({
-    ...card,
-    value: formatStatValue(stats?.[DASHBOARD_STAT_KEYS[index]]),
-  }));
+  return cards.map((card, index) => {
+    return {
+      description: card.description,
+      helperText: card.helperText,
+      icon: card.icon,
+      value: formatStatValue(stats?.[DASHBOARD_STAT_KEYS[index]]),
+    };
+  });
 }

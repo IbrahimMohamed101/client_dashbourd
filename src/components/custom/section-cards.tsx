@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 export interface SectionCardProps {
   description: string;
   value: string | number;
+  helperText?: string;
   percentage?: string | number;
   isPositive?: boolean;
   trendText?: string;
@@ -35,27 +36,35 @@ export function SectionCards({ cardsData, className }: SectionCardsProps) {
 export function SectionCard({
   description,
   value,
+  helperText,
   percentage,
   isPositive,
   trendText,
   icon,
 }: SectionCardProps) {
   return (
-    <Card className="overflow-hidden border-none bg-background/50 shadow-sm backdrop-blur-sm transition-all hover:bg-background/80 hover:shadow-md">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+    <Card className="relative min-w-0 rounded-lg bg-card shadow-sm transition-all before:absolute before:inset-y-6 before:right-0 before:w-1 before:rounded-l-md before:bg-primary/65 hover:shadow-md">
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+        <CardTitle className="min-w-0 text-sm leading-5 font-medium text-muted-foreground">
           {description}
         </CardTitle>
-        {icon}
+        <div className="shrink-0">{icon}</div>
       </CardHeader>
-      <CardContent>
-        <div className="text-4xl font-bold tracking-tight">{value}</div>
+      <CardContent className="min-w-0">
+        <div className="truncate text-3xl leading-tight font-semibold tracking-normal text-foreground tabular-nums xl:text-4xl">
+          {value}
+        </div>
+        {helperText && (
+          <p className="mt-2 truncate text-xs text-muted-foreground">
+            {helperText}
+          </p>
+        )}
         {(percentage !== undefined || trendText) && (
-          <p className="mt-1 flex items-center justify-end gap-3 text-xs">
+          <p className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-xs">
             {percentage !== undefined && (
               <span
                 className={cn(
-                  "mr-1 flex items-center font-semibold",
+                  "flex shrink-0 items-center rounded-md px-2 py-1 font-semibold tabular-nums",
                   isPositive ? "text-emerald-500" : "text-rose-500"
                 )}
               >
@@ -68,7 +77,9 @@ export function SectionCard({
               </span>
             )}
             {trendText && (
-              <span className="text-muted-foreground">{trendText}</span>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                {trendText}
+              </span>
             )}
           </p>
         )}

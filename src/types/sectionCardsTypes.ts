@@ -1,6 +1,7 @@
 interface SectionCardsData {
   description: string;
   value: string | number;
+  helperText?: string;
   percentage?: string | number;
   isPositive?: boolean;
   trendText?: string;
