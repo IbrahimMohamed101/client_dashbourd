@@ -51,7 +51,10 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 
 export function AddonsTable({ data: initialData }: { data: Addon[] }) {
-  const [data, setData] = React.useState(initialData);
+  const data = React.useMemo(
+    () => (Array.isArray(initialData) ? initialData : []),
+    [initialData]
+  );
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -64,13 +67,9 @@ export function AddonsTable({ data: initialData }: { data: Addon[] }) {
 
   // Extract unique categories for filter
   const categories = React.useMemo(() => {
-    const cats = new Set(initialData.map((addon) => addon.category));
+    const cats = new Set(data.map((addon) => addon.category));
     return Array.from(cats);
-  }, [initialData]);
-
-  React.useEffect(() => {
-    setData(initialData);
-  }, [initialData]);
+  }, [data]);
 
   const table = useReactTable({
     data,
@@ -92,10 +91,10 @@ export function AddonsTable({ data: initialData }: { data: Addon[] }) {
     globalFilterFn: (row, _columnId, filterValue) => {
       const nameAr = row.original.name.ar.toLowerCase();
       const nameEn = row.original.name.en.toLowerCase();
-      const search = filterValue.toLowerCase();
+      const search = String(filterValue).toLowerCase();
       return nameAr.includes(search) || nameEn.includes(search);
     },
-    getRowId: (row) => row._id,
+    getRowId: (row) => row._id || row.id || row.name.en || row.name.ar,
   });
 
   const totalFiltered = table.getFilteredRowModel().rows.length;

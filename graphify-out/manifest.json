@@ -955,9 +955,9 @@
     "semantic_hash": "654e2ca2e9fddc27eb7e3954900dc48e"
   },
   "src/hooks/useAddonsQuery.ts": {
-    "mtime": 1780681298.3269162,
-    "ast_hash": "f2dfcde661d326fff6efa7bf47010fc0",
-    "semantic_hash": "f2dfcde661d326fff6efa7bf47010fc0"
+    "mtime": 1781868956.2749078,
+    "ast_hash": "e2f4775b623f62e17d30d8b98c5ab4bd",
+    "semantic_hash": ""
   },
   "src/hooks/useAuth.ts": {
     "mtime": 1780681298.3269162,
@@ -1045,9 +1045,9 @@
     "semantic_hash": "352c4cb4495595670cd7ac405c117db9"
   },
   "src/hooks/useOneTimeOrdersQuery.ts": {
-    "mtime": 1780681298.3269162,
-    "ast_hash": "142bc6cf5ec85e853984f8204bbdc85c",
-    "semantic_hash": "142bc6cf5ec85e853984f8204bbdc85c"
+    "mtime": 1781869157.082239,
+    "ast_hash": "c2c1dd6a7af8e10e611907ce906fd456",
+    "semantic_hash": ""
   },
   "src/hooks/useOperationsBoard.ts": {
     "mtime": 1781310614.4767365,
@@ -1080,9 +1080,9 @@
     "semantic_hash": "62ca36f5008e8139bd8d401a6ba65b70"
   },
   "src/hooks/useSubscriptionsQuery.ts": {
-    "mtime": 1780681298.3269162,
-    "ast_hash": "a7eaed71ee2f4781251ba246dd111d53",
-    "semantic_hash": "a7eaed71ee2f4781251ba246dd111d53"
+    "mtime": 1781869035.644089,
+    "ast_hash": "ef3a5417d83d8c3f6de28bdce38efc91",
+    "semantic_hash": ""
   },
   "src/hooks/useUploadImageMutation.ts": {
     "mtime": 1780681298.3269162,
@@ -1090,9 +1090,9 @@
     "semantic_hash": "830b525d8ef49d2ad34266f6050a6c71"
   },
   "src/hooks/useUsersQuery.ts": {
-    "mtime": 1780681298.3269162,
-    "ast_hash": "fdeac515c1fe8f6f1b8ff20c8f463b8b",
-    "semantic_hash": "fdeac515c1fe8f6f1b8ff20c8f463b8b"
+    "mtime": 1781869057.0570016,
+    "ast_hash": "bcbb3fe8fd916c4e41cb7b3ecfc20b21",
+    "semantic_hash": ""
   },
   "src/lib/apiErrors.ts": {
     "mtime": 1780681298.3429942,
@@ -1230,7 +1230,7 @@
     "semantic_hash": "bb764a9e2cdc12b435aa85ccee797580"
   },
   "src/routeTree.gen.ts": {
-    "mtime": 1780681374.2119079,
+    "mtime": 1781868880.4751902,
     "ast_hash": "20fc37af6359fbe99deba1203d42b8ae",
     "semantic_hash": "20fc37af6359fbe99deba1203d42b8ae"
   },
@@ -1245,9 +1245,9 @@
     "semantic_hash": "9e434d4b24d2ca4141e73b464cc12120"
   },
   "src/routes/_protected/accounting/index.tsx": {
-    "mtime": 1780681298.3449981,
-    "ast_hash": "75bd03de94ea0fa67caab994454da9b0",
-    "semantic_hash": "75bd03de94ea0fa67caab994454da9b0"
+    "mtime": 1781867513.2630842,
+    "ast_hash": "ddb8ff7ba45723cf27568490c7b56e00",
+    "semantic_hash": ""
   },
   "src/routes/_protected/addons/$addonId/update.tsx": {
     "mtime": 1780681298.3449981,
@@ -1260,9 +1260,9 @@
     "semantic_hash": "79792c30b5c469b1710106f43b32a837"
   },
   "src/routes/_protected/addons/index.tsx": {
-    "mtime": 1780681298.3449981,
-    "ast_hash": "701150d01f9f6bc77e9f1796df6e0726",
-    "semantic_hash": "701150d01f9f6bc77e9f1796df6e0726"
+    "mtime": 1781868983.3687396,
+    "ast_hash": "e5a1099adfe895727b6557056153244c",
+    "semantic_hash": ""
   },
   "src/routes/_protected/dashboard-users/index.tsx": {
     "mtime": 1780681298.3449981,
@@ -1275,8 +1275,8 @@
     "semantic_hash": ""
   },
   "src/routes/_protected/delivery/index.tsx": {
-    "mtime": 1781459174.9305303,
-    "ast_hash": "5575905b6c8fd8d7594d3cd7381d1ad6",
+    "mtime": 1781868879.4028528,
+    "ast_hash": "32e0e822c7fb8414e86c18b8a15e26e2",
     "semantic_hash": ""
   },
   "src/routes/_protected/manual-deduction/index.tsx": {
@@ -1370,9 +1370,9 @@
     "semantic_hash": "bc89d246dda6b81315b85b6fce80402f"
   },
   "src/routes/_protected/pickup-branches/index.tsx": {
-    "mtime": 1780681298.3588648,
-    "ast_hash": "750b239053224f182079486ea2c18f11",
-    "semantic_hash": "750b239053224f182079486ea2c18f11"
+    "mtime": 1781867450.2137377,
+    "ast_hash": "7cecc33a64f4610296fb0914b9368cba",
+    "semantic_hash": ""
   },
   "src/routes/_protected/profile/index.tsx": {
     "mtime": 1780681298.3588648,
@@ -1385,9 +1385,9 @@
     "semantic_hash": "ca863667803448788f6a434ff21e8e51"
   },
   "src/routes/_protected/restaurant-hours/index.tsx": {
-    "mtime": 1780681298.3588648,
-    "ast_hash": "b4d85e12b2109de5ace5eb3a94a96dd5",
-    "semantic_hash": "b4d85e12b2109de5ace5eb3a94a96dd5"
+    "mtime": 1781867374.1157186,
+    "ast_hash": "51059c7129bce97149f75e4fa53bfd50",
+    "semantic_hash": ""
   },
   "src/routes/_protected/route.tsx": {
     "mtime": 1780681298.3588648,
@@ -1395,9 +1395,9 @@
     "semantic_hash": "0788295866487556626f60e120317c2b"
   },
   "src/routes/_protected/settings/index.tsx": {
-    "mtime": 1780681298.3588648,
-    "ast_hash": "e9fe38772c8584750d017a023498b4cc",
-    "semantic_hash": "e9fe38772c8584750d017a023498b4cc"
+    "mtime": 1781867322.5971127,
+    "ast_hash": "0204f925f356f435c354eb27258c9a19",
+    "semantic_hash": ""
   },
   "src/routes/_protected/subscriptions/$subscriptionId/index.tsx": {
     "mtime": 1780681298.3588648,
@@ -1445,9 +1445,9 @@
     "semantic_hash": "e255c2cb650e86f7302bf3504c3be31c"
   },
   "src/types/addonTypes.ts": {
-    "mtime": 1780681298.3588648,
-    "ast_hash": "86c0f23afc95129c8aee4eb65e3f302e",
-    "semantic_hash": "86c0f23afc95129c8aee4eb65e3f302e"
+    "mtime": 1781869245.8525171,
+    "ast_hash": "10eddfab1dfd043acb16569f2c73863f",
+    "semantic_hash": ""
   },
   "src/types/auth.ts": {
     "mtime": 1780681298.3588648,
@@ -1575,19 +1575,19 @@
     "semantic_hash": "0108027357359c4d94919e95c7e4ab41"
   },
   "src/utils/fetchAddonById.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "311c1a4a6b201e5386f4124252b3b13d",
-    "semantic_hash": "311c1a4a6b201e5386f4124252b3b13d"
+    "mtime": 1781868906.0178852,
+    "ast_hash": "c48a7212eadd675e491b26fb8414922a",
+    "semantic_hash": ""
   },
   "src/utils/fetchAddons.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "227d494bd8cbae3a0dd0abfda6f7a812",
-    "semantic_hash": "227d494bd8cbae3a0dd0abfda6f7a812"
+    "mtime": 1781868901.4592235,
+    "ast_hash": "b351e8d37d7da68e87ec0eb273b0e351",
+    "semantic_hash": ""
   },
   "src/utils/fetchCreateAddon.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "0ee235b2ade634d7259d1307143309b1",
-    "semantic_hash": "0ee235b2ade634d7259d1307143309b1"
+    "mtime": 1781868909.9771576,
+    "ast_hash": "b84939bbfccc72bb41c44c4745131a90",
+    "semantic_hash": ""
   },
   "src/utils/fetchCreatePackage.ts": {
     "mtime": 1780681298.374571,
@@ -1595,8 +1595,8 @@
     "semantic_hash": "fc0e103d5c88a4d6a52ae32eecdba97a"
   },
   "src/utils/fetchDashboardOpsData.ts": {
-    "mtime": 1781459043.8201983,
-    "ast_hash": "fc416b1ee42a7535a57401c2b31577c8",
+    "mtime": 1781869076.345629,
+    "ast_hash": "4a7f267a1c6846d5d6a3cd699889208a",
     "semantic_hash": ""
   },
   "src/utils/fetchDashboardSupportData.ts": {
@@ -1610,9 +1610,9 @@
     "semantic_hash": "49c7a34413bdf505ec906c9138b8d5c9"
   },
   "src/utils/fetchDeleteAddon.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "88ddf9e8630ad4b2f052e180e8dcb829",
-    "semantic_hash": "88ddf9e8630ad4b2f052e180e8dcb829"
+    "mtime": 1781868922.6468575,
+    "ast_hash": "d3b93a9e66bf67ddcbe10489488e9344",
+    "semantic_hash": ""
   },
   "src/utils/fetchDeliveryOptions.ts": {
     "mtime": 1780681298.374571,
@@ -1655,14 +1655,14 @@
     "semantic_hash": "c02a06d3c202ad1185ec5d546b094928"
   },
   "src/utils/fetchMenuActions.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "0bf0ca999a31a81db88413ec39bc114c",
-    "semantic_hash": "0bf0ca999a31a81db88413ec39bc114c"
+    "mtime": 1781869101.5473928,
+    "ast_hash": "387dd1f0d7f2c1c454439aba6d232d01",
+    "semantic_hash": ""
   },
   "src/utils/fetchMenuCategories.ts": {
-    "mtime": 1780762942.602629,
-    "ast_hash": "f9c50d0aa731ec2d7d5fd391e22c3ecf",
-    "semantic_hash": "f9c50d0aa731ec2d7d5fd391e22c3ecf"
+    "mtime": 1781869107.9516702,
+    "ast_hash": "19298c8442498aa5034882ee8bc2664c",
+    "semantic_hash": ""
   },
   "src/utils/fetchMenuCustomization.ts": {
     "mtime": 1780777584.5737457,
@@ -1680,29 +1680,29 @@
     "semantic_hash": "99a7248c7dd2bbdb788bd99eeb307a04"
   },
   "src/utils/fetchMenuOptionGroups.ts": {
-    "mtime": 1780781271.8440087,
-    "ast_hash": "c8e8f58d568b0c22fa06cc50e9e836a3",
-    "semantic_hash": "c8e8f58d568b0c22fa06cc50e9e836a3"
+    "mtime": 1781869211.9438913,
+    "ast_hash": "0e6010bbca4d33ba87b08e4b6d9622dc",
+    "semantic_hash": ""
   },
   "src/utils/fetchMenuOptions.ts": {
-    "mtime": 1781232089.0822873,
-    "ast_hash": "15b64527122e3fc8219df2d7bcc95121",
+    "mtime": 1781869119.8298287,
+    "ast_hash": "a5bee094ce33bd826a68a49d49c7506f",
     "semantic_hash": ""
   },
   "src/utils/fetchMenuProductGroups.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "2dac00893146a64a260377eb43a6bbcc",
-    "semantic_hash": "2dac00893146a64a260377eb43a6bbcc"
+    "mtime": 1781869191.7305882,
+    "ast_hash": "a84e64986841601cfc591f51a938587b",
+    "semantic_hash": ""
   },
   "src/utils/fetchMenuProducts.ts": {
-    "mtime": 1780762942.602629,
-    "ast_hash": "04cee740d6780733c1f6d4fd77e203e0",
-    "semantic_hash": "04cee740d6780733c1f6d4fd77e203e0"
+    "mtime": 1781869114.2247427,
+    "ast_hash": "d2ca06d77e798e27ba43a46b1c97d076",
+    "semantic_hash": ""
   },
   "src/utils/fetchOneTimeOrders.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "593aed47316ff3f9ba3bbbc8fd5fb090",
-    "semantic_hash": "593aed47316ff3f9ba3bbbc8fd5fb090"
+    "mtime": 1781869150.201399,
+    "ast_hash": "ffcb5736b595e5db3c4ff97cba934c17",
+    "semantic_hash": ""
   },
   "src/utils/fetchPaymentsData.ts": {
     "mtime": 1780681298.374571,
@@ -1725,9 +1725,9 @@
     "semantic_hash": "adf90a501c4cac14b5e47734059160c3"
   },
   "src/utils/fetchSubscriptionsData.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "19f144ad076e54942ffdbd750f739fe0",
-    "semantic_hash": "19f144ad076e54942ffdbd750f739fe0"
+    "mtime": 1781869023.7520173,
+    "ast_hash": "fa780a0bf2ee77192cc3ba8f48f3c539",
+    "semantic_hash": ""
   },
   "src/utils/fetchTogglePlanStatus.ts": {
     "mtime": 1780681298.374571,
@@ -1735,9 +1735,9 @@
     "semantic_hash": "7d1fa49a4df306a34ea2832ab74d4cfc"
   },
   "src/utils/fetchUpdateAddon.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "c83cbf3327b03928409e9bd1c520d44c",
-    "semantic_hash": "c83cbf3327b03928409e9bd1c520d44c"
+    "mtime": 1781868916.0251844,
+    "ast_hash": "e67ca94faf606ba3fce324212b84f705",
+    "semantic_hash": ""
   },
   "src/utils/fetchUpdatePackage.ts": {
     "mtime": 1780681298.374571,
@@ -1750,9 +1750,9 @@
     "semantic_hash": "215439e7ac63f6f3222a5377878ade7a"
   },
   "src/utils/fetchUsersData.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "a21586964acb9fce79bf67821c78469b",
-    "semantic_hash": "a21586964acb9fce79bf67821c78469b"
+    "mtime": 1781869049.7523828,
+    "ast_hash": "d7bd2de6a205d0161106ddc2f94311fa",
+    "semantic_hash": ""
   },
   "src/utils/ksaDate.ts": {
     "mtime": 1780681298.374571,
@@ -1765,9 +1765,9 @@
     "semantic_hash": "70078f67983a50a54d5bf98a79c7eb06"
   },
   "src/utils/menuApiContract.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "a2ac16e2e65a959bea7bed10bd997e3b",
-    "semantic_hash": "a2ac16e2e65a959bea7bed10bd997e3b"
+    "mtime": 1781869095.1866648,
+    "ast_hash": "c09fa13c0d54f011b97435ce8a806b6c",
+    "semantic_hash": ""
   },
   "src/utils/menuFormValues.ts": {
     "mtime": 1780790598.5761335,
@@ -1825,9 +1825,9 @@
     "semantic_hash": "206e3718864c031b91ba4337b8fe91db"
   },
   "src/utils/subscriptionApiContract.ts": {
-    "mtime": 1780681298.3902972,
-    "ast_hash": "62fa66245a2ed4128bf76e8b0ed9d22e",
-    "semantic_hash": "62fa66245a2ed4128bf76e8b0ed9d22e"
+    "mtime": 1781869017.0642457,
+    "ast_hash": "b1e1d8264c5a667de2336c96bd96df82",
+    "semantic_hash": ""
   },
   "tests/apiErrors.test.ts": {
     "mtime": 1780681298.3902972,
@@ -1972,6 +1972,26 @@
   "src/types/dashboardHomeTypes.ts": {
     "mtime": 1781733270.4780798,
     "ast_hash": "02f92133db0b87b73ef9e8dcdd172986",
+    "semantic_hash": ""
+  },
+  "src/hooks/useCourierDeliveriesQuery.ts": {
+    "mtime": 1781868814.9598906,
+    "ast_hash": "ba79f74a04d7d929617b4dfb2a3ce5c1",
+    "semantic_hash": ""
+  },
+  "src/utils/fetchAddonPrices.ts": {
+    "mtime": 1781868934.2292802,
+    "ast_hash": "7c0ebd0addeb52cc1b14b2f5aeeaa518",
+    "semantic_hash": ""
+  },
+  "src/utils/fetchCourierDeliveries.ts": {
+    "mtime": 1781868804.5735292,
+    "ast_hash": "97747489dc0b456b5b820feac4079c88",
+    "semantic_hash": ""
+  },
+  "src/utils/fetchPackageTiers.ts": {
+    "mtime": 1781869138.1907196,
+    "ast_hash": "bed6567b9848ff44cd0ef352d315922d",
     "semantic_hash": ""
   }
 }

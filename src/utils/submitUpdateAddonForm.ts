@@ -23,6 +23,8 @@ export const submitUpdateAddonForm = async (
     formData.append("description[ar]", data.description.ar);
     formData.append("description[en]", data.description.en);
     formData.append("currency", data.currency);
+    formData.append("kind", data.type === "subscription" ? "plan" : "item");
+    formData.append("price", String(Number(data.priceSar)));
     formData.append("priceHalala", Math.round(Number(data.priceSar) * 100).toString());
     formData.append("category", data.category);
     formData.append("type", data.type);

@@ -20,15 +20,25 @@ export const addonsColumns: ColumnDef<Addon>[] = [
   {
     accessorKey: "imageUrl",
     header: "الصورة",
-    cell: ({ row }) => (
-      <div className="flex h-12 w-16 overflow-hidden rounded-md border bg-muted">
-        <img
-          src={row.original.imageUrl}
-          alt={row.original.name.ar}
-          className="h-full w-full object-cover"
-        />
-      </div>
-    ),
+    cell: ({ row }) => {
+      const imageUrl = row.original.imageUrl?.trim();
+
+      return (
+        <div className="flex h-12 w-16 overflow-hidden rounded-md border bg-muted">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={row.original.name.ar}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-xs font-medium text-muted-foreground">
+              -
+            </div>
+          )}
+        </div>
+      );
+    },
     enableHiding: false,
   },
   {
