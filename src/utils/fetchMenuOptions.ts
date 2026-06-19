@@ -103,3 +103,10 @@ export const fetchToggleMenuOptionActive = async (
 ): Promise<void> => {
   await api.patch(menuOptionVisibilityUrl(id), { isVisible });
 };
+
+export const fetchToggleMenuOption = async (
+  id: string,
+  isActive: boolean
+): Promise<void> => {
+  await api.patch(`/api/dashboard/menu/options/${id}/toggle`, { isActive });
+};

@@ -59,6 +59,13 @@ export const fetchOneTimeOrderDetail = async (
   return response.data;
 };
 
+export const fetchOneTimeOrderTimeline = async (orderId: string) => {
+  const response = await api.get(
+    `/api/dashboard/orders/${orderId}/timeline`
+  );
+  return response.data;
+};
+
 // ── Step 3: Action – Prepare ──
 // POST /api/dashboard/orders/:orderId/actions/prepare
 // Allowed from: confirmed → in_preparation

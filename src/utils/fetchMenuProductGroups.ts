@@ -47,6 +47,16 @@ export const fetchProductGroupOptionRelations = async (
   return response.data;
 };
 
+export const fetchProductGroupOptionPool = async (
+  productId: string,
+  groupId: string
+): Promise<ProductGroupOptionRelationsResponse> => {
+  const response = await api.get(
+    `/api/dashboard/menu/products/${productId}/option-groups/${groupId}/option-pool`
+  );
+  return response.data;
+};
+
 // ── §10.1 Link Groups to Product ──
 // PUT /api/dashboard/menu/products/:productId/groups
 // WARNING: This replaces all groups. Send the full list.
@@ -114,5 +124,28 @@ export const fetchUpdateOptionAvailabilityInProduct = async (
   await api.patch(
     `/api/dashboard/menu/products/${productId}/option-groups/${groupId}/options/${optionId}/availability`,
     { isAvailable }
+  );
+};
+
+export const fetchUpdateGroupVisibilityInProduct = async (
+  productId: string,
+  groupId: string,
+  isVisible: boolean
+): Promise<void> => {
+  await api.patch(
+    `/api/dashboard/menu/products/${productId}/option-groups/${groupId}/visibility`,
+    { isVisible }
+  );
+};
+
+export const fetchUpdateOptionVisibilityInProduct = async (
+  productId: string,
+  groupId: string,
+  optionId: string,
+  isVisible: boolean
+): Promise<void> => {
+  await api.patch(
+    `/api/dashboard/menu/products/${productId}/option-groups/${groupId}/options/${optionId}/visibility`,
+    { isVisible }
   );
 };

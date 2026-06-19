@@ -9,11 +9,13 @@ import type {
 } from "@/types/subscriptionTypes";
 import {
   subscriptionAddonEntitlementsUrl,
+  subscriptionAuditUrl,
   subscriptionBalancesUrl,
   subscriptionCancelUrl,
   subscriptionDeliveryUrl,
   subscriptionDaysUrl,
   subscriptionExtendUrl,
+  subscriptionLifecycleUrl,
 } from "./subscriptionApiContract";
 
 type ApiStatusError = {
@@ -129,6 +131,16 @@ export const unskipSubscriptionDay = async (subscriptionId: string, date: string
 // ----- Audit log -----
 export const fetchSubscriptionAuditLog = async (subscriptionId: string) => {
   const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}/audit-log`);
+  return response.data;
+};
+
+export const fetchSubscriptionAudit = async (subscriptionId: string) => {
+  const response = await api.get(subscriptionAuditUrl(subscriptionId));
+  return response.data;
+};
+
+export const fetchSubscriptionLifecycle = async (subscriptionId: string) => {
+  const response = await api.get(subscriptionLifecycleUrl(subscriptionId));
   return response.data;
 };
 

@@ -1,6 +1,14 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
-import { fetchAddons } from "@/utils/fetchAddons";
+import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fetchAddonPlans, fetchAddons } from "@/utils/fetchAddons";
 import { fetchAddonById } from "@/utils/fetchAddonById";
+import {
+  createAddonPlanPrice,
+  deleteAddonPlanPrice,
+  fetchAddonPlanPrices,
+  toggleAddonPlanPrice,
+  updateAddonPlanPrice,
+  type AddonPlanPricePayload,
+} from "@/utils/fetchAddonPrices";
 
 export const addonsQueryOptions = () =>
   queryOptions({
@@ -13,6 +21,25 @@ export const useAddonsQuery = () => {
   return useQuery(addonsQueryOptions());
 };
 
+export const addonPlansQueryOptions = () =>
+  queryOptions({
+    queryKey: ["addons", "plans"],
+    queryFn: fetchAddonPlans,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const useAddonPlansQuery = () => useQuery(addonPlansQueryOptions());
+
+export const addonPlanPricesQueryOptions = () =>
+  queryOptions({
+    queryKey: ["addons", "plan-prices"],
+    queryFn: fetchAddonPlanPrices,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const useAddonPlanPricesQuery = () =>
+  useQuery(addonPlanPricesQueryOptions());
+
 export const addonByIdQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ["addons", "detail", id],
@@ -22,4 +49,66 @@ export const addonByIdQueryOptions = (id: string) =>
 
 export const useAddonByIdQuery = (id: string) => {
   return useQuery(addonByIdQueryOptions(id));
+};
+
+export const useCreateAddonPlanPriceMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: AddonPlanPricePayload) => createAddonPlanPrice(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["addons", "plan-prices"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["addons"] });
+    },
+  });
+};
+
+export const useUpdateAddonPlanPriceMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: AddonPlanPricePayload;
+    }) => updateAddonPlanPrice(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["addons", "plan-prices"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["addons"] });
+    },
+  });
+};
+
+export const useDeleteAddonPlanPriceMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => deleteAddonPlanPrice(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["addons", "plan-prices"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["addons"] });
+    },
+  });
+};
+
+export const useToggleAddonPlanPriceMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => toggleAddonPlanPrice(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["addons", "plan-prices"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["addons"] });
+    },
+  });
 };

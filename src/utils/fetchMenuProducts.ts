@@ -17,7 +17,10 @@ import {
   normalizeBulkUpdateProductsResponse,
 } from "@/utils/menuResponseNormalizers";
 import { buildListQuery } from "@/utils/buildListQuery";
-import { menuProductComposerUrl } from "@/utils/menuApiContract";
+import {
+  menuProductComposerUrl,
+  menuProductVisibilityUrl,
+} from "@/utils/menuApiContract";
 
 // ── List Products ──
 // GET /api/dashboard/menu/products
@@ -83,6 +86,13 @@ export const fetchUpdateMenuProductAvailability = async (
   await api.patch(`/api/dashboard/menu/products/${id}/availability`, {
     isAvailable,
   });
+};
+
+export const fetchToggleMenuProductVisibility = async (
+  id: string,
+  isVisible: boolean
+): Promise<void> => {
+  await api.patch(menuProductVisibilityUrl(id), { isVisible });
 };
 
 // ── Duplicate Product ──

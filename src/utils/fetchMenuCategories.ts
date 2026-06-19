@@ -15,6 +15,10 @@ import {
   normalizeCategoryProductAssignmentResponse,
 } from "@/utils/menuResponseNormalizers";
 import { buildListQuery } from "@/utils/buildListQuery";
+import {
+  menuCategoryAvailabilityUrl,
+  menuCategoryVisibilityUrl,
+} from "@/utils/menuApiContract";
 
 // ── List Categories ──
 // GET /api/dashboard/menu/categories
@@ -54,6 +58,20 @@ export const fetchUpdateMenuCategory = async (
   data: UpdateMenuCategoryPayload
 ): Promise<void> => {
   await api.patch(`/api/dashboard/menu/categories/${id}`, data);
+};
+
+export const fetchUpdateMenuCategoryAvailability = async (
+  id: string,
+  isAvailable: boolean
+): Promise<void> => {
+  await api.patch(menuCategoryAvailabilityUrl(id), { isAvailable });
+};
+
+export const fetchToggleMenuCategoryVisibility = async (
+  id: string,
+  isVisible: boolean
+): Promise<void> => {
+  await api.patch(menuCategoryVisibilityUrl(id), { isVisible });
 };
 
 export const fetchBulkAssignProductsToCategory = async (

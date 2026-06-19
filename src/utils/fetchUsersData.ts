@@ -29,6 +29,13 @@ export const fetchUserDetails = async (userId: string) => {
   return response.data;
 };
 
+export const fetchUserSubscriptions = async (userId: string) => {
+  const response = await api.get(
+    `/api/dashboard/users/${userId}/subscriptions`
+  );
+  return response.data;
+};
+
 export const createUser = async (data: CreateUserSchemaType) => {
   const response = await api.post("/api/dashboard/users", data);
   return response.data;

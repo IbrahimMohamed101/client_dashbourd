@@ -13,6 +13,12 @@ export const subscriptionBalancesUrl = (subscriptionId: string) =>
 export const subscriptionAddonEntitlementsUrl = (subscriptionId: string) =>
   `${subscriptionBaseUrl(subscriptionId)}/addon-entitlements`;
 
+export const subscriptionAuditUrl = (subscriptionId: string) =>
+  `${subscriptionBaseUrl(subscriptionId)}/audit`;
+
+export const subscriptionLifecycleUrl = (subscriptionId: string) =>
+  `${subscriptionBaseUrl(subscriptionId)}/lifecycle`;
+
 export const subscriptionDaysUrl = (subscriptionId: string) =>
   `${subscriptionBaseUrl(subscriptionId)}/days`;
 

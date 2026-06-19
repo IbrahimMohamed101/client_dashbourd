@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
   fetchOneTimeOrders,
   fetchOneTimeOrderDetail,
+  fetchOneTimeOrderTimeline,
   executeOneTimeOrderAction,
   fetchKitchenQueue,
   fetchPickupQueue,
@@ -22,6 +23,8 @@ const KEYS = {
   list: (params: OneTimeOrderListParams) =>
     ["oneTimeOrders", "list", params] as const,
   detail: (orderId: string) => ["oneTimeOrders", "detail", orderId] as const,
+  timeline: (orderId: string) =>
+    ["oneTimeOrders", "timeline", orderId] as const,
   kitchenQueue: (params: {
     date?: string;
     status?: string;
@@ -62,6 +65,16 @@ export const useOneTimeOrderDetailQuery = (orderId: string) =>
     refetchInterval: 60_000, // Keep detail in sync
     refetchIntervalInBackground: true,
     placeholderData: (prev) => prev,
+  });
+
+export const useOneTimeOrderTimelineQuery = (orderId: string) =>
+  useQuery({
+    queryKey: KEYS.timeline(orderId),
+    queryFn: () => fetchOneTimeOrderTimeline(orderId),
+    enabled: Boolean(orderId),
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: true,
+    placeholderData: (previous) => previous,
   });
 
 // ── Kitchen queue ──

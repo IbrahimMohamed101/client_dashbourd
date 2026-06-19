@@ -7,8 +7,10 @@ import {
   extendSubscription,
   cancelSubscription,
   createSubscription,
+  fetchSubscriptionAudit,
   searchSubscriptionsByPhone,
   manualDeductSubscription,
+  fetchSubscriptionLifecycle,
 } from "@/utils/fetchSubscriptionsData";
 import { queryOptions, useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 
@@ -56,6 +58,28 @@ export const subscriptionDetailsQueryOptions = (id: string) =>
 export const useSubscriptionDetailsQuery = (id: string) => {
   return useQuery(subscriptionDetailsQueryOptions(id));
 };
+
+export const subscriptionAuditQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["subscription-audit", id],
+    queryFn: () => fetchSubscriptionAudit(id),
+    enabled: Boolean(id),
+    staleTime: 1000 * 60,
+  });
+
+export const useSubscriptionAuditQuery = (id: string) =>
+  useQuery(subscriptionAuditQueryOptions(id));
+
+export const subscriptionLifecycleQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["subscription-lifecycle", id],
+    queryFn: () => fetchSubscriptionLifecycle(id),
+    enabled: Boolean(id),
+    staleTime: 1000 * 60,
+  });
+
+export const useSubscriptionLifecycleQuery = (id: string) =>
+  useQuery(subscriptionLifecycleQueryOptions(id));
 
 export const useFreezeSubscriptionMutation = () => {
   const queryClient = useQueryClient();

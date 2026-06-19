@@ -2,12 +2,15 @@ import api from "@/lib/apis";
 import type {
   MenuOptionGroupsResponse,
   MenuOptionGroupDetailResponse,
+  MenuOptionsResponse,
+  CreateMenuOptionPayload,
   CreateMenuOptionGroupPayload,
   UpdateMenuOptionGroupPayload,
   ReorderItem,
   MenuListParams,
 } from "@/types/menuTypes";
 import {
+  normalizeOptionsResponse,
   normalizeOptionGroupsResponse,
   normalizeOptionGroupDetailResponse,
 } from "@/utils/menuResponseNormalizers";
@@ -35,6 +38,22 @@ export const fetchMenuOptionGroupById = async (
     `/api/dashboard/menu/option-groups/${id}?includeInactive=true`
   );
   return normalizeOptionGroupDetailResponse(response.data);
+};
+
+export const fetchMenuOptionGroupOptions = async (
+  groupId: string
+): Promise<MenuOptionsResponse> => {
+  const response = await api.get(
+    `/api/dashboard/menu/option-groups/${groupId}/options`
+  );
+  return normalizeOptionsResponse(response.data);
+};
+
+export const fetchCreateMenuOptionInGroup = async (
+  groupId: string,
+  data: CreateMenuOptionPayload
+): Promise<void> => {
+  await api.post(`/api/dashboard/menu/option-groups/${groupId}/options`, data);
 };
 
 // ── Create Option Group ──

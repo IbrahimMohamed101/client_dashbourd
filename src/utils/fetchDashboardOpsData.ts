@@ -233,6 +233,28 @@ export const fetchDashboardOpsSearch = async (
   };
 };
 
+export const fetchCashierCustomerLookup = async (phone: string) => {
+  const response = await api.get("/api/dashboard/ops/cashier/customer-lookup", {
+    params: { phone },
+  });
+  return response.data;
+};
+
+export const createCashierCustomerConsumption = async (data: {
+  userId?: string;
+  subscriptionId?: string;
+  phone?: string;
+  items?: unknown[];
+  reason?: string;
+  notes?: string;
+}) => {
+  const response = await api.post(
+    "/api/dashboard/ops/cashier/customer-consumption",
+    data
+  );
+  return response.data;
+};
+
 export const fetchDeliverySchedule = async (
   date?: string
 ): Promise<unknown> => {

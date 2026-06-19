@@ -9,7 +9,12 @@ import type {
   MenuRollbackResponse,
 } from "@/types/menuTypes";
 import { buildListQuery } from "@/utils/buildListQuery";
-import { menuRollbackUrl, menuVersionsUrl } from "@/utils/menuApiContract";
+import {
+  menuDiffUrl,
+  menuPreviewUrl,
+  menuRollbackUrl,
+  menuVersionsUrl,
+} from "@/utils/menuApiContract";
 
 // ── §13 Validate Menu ──
 // POST /api/dashboard/menu/validate
@@ -28,6 +33,16 @@ export const fetchPublishMenu = async (
   notes?: string
 ): Promise<MenuPublishResponse> => {
   const response = await api.post("/api/dashboard/menu/publish", { notes });
+  return response.data;
+};
+
+export const fetchMenuPreview = async (): Promise<unknown> => {
+  const response = await api.get(menuPreviewUrl());
+  return response.data;
+};
+
+export const fetchMenuDiff = async (): Promise<unknown> => {
+  const response = await api.get(menuDiffUrl());
   return response.data;
 };
 

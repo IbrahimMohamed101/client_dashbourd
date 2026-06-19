@@ -1,5 +1,10 @@
 import { queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchUsersList, fetchUserDetails, updateUser } from "@/utils/fetchUsersData";
+import {
+  fetchUserDetails,
+  fetchUserSubscriptions,
+  fetchUsersList,
+  updateUser,
+} from "@/utils/fetchUsersData";
 
 export const usersQueryOptions = (page: number, limit: number) =>
   queryOptions({
@@ -34,6 +39,17 @@ export const userDetailsQueryOptions = (userId: string) =>
 export const useUserDetailsQuery = (userId: string) => {
   return useQuery(userDetailsQueryOptions(userId));
 };
+
+export const userSubscriptionsQueryOptions = (userId: string) =>
+  queryOptions({
+    queryKey: ["user-subscriptions", userId],
+    queryFn: () => fetchUserSubscriptions(userId),
+    enabled: Boolean(userId),
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const useUserSubscriptionsQuery = (userId: string) =>
+  useQuery(userSubscriptionsQueryOptions(userId));
 
 export const useUpdateUserMutation = () => {
   const queryClient = useQueryClient();
