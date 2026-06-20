@@ -11,10 +11,10 @@ import type {
   MealBuilderSectionType,
   MealBuilderValidation,
 } from "@/types/mealBuilderTypes";
-import { SELECTION_TYPES } from "./mealBuilderConstants";
 import {
   PREMIUM_REQUIRED_KEYS,
   REQUIRED_SECTION_ORDER,
+  SELECTION_TYPES,
   VISUAL_SECTION_LABELS,
 } from "./mealBuilderConstants";
 
@@ -88,7 +88,8 @@ export function issuesForSection(
 ): MealBuilderCheck[] {
   return (
     validation?.checks.filter(
-      (issue) => Number(issue.sectionIndex) === index || issue.sectionType === type
+      (issue) =>
+        Number(issue.sectionIndex) === index || issue.sectionType === type
     ) ?? []
   );
 }
@@ -98,10 +99,13 @@ export function visualSectionKey(
   options: MenuOption[] = [],
   products: MenuProduct[] = []
 ) {
-  const explicit = String((section as MealBuilderSection & { key?: string }).key || "").toLowerCase();
+  const explicit = String(
+    (section as MealBuilderSection & { key?: string }).key || ""
+  ).toLowerCase();
   if (explicit) return explicit;
 
-  const text = `${section.titleOverride.en} ${section.titleOverride.ar} ${section.selectionType}`.toLowerCase();
+  const text =
+    `${section.titleOverride.en} ${section.titleOverride.ar} ${section.selectionType}`.toLowerCase();
   if (text.includes("premium") || text.includes("مميز")) return "premium";
   if (text.includes("sandwich") || text.includes("ساند")) return "sandwich";
   if (text.includes("carb") || text.includes("نشو")) return "carbs";
@@ -110,16 +114,37 @@ export function visualSectionKey(
   if (text.includes("egg") || text.includes("بيض")) return "eggs";
   if (text.includes("chicken") || text.includes("دجاج")) return "chicken";
 
-  const selectedOptions = options.filter((option) => section.selectedOptionIds.includes(option.id));
-  const selectedProducts = products.filter((product) => section.selectedProductIds.includes(product.id));
+  const selectedOptions = options.filter((option) =>
+    section.selectedOptionIds.includes(option.id)
+  );
+  const selectedProducts = products.filter((product) =>
+    section.selectedProductIds.includes(product.id)
+  );
   const keys = [...selectedOptions, ...selectedProducts]
-    .map((item) => `${item.key} ${(item as MenuOption).proteinFamilyKey ?? ""} ${(item as MenuOption).displayCategoryKey ?? ""}`)
+    .map(
+      (item) =>
+        `${item.key} ${(item as MenuOption).proteinFamilyKey ?? ""} ${
+          (item as MenuOption).displayCategoryKey ?? ""
+        }`
+    )
     .join(" ")
     .toLowerCase();
 
-  if (keys.includes("beef_steak") || keys.includes("shrimp") || keys.includes("salmon") || keys.includes("premium_large_salad")) return "premium";
+  if (
+    keys.includes("beef_steak") ||
+    keys.includes("shrimp") ||
+    keys.includes("salmon") ||
+    keys.includes("premium_large_salad")
+  )
+    return "premium";
   if (keys.includes("sandwich")) return "sandwich";
-  if (keys.includes("carb") || keys.includes("rice") || keys.includes("pasta") || keys.includes("potato")) return "carbs";
+  if (
+    keys.includes("carb") ||
+    keys.includes("rice") ||
+    keys.includes("pasta") ||
+    keys.includes("potato")
+  )
+    return "carbs";
   if (keys.includes("beef") || keys.includes("meat")) return "beef";
   if (keys.includes("fish") || keys.includes("tuna")) return "fish";
   if (keys.includes("egg")) return "eggs";
@@ -144,7 +169,11 @@ export function orderWarnings(
 
   REQUIRED_SECTION_ORDER.forEach((key, index) => {
     if (actual[index] !== key) {
-      warnings.push(`الترتيب المتوقع: ${REQUIRED_SECTION_ORDER.join("، ")}. الترتيب الحالي: ${actual.join("، ") || "فارغ"}.`);
+      warnings.push(
+        `الترتيب المتوقع: ${REQUIRED_SECTION_ORDER.join(
+          "، "
+        )}. الترتيب الحالي: ${actual.join("، ") || "فارغ"}.`
+      );
     }
   });
 
@@ -161,14 +190,20 @@ export function premiumMissingKeys(
   products: MenuProduct[]
 ) {
   const selectedKeys = [
-    ...options.filter((option) => section.selectedOptionIds.includes(option.id)).map((option) => option.key),
-    ...products.filter((product) => section.selectedProductIds.includes(product.id)).map((product) => product.key),
+    ...options
+      .filter((option) => section.selectedOptionIds.includes(option.id))
+      .map((option) => option.key),
+    ...products
+      .filter((product) => section.selectedProductIds.includes(product.id))
+      .map((product) => product.key),
   ];
   return PREMIUM_REQUIRED_KEYS.filter((key) => !selectedKeys.includes(key));
 }
 
 export function orderSections(sections: MealBuilderSection[]) {
-  return [...sections].sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+  return [...sections].sort(
+    (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+  );
 }
 
 export function toggle(ids: string[], id: string) {
@@ -178,7 +213,9 @@ export function toggle(ids: string[], id: string) {
 export function matches(item: { key: string; name: LocalizedText }, query: string) {
   const value = query.trim().toLowerCase();
   if (!value) return true;
-  return `${item.key} ${item.name.ar} ${item.name.en}`.toLowerCase().includes(value);
+  return `${item.key} ${item.name.ar} ${item.name.en}`
+    .toLowerCase()
+    .includes(value);
 }
 
 export function toOption(item: { id: string; key: string; name: LocalizedText }) {
@@ -196,7 +233,14 @@ export function sectionTitle(
   visualKey?: string
 ) {
   const visual = visualKey ? visualSectionLabel(visualKey).ar : "";
-  return section.titleOverride.ar || visual || section.titleOverride.en || group?.name.ar || category?.name.ar || "قسم بدون عنوان";
+  return (
+    section.titleOverride.ar ||
+    visual ||
+    section.titleOverride.en ||
+    group?.name.ar ||
+    category?.name.ar ||
+    "قسم بدون عنوان"
+  );
 }
 
 export function selectionLabel(value: string) {
@@ -204,7 +248,11 @@ export function selectionLabel(value: string) {
 }
 
 export function availableLabel(item: Partial<MenuProduct | MenuOption>) {
-  if (item.isActive === false || item.isVisible === false || item.isAvailable === false) {
+  if (
+    item.isActive === false ||
+    item.isVisible === false ||
+    item.isAvailable === false
+  ) {
     return "غير متاح";
   }
   return "متاح";
@@ -213,7 +261,9 @@ export function availableLabel(item: Partial<MenuProduct | MenuOption>) {
 export function readinessLabel(readiness: MealBuilderValidation | null) {
   if (!readiness) return "جار التحميل";
   if (readiness.errors.length || readiness.status === "error") return "خطأ";
-  if (readiness.warnings.length || readiness.status === "warning") return "تحذير";
+  if (readiness.warnings.length || readiness.status === "warning") {
+    return "تحذير";
+  }
   return "جاهز";
 }
 

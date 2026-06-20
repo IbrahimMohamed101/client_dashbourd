@@ -19,6 +19,7 @@ import { Route as ProtectedSettingsIndexRouteImport } from './routes/_protected/
 import { Route as ProtectedRestaurantHoursIndexRouteImport } from './routes/_protected/restaurant-hours/index'
 import { Route as ProtectedPromoCodesIndexRouteImport } from './routes/_protected/promo-codes/index'
 import { Route as ProtectedProfileIndexRouteImport } from './routes/_protected/profile/index'
+import { Route as ProtectedPremiumMealsIndexRouteImport } from './routes/_protected/premium-meals/index'
 import { Route as ProtectedPickupBranchesIndexRouteImport } from './routes/_protected/pickup-branches/index'
 import { Route as ProtectedPaymentsIndexRouteImport } from './routes/_protected/payments/index'
 import { Route as ProtectedPackagesIndexRouteImport } from './routes/_protected/packages/index'
@@ -102,6 +103,12 @@ const ProtectedProfileIndexRoute = ProtectedProfileIndexRouteImport.update({
   path: '/profile/',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
+const ProtectedPremiumMealsIndexRoute =
+  ProtectedPremiumMealsIndexRouteImport.update({
+    id: '/premium-meals/',
+    path: '/premium-meals/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
 const ProtectedPickupBranchesIndexRoute =
   ProtectedPickupBranchesIndexRouteImport.update({
     id: '/pickup-branches/',
@@ -295,6 +302,7 @@ export interface FileRoutesByFullPath {
   '/packages/': typeof ProtectedPackagesIndexRoute
   '/payments/': typeof ProtectedPaymentsIndexRoute
   '/pickup-branches/': typeof ProtectedPickupBranchesIndexRoute
+  '/premium-meals/': typeof ProtectedPremiumMealsIndexRoute
   '/profile/': typeof ProtectedProfileIndexRoute
   '/promo-codes/': typeof ProtectedPromoCodesIndexRoute
   '/restaurant-hours/': typeof ProtectedRestaurantHoursIndexRoute
@@ -336,6 +344,7 @@ export interface FileRoutesByTo {
   '/packages': typeof ProtectedPackagesIndexRoute
   '/payments': typeof ProtectedPaymentsIndexRoute
   '/pickup-branches': typeof ProtectedPickupBranchesIndexRoute
+  '/premium-meals': typeof ProtectedPremiumMealsIndexRoute
   '/profile': typeof ProtectedProfileIndexRoute
   '/promo-codes': typeof ProtectedPromoCodesIndexRoute
   '/restaurant-hours': typeof ProtectedRestaurantHoursIndexRoute
@@ -379,6 +388,7 @@ export interface FileRoutesById {
   '/_protected/packages/': typeof ProtectedPackagesIndexRoute
   '/_protected/payments/': typeof ProtectedPaymentsIndexRoute
   '/_protected/pickup-branches/': typeof ProtectedPickupBranchesIndexRoute
+  '/_protected/premium-meals/': typeof ProtectedPremiumMealsIndexRoute
   '/_protected/profile/': typeof ProtectedProfileIndexRoute
   '/_protected/promo-codes/': typeof ProtectedPromoCodesIndexRoute
   '/_protected/restaurant-hours/': typeof ProtectedRestaurantHoursIndexRoute
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
     | '/packages/'
     | '/payments/'
     | '/pickup-branches/'
+    | '/premium-meals/'
     | '/profile/'
     | '/promo-codes/'
     | '/restaurant-hours/'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/packages'
     | '/payments'
     | '/pickup-branches'
+    | '/premium-meals'
     | '/profile'
     | '/promo-codes'
     | '/restaurant-hours'
@@ -505,6 +517,7 @@ export interface FileRouteTypes {
     | '/_protected/packages/'
     | '/_protected/payments/'
     | '/_protected/pickup-branches/'
+    | '/_protected/premium-meals/'
     | '/_protected/profile/'
     | '/_protected/promo-codes/'
     | '/_protected/restaurant-hours/'
@@ -602,6 +615,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile/'
       preLoaderRoute: typeof ProtectedProfileIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/premium-meals/': {
+      id: '/_protected/premium-meals/'
+      path: '/premium-meals'
+      fullPath: '/premium-meals/'
+      preLoaderRoute: typeof ProtectedPremiumMealsIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/pickup-branches/': {
@@ -836,6 +856,7 @@ interface ProtectedRouteRouteChildren {
   ProtectedPackagesIndexRoute: typeof ProtectedPackagesIndexRoute
   ProtectedPaymentsIndexRoute: typeof ProtectedPaymentsIndexRoute
   ProtectedPickupBranchesIndexRoute: typeof ProtectedPickupBranchesIndexRoute
+  ProtectedPremiumMealsIndexRoute: typeof ProtectedPremiumMealsIndexRoute
   ProtectedProfileIndexRoute: typeof ProtectedProfileIndexRoute
   ProtectedPromoCodesIndexRoute: typeof ProtectedPromoCodesIndexRoute
   ProtectedRestaurantHoursIndexRoute: typeof ProtectedRestaurantHoursIndexRoute
@@ -877,6 +898,7 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedPackagesIndexRoute: ProtectedPackagesIndexRoute,
   ProtectedPaymentsIndexRoute: ProtectedPaymentsIndexRoute,
   ProtectedPickupBranchesIndexRoute: ProtectedPickupBranchesIndexRoute,
+  ProtectedPremiumMealsIndexRoute: ProtectedPremiumMealsIndexRoute,
   ProtectedProfileIndexRoute: ProtectedProfileIndexRoute,
   ProtectedPromoCodesIndexRoute: ProtectedPromoCodesIndexRoute,
   ProtectedRestaurantHoursIndexRoute: ProtectedRestaurantHoursIndexRoute,

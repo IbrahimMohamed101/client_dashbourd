@@ -1,5 +1,4 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
-
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import {
   createMealBuilderDraft,
@@ -11,12 +10,21 @@ import {
   updateMealBuilderDraft,
   validateMealBuilderDraft,
 } from "@/utils/fetchMealBuilder";
-import type { MealBuilderDraftPayload, MealBuilderPickerParams } from "@/types/mealBuilderTypes";
+import type {
+  MealBuilderDraftPayload,
+  MealBuilderPickerParams,
+} from "@/types/mealBuilderTypes";
 
 export const MEAL_BUILDER_KEY = "dashboard.meal-builder";
 export const MEAL_BUILDER_HYDRATED_KEY = "dashboard.meal-builder.hydrated";
 export const MEAL_BUILDER_READINESS_KEY = "dashboard.meal-builder.readiness";
 export const MEAL_BUILDER_PICKER_KEY = "dashboard.meal-builder.picker";
+
+const mealBuilderInvalidateKeys = [
+  [MEAL_BUILDER_KEY],
+  [MEAL_BUILDER_HYDRATED_KEY],
+  [MEAL_BUILDER_READINESS_KEY],
+];
 
 export const mealBuilderQueryOptions = () =>
   queryOptions({
@@ -67,14 +75,14 @@ export const useCreateMealBuilderDraftMutation = () =>
   useMutationWithToast({
     mutationFn: createMealBuilderDraft,
     successMessage: "تم إنشاء مسودة منشئ الوجبات",
-    invalidateKeys: [[MEAL_BUILDER_KEY], [MEAL_BUILDER_HYDRATED_KEY], [MEAL_BUILDER_READINESS_KEY]],
+    invalidateKeys: mealBuilderInvalidateKeys,
   });
 
 export const useSaveMealBuilderDraftMutation = () =>
   useMutationWithToast({
     mutationFn: updateMealBuilderDraft,
     successMessage: "تم حفظ مسودة منشئ الوجبات",
-    invalidateKeys: [[MEAL_BUILDER_KEY], [MEAL_BUILDER_HYDRATED_KEY], [MEAL_BUILDER_READINESS_KEY]],
+    invalidateKeys: mealBuilderInvalidateKeys,
   });
 
 export const useValidateMealBuilderDraftMutation = () => {
@@ -99,5 +107,8 @@ export const usePublishMealBuilderDraftMutation = () =>
   useMutationWithToast({
     mutationFn: publishMealBuilderDraft,
     successMessage: "تم نشر منشئ الوجبات للموبايل",
-    invalidateKeys: [[MEAL_BUILDER_KEY], [MEAL_BUILDER_HYDRATED_KEY], [MEAL_BUILDER_READINESS_KEY], ["menu.mealPlannerPreview"]],
+    invalidateKeys: [
+      ...mealBuilderInvalidateKeys,
+      ["menu.mealPlannerPreview"],
+    ],
   });

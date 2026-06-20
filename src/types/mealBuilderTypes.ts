@@ -6,6 +6,7 @@ import type {
   MenuProduct,
   MenuProductComposer,
 } from "@/types/menuTypes";
+import type { MealPlannerMenuContract } from "@/types/mealPlannerMenuTypes";
 
 export type MealBuilderSectionType =
   | "option_group"
@@ -180,6 +181,7 @@ export interface MealBuilderState {
   draft: MealBuilderConfig | null;
   published: MealBuilderConfig | null;
   preview: MealBuilderContract | null;
+  plannerCatalog?: MealPlannerMenuContract | null;
   validation: {
     draft: MealBuilderValidation | null;
     published: MealBuilderValidation | null;

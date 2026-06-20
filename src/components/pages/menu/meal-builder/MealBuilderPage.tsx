@@ -76,7 +76,7 @@ type EditorState = {
   index: number | null;
 } | null;
 
-export function MealBuilderPage() {
+export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const builderQuery = useMealBuilderQuery();
   const hydratedQuery = useMealBuilderHydratedQuery();
@@ -128,7 +128,7 @@ export function MealBuilderPage() {
   }
 
   return (
-    <div className="grid gap-5" dir="rtl">
+    <div className="grid gap-5" data-embedded={embedded || undefined} dir="rtl">
       <HeaderCard
         onCreateDraft={() => createDraft.mutate()}
         onRefresh={refresh}
@@ -149,8 +149,12 @@ export function MealBuilderPage() {
           initialValidation={
             hydrated?.validation ?? state?.validation.draft ?? null
           }
-          plannerPreview={plannerPreviewQuery.data?.data ?? null}
-          plannerLoading={plannerPreviewQuery.isLoading}
+          plannerPreview={
+            plannerPreviewQuery.data?.data ?? state?.plannerCatalog ?? null
+          }
+          plannerLoading={
+            plannerPreviewQuery.isLoading && !state?.plannerCatalog
+          }
           catalog={catalog}
           loading={loading}
         />

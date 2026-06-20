@@ -2,25 +2,26 @@ import * as React from "react";
 void React;
 
 import {
-  LayoutDashboardIcon,
-  Settings2Icon,
-  CircleHelpIcon,
-  Users,
+  Bell,
+  BookOpen,
   Boxes,
   CalendarPlus,
-  ChefHat,
-  PlusSquare,
-  Truck,
-  CreditCard,
-  Ticket,
-  MapPin,
-  BookOpen,
-  MinusCircle,
-  ShieldUser,
   ChartNoAxesCombined,
+  ChefHat,
+  CircleHelpIcon,
   ClipboardList,
-  Bell,
   Clock,
+  CreditCard,
+  LayoutDashboardIcon,
+  MapPin,
+  MinusCircle,
+  PlusSquare,
+  Settings2Icon,
+  ShieldUser,
+  Sparkles,
+  Ticket,
+  Truck,
+  Users,
 } from "lucide-react";
 
 export const NavLinksData = {
@@ -79,6 +80,11 @@ export const NavLinksData = {
       title: "المنيو",
       url: "/menu",
       icon: <BookOpen />,
+    },
+    {
+      title: "وجبات بريميوم",
+      url: "/premium-meals",
+      icon: <Sparkles />,
     },
     {
       title: "التوصيل",
