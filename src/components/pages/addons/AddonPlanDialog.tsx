@@ -1,4 +1,11 @@
-import { useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { CheckCircle2, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +36,7 @@ import type {
   MenuProductPickerItem,
 } from "@/types/addonTypes";
 import {
+  addonId,
   ensurePriceRows,
   localizedName,
   planToForm,
@@ -51,6 +59,82 @@ type AddonPlanDialogProps = {
   onSubmit: (payload: AddonPlanWritePayload) => void;
 };
 
+type DialogFormState = {
+  form: PlanFormState;
+  error: string | null;
+};
+
+type TextFieldName = "nameAr" | "nameEn" | "category" | "maxPerDay";
+
+type DialogFormAction =
+  | { type: "RESET_FROM_PLAN"; form: PlanFormState }
+  | { type: "SET_FIELD"; field: TextFieldName; value: string }
+  | { type: "SET_FIELD"; field: "isActive"; value: boolean }
+  | { type: "TOGGLE_PRODUCT"; productId: string }
+  | { type: "SET_PRODUCT_IDS"; productIds: string[] }
+  | {
+      type: "UPDATE_PRICE";
+      basePlanId: string;
+      patch: Partial<Pick<PriceRowState, "priceHalala" | "isActive">>;
+    }
+  | { type: "SET_ERROR"; error: string }
+  | { type: "CLEAR_ERROR" };
+
+function dialogFormReducer(
+  state: DialogFormState,
+  action: DialogFormAction
+): DialogFormState {
+  switch (action.type) {
+    case "RESET_FROM_PLAN":
+      return { form: action.form, error: null };
+    case "SET_FIELD":
+      return {
+        form: { ...state.form, [action.field]: action.value },
+        error: null,
+      };
+    case "TOGGLE_PRODUCT": {
+      const currentIds = uniqueIds(state.form.menuProductIds);
+      const exists = currentIds.includes(action.productId);
+
+      return {
+        form: {
+          ...state.form,
+          menuProductIds: exists
+            ? currentIds.filter((id) => id !== action.productId)
+            : uniqueIds([...currentIds, action.productId]),
+        },
+        error: null,
+      };
+    }
+    case "SET_PRODUCT_IDS":
+      return {
+        form: {
+          ...state.form,
+          menuProductIds: uniqueIds(action.productIds),
+        },
+        error: null,
+      };
+    case "UPDATE_PRICE":
+      return {
+        form: {
+          ...state.form,
+          prices: upsertPriceRow(
+            state.form.prices,
+            action.basePlanId,
+            action.patch
+          ),
+        },
+        error: null,
+      };
+    case "SET_ERROR":
+      return { ...state, error: action.error };
+    case "CLEAR_ERROR":
+      return { ...state, error: null };
+    default:
+      return state;
+  }
+}
+
 export function AddonPlanDialog({
   open,
   onOpenChange,
@@ -62,11 +146,30 @@ export function AddonPlanDialog({
   serverError,
   onSubmit,
 }: AddonPlanDialogProps) {
-  const [form, setForm] = useState<PlanFormState>(() =>
-    planToForm(plan, basePlans)
-  );
+  const [state, dispatch] = useReducer(dialogFormReducer, null, () => ({
+    form: planToForm(plan, basePlans),
+    error: null,
+  }));
+  const { form } = state;
   const [productSearch, setProductSearch] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
+  const planKey = plan ? addonId(plan) : "create";
+  const basePlanIdsKey = useMemo(
+    () => basePlans.map((basePlan) => basePlan.id).join("|"),
+    [basePlans]
+  );
+  const resetKey = `${planKey}:${basePlanIdsKey}`;
+  const lastResetKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (lastResetKeyRef.current === resetKey) return;
+
+    dispatch({
+      type: "RESET_FROM_PLAN",
+      form: planToForm(plan, basePlans),
+    });
+    lastResetKeyRef.current = resetKey;
+  }, [basePlans, open, plan, resetKey]);
 
   const filteredProducts = useMemo(() => {
     const search = productSearch.trim().toLowerCase();
@@ -98,51 +201,26 @@ export function AddonPlanDialog({
     [basePlans, form.prices]
   );
 
-  const updateForm = <K extends keyof PlanFormState>(
-    key: K,
-    value: PlanFormState[K]
-  ) => {
-    setForm((current) => ({ ...current, [key]: value }));
-    setFormError(null);
+  const updateTextField = (field: TextFieldName, value: string) => {
+    dispatch({ type: "SET_FIELD", field, value });
   };
 
   const setProductSelected = (productId: string, selected: boolean) => {
-    setForm((current) => {
-      const currentIds = uniqueIds(current.menuProductIds);
-      return {
-        ...current,
-        menuProductIds: selected
-          ? uniqueIds([...currentIds, productId])
-          : currentIds.filter((id) => id !== productId),
-      };
-    });
-    setFormError(null);
-  };
+    const currentIds = uniqueIds(form.menuProductIds);
 
-  const toggleProductFromRow = (productId: string) => {
-    setForm((current) => {
-      const currentIds = uniqueIds(current.menuProductIds);
-      const exists = currentIds.includes(productId);
-
-      return {
-        ...current,
-        menuProductIds: exists
-          ? currentIds.filter((id) => id !== productId)
-          : [...currentIds, productId],
-      };
+    dispatch({
+      type: "SET_PRODUCT_IDS",
+      productIds: selected
+        ? uniqueIds([...currentIds, productId])
+        : currentIds.filter((id) => id !== productId),
     });
-    setFormError(null);
   };
 
   const updatePrice = (
     basePlanId: string,
     patch: Partial<Pick<PriceRowState, "priceHalala" | "isActive">>
   ) => {
-    setForm((current) => ({
-      ...current,
-      prices: upsertPriceRow(current.prices, basePlanId, patch),
-    }));
-    setFormError(null);
+    dispatch({ type: "UPDATE_PRICE", basePlanId, patch });
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -151,14 +229,14 @@ export function AddonPlanDialog({
 
     const result = validateAndBuildPayload(form, basePlans);
     if (!result.ok) {
-      setFormError(result.message);
+      dispatch({ type: "SET_ERROR", error: result.message });
       return;
     }
 
     onSubmit(result.payload);
   };
 
-  const shownError = formError || serverError;
+  const shownError = state.error || serverError;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -191,13 +269,13 @@ export function AddonPlanDialog({
                 <Field
                   label="الاسم بالعربي"
                   value={form.nameAr}
-                  onChange={(value) => updateForm("nameAr", value)}
+                  onChange={(value) => updateTextField("nameAr", value)}
                   required
                 />
                 <Field
                   label="الاسم بالإنجليزي"
                   value={form.nameEn}
-                  onChange={(value) => updateForm("nameEn", value)}
+                  onChange={(value) => updateTextField("nameEn", value)}
                   required
                   dir="ltr"
                 />
@@ -207,7 +285,7 @@ export function AddonPlanDialog({
                   <Label>التصنيف</Label>
                   <Select
                     value={form.category}
-                    onValueChange={(value) => updateForm("category", value)}
+                    onValueChange={(value) => updateTextField("category", value)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -225,7 +303,7 @@ export function AddonPlanDialog({
                   label="الحد اليومي"
                   type="number"
                   value={form.maxPerDay}
-                  onChange={(value) => updateForm("maxPerDay", value)}
+                  onChange={(value) => updateTextField("maxPerDay", value)}
                   required
                 />
                 <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3">
@@ -233,7 +311,11 @@ export function AddonPlanDialog({
                   <Switch
                     checked={form.isActive}
                     onCheckedChange={(checked) =>
-                      updateForm("isActive", checked)
+                      dispatch({
+                        type: "SET_FIELD",
+                        field: "isActive",
+                        value: checked,
+                      })
                     }
                   />
                 </div>
@@ -347,16 +429,7 @@ export function AddonPlanDialog({
                           return (
                             <div
                               key={product.id}
-                              role="button"
-                              tabIndex={0}
-                              className="flex w-full cursor-pointer items-center gap-3 px-3 py-3 text-right transition hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
-                              onClick={() => toggleProductFromRow(product.id)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === " ") {
-                                  event.preventDefault();
-                                  toggleProductFromRow(product.id);
-                                }
-                              }}
+                              className="flex w-full items-center gap-3 px-3 py-3 text-right transition hover:bg-muted/50"
                             >
                               <Checkbox
                                 id={checkboxId}
@@ -364,12 +437,10 @@ export function AddonPlanDialog({
                                 onCheckedChange={(value) =>
                                   setProductSelected(product.id, value === true)
                                 }
-                                onClick={(event) => event.stopPropagation()}
                               />
                               <label
                                 htmlFor={checkboxId}
                                 className="min-w-0 flex-1 cursor-pointer"
-                                onClick={(event) => event.preventDefault()}
                               >
                                 <span className="block truncate text-sm font-medium">
                                   {localizedName(product.name)}

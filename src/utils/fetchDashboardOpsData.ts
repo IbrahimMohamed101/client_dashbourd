@@ -206,9 +206,9 @@ export const fetchDashboardOpsList = async (
   });
   const items = extractOperationsQueueItems(response.data);
   return {
-    ...response.data,
+    status: response.data?.status !== false,
     data: {
-      ...response.data?.data,
+      contractVersion: response.data?.data?.contractVersion,
       date: response.data?.data?.date ?? date,
       items,
     },
@@ -219,14 +219,24 @@ export const fetchDashboardOpsList = async (
 export const fetchDashboardOpsSearch = async (
   query: string
 ): Promise<DashboardOpsListResponse> => {
+  if (query.trim().length < 3) {
+    return {
+      status: true,
+      data: {
+        date: "",
+        items: [],
+      },
+    };
+  }
+
   const response = await api.get("/api/dashboard/ops/search", {
     params: { q: query },
   });
   const items = extractOperationsQueueItems(response.data);
   return {
-    ...response.data,
+    status: response.data?.status !== false,
     data: {
-      ...response.data?.data,
+      contractVersion: response.data?.data?.contractVersion,
       date: response.data?.data?.date ?? "",
       items,
     },

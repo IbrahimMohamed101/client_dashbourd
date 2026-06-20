@@ -220,9 +220,9 @@
     "semantic_hash": "d3813af12451c17707ec7745821144ee"
   },
   "src/components/pages/menu/categories/CategoryProductsPanel.tsx": {
-    "mtime": 1780790614.7327695,
-    "ast_hash": "c59faf5489c86c89b2b28e1e992804b3",
-    "semantic_hash": "c59faf5489c86c89b2b28e1e992804b3"
+    "mtime": 1781969325.2552352,
+    "ast_hash": "5a6d1f17b14649eecae655ddba5c6d44",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/categories/MenuCategoriesTab.tsx": {
     "mtime": 1780681298.2796564,
@@ -230,9 +230,9 @@
     "semantic_hash": "d7ae531b7258167319f1ce8bbc6687d9"
   },
   "src/components/pages/menu/categories/MenuCategoryFormFields.tsx": {
-    "mtime": 1780786728.8049703,
-    "ast_hash": "8d1638d9fa3765e144376e18923f6cdb",
-    "semantic_hash": "8d1638d9fa3765e144376e18923f6cdb"
+    "mtime": 1781969205.5699048,
+    "ast_hash": "b3707ae3b6d45c2fbc4dd0bcb28b84b2",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/meal-builder/MealBuilderBadges.tsx": {
     "mtime": 1780883846.619405,
@@ -300,9 +300,9 @@
     "semantic_hash": "2209e6af60d163503fd4ffb7845e8ec6"
   },
   "src/components/pages/menu/option-groups/MenuOptionGroupFormFields.tsx": {
-    "mtime": 1780779051.42621,
-    "ast_hash": "0e019a9fda5343610b94310090878d2b",
-    "semantic_hash": "0e019a9fda5343610b94310090878d2b"
+    "mtime": 1781969206.4617722,
+    "ast_hash": "f6ed03a1e0f3111550ad5ba8f637a293",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/option-groups/MenuOptionGroupsTab.tsx": {
     "mtime": 1780681298.2796564,
@@ -315,9 +315,9 @@
     "semantic_hash": "ea072a01ff1da6987f12fa32bf69dc76"
   },
   "src/components/pages/menu/options/MenuOptionFormFields.tsx": {
-    "mtime": 1780782454.4176142,
-    "ast_hash": "e2cd480ec0ea5e24c224d4a0df2b156c",
-    "semantic_hash": "e2cd480ec0ea5e24c224d4a0df2b156c"
+    "mtime": 1781969118.4163501,
+    "ast_hash": "f40162be464fc7d1b849f7a592fa5691",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/options/MenuOptionsTab.tsx": {
     "mtime": 1780681298.2796564,
@@ -325,9 +325,9 @@
     "semantic_hash": "f11a2552988102e329cf247395531b6e"
   },
   "src/components/pages/menu/products/MenuProductFormFields.tsx": {
-    "mtime": 1780790590.2014465,
-    "ast_hash": "2e709dcee0306c72fd96da5fdf1da432",
-    "semantic_hash": "2e709dcee0306c72fd96da5fdf1da432"
+    "mtime": 1781969108.5243032,
+    "ast_hash": "51e8d3ab474e24b871ea59f2c0547817",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/products/MenuProductsTab.tsx": {
     "mtime": 1780779021.4467692,
@@ -335,19 +335,19 @@
     "semantic_hash": "a89bdc144c7f85dbfe9f00e1e227e87a"
   },
   "src/components/pages/menu/products/ProductComposerRelationsPanel.tsx": {
-    "mtime": 1780721483.2474978,
-    "ast_hash": "b5ea73bc8e36b30acbd6a68789883e5a",
-    "semantic_hash": "b5ea73bc8e36b30acbd6a68789883e5a"
+    "mtime": 1781969309.4957254,
+    "ast_hash": "085284530fb08385b4c74fbc52c1d015",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/products/ProductCustomizationPanel.tsx": {
-    "mtime": 1780777700.13475,
-    "ast_hash": "58c9f1ab41cace77fb7f262c3021fa3a",
-    "semantic_hash": "58c9f1ab41cace77fb7f262c3021fa3a"
+    "mtime": 1781969324.401761,
+    "ast_hash": "2f377f5d1959760d1e0cfb7844d0303b",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/public-preview/PublicMenuPreviewTab.tsx": {
-    "mtime": 1780783906.9879327,
-    "ast_hash": "d0036173986d336c8f581a6bcb6789e7",
-    "semantic_hash": "d0036173986d336c8f581a6bcb6789e7"
+    "mtime": 1781969326.2387297,
+    "ast_hash": "7a1f0f80f51303fa91cb325ca25189d3",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/relations/MenuProductRelationsTab.tsx": {
     "mtime": 1780681298.2796564,
@@ -1260,8 +1260,8 @@
     "semantic_hash": ""
   },
   "src/routes/_protected/addons/index.tsx": {
-    "mtime": 1781966169.210971,
-    "ast_hash": "db1e5ca169e679d5510b918a7de2cb55",
+    "mtime": 1781968617.4920356,
+    "ast_hash": "28c64c1efc11027b8f56f9ac27f7cfa1",
     "semantic_hash": ""
   },
   "src/routes/_protected/dashboard-users/index.tsx": {
@@ -1685,8 +1685,8 @@
     "semantic_hash": ""
   },
   "src/utils/fetchMenuOptions.ts": {
-    "mtime": 1781869119.8298287,
-    "ast_hash": "a5bee094ce33bd826a68a49d49c7506f",
+    "mtime": 1781968701.9940424,
+    "ast_hash": "bd94993d872acdfc0a6b62c2ad9081ab",
     "semantic_hash": ""
   },
   "src/utils/fetchMenuProductGroups.ts": {
@@ -1765,8 +1765,8 @@
     "semantic_hash": "70078f67983a50a54d5bf98a79c7eb06"
   },
   "src/utils/menuApiContract.ts": {
-    "mtime": 1781869095.1866648,
-    "ast_hash": "c09fa13c0d54f011b97435ce8a806b6c",
+    "mtime": 1781968670.7435102,
+    "ast_hash": "dedaa695f58add49a0ad135ffd3f0836",
     "semantic_hash": ""
   },
   "src/utils/menuFormValues.ts": {
@@ -1775,14 +1775,14 @@
     "semantic_hash": "be8dead1beaa176e7da2d284b4eacbc2"
   },
   "src/utils/menuPayloadMappers.ts": {
-    "mtime": 1780789299.7078247,
-    "ast_hash": "1174232efd830c4f84bdc33c68ab5fff",
-    "semantic_hash": "1174232efd830c4f84bdc33c68ab5fff"
+    "mtime": 1781968681.5478866,
+    "ast_hash": "c0f6590c386b99510f2978e9ee3b4e72",
+    "semantic_hash": ""
   },
   "src/utils/menuResponseNormalizers.ts": {
-    "mtime": 1780762928.337463,
-    "ast_hash": "11c9e4a2ad462b4538d60d36ee8d91e5",
-    "semantic_hash": "11c9e4a2ad462b4538d60d36ee8d91e5"
+    "mtime": 1781968695.1976593,
+    "ast_hash": "4eb264c01bcc95d3a061ce7d211657a4",
+    "semantic_hash": ""
   },
   "src/utils/newOrderNotification.ts": {
     "mtime": 1780681298.374571,
@@ -1992,6 +1992,16 @@
   "src/utils/fetchPackageTiers.ts": {
     "mtime": 1781869138.1907196,
     "ast_hash": "bed6567b9848ff44cd0ef352d315922d",
+    "semantic_hash": ""
+  },
+  "src/components/pages/addons/AddonPlanDialog.tsx": {
+    "mtime": 1781968556.5849001,
+    "ast_hash": "fe3a566f78e7f617448402a9faf47ffa",
+    "semantic_hash": ""
+  },
+  "src/components/pages/addons/addon-plan-form-utils.ts": {
+    "mtime": 1781968306.9329274,
+    "ast_hash": "52fd287ad394f35d619b6ea3feb31e10",
     "semantic_hash": ""
   }
 }

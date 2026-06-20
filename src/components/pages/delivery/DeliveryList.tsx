@@ -2,20 +2,20 @@ import { PackageX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeliveryCard } from "./DeliveryCard";
 import type {
-  UnifiedQueueItem,
   DashboardOpsActionRequest,
+  UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
-
-// ── Props ──
 
 interface DeliveryListProps {
   data: UnifiedQueueItem[];
   isLoading: boolean;
-  onActionClick: (action: string, payload: DashboardOpsActionRequest) => void;
+  onActionClick: (
+    item: UnifiedQueueItem,
+    action: string,
+    payload: DashboardOpsActionRequest
+  ) => void;
   isActionLoading: boolean;
 }
-
-// ── Component ──
 
 export function DeliveryList({
   data,
@@ -40,9 +40,9 @@ export function DeliveryList({
           <PackageX className="h-8 w-8 text-muted-foreground" />
         </div>
         <div className="flex flex-col gap-1">
-          <h3 className="text-base font-bold">لا توجد طلبات</h3>
-          <p className="text-sm text-muted-foreground">
-            لم يتم العثور على أي طلبات مطابقة للبحث أو الفلتر المحدد.
+          <h3 className="text-base font-bold">لا توجد توصيلات</h3>
+          <p className="max-w-md text-sm text-muted-foreground">
+            لم يتم العثور على أي توصيلات مطابقة للبحث أو الفلتر المحدد.
           </p>
         </div>
       </div>
@@ -51,11 +51,10 @@ export function DeliveryList({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Results count & Header */}
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-sm font-semibold opacity-80">جميع الطلبات</h2>
+        <h2 className="text-sm font-semibold opacity-80">جميع التوصيلات</h2>
         <span className="text-[10px] font-medium text-muted-foreground">
-          {data.length} طلب متاح
+          {data.length} توصيل متاح
         </span>
       </div>
 

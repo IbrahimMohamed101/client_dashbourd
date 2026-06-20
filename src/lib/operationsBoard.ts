@@ -101,6 +101,7 @@ function buildAddressSummary(value: unknown): string | null {
   if (displayAddress) return displayAddress;
 
   return [
+    address.formattedAddress,
     address.line1,
     address.line2,
     address.label,
@@ -256,8 +257,8 @@ function normalizeCustomer(raw: RawQueueRecord): UnifiedQueueItem["customer"] {
 
   return {
     id: asString(source?.id) || asString(raw.userId) || "",
-    name: safeText(source?.name, "غير محدد"),
-    phone: asString(source?.phone) || "",
+    name: safeText(source?.name ?? raw.customerName, "غير محدد"),
+    phone: asString(source?.phone) || asString(raw.customerPhone) || "",
   };
 }
 
@@ -379,7 +380,10 @@ export function normalizeOperationsQueueItem(
   const orderSummary = asRecord(record.orderSummary);
   const kitchen = asRecord(record.kitchen);
   const fulfillment = asRecord(record.fulfillment);
-  const delivery = asRecord(record.delivery) || asRecord(fulfillment?.delivery);
+  const delivery =
+    asRecord(record.delivery) ||
+    asRecord(fulfillment?.delivery) ||
+    (record.deliveryAddress ? { address: record.deliveryAddress } : null);
   const pickup = asRecord(record.pickup) || asRecord(fulfillment?.pickup);
   const context = asRecord(record.context);
   const timestamps = asRecord(record.timestamps);
@@ -394,6 +398,7 @@ export function normalizeOperationsQueueItem(
     ids?.entityId ||
     record.entityId ||
     record.id ||
+    record.deliveryId ||
     ids?.subscriptionDayId ||
     record.subscriptionDayId ||
     ids?.orderId ||
@@ -439,6 +444,7 @@ export function normalizeOperationsQueueItem(
         asString(context?.window) ||
         asString(delivery?.window) ||
         asString(delivery?.deliveryWindow) ||
+        asString(record.deliveryWindow) ||
         undefined,
       address: context?.address || delivery?.address,
       addressSummary,
@@ -458,7 +464,11 @@ export function normalizeOperationsQueueItem(
     },
     delivery: delivery
       ? {
-        deliveryId: asString(delivery.deliveryId) || asString(ids?.deliveryId),
+        deliveryId:
+          asString(delivery.deliveryId) ||
+          asString(ids?.deliveryId) ||
+          asString(record.deliveryId) ||
+          asString(record.id),
         method: asString(delivery.method) || mode,
         date: asString(delivery.date),
         status: asString(delivery.status),
@@ -470,8 +480,11 @@ export function normalizeOperationsQueueItem(
             : null,
         zoneId: asString(delivery.zoneId),
         courierId: asString(delivery.courierId),
-        window: asString(delivery.window),
-        deliveryWindow: asString(delivery.deliveryWindow) || undefined,
+        window: asString(delivery.window) || asString(record.deliveryWindow),
+        deliveryWindow:
+          asString(delivery.deliveryWindow) ||
+          asString(record.deliveryWindow) ||
+          undefined,
         pickupLocationId: asString(delivery.pickupLocationId),
       }
       : undefined,
@@ -567,11 +580,17 @@ export function extractOperationsQueueItems(
   response: DashboardOpsListResponse | unknown
 ): UnifiedQueueItem[] {
   const payload = asRecord(response);
-  if (!payload) return [];
+  if (!payload) {
+    return Array.isArray(response)
+      ? response.map((item) => normalizeOperationsQueueItem(item))
+      : [];
+  }
 
   const nested = asRecord(payload.data);
   const contractVersion = asString(nested?.contractVersion);
-  const rawItems = Array.isArray(nested?.items)
+  const rawItems = Array.isArray(payload.data)
+    ? payload.data
+    : Array.isArray(nested?.items)
     ? nested.items
     : Array.isArray(payload.items)
       ? payload.items

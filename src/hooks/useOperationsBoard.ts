@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/apis";
 import {
   buildOperationsActionPayload,
+  getCourierItems,
   getEndpointForAction,
+  getPickupItems,
   getScreensForRole,
   OPERATIONS_SCREENS,
   type OperationsScreen,
@@ -14,15 +16,27 @@ import type {
   UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
 import {
-  getCourierQueue,
-  getKitchenQueue,
-  getPickupQueue,
+  fetchDashboardOpsList,
+  fetchDashboardOpsSearch,
 } from "@/utils/fetchDashboardOpsData";
 
 interface UseOperationsBoardParams {
   date?: string;
   q?: string;
 }
+
+const itemTimestamp = (item: UnifiedQueueItem) => {
+  const raw =
+    item.timestamps?.updatedAt ||
+    item.timestamps?.createdAt ||
+    item.context.date ||
+    "";
+  const time = new Date(raw).getTime();
+  return Number.isFinite(time) ? time : 0;
+};
+
+const newestFirst = (items: UnifiedQueueItem[]) =>
+  [...items].sort((a, b) => itemTimestamp(b) - itemTimestamp(a));
 
 export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
   const { user } = useAuth();
@@ -32,22 +46,33 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     getScreensForRole(role);
 
   const queueQuery = useQuery({
-    queryKey: ["operations-board", "queue", visibleScreens, params.date, params.q],
+    queryKey: [
+      "operations-board",
+      "queue",
+      visibleScreens,
+      params.date,
+      params.q,
+    ],
     queryFn: async () => {
-      const results = await Promise.all(
-        visibleScreens.map(async (screen) => {
-          const date = params.date || "";
-          const requestParams = { q: params.q || undefined };
-          const items =
-            screen === "kitchen"
-              ? await getKitchenQueue(date, requestParams)
-              : screen === "pickup"
-                ? await getPickupQueue(date, requestParams)
-                : await getCourierQueue(date, requestParams);
-          return { screen, items };
-        })
+      const search = params.q?.trim() || "";
+      const response =
+        search.length >= 3
+          ? await fetchDashboardOpsSearch(search)
+          : await fetchDashboardOpsList(params.date || "");
+      const items = response.data?.items ?? [];
+      const pickupItems = getPickupItems(items);
+      const courierItems = getCourierItems(items);
+      const pickupIds = new Set(pickupItems.map((item) => item.id));
+      const courierIds = new Set(courierItems.map((item) => item.id));
+      const kitchenItems = items.filter(
+        (item) => !pickupIds.has(item.id) && !courierIds.has(item.id)
       );
-      return results;
+
+      return [
+        { screen: "kitchen" as const, items: newestFirst(kitchenItems) },
+        { screen: "pickup" as const, items: newestFirst(pickupItems) },
+        { screen: "courier" as const, items: newestFirst(courierItems) },
+      ].filter((result) => visibleScreens.includes(result.screen));
     },
     refetchInterval: 30_000,
     refetchIntervalInBackground: true,
@@ -61,13 +86,14 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     courier: [],
   };
 
-  const itemsByScreen = queueQuery.data?.reduce(
-    (acc, result) => {
-      acc[result.screen] = Array.isArray(result.items) ? result.items : [];
-      return acc;
-    },
-    { ...emptyItemsByScreen }
-  ) ?? { ...emptyItemsByScreen };
+  const itemsByScreen =
+    queueQuery.data?.reduce(
+      (acc, result) => {
+        acc[result.screen] = Array.isArray(result.items) ? result.items : [];
+        return acc;
+      },
+      { ...emptyItemsByScreen }
+    ) ?? { ...emptyItemsByScreen };
 
   const allItems = Object.values(itemsByScreen).flat();
 
@@ -85,7 +111,9 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
       notes?: string;
       pickupCode?: string;
     }) => {
-      const actionDef = item.allowedActions?.find((entry) => entry.id === action);
+      const actionDef = item.allowedActions?.find(
+        (entry) => entry.id === action
+      );
       const endpoint = actionDef?.endpoint || getEndpointForAction(action);
       const method = (actionDef?.method || "POST").toLowerCase();
       const payload = buildOperationsActionPayload(
@@ -103,7 +131,7 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
       return data;
     },
     onSuccess: (_data, variables) => {
-      toast.success(`تم ${variables.action} بنجاح`);
+      toast.success(`تم تنفيذ ${variables.action} بنجاح`);
       queryClient.invalidateQueries({ queryKey: ["operations-board", "queue"] });
     },
     onError: (error: unknown) => {

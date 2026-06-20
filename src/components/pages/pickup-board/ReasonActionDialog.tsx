@@ -1,4 +1,8 @@
 import React from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ChefHat, XCircle } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -8,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -16,12 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChefHat, XCircle } from "lucide-react";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 
 const reasonSchema = z.object({
@@ -78,9 +78,9 @@ export const ReasonActionDialog: React.FC<ReasonActionDialogProps> = ({
                 تأكيد: {dialogState.actionLabel}
               </AlertDialogTitle>
               <AlertDialogDescription className="pt-2 text-base">
-                يرجى إدخال سبب هذا الإجراء للحفاظ على سجل التدقيق.
+                يرجى إدخال سبب هذا الإجراء للحفاظ على سجل تدقيق واضح.
               </AlertDialogDescription>
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 space-y-3 text-right">
                 <FormField
                   control={form.control}
                   name="reason"
@@ -91,9 +91,9 @@ export const ReasonActionDialog: React.FC<ReasonActionDialogProps> = ({
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="أدخل سبب الإجراء..."
-                          {...field}
+                          placeholder="اكتب السبب..."
                           autoFocus
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -105,9 +105,9 @@ export const ReasonActionDialog: React.FC<ReasonActionDialogProps> = ({
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>ملاحظات (اختياري)</FormLabel>
+                      <FormLabel>ملاحظات اختيارية</FormLabel>
                       <FormControl>
-                        <Input placeholder="ملاحظات إضافية..." {...field} />
+                        <Input placeholder="أي تفاصيل إضافية..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
