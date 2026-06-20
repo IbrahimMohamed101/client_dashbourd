@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -30,15 +30,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -48,7 +39,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -75,7 +65,6 @@ import {
 } from "@/components/ui/chart";
 import {
   Archive,
-  CheckCircle2,
   Edit3,
   PackagePlus,
   PieChartIcon,
@@ -90,9 +79,12 @@ import type {
   Addon,
   AddonCategoryOption,
   AddonPlanWritePayload,
-  BasePlanPickerItem,
-  MenuProductPickerItem,
 } from "@/types/addonTypes";
+import { AddonPlanDialog } from "@/components/pages/addons/AddonPlanDialog";
+import {
+  addonId,
+  localizedName,
+} from "@/components/pages/addons/addon-plan-form-utils";
 import { createAddonPlan, updateAddonPlan } from "@/utils/fetchAddons";
 import { fetchDeleteAddon } from "@/utils/fetchDeleteAddon";
 import { toggleAddonItem } from "@/utils/fetchUpdateAddon";
@@ -152,9 +144,9 @@ function RouteComponent() {
     addonBasePlanPickerQueryOptions()
   );
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogVersion, setDialogVersion] = useState(0);
   const [editingPlan, setEditingPlan] = useState<Addon | null>(null);
   const [archivePlan, setArchivePlan] = useState<Addon | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -216,6 +208,10 @@ function RouteComponent() {
       await invalidateAddons();
       setDialogOpen(false);
       setEditingPlan(null);
+      setDialogError(null);
+    },
+    onError: (error) => {
+      setDialogError(errorMessage(error));
     },
   });
 
@@ -232,6 +228,10 @@ function RouteComponent() {
       await invalidateAddons();
       setDialogOpen(false);
       setEditingPlan(null);
+      setDialogError(null);
+    },
+    onError: (error) => {
+      setDialogError(errorMessage(error));
     },
   });
 
@@ -254,13 +254,13 @@ function RouteComponent() {
 
   const openCreate = () => {
     setEditingPlan(null);
-    setDialogVersion((version) => version + 1);
+    setDialogError(null);
     setDialogOpen(true);
   };
 
   const openEdit = (plan: Addon) => {
     setEditingPlan(plan);
-    setDialogVersion((version) => version + 1);
+    setDialogError(null);
     setDialogOpen(true);
   };
 
@@ -396,26 +396,33 @@ function RouteComponent() {
         )}
       </div>
 
-      <AddonPlanDialog
-        key={`${editingPlan ? addonId(editingPlan) : "new-addon-plan"}-${dialogVersion}`}
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) setEditingPlan(null);
-        }}
-        plan={editingPlan}
-        products={products}
-        basePlans={basePlans}
-        categories={categories}
-        isSaving={isSaving}
-        onSubmit={(payload) => {
-          if (editingPlan) {
-            updateMutation.mutate({ id: addonId(editingPlan), payload });
-          } else {
-            createMutation.mutate(payload);
-          }
-        }}
-      />
+      {dialogOpen ? (
+        <AddonPlanDialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setEditingPlan(null);
+              setDialogError(null);
+            }
+          }}
+          plan={editingPlan}
+          products={products}
+          basePlans={basePlans}
+          categories={categories}
+          isSaving={isSaving}
+          serverError={dialogError}
+          onSubmit={(payload) => {
+            if (isSaving) return;
+            setDialogError(null);
+            if (editingPlan) {
+              updateMutation.mutate({ id: addonId(editingPlan), payload });
+            } else {
+              createMutation.mutate(payload);
+            }
+          }}
+        />
+      ) : null}
 
       <AlertDialog
         open={!!archivePlan}
@@ -990,404 +997,6 @@ function PlanStat({ label, value }: { label: string; value: number | string }) {
   );
 }
 
-type PriceRowState = {
-  basePlanId: string;
-  priceHalala: string;
-  isActive: boolean;
-};
-
-type PlanFormState = {
-  nameAr: string;
-  nameEn: string;
-  category: string;
-  maxPerDay: string;
-  isActive: boolean;
-  menuProductIds: string[];
-  prices: PriceRowState[];
-};
-
-function AddonPlanDialog({
-  open,
-  onOpenChange,
-  plan,
-  products,
-  basePlans,
-  categories,
-  isSaving,
-  onSubmit,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  plan: Addon | null;
-  products: MenuProductPickerItem[];
-  basePlans: BasePlanPickerItem[];
-  categories: AddonCategoryOption[];
-  isSaving: boolean;
-  onSubmit: (payload: AddonPlanWritePayload) => void;
-}) {
-  const [form, setForm] = useState<PlanFormState>(() =>
-    planToForm(plan, basePlans)
-  );
-  const [productSearch, setProductSearch] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const filteredProducts = useMemo(() => {
-    const search = productSearch.trim().toLowerCase();
-    if (!search) return products;
-
-    return products.filter((product) => {
-      const haystack = [
-        product.key,
-        product.category,
-        product.name.ar,
-        product.name.en,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(search);
-    });
-  }, [productSearch, products]);
-
-  const selectedProducts = products.filter((product) =>
-    form.menuProductIds.includes(product.id)
-  );
-
-  const updateForm = <K extends keyof PlanFormState>(
-    key: K,
-    value: PlanFormState[K]
-  ) => {
-    setForm((current) => ({ ...current, [key]: value }));
-    setFormError(null);
-  };
-
-  const toggleProduct = (productId: string) => {
-    setForm((current) => {
-      const exists = current.menuProductIds.includes(productId);
-      return {
-        ...current,
-        menuProductIds: exists
-          ? current.menuProductIds.filter((id) => id !== productId)
-          : [...current.menuProductIds, productId],
-      };
-    });
-    setFormError(null);
-  };
-
-  const updatePrice = (
-    basePlanId: string,
-    patch: Partial<Pick<PriceRowState, "priceHalala" | "isActive">>
-  ) => {
-    setForm((current) => ({
-      ...current,
-      prices: current.prices.map((row) =>
-        row.basePlanId === basePlanId ? { ...row, ...patch } : row
-      ),
-    }));
-    setFormError(null);
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const payload = formToPayload(form);
-    if (!payload.name.ar || !payload.name.en) {
-      setFormError("الاسم العربي والإنجليزي مطلوبان.");
-      return;
-    }
-    if (payload.menuProductIds.length === 0) {
-      setFormError("اختر منتجا واحدا على الأقل من المنيو.");
-      return;
-    }
-    if (payload.planPrices.length === 0) {
-      setFormError("يجب إضافة سعر واحد على الأقل.");
-      return;
-    }
-
-    onSubmit(payload);
-  };
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
-      <DialogContent
-        className="grid max-h-[92dvh] w-[calc(100%-1rem)] max-w-[72rem] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[72rem] [&_*]:min-w-0"
-        dir="rtl"
-      >
-        <DialogHeader className="border-b px-5 py-4 text-right">
-          <DialogTitle>{plan ? "تعديل باقة إضافة" : "إنشاء باقة إضافة"}</DialogTitle>
-          <DialogDescription>
-            اربط منتجات موجودة مسبقا، ثم أدخل أسعار الباقة بالهللة لكل خطة
-            اشتراك أساسية.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form
-          id="addon-plan-form"
-          className="min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-5"
-          onSubmit={handleSubmit}
-        >
-          <div className="space-y-4">
-            <section className="space-y-4 rounded-lg border bg-muted/10 p-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 shrink-0 text-primary" />
-                <h3 className="text-sm font-semibold">بيانات الباقة</h3>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <Field
-                  label="الاسم بالعربي"
-                  value={form.nameAr}
-                  onChange={(value) => updateForm("nameAr", value)}
-                  required
-                />
-                <Field
-                  label="الاسم بالإنجليزي"
-                  value={form.nameEn}
-                  onChange={(value) => updateForm("nameEn", value)}
-                  required
-                  dir="ltr"
-                />
-              </div>
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_9rem] md:items-end">
-                <div className="space-y-2">
-                  <Label>التصنيف</Label>
-                  <Select
-                    value={form.category}
-                    onValueChange={(value) => updateForm("category", value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.key} value={category.key}>
-                          {localizedName(category.label)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Field
-                  label="الحد اليومي"
-                  type="number"
-                  value={form.maxPerDay}
-                  onChange={(value) => updateForm("maxPerDay", value)}
-                  required
-                />
-                <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3">
-                  <Label>نشطة</Label>
-                  <Switch
-                    checked={form.isActive}
-                    onCheckedChange={(checked) =>
-                      updateForm("isActive", checked)
-                    }
-                  />
-                </div>
-              </div>
-            </section>
-
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.72fr)] xl:items-start">
-              <section className="space-y-3 rounded-lg border bg-muted/10 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold">مصفوفة الأسعار</h3>
-                    <p className="text-xs text-muted-foreground">
-                      أدخل السعر بالهللة لكل خطة أساسية، ويمكن تعطيل أي صف بدون حذفه.
-                    </p>
-                  </div>
-                  <Badge variant="outline">
-                    {formatNumber(form.prices.filter((price) => price.isActive).length)} نشطة
-                  </Badge>
-                </div>
-                {basePlans.length === 0 ? (
-                  <p className="rounded-lg border border-dashed bg-background p-4 text-sm text-muted-foreground">
-                    لا توجد خطط أساسية من الخادم.
-                  </p>
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {basePlans.map((basePlan) => {
-                      const row = form.prices.find(
-                        (price) => price.basePlanId === basePlan.id
-                      );
-
-                      return (
-                        <div
-                          key={basePlan.id}
-                          className="rounded-lg border bg-background p-3 shadow-sm"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="line-clamp-2 text-sm font-semibold leading-6">
-                                {basePlan.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {basePlan.daysCount ?? "-"} يوم ·{" "}
-                                {basePlan.mealsCount ?? "-"} وجبة
-                              </p>
-                            </div>
-                            <Switch
-                              checked={row?.isActive ?? true}
-                              onCheckedChange={(checked) =>
-                                updatePrice(basePlan.id, {
-                                  isActive: checked,
-                                })
-                              }
-                            />
-                          </div>
-                          <div className="mt-3 space-y-2">
-                            <Label className="text-xs">السعر بالهللة</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="1"
-                              inputMode="numeric"
-                              value={row?.priceHalala ?? "0"}
-                              onChange={(event) =>
-                                updatePrice(basePlan.id, {
-                                  priceHalala: event.target.value,
-                                })
-                              }
-                              className="h-10 text-right"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-
-              <div className="space-y-4">
-                <section className="space-y-3 rounded-lg border bg-muted/10 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-semibold">ربط المنتجات</h3>
-                      <p className="text-xs text-muted-foreground">
-                        اختر من منتجات المنيو المتاحة للاشتراكات فقط.
-                      </p>
-                    </div>
-                    <Badge variant="outline">
-                      {formatNumber(form.menuProductIds.length)} مختارة
-                    </Badge>
-                  </div>
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={productSearch}
-                      onChange={(event) => setProductSearch(event.target.value)}
-                      className="pr-9"
-                      placeholder="ابحث باسم المنتج أو الكود"
-                    />
-                  </div>
-                  <div className="max-h-[19rem] overflow-y-auto overflow-x-hidden rounded-lg border bg-background">
-                    {filteredProducts.length === 0 ? (
-                      <p className="p-4 text-sm text-muted-foreground">
-                        لا توجد منتجات مطابقة.
-                      </p>
-                    ) : (
-                      <div className="divide-y">
-                        {filteredProducts.map((product) => {
-                          const checked = form.menuProductIds.includes(product.id);
-                          return (
-                            <button
-                              key={product.id}
-                              type="button"
-                              className="flex w-full items-center gap-3 px-3 py-3 text-right transition hover:bg-muted/50"
-                              onClick={() => toggleProduct(product.id)}
-                            >
-                              <Checkbox checked={checked} />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-medium">
-                                  {localizedName(product.name)}
-                                </span>
-                                <span className="block truncate text-xs text-muted-foreground">
-                                  {product.key || product.category || product.id}
-                                </span>
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </section>
-
-                <section className="space-y-2 rounded-lg border bg-muted/10 p-4">
-                  <h3 className="text-sm font-semibold">المنتجات المختارة</h3>
-                  {selectedProducts.length === 0 ? (
-                    <p className="rounded-md border border-dashed bg-background p-3 text-sm text-muted-foreground">
-                      اختر منتجا واحدا على الأقل.
-                    </p>
-                  ) : (
-                    <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto overflow-x-hidden">
-                      {selectedProducts.map((product) => (
-                        <Badge key={product.id} variant="secondary">
-                          {localizedName(product.name)}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </section>
-
-                {formError ? (
-                  <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                    {formError}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </form>
-
-        <DialogFooter className="border-t bg-background px-5 py-4">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isSaving}
-            onClick={() => onOpenChange(false)}
-          >
-            إلغاء
-          </Button>
-          <Button type="submit" form="addon-plan-form" disabled={isSaving}>
-            حفظ الباقة
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  required = false,
-  dir,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: "text" | "number";
-  required?: boolean;
-  dir?: "rtl" | "ltr";
-}) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Input
-        type={type}
-        value={value}
-        required={required}
-        dir={dir}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </div>
-  );
-}
-
 type ChartRow = {
   key: string;
   label: string;
@@ -1430,61 +1039,6 @@ function toPlanRows(plans: Addon[]): PlanChartRow[] {
   });
 }
 
-function planToForm(
-  plan: Addon | null,
-  basePlans: BasePlanPickerItem[]
-): PlanFormState {
-  const priceMap = new Map(
-    (plan?.planPrices ?? []).map((price) => [price.basePlanId, price])
-  );
-
-  return {
-    nameAr: plan?.name.ar ?? "",
-    nameEn: plan?.name.en ?? "",
-    category: plan?.category ?? "snack",
-    maxPerDay: String(plan?.maxPerDay ?? 1),
-    isActive: plan?.isActive ?? true,
-    menuProductIds: plan?.menuProductIds ?? [],
-    prices: basePlans.map((basePlan) => {
-      const price = priceMap.get(basePlan.id);
-      return {
-        basePlanId: basePlan.id,
-        priceHalala: String(price?.priceHalala ?? 0),
-        isActive: price?.isActive ?? true,
-      };
-    }),
-  };
-}
-
-function formToPayload(form: PlanFormState): AddonPlanWritePayload {
-  return {
-    name: {
-      ar: form.nameAr.trim(),
-      en: form.nameEn.trim(),
-    },
-    category: form.category,
-    maxPerDay: Math.max(0, Number(form.maxPerDay) || 0),
-    isActive: form.isActive,
-    menuProductIds: Array.from(new Set(form.menuProductIds.filter(Boolean))),
-    planPrices: form.prices.map((price) => ({
-      basePlanId: price.basePlanId,
-      priceHalala: Math.max(0, Math.round(Number(price.priceHalala) || 0)),
-      isActive: price.isActive,
-    })),
-  };
-}
-
-function addonId(addon: Addon) {
-  return addon.id || addon._id;
-}
-
-function localizedName(
-  value?: { ar?: string; en?: string } | string | null
-) {
-  if (typeof value === "string") return value || "-";
-  return value?.ar || value?.en || "-";
-}
-
 function categoryLabel(category: string) {
   const labels: Record<string, string> = {
     juice: "عصائر",
@@ -1501,4 +1055,27 @@ function compactLabel(value: string, maxLength: number) {
 
 function formatNumber(value: number) {
   return value.toLocaleString("ar-EG");
+}
+
+function errorMessage(error: unknown) {
+  if (error && typeof error === "object") {
+    const response = "response" in error ? error.response : undefined;
+    if (response && typeof response === "object" && "data" in response) {
+      const data = response.data;
+      if (data && typeof data === "object") {
+        if ("message" in data && typeof data.message === "string") {
+          return data.message;
+        }
+        if ("error" in data && typeof data.error === "string") {
+          return data.error;
+        }
+      }
+    }
+
+    if ("message" in error && typeof error.message === "string") {
+      return error.message;
+    }
+  }
+
+  return "تعذر تنفيذ العملية. تحقق من البيانات وحاول مرة أخرى.";
 }

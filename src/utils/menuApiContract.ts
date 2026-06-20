@@ -17,7 +17,7 @@ export const menuOptionGroupVisibilityUrl = (id: string) =>
   `/api/dashboard/menu/option-groups/${id}/visibility`;
 
 export const menuProductComposerUrl = (productId: string) =>
-  `/api/dashboard/menu/products/${productId}/composer`;
+  `/api/dashboard/menu/products/${productId}/composer?contractVersion=v4`;
 
 export const menuPreviewUrl = () => "/api/dashboard/menu/preview";
 

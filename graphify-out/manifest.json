@@ -955,8 +955,8 @@
     "semantic_hash": "654e2ca2e9fddc27eb7e3954900dc48e"
   },
   "src/hooks/useAddonsQuery.ts": {
-    "mtime": 1781868956.2749078,
-    "ast_hash": "e2f4775b623f62e17d30d8b98c5ab4bd",
+    "mtime": 1781958851.7834332,
+    "ast_hash": "1ce3bb4d6be5c861492ef1bd1c44bc3c",
     "semantic_hash": ""
   },
   "src/hooks/useAuth.ts": {
@@ -1230,7 +1230,7 @@
     "semantic_hash": "bb764a9e2cdc12b435aa85ccee797580"
   },
   "src/routeTree.gen.ts": {
-    "mtime": 1781868880.4751902,
+    "mtime": 1781961396.674608,
     "ast_hash": "20fc37af6359fbe99deba1203d42b8ae",
     "semantic_hash": "20fc37af6359fbe99deba1203d42b8ae"
   },
@@ -1250,18 +1250,18 @@
     "semantic_hash": ""
   },
   "src/routes/_protected/addons/$addonId/update.tsx": {
-    "mtime": 1780681298.3449981,
-    "ast_hash": "6134d25b0a8b1a284516740d4dff31bc",
-    "semantic_hash": "6134d25b0a8b1a284516740d4dff31bc"
+    "mtime": 1781959284.5337646,
+    "ast_hash": "225db8543fa02bdd792d1b9580eee468",
+    "semantic_hash": ""
   },
   "src/routes/_protected/addons/create.tsx": {
-    "mtime": 1780681298.3449981,
-    "ast_hash": "79792c30b5c469b1710106f43b32a837",
-    "semantic_hash": "79792c30b5c469b1710106f43b32a837"
+    "mtime": 1781959271.5948982,
+    "ast_hash": "63dcc6e396328f82652df2a4f35a964f",
+    "semantic_hash": ""
   },
   "src/routes/_protected/addons/index.tsx": {
-    "mtime": 1781892416.0623133,
-    "ast_hash": "a396c3d17646a5144f18fbc69c7074f3",
+    "mtime": 1781966169.210971,
+    "ast_hash": "db1e5ca169e679d5510b918a7de2cb55",
     "semantic_hash": ""
   },
   "src/routes/_protected/dashboard-users/index.tsx": {
@@ -1445,8 +1445,8 @@
     "semantic_hash": "e255c2cb650e86f7302bf3504c3be31c"
   },
   "src/types/addonTypes.ts": {
-    "mtime": 1781869245.8525171,
-    "ast_hash": "10eddfab1dfd043acb16569f2c73863f",
+    "mtime": 1781959139.6222544,
+    "ast_hash": "a94f5759e099e9a6592a51e059f7b526",
     "semantic_hash": ""
   },
   "src/types/auth.ts": {
@@ -1580,8 +1580,8 @@
     "semantic_hash": ""
   },
   "src/utils/fetchAddons.ts": {
-    "mtime": 1781889868.8274777,
-    "ast_hash": "e1b87cea11849e3c9b1b7a89c55e02a5",
+    "mtime": 1781958842.7362187,
+    "ast_hash": "c3944bf4d24b0233b716d6dee8ea1bbb",
     "semantic_hash": ""
   },
   "src/utils/fetchCreateAddon.ts": {
@@ -1945,9 +1945,9 @@
     "semantic_hash": "f253e9f9b3fdb8fe5f25b6b36988c3a9"
   },
   "vite.config.ts": {
-    "mtime": 1780681298.3902972,
-    "ast_hash": "d6eb549bc44334a1904691ebf2fefa01",
-    "semantic_hash": "d6eb549bc44334a1904691ebf2fefa01"
+    "mtime": 1781966836.7292533,
+    "ast_hash": "02dd5c095c4b41da9b091755c816dce9",
+    "semantic_hash": ""
   },
   "src/components/pages/operations-board/OperationsOrderDetailsDialog.tsx": {
     "mtime": 1781517164.82269,
@@ -1980,8 +1980,8 @@
     "semantic_hash": ""
   },
   "src/utils/fetchAddonPrices.ts": {
-    "mtime": 1781889894.8223486,
-    "ast_hash": "29e91aa0623fba27b4904e68a9d75915",
+    "mtime": 1781959151.649407,
+    "ast_hash": "bae2ce4d183a61b214453a35e916dd32",
     "semantic_hash": ""
   },
   "src/utils/fetchCourierDeliveries.ts": {

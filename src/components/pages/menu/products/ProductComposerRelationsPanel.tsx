@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   AlertTriangle,
@@ -97,7 +97,10 @@ export function ProductComposerRelationsPanel({
   composer,
   productId,
 }: ProductComposerRelationsPanelProps) {
-  const linkedGroups = composer.linkedOptionGroups || [];
+  const linkedGroups = useMemo(
+    () => composer.linkedOptionGroups || [],
+    [composer.linkedOptionGroups]
+  );
   const isCustomizable = Boolean(
     composer.availability?.isCustomizable ?? composer.product?.isCustomizable
   );
@@ -139,52 +142,50 @@ export function ProductComposerRelationsPanel({
     () => linkedGroups.find((group) => groupRelationId(group) === groupId),
     [linkedGroups, groupId]
   );
-  const linkedOptions = selectedLinkedGroup?.options || [];
+  const linkedOptions = useMemo(
+    () => selectedLinkedGroup?.options || [],
+    [selectedLinkedGroup?.options]
+  );
   const selectedLinkedOption = linkedOptions.find(
     (option) => optionRelationId(option) === optionId
   );
 
-  useEffect(() => {
-    if (!selectedLinkedGroup) {
-      setMinSelections("0");
-      setMaxSelections("1");
-      setIsRequired(false);
-      setGroupSortOrder("0");
-      setOptionId("");
-      return;
-    }
-
-    setMinSelections(String(selectedLinkedGroup.minSelections ?? 0));
+  const loadGroupDraft = (group: MenuProductLinkedGroup | undefined) => {
+    setMinSelections(String(group?.minSelections ?? 0));
     setMaxSelections(
-      selectedLinkedGroup.maxSelections === null
-        ? ""
-        : String(selectedLinkedGroup.maxSelections ?? "")
+      group?.maxSelections == null ? "" : String(group.maxSelections)
     );
-    setIsRequired(selectedLinkedGroup.isRequired ?? false);
-    setGroupSortOrder(String(selectedLinkedGroup.sortOrder ?? 0));
+    setIsRequired(group?.isRequired ?? false);
+    setGroupSortOrder(String(group?.sortOrder ?? 0));
     setOptionId("");
-  }, [selectedLinkedGroup]);
+  };
 
-  useEffect(() => {
-    if (!selectedLinkedOption) {
-      setExtraPriceSar("0");
-      setExtraWeightUnitGrams("");
-      setExtraWeightPriceSar("");
-      setOptionSortOrder("0");
-      setOptionAvailable(true);
-      return;
-    }
-
-    setExtraPriceSar(toSar(selectedLinkedOption.extraPriceHalala) || "0");
+  const loadOptionDraft = (option: MenuProductLinkedOption | undefined) => {
+    setExtraPriceSar(toSar(option?.extraPriceHalala) || "0");
     setExtraWeightUnitGrams(
-      selectedLinkedOption.extraWeightUnitGrams === undefined
+      option?.extraWeightUnitGrams === undefined
         ? ""
-        : String(selectedLinkedOption.extraWeightUnitGrams)
+        : String(option.extraWeightUnitGrams)
     );
-    setExtraWeightPriceSar(toSar(selectedLinkedOption.extraWeightPriceHalala));
-    setOptionSortOrder(String(selectedLinkedOption.sortOrder ?? 0));
-    setOptionAvailable(selectedLinkedOption.isAvailable ?? true);
-  }, [selectedLinkedOption]);
+    setExtraWeightPriceSar(toSar(option?.extraWeightPriceHalala));
+    setOptionSortOrder(String(option?.sortOrder ?? 0));
+    setOptionAvailable(option?.isAvailable ?? true);
+  };
+
+  const handleGroupChange = (nextGroupId: string) => {
+    setGroupId(nextGroupId);
+    loadGroupDraft(
+      linkedGroups.find((group) => groupRelationId(group) === nextGroupId)
+    );
+    loadOptionDraft(undefined);
+  };
+
+  const handleOptionChange = (nextOptionId: string) => {
+    setOptionId(nextOptionId);
+    loadOptionDraft(
+      linkedOptions.find((option) => optionRelationId(option) === nextOptionId)
+    );
+  };
 
   const groupPayload = (): LinkGroupsPayload => ({
     groups: [
@@ -269,7 +270,7 @@ export function ProductComposerRelationsPanel({
               <CardTitle className="text-base">مجموعات المنتج</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Select value={groupId} onValueChange={setGroupId}>
+              <Select value={groupId} onValueChange={handleGroupChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر مجموعة خيارات" />
                 </SelectTrigger>
@@ -356,7 +357,7 @@ export function ProductComposerRelationsPanel({
             <CardContent className="space-y-4">
               <Select
                 value={optionId}
-                onValueChange={setOptionId}
+                onValueChange={handleOptionChange}
                 disabled={!groupId}
               >
                 <SelectTrigger>

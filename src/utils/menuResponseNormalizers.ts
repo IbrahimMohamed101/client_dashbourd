@@ -462,8 +462,11 @@ function normalizeComposerLinkedGroup(raw: any): any {
 export function normalizeProductComposerResponse(raw: any): MenuProductComposerResponse {
   const data = raw.data ?? raw;
   const product = normalizeProduct(data.product ?? {});
+  const customization = data.customization ?? {};
   const linkedOptionGroups = Array.isArray(data.customization?.linkedGroups)
     ? data.customization.linkedGroups.map(normalizeComposerLinkedGroup)
+    : Array.isArray(customization.groups)
+      ? customization.groups.map(normalizeComposerLinkedGroup)
     : Array.isArray(data.linkedOptionGroups)
       ? data.linkedOptionGroups.map(normalizeComposerLinkedGroup)
       : [];
@@ -480,7 +483,10 @@ export function normalizeProductComposerResponse(raw: any): MenuProductComposerR
         versionId: (product as any).versionId ?? null,
       },
       availability: data.availability ?? {
-        isCustomizable: data.customization?.isCustomizable ?? product.isCustomizable,
+        isCustomizable:
+          customization.enabled ??
+          customization.isCustomizable ??
+          product.isCustomizable,
         isActive: product.isActive,
         isVisible: product.isVisible ?? true,
         isAvailable: product.isAvailable,
@@ -500,7 +506,10 @@ export function normalizeProductComposerResponse(raw: any): MenuProductComposerR
       ui: data.ui ?? product.ui ?? { cardVariant: "standard" },
       linkedOptionGroups,
       customization: {
-        isCustomizable: data.customization?.isCustomizable ?? product.isCustomizable,
+        isCustomizable:
+          customization.enabled ??
+          customization.isCustomizable ??
+          product.isCustomizable,
         linkedGroups: linkedOptionGroups,
       },
       availableActions: data.availableActions,

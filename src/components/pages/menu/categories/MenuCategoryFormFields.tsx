@@ -24,6 +24,8 @@ interface Props {
 
 export function MenuCategoryFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
+  const isAvailable = form.watch("isAvailable") ?? true;
+  const isVisible = form.watch("isVisible") ?? true;
 
   return (
     <div className="space-y-6">
@@ -138,13 +140,29 @@ export function MenuCategoryFormFields({ form, isEdit }: Props) {
           <CardDescription>تحكم في ظهور وتفعيل التصنيف في التطبيق</CardDescription>
         </CardHeader>
         <CardContent>
-          <ToggleCard
-            label="نشط"
-            note={isActive ? "التصنيف مفعل" : "التصنيف معطل"}
-            name="isActive"
-            form={form}
-            className="data-[state=checked]:bg-green-500"
-          />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <ToggleCard
+              label="نشط"
+              note={isActive ? "التصنيف مفعل" : "التصنيف معطل"}
+              name="isActive"
+              form={form}
+              className="data-[state=checked]:bg-green-500"
+            />
+            <ToggleCard
+              label="متوفر"
+              note={isAvailable ? "متاح للطلب" : "غير متاح حاليا"}
+              name="isAvailable"
+              form={form}
+              className="data-[state=checked]:bg-emerald-500"
+            />
+            <ToggleCard
+              label="ظاهر"
+              note={isVisible ? "يظهر في التطبيق" : "مخفي عن العملاء"}
+              name="isVisible"
+              form={form}
+              className="data-[state=checked]:bg-sky-500"
+            />
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -180,7 +198,7 @@ function ToggleCard({
 }: {
   label: string;
   note: string;
-  name: "isActive";
+  name: "isActive" | "isAvailable" | "isVisible";
   form: UseFormReturn<MenuCategorySchemaInput, unknown, MenuCategorySchemaType>;
   className: string;
 }) {
@@ -198,11 +216,7 @@ function ToggleCard({
             type="button"
             checked={field.value ?? true}
             className={className}
-            onCheckedChange={(checked) => {
-              field.onChange(checked);
-              form.setValue("isAvailable", checked, { shouldDirty: true });
-              form.setValue("isVisible", checked, { shouldDirty: true });
-            }}
+            onCheckedChange={field.onChange}
           />
         )}
       />

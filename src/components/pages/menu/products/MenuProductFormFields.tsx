@@ -46,6 +46,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
   const selectedCategoryId = form.watch("categoryId") ?? "";
   const isActive = form.watch("isActive") ?? true;
   const isAvailable = form.watch("isAvailable") ?? true;
+  const isVisible = form.watch("isVisible") ?? true;
   const numberInput = (
     name: FieldPath<MenuProductSchemaInput>
   ): UseFormRegisterReturn =>
@@ -269,7 +270,7 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
             inputProps={form.register("sortOrder")}
           />
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <ToggleCard
               label="نشط"
               note={isActive ? "المنتج مفعل" : "المنتج معطل"}
@@ -283,6 +284,13 @@ export function MenuProductFormFields({ form, isEdit }: Props) {
               name="isAvailable"
               form={form}
               className="data-[state=checked]:bg-emerald-500"
+            />
+            <ToggleCard
+              label="ظاهر"
+              note={isVisible ? "يظهر في التطبيق" : "مخفي عن العملاء"}
+              name="isVisible"
+              form={form}
+              className="data-[state=checked]:bg-sky-500"
             />
           </div>
         </CardContent>
@@ -365,7 +373,7 @@ function ToggleCard({
 }: {
   label: string;
   note: string;
-  name: "isActive" | "isAvailable";
+  name: "isActive" | "isAvailable" | "isVisible";
   form: UseFormReturn<MenuProductSchemaInput, unknown, MenuProductSchemaType>;
   className: string;
   defaultChecked?: boolean;

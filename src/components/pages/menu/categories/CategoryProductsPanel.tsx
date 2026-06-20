@@ -47,7 +47,10 @@ export function CategoryProductsPanel({
   const [moveProduct, setMoveProduct] = useState<MenuProduct | null>(null);
   const [targetCategoryId, setTargetCategoryId] = useState("");
 
-  const assignedProducts = category.products ?? [];
+  const assignedProducts = useMemo(
+    () => category.products ?? [],
+    [category.products]
+  );
   const assignedIds = useMemo(
     () => new Set(assignedProducts.map((product) => product.id)),
     [assignedProducts]

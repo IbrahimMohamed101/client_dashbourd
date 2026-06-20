@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect -- This editor hydrates local draft controls from backend snapshots. */
 import { useEffect, useMemo, useState } from "react";
 import {
   Check,
@@ -64,7 +65,10 @@ export function ProductCustomizationPanel({
   const saveCustomization = useSaveProductCustomizationMutation();
 
   const libraryGroups = libraryData?.data.groups ?? [];
-  const libraryOptions = libraryData?.data.options ?? [];
+  const libraryOptions = useMemo(
+    () => libraryData?.data.options ?? [],
+    [libraryData?.data.options]
+  );
   const enabledLibraryOptions = useMemo(
     () => libraryOptions.filter((option) => option.enabled !== false),
     [libraryOptions]

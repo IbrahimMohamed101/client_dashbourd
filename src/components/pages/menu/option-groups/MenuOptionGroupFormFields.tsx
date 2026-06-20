@@ -43,6 +43,8 @@ const DISPLAY_STYLES = [
 
 export function MenuOptionGroupFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
+  const isAvailable = form.watch("isAvailable") ?? true;
+  const isVisible = form.watch("isVisible") ?? true;
 
   return (
     <div className="space-y-6">
@@ -145,13 +147,29 @@ export function MenuOptionGroupFormFields({ form, isEdit }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ToggleCard
-            label="نشط"
-            note={isActive ? "مجموعة الخيارات مفعلة" : "مجموعة الخيارات معطلة"}
-            name="isActive"
-            form={form}
-            className="data-[state=checked]:bg-green-500"
-          />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <ToggleCard
+              label="نشط"
+              note={isActive ? "مجموعة الخيارات مفعلة" : "مجموعة الخيارات معطلة"}
+              name="isActive"
+              form={form}
+              className="data-[state=checked]:bg-green-500"
+            />
+            <ToggleCard
+              label="متوفرة"
+              note={isAvailable ? "متاحة للاختيار" : "غير متاحة حاليا"}
+              name="isAvailable"
+              form={form}
+              className="data-[state=checked]:bg-emerald-500"
+            />
+            <ToggleCard
+              label="ظاهرة"
+              note={isVisible ? "تظهر في التطبيق" : "مخفية عن العملاء"}
+              name="isVisible"
+              form={form}
+              className="data-[state=checked]:bg-sky-500"
+            />
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -204,7 +222,7 @@ function ToggleCard({
 }: {
   label: string;
   note: string;
-  name: "isActive";
+  name: "isActive" | "isAvailable" | "isVisible";
   form: UseFormReturn<
     MenuOptionGroupSchemaInput,
     unknown,
@@ -226,11 +244,7 @@ function ToggleCard({
             type="button"
             checked={field.value ?? true}
             className={className}
-            onCheckedChange={(checked) => {
-              field.onChange(checked);
-              form.setValue("isAvailable", checked, { shouldDirty: true });
-              form.setValue("isVisible", checked, { shouldDirty: true });
-            }}
+            onCheckedChange={field.onChange}
           />
         )}
       />

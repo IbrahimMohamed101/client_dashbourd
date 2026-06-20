@@ -420,7 +420,7 @@ export function PublicMenuPreviewTab() {
   const { data, isLoading, isFetching, isError, error, refetch } =
     usePublicMenuPreviewQuery();
   const contract = data?.data;
-  const sections = contract?.sections || [];
+  const sections = useMemo(() => contract?.sections || [], [contract?.sections]);
 
   const visibleSections = useMemo(() => {
     if (showInactive) return sections;

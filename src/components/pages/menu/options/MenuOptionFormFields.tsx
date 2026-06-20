@@ -33,6 +33,8 @@ interface Props {
 
 export function MenuOptionFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
+  const isAvailable = form.watch("isAvailable") ?? true;
+  const isVisible = form.watch("isVisible") ?? true;
   const { data: groupsData } = useMenuOptionGroupsQuery({});
   const responseData = groupsData?.data;
   const groups = (
@@ -242,7 +244,7 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
           <CardDescription>تحكم في ترتيب الخيار وتفعيله في التطبيق</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_repeat(3,minmax(180px,220px))]">
             <div className="space-y-1.5">
               <Label>ترتيب العرض</Label>
               <Input
@@ -256,7 +258,7 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
               <div className="space-y-0.5">
                 <Label className="text-base font-bold">نشط</Label>
                 <p className="text-xs text-muted-foreground">
-                  {isActive ? "الخيار ظاهر ومتاح للعملاء" : "الخيار معطل وغير متاح للعملاء"}
+                  {isActive ? "الخيار مفعل" : "الخيار معطل"}
                 </p>
               </div>
               <Controller
@@ -267,24 +269,63 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
                     type="button"
                     checked={field.value ?? true}
                     className="data-[state=checked]:bg-green-500"
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked);
-                      form.setValue("isAvailable", checked, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      });
-                      form.setValue("isVisible", checked, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      });
-                    }}
+                    onCheckedChange={field.onChange}
                   />
                 )}
               />
             </div>
+            <ToggleCard
+              label="متوفر"
+              note={isAvailable ? "متاح للاختيار" : "غير متاح حاليا"}
+              name="isAvailable"
+              form={form}
+              className="data-[state=checked]:bg-emerald-500"
+            />
+            <ToggleCard
+              label="ظاهر"
+              note={isVisible ? "يظهر للعملاء" : "مخفي عن العملاء"}
+              name="isVisible"
+              form={form}
+              className="data-[state=checked]:bg-sky-500"
+            />
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function ToggleCard({
+  label,
+  note,
+  name,
+  form,
+  className,
+}: {
+  label: string;
+  note: string;
+  name: "isAvailable" | "isVisible";
+  form: UseFormReturn<MenuOptionSchemaInput, unknown, MenuOptionSchemaType>;
+  className: string;
+}) {
+  return (
+    <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm transition-colors hover:bg-muted/50">
+      <div className="space-y-0.5">
+        <Label className="text-base font-bold">{label}</Label>
+        <p className="text-xs text-muted-foreground">{note}</p>
+      </div>
+      <Controller
+        control={form.control}
+        name={name}
+        render={({ field }) => (
+          <Switch
+            type="button"
+            checked={field.value ?? true}
+            className={className}
+            onCheckedChange={field.onChange}
+          />
+        )}
+      />
     </div>
   );
 }
