@@ -1,85 +1,28 @@
-export interface Addon {
-  id?: string;
-  _id: string;
-  kind?: "item" | "plan" | string;
-  name: {
-    ar: string;
-    en: string;
-  };
-  description: {
-    ar: string;
-    en: string;
-  };
-  price: number;
-  priceHalala: number;
-  priceLabel?: string;
-  priceSar?: number;
-  category: string;
-  currency: string;
-  type: "subscription" | "one_time";
-  billingMode?: "per_day" | "per_meal" | string;
-  maxPerDay?: number;
-  menuProductIds?: string[];
-  menuProductsCount?: number;
-  planPricesCount?: number;
-  pricingMode?: string;
-  imageUrl: string;
-  isActive: boolean;
-  sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
-  legacyCompatibility?: Record<string, unknown>;
-  menuProducts?: unknown[];
-  planPrices?: AddonPlanPrice[];
+export interface LocalizedName {
+  ar: string;
+  en: string;
 }
 
-export interface AddonsResponse {
-  status: boolean;
-  data: Addon[];
-}
+export type AddonCategory = "juice" | "snack" | "small_salad" | string;
 
-export interface AddonDetailResponse {
-  status: boolean;
-  data: Addon;
-}
-
-export interface CreateAddonPayload {
-  kind?: "item" | "plan" | string;
-  name: {
-    ar: string;
-    en: string;
-  };
-  description: {
-    ar: string;
-    en: string;
-  };
-  priceHalala: number;
-  currency: string;
+export interface AddonMenuProduct {
+  id: string;
+  key?: string;
+  name: LocalizedName;
+  category?: string;
+  image?: string;
   imageUrl?: string;
-  imageFile?: File;
-  category: string;
   isActive: boolean;
-  sortOrder: number;
-  type: "subscription" | "one_time" | string;
-  billingMode?: "per_day" | "per_meal" | string;
-  maxPerDay?: number;
-  menuProductIds?: string[];
 }
 
 export interface AddonPlanPrice {
   id?: string;
   _id?: string;
-  addonPlanId: string;
-  addonPlanName?: {
-    ar?: string;
-    en?: string;
-  };
+  addonPlanId?: string;
+  addonPlanName?: LocalizedName;
   category?: string;
   basePlanId: string;
-  basePlanName?: {
-    ar?: string;
-    en?: string;
-  };
+  basePlanName?: LocalizedName | string;
   daysCount?: number;
   mealsCount?: number;
   priceHalala: number;
@@ -89,12 +32,118 @@ export interface AddonPlanPrice {
   isActive: boolean;
 }
 
+export interface Addon {
+  id?: string;
+  _id: string;
+  kind?: "item" | "plan" | string;
+  name: LocalizedName;
+  description: LocalizedName;
+  price: number;
+  priceHalala: number;
+  priceLabel?: string;
+  priceSar?: number;
+  category: AddonCategory;
+  currency: string;
+  type: "subscription" | "one_time";
+  billingMode?: "per_day" | "per_meal" | string;
+  maxPerDay?: number;
+  menuProductIds: string[];
+  menuProductsCount?: number;
+  planPricesCount?: number;
+  pricingMode?: string;
+  imageUrl: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  legacyCompatibility?: Record<string, unknown>;
+  menuProducts: AddonMenuProduct[];
+  planPrices: AddonPlanPrice[];
+}
+
+export interface AddonsSummary {
+  plansCount: number;
+  matrixRowsCount: number;
+  currency: string;
+}
+
+export interface AddonCategoryOption {
+  key: AddonCategory;
+  label: LocalizedName;
+}
+
+export interface AddonsMeta {
+  addonPlanCategories: AddonCategoryOption[];
+}
+
+export interface AddonsResponse {
+  status: boolean;
+  data: Addon[];
+  summary: AddonsSummary;
+  meta: AddonsMeta;
+}
+
+export interface AddonDetailResponse {
+  status: boolean;
+  data: Addon;
+}
+
+export interface AddonPlanWritePayload {
+  name: LocalizedName;
+  category: AddonCategory;
+  maxPerDay?: number;
+  isActive?: boolean;
+  menuProductIds: string[];
+  planPrices: Array<{
+    basePlanId: string;
+    priceHalala: number;
+    isActive?: boolean;
+  }>;
+}
+
+export interface CreateAddonPayload extends AddonPlanWritePayload {
+  kind?: "item" | "plan" | string;
+  description?: LocalizedName;
+  priceHalala?: number;
+  currency?: string;
+  imageUrl?: string;
+  imageFile?: File;
+  sortOrder?: number;
+  type?: "subscription" | "one_time" | string;
+  billingMode?: "per_day" | "per_meal" | string;
+}
+
 export interface AddonPlanPricesResponse {
   status: boolean;
   data: AddonPlanPrice[];
 }
 
-export interface AddonPlansResponse {
+export type AddonPlansResponse = AddonsResponse;
+
+export interface MenuProductPickerItem {
+  id: string;
+  key?: string;
+  name: LocalizedName;
+  category?: string;
+  image?: string;
+  imageUrl?: string;
+  isActive: boolean;
+}
+
+export interface MenuProductPickerResponse {
   status: boolean;
-  data: Addon[];
+  data: MenuProductPickerItem[];
+}
+
+export interface BasePlanPickerItem {
+  id: string;
+  name: string;
+  daysCount?: number;
+  mealsCount?: number;
+  isActive: boolean;
+}
+
+export interface BasePlanPickerResponse {
+  status: boolean;
+  data: BasePlanPickerItem[];
 }

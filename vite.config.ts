@@ -20,6 +20,9 @@ export default defineConfig({
     },
   },
   server: {
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+    },
     proxy: {
       "/api": {
         target: "http://localhost:3000",

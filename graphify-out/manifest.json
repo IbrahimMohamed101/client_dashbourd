@@ -105,14 +105,14 @@
     "semantic_hash": "e4a21b2a0f9693835416d78d65d3bd9b"
   },
   "src/components/pages/addons/addons-columns.tsx": {
-    "mtime": 1780681298.2796564,
-    "ast_hash": "af9d51bb81c663944141ed652888c69d",
-    "semantic_hash": "af9d51bb81c663944141ed652888c69d"
+    "mtime": 1781890020.8915212,
+    "ast_hash": "181e17617fae0fca196c56e1620582e6",
+    "semantic_hash": ""
   },
   "src/components/pages/addons/addons-table.tsx": {
-    "mtime": 1780681298.2796564,
-    "ast_hash": "3fee20fcaa1c9dbc1d44cbfd8ebdbfef",
-    "semantic_hash": "3fee20fcaa1c9dbc1d44cbfd8ebdbfef"
+    "mtime": 1781889878.3216445,
+    "ast_hash": "7612c0ddd756c1239fe70206a2d09ef6",
+    "semantic_hash": ""
   },
   "src/components/pages/dashboard/activity-columns.tsx": {
     "mtime": 1781733310.4722743,
@@ -1260,8 +1260,8 @@
     "semantic_hash": "79792c30b5c469b1710106f43b32a837"
   },
   "src/routes/_protected/addons/index.tsx": {
-    "mtime": 1781868983.3687396,
-    "ast_hash": "e5a1099adfe895727b6557056153244c",
+    "mtime": 1781892416.0623133,
+    "ast_hash": "a396c3d17646a5144f18fbc69c7074f3",
     "semantic_hash": ""
   },
   "src/routes/_protected/dashboard-users/index.tsx": {
@@ -1580,8 +1580,8 @@
     "semantic_hash": ""
   },
   "src/utils/fetchAddons.ts": {
-    "mtime": 1781868901.4592235,
-    "ast_hash": "b351e8d37d7da68e87ec0eb273b0e351",
+    "mtime": 1781889868.8274777,
+    "ast_hash": "e1b87cea11849e3c9b1b7a89c55e02a5",
     "semantic_hash": ""
   },
   "src/utils/fetchCreateAddon.ts": {
@@ -1805,9 +1805,9 @@
     "semantic_hash": "68b52e48413776e0eb028e77522825ed"
   },
   "src/utils/submitAddonForm.ts": {
-    "mtime": 1780681298.374571,
-    "ast_hash": "07c91829dc625db93987419baa23db6a",
-    "semantic_hash": "07c91829dc625db93987419baa23db6a"
+    "mtime": 1781892204.604197,
+    "ast_hash": "8ee5f42f34124c2bd1fc02a4b1c8aa19",
+    "semantic_hash": ""
   },
   "src/utils/submitPackageForm.ts": {
     "mtime": 1780681298.3902972,
@@ -1815,9 +1815,9 @@
     "semantic_hash": "e1be7272dcd7a8f63aab5bc6c5b0314f"
   },
   "src/utils/submitUpdateAddonForm.ts": {
-    "mtime": 1780681298.3902972,
-    "ast_hash": "b0e7eb8133c75c1fb9157e20ae8252cf",
-    "semantic_hash": "b0e7eb8133c75c1fb9157e20ae8252cf"
+    "mtime": 1781892209.786589,
+    "ast_hash": "6cf3c0c3132c123043aad850d29d7c11",
+    "semantic_hash": ""
   },
   "src/utils/submitUpdatePackageForm.ts": {
     "mtime": 1780681298.3902972,
@@ -1980,8 +1980,8 @@
     "semantic_hash": ""
   },
   "src/utils/fetchAddonPrices.ts": {
-    "mtime": 1781868934.2292802,
-    "ast_hash": "7c0ebd0addeb52cc1b14b2f5aeeaa518",
+    "mtime": 1781889894.8223486,
+    "ast_hash": "29e91aa0623fba27b4904e68a9d75915",
     "semantic_hash": ""
   },
   "src/utils/fetchCourierDeliveries.ts": {

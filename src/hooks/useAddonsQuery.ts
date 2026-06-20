@@ -1,5 +1,10 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchAddonPlans, fetchAddons } from "@/utils/fetchAddons";
+import {
+  fetchAddonBasePlanPicker,
+  fetchAddonPlans,
+  fetchAddonProductPicker,
+  fetchAddons,
+} from "@/utils/fetchAddons";
 import { fetchAddonById } from "@/utils/fetchAddonById";
 import {
   createAddonPlanPrice,
@@ -39,6 +44,20 @@ export const addonPlanPricesQueryOptions = () =>
 
 export const useAddonPlanPricesQuery = () =>
   useQuery(addonPlanPricesQueryOptions());
+
+export const addonProductPickerQueryOptions = () =>
+  queryOptions({
+    queryKey: ["addons", "product-picker"],
+    queryFn: fetchAddonProductPicker,
+    staleTime: 1000 * 60 * 5,
+  });
+
+export const addonBasePlanPickerQueryOptions = () =>
+  queryOptions({
+    queryKey: ["addons", "base-plan-picker"],
+    queryFn: fetchAddonBasePlanPicker,
+    staleTime: 1000 * 60 * 5,
+  });
 
 export const addonByIdQueryOptions = (id: string) =>
   queryOptions({

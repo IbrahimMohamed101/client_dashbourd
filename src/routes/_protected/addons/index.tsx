@@ -1,20 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useState, type FormEvent, type HTMLInputTypeAttribute } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import {
-  addonPlanPricesQueryOptions,
-  addonPlansQueryOptions,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  PolarAngleAxis,
+  RadialBar,
+  RadialBarChart,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  addonBasePlanPickerQueryOptions,
+  addonProductPickerQueryOptions,
   addonsQueryOptions,
-  useCreateAddonPlanPriceMutation,
-  useDeleteAddonPlanPriceMutation,
-  useToggleAddonPlanPriceMutation,
-  useUpdateAddonPlanPriceMutation,
 } from "@/hooks/useAddonsQuery";
-import { packagesQueryOptions } from "@/hooks/usePackagesQuery";
 import { Loader } from "@/components/global/loader";
-import { AddonsTable } from "@/components/pages/addons/addons-table";
-import { Card, CardContent } from "@/components/ui/card";
+import { ToastMessage } from "@/components/global/ToastMessage";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -33,14 +49,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ToastMessage } from "@/components/global/ToastMessage";
-import {
-  EditIcon,
-  PlusIcon,
-  PlusSquare,
-  PowerIcon,
-  TrashIcon,
-} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -49,788 +57,1303 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Addon, AddonPlanPrice } from "@/types/addonTypes";
-import { fetchCreateAddon } from "@/utils/fetchCreateAddon";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
+  Archive,
+  CheckCircle2,
+  Edit3,
+  PackagePlus,
+  PieChartIcon,
+  Plus,
+  Power,
+  Search,
+  SlidersHorizontal,
+  Utensils,
+  X,
+} from "lucide-react";
+import type {
+  Addon,
+  AddonCategoryOption,
+  AddonPlanWritePayload,
+  BasePlanPickerItem,
+  MenuProductPickerItem,
+} from "@/types/addonTypes";
+import { createAddonPlan, updateAddonPlan } from "@/utils/fetchAddons";
 import { fetchDeleteAddon } from "@/utils/fetchDeleteAddon";
-import { fetchUpdateAddon, toggleAddonItem } from "@/utils/fetchUpdateAddon";
+import { toggleAddonItem } from "@/utils/fetchUpdateAddon";
+
+const chartConfig = {
+  active: {
+    label: "نشطة",
+    color: "var(--chart-1)",
+  },
+  inactive: {
+    label: "غير نشطة",
+    color: "var(--chart-4)",
+  },
+  value: {
+    label: "العدد",
+    color: "var(--chart-2)",
+  },
+  products: {
+    label: "المنتجات",
+    color: "var(--chart-3)",
+  },
+  prices: {
+    label: "الأسعار",
+    color: "var(--chart-5)",
+  },
+  linked: {
+    label: "الربط",
+    color: "var(--chart-3)",
+  },
+  categories: {
+    label: "التصنيفات",
+    color: "var(--chart-4)",
+  },
+} satisfies ChartConfig;
 
 export const Route = createFileRoute("/_protected/addons/")({
   component: RouteComponent,
   loader: async ({ context }) => {
     await Promise.all([
       context.queryClient.ensureQueryData(addonsQueryOptions()),
-      context.queryClient.ensureQueryData(addonPlansQueryOptions()),
-      context.queryClient.ensureQueryData(addonPlanPricesQueryOptions()),
-      context.queryClient.ensureQueryData(packagesQueryOptions()),
+      context.queryClient.ensureQueryData(addonProductPickerQueryOptions()),
+      context.queryClient.ensureQueryData(addonBasePlanPickerQueryOptions()),
     ]);
   },
   pendingComponent: () => (
-    <Loader variant="full-screen" label="جاري تحميل الإضافات..." />
+    <Loader variant="full-screen" label="جاري تحميل باقات الإضافات..." />
   ),
 });
 
 function RouteComponent() {
   const queryClient = useQueryClient();
-  const { data: addonsResponse } = useSuspenseQuery(
-    addonsQueryOptions()
+  const { data: addonsResponse } = useSuspenseQuery(addonsQueryOptions());
+  const { data: productPicker } = useSuspenseQuery(
+    addonProductPickerQueryOptions()
   );
-  const { data: plansResponse } = useSuspenseQuery(addonPlansQueryOptions());
-  const { data: pricesResponse } = useSuspenseQuery(
-    addonPlanPricesQueryOptions()
+  const { data: basePlanPicker } = useSuspenseQuery(
+    addonBasePlanPickerQueryOptions()
   );
-  const { data: packagesResponse } = useSuspenseQuery(packagesQueryOptions());
-
-  const addons = addonsResponse?.data || [];
-  const plans = plansResponse?.data || [];
-  const prices = pricesResponse?.data || [];
-  const basePlans = normalizeBasePlans(packagesResponse);
-  const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogVersion, setDialogVersion] = useState(0);
   const [editingPlan, setEditingPlan] = useState<Addon | null>(null);
-  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
-  const [editingPrice, setEditingPrice] = useState<AddonPlanPrice | null>(null);
+  const [archivePlan, setArchivePlan] = useState<Addon | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
-  const invalidateAddonContract = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["addons"] }),
-      queryClient.invalidateQueries({ queryKey: ["addons", "plans"] }),
-      queryClient.invalidateQueries({ queryKey: ["addons", "plan-prices"] }),
-    ]);
+  const plans = addonsResponse.data;
+  const products = productPicker.data;
+  const basePlans = basePlanPicker.data;
+  const categories = addonsResponse.meta.addonPlanCategories;
+  const activePlans = plans.filter((plan) => plan.isActive).length;
+  const inactivePlans = Math.max(0, plans.length - activePlans);
+  const linkedProductsCount = new Set(
+    plans.flatMap((plan) => plan.menuProductIds)
+  ).size;
+  const matrixRowsCount =
+    addonsResponse.summary.matrixRowsCount ||
+    plans.reduce((total, plan) => total + plan.planPrices.length, 0);
+
+  const categoryRows = useMemo(() => toCategoryRows(plans), [plans]);
+  const planRows = useMemo(() => toPlanRows(plans), [plans]);
+  const filteredPlans = useMemo(
+    () =>
+      plans.filter((plan) => {
+        const search = searchTerm.trim().toLowerCase();
+        const matchesSearch =
+          !search ||
+          [
+            plan.name.ar,
+            plan.name.en,
+            plan.category,
+            ...plan.menuProducts.map((product) => localizedName(product.name)),
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(search);
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "active" && plan.isActive) ||
+          (statusFilter === "inactive" && !plan.isActive);
+        const matchesCategory =
+          categoryFilter === "all" || plan.category === categoryFilter;
+
+        return matchesSearch && matchesStatus && matchesCategory;
+      }),
+    [categoryFilter, plans, searchTerm, statusFilter]
+  );
+  const hasActiveFilters =
+    searchTerm.trim() !== "" ||
+    statusFilter !== "all" ||
+    categoryFilter !== "all";
+
+  const invalidateAddons = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["addons"] });
   };
 
-  const createPlanMutation = useMutation({
-    mutationFn: (formData: FormData) => fetchCreateAddon(formData),
+  const createMutation = useMutation({
+    mutationFn: createAddonPlan,
     onSuccess: async () => {
-      ToastMessage("Addon plan saved successfully.", "success");
-      await invalidateAddonContract();
-      setPlanDialogOpen(false);
+      ToastMessage("تم إنشاء باقة الإضافة بنجاح.", "success");
+      await invalidateAddons();
+      setDialogOpen(false);
       setEditingPlan(null);
     },
   });
 
-  const updatePlanMutation = useMutation({
-    mutationFn: ({ id, formData }: { id: string; formData: FormData }) =>
-      fetchUpdateAddon(id, formData),
+  const updateMutation = useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: AddonPlanWritePayload;
+    }) => updateAddonPlan(id, payload),
     onSuccess: async () => {
-      ToastMessage("Addon plan updated successfully.", "success");
-      await invalidateAddonContract();
-      setPlanDialogOpen(false);
+      ToastMessage("تم تحديث باقة الإضافة بنجاح.", "success");
+      await invalidateAddons();
+      setDialogOpen(false);
       setEditingPlan(null);
     },
   });
 
-  const togglePlanMutation = useMutation({
+  const toggleMutation = useMutation({
     mutationFn: (id: string) => toggleAddonItem(id),
     onSuccess: async () => {
-      await invalidateAddonContract();
+      ToastMessage("تم تحديث حالة الباقة.", "success");
+      await invalidateAddons();
     },
   });
 
-  const deletePlanMutation = useMutation({
+  const archiveMutation = useMutation({
     mutationFn: (id: string) => fetchDeleteAddon(id),
     onSuccess: async () => {
-      ToastMessage("Addon plan deleted successfully.", "success");
-      await invalidateAddonContract();
+      ToastMessage("تم أرشفة الباقة بأمان.", "success");
+      await invalidateAddons();
+      setArchivePlan(null);
     },
   });
 
-  const createPriceMutation = useCreateAddonPlanPriceMutation();
-  const updatePriceMutation = useUpdateAddonPlanPriceMutation();
-  const togglePriceMutation = useToggleAddonPlanPriceMutation();
-  const deletePriceMutation = useDeleteAddonPlanPriceMutation();
-
-  const openCreatePlan = () => {
+  const openCreate = () => {
     setEditingPlan(null);
-    setPlanDialogOpen(true);
+    setDialogVersion((version) => version + 1);
+    setDialogOpen(true);
   };
 
-  const openEditPlan = (plan: Addon) => {
+  const openEdit = (plan: Addon) => {
     setEditingPlan(plan);
-    setPlanDialogOpen(true);
+    setDialogVersion((version) => version + 1);
+    setDialogOpen(true);
   };
 
-  const openCreatePrice = () => {
-    setEditingPrice(null);
-    setPriceDialogOpen(true);
-  };
-
-  const openEditPrice = (price: AddonPlanPrice) => {
-    setEditingPrice(price);
-    setPriceDialogOpen(true);
-  };
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isMutating =
+    isSaving || toggleMutation.isPending || archiveMutation.isPending;
 
   return (
     <>
-      <div className="px-4 lg:px-6">
-        <Card className="bg-linear-to-br from-primary/10 via-background to-background text-foreground shadow-none">
-          <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-inner">
-                <PlusSquare className="size-6 text-primary-foreground" />
+      <div className="space-y-5 px-4 lg:px-6" dir="rtl">
+        <section className="rounded-lg border bg-background">
+          <div className="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                <PackagePlus className="size-5" />
               </div>
-              <div className="space-y-1">
-                <h2 className="text-xl font-bold tracking-tight">
-                  الإضافات (Addons)
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  إدارة الإضافات واشتراكات المشروبات
+              <div className="min-w-0">
+                <h1 className="text-xl font-semibold tracking-tight">
+                  باقات الإضافات
+                </h1>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  اربط منتجات المنيو الجاهزة بباقات إضافية، وحدد سعر كل باقة
+                  حسب خطة الاشتراك الأساسية.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4 sm:border-r sm:pr-6">
-              <div className="text-center sm:text-right">
-                <p className="text-3xl font-black text-primary">
-                  {addons.length}
-                </p>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  إجمالي الإضافات
-                </p>
-              </div>
-            </div>
-            <Button onClick={openCreatePlan}>
-              <PlusIcon className="size-4" />
-              Add plan
+            <Button onClick={openCreate} className="w-full gap-2 sm:w-auto">
+              <Plus className="size-4" />
+              باقة جديدة
             </Button>
-          </CardContent>
-        </Card>
-      </div>
-      <AddonsTable data={addons} />
-      <div className="grid gap-4 px-4 lg:grid-cols-2 lg:px-6">
-        <AddonPlansPanel
-          plans={plans}
-          onCreate={openCreatePlan}
-          onEdit={openEditPlan}
-          onToggle={(plan) => togglePlanMutation.mutate(addonId(plan))}
-          onDelete={(plan) => deletePlanMutation.mutate(addonId(plan))}
-          isMutating={
-            createPlanMutation.isPending ||
-            updatePlanMutation.isPending ||
-            togglePlanMutation.isPending ||
-            deletePlanMutation.isPending
-          }
+          </div>
+        </section>
+
+        <section className="grid gap-4">
+          <Card className="shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <PieChartIcon className="size-4 text-primary" />
+                نظرة تشغيلية
+              </CardTitle>
+              <CardDescription>
+                ملخص سريع لحالة الباقات والمنتجات والأسعار المرتبطة.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <MetricRadial
+                    label="كل الباقات"
+                    value={plans.length}
+                    total={Math.max(plans.length, 1)}
+                    colorKey="value"
+                  />
+                  <MetricRadial
+                    label="نشطة"
+                    value={activePlans}
+                    total={Math.max(plans.length, 1)}
+                    colorKey="active"
+                  />
+                  <MetricRadial
+                    label="منتجات مرتبطة"
+                    value={linkedProductsCount}
+                    total={Math.max(products.length, linkedProductsCount, 1)}
+                    colorKey="linked"
+                  />
+                  <MetricRadial
+                    label="صفوف أسعار"
+                    value={matrixRowsCount}
+                    total={Math.max(plans.length * basePlans.length, matrixRowsCount, 1)}
+                    colorKey="prices"
+                  />
+                </div>
+                <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+                  <StatusChart active={activePlans} inactive={inactivePlans} />
+                  <CategoryChart rows={categoryRows} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">أقوى الباقات</CardTitle>
+              <CardDescription>
+                مقارنة سريعة بعدد المنتجات وصفوف الأسعار لكل باقة.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PlanBars rows={planRows} />
+            </CardContent>
+          </Card>
+        </section>
+
+        <FiltersPanel
+          searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          categoryFilter={categoryFilter}
+          categories={categories}
+          resultCount={filteredPlans.length}
+          totalCount={plans.length}
+          hasActiveFilters={hasActiveFilters}
+          onSearchChange={setSearchTerm}
+          onStatusChange={setStatusFilter}
+          onCategoryChange={setCategoryFilter}
+          onReset={() => {
+            setSearchTerm("");
+            setStatusFilter("all");
+            setCategoryFilter("all");
+          }}
         />
-        <AddonPricesPanel
-          prices={prices}
-          onCreate={openCreatePrice}
-          onEdit={openEditPrice}
-          onToggle={(price) =>
-            togglePriceMutation.mutate(price.id || price._id || "")
-          }
-          onDelete={(price) =>
-            deletePriceMutation.mutate(price.id || price._id || "")
-          }
-          isMutating={
-            createPriceMutation.isPending ||
-            updatePriceMutation.isPending ||
-            togglePriceMutation.isPending ||
-            deletePriceMutation.isPending
-          }
-        />
+
+        {plans.length === 0 ? (
+          <EmptyState onCreate={openCreate} />
+        ) : filteredPlans.length === 0 ? (
+          <NoFilterResults onReset={() => {
+            setSearchTerm("");
+            setStatusFilter("all");
+            setCategoryFilter("all");
+          }} />
+        ) : (
+          <section className="grid gap-4 2xl:grid-cols-2">
+            {filteredPlans.map((plan) => (
+              <AddonPlanCard
+                key={addonId(plan)}
+                plan={plan}
+                isMutating={isMutating}
+                onEdit={() => openEdit(plan)}
+                onToggle={() => toggleMutation.mutate(addonId(plan))}
+                onArchive={() => setArchivePlan(plan)}
+              />
+            ))}
+          </section>
+        )}
       </div>
+
       <AddonPlanDialog
-        key={editingPlan ? addonId(editingPlan) : "create-addon-plan"}
-        open={planDialogOpen}
+        key={`${editingPlan ? addonId(editingPlan) : "new-addon-plan"}-${dialogVersion}`}
+        open={dialogOpen}
         onOpenChange={(open) => {
-          setPlanDialogOpen(open);
+          setDialogOpen(open);
           if (!open) setEditingPlan(null);
         }}
         plan={editingPlan}
-        isSaving={createPlanMutation.isPending || updatePlanMutation.isPending}
-        onSubmit={(formData) => {
-          if (editingPlan) {
-            updatePlanMutation.mutate({ id: addonId(editingPlan), formData });
-          } else {
-            createPlanMutation.mutate(formData);
-          }
-        }}
-      />
-      <AddonPriceDialog
-        key={editingPrice?.id || editingPrice?._id || "create-addon-price"}
-        open={priceDialogOpen}
-        onOpenChange={(open) => {
-          setPriceDialogOpen(open);
-          if (!open) setEditingPrice(null);
-        }}
-        price={editingPrice}
-        plans={plans}
+        products={products}
         basePlans={basePlans}
-        isSaving={createPriceMutation.isPending || updatePriceMutation.isPending}
+        categories={categories}
+        isSaving={isSaving}
         onSubmit={(payload) => {
-          if (editingPrice?.id || editingPrice?._id) {
-            updatePriceMutation.mutate({
-              id: editingPrice.id || editingPrice._id || "",
-              data: payload,
-            });
+          if (editingPlan) {
+            updateMutation.mutate({ id: addonId(editingPlan), payload });
           } else {
-            createPriceMutation.mutate(payload);
+            createMutation.mutate(payload);
           }
-          setPriceDialogOpen(false);
-          setEditingPrice(null);
         }}
       />
+
+      <AlertDialog
+        open={!!archivePlan}
+        onOpenChange={(open) => {
+          if (!open) setArchivePlan(null);
+        }}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>أرشفة باقة الإضافة؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم إخفاء الباقة من القائمة الافتراضية بدون حذف البيانات
+              التاريخية أو سجلات الاشتراكات السابقة.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={archiveMutation.isPending}>
+              إلغاء
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={archiveMutation.isPending || !archivePlan}
+              onClick={() => {
+                if (archivePlan) archiveMutation.mutate(addonId(archivePlan));
+              }}
+            >
+              أرشفة
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
 
-function localizedName(value?: { ar?: string; en?: string } | null) {
-  return value?.ar || value?.en || "-";
-}
-
-function addonId(addon: Addon) {
-  return addon.id || addon._id;
-}
-
-function AddonPlansPanel({
-  plans,
-  onCreate,
-  onEdit,
-  onToggle,
-  onDelete,
-  isMutating,
+function MetricRadial({
+  label,
+  value,
+  total,
+  colorKey,
 }: {
-  plans: Addon[];
-  onCreate: () => void;
-  onEdit: (plan: Addon) => void;
-  onToggle: (plan: Addon) => void;
-  onDelete: (plan: Addon) => void;
-  isMutating: boolean;
-}) {
-  return (
-    <Card>
-      <CardContent className="space-y-4 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-semibold">Addon subscription plans</h3>
-            <p className="text-sm text-muted-foreground">
-              Billing mode, daily allocation, and menu product entitlement IDs.
-            </p>
-          </div>
-          <Button size="sm" onClick={onCreate}>
-            <PlusIcon className="size-4" />
-            Plan
-          </Button>
-        </div>
-        {plans.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No addon plans returned.
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Billing</TableHead>
-                <TableHead>Max/day</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Prices</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {plans.map((plan) => (
-                <TableRow key={addonId(plan)}>
-                  <TableCell>{localizedName(plan.name)}</TableCell>
-                  <TableCell>{plan.billingMode || "-"}</TableCell>
-                  <TableCell>{plan.maxPerDay ?? "-"}</TableCell>
-                  <TableCell>
-                    {plan.menuProductsCount ?? plan.menuProductIds?.length ?? 0}
-                  </TableCell>
-                  <TableCell>{plan.planPricesCount ?? 0}</TableCell>
-                  <TableCell>{plan.isActive ? "Active" : "Inactive"}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={isMutating}
-                        onClick={() => onEdit(plan)}
-                      >
-                        <EditIcon className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={isMutating}
-                        onClick={() => onToggle(plan)}
-                      >
-                        <PowerIcon className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={isMutating}
-                        onClick={() => onDelete(plan)}
-                      >
-                        <TrashIcon className="size-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function AddonPricesPanel({
-  prices,
-  onCreate,
-  onEdit,
-  onToggle,
-  onDelete,
-  isMutating,
-}: {
-  prices: AddonPlanPrice[];
-  onCreate: () => void;
-  onEdit: (price: AddonPlanPrice) => void;
-  onToggle: (price: AddonPlanPrice) => void;
-  onDelete: (price: AddonPlanPrice) => void;
-  isMutating: boolean;
-}) {
-  return (
-    <Card>
-      <CardContent className="space-y-4 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-semibold">Pricing matrix</h3>
-            <p className="text-sm text-muted-foreground">
-              Source of truth for subscription add-on plan pricing.
-            </p>
-          </div>
-          <Button size="sm" onClick={onCreate}>
-            <PlusIcon className="size-4" />
-            Price
-          </Button>
-        </div>
-        {prices.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No pricing matrix rows returned.
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Addon plan</TableHead>
-                <TableHead>Base plan</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {prices.map((price) => (
-                <TableRow key={price.id || price._id}>
-                  <TableCell>{localizedName(price.addonPlanName)}</TableCell>
-                  <TableCell>{localizedName(price.basePlanName)}</TableCell>
-                  <TableCell>
-                    {price.priceLabel || price.priceSar || price.priceHalala}
-                  </TableCell>
-                  <TableCell>
-                    {price.isActive ? "Active" : "Inactive"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={isMutating}
-                        onClick={() => onEdit(price)}
-                      >
-                        <EditIcon className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={isMutating}
-                        onClick={() => onToggle(price)}
-                      >
-                        <PowerIcon className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={isMutating}
-                        onClick={() => onDelete(price)}
-                      >
-                        <TrashIcon className="size-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-type BasePlanOption = {
-  id: string;
   label: string;
-};
+  value: number;
+  total: number;
+  colorKey: keyof typeof chartConfig;
+}) {
+  const percent = total > 0 ? Math.min(100, Math.round((value / total) * 100)) : 0;
+  const rows = [
+    {
+      name: label,
+      value: percent,
+      fill: `var(--color-${String(colorKey)})`,
+    },
+  ];
 
-type AddonPlanFormState = {
-  nameAr: string;
-  nameEn: string;
-  descriptionAr: string;
-  descriptionEn: string;
-  category: string;
-  billingMode: "per_day" | "per_meal";
-  maxPerDay: string;
-  price: string;
-  menuProductIds: string;
-  isActive: boolean;
-};
+  return (
+    <div className="grid min-h-32 grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-3 rounded-lg border bg-muted/15 p-3">
+      <ChartContainer config={chartConfig} className="h-20 w-20">
+        <RadialBarChart
+          data={rows}
+          startAngle={90}
+          endAngle={-270}
+          innerRadius={30}
+          outerRadius={40}
+        >
+          <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+          <RadialBar
+            dataKey="value"
+            background={{ fill: "var(--muted)" }}
+            cornerRadius={8}
+            isAnimationActive
+          />
+        </RadialBarChart>
+      </ChartContainer>
+      <div className="min-w-0">
+        <p className="text-2xl font-semibold tabular-nums">{formatNumber(value)}</p>
+        <p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {formatNumber(percent)}٪ من المرجع
+        </p>
+      </div>
+    </div>
+  );
+}
 
-type AddonPriceFormState = {
-  addonPlanId: string;
+function StatusChart({ active, inactive }: { active: number; inactive: number }) {
+  const legendRows = [
+    { key: "active", label: "نشطة", value: active, fill: "var(--color-active)" },
+    {
+      key: "inactive",
+      label: "غير نشطة",
+      value: inactive,
+      fill: "var(--color-inactive)",
+    },
+  ];
+  const chartRows = legendRows.filter((row) => row.value > 0);
+
+  if (active + inactive === 0) {
+    return <ChartEmpty title="لا توجد حالات لعرضها" />;
+  }
+
+  return (
+    <div className="rounded-lg border bg-background p-3">
+      <p className="mb-2 text-sm font-medium">توزيع الحالة</p>
+      <ChartContainer config={chartConfig} className="h-44 w-full">
+        <PieChart>
+          <ChartTooltip
+            cursor={false}
+            content={<ChartTooltipContent hideLabel nameKey="label" />}
+          />
+          <Pie
+            data={chartRows}
+            dataKey="value"
+            nameKey="label"
+            innerRadius={42}
+            outerRadius={68}
+            paddingAngle={3}
+            strokeWidth={2}
+            isAnimationActive
+          >
+            {chartRows.map((row) => (
+              <Cell key={row.key} fill={row.fill} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ChartContainer>
+      <ChartLegendMini rows={legendRows} />
+    </div>
+  );
+}
+
+function CategoryChart({ rows }: { rows: ChartRow[] }) {
+  if (rows.length === 0) {
+    return <ChartEmpty title="لا توجد تصنيفات بعد" />;
+  }
+
+  return (
+    <div className="rounded-lg border bg-background p-3">
+      <p className="mb-2 text-sm font-medium">الباقات حسب التصنيف</p>
+      <ChartContainer config={chartConfig} className="h-44 w-full">
+        <BarChart data={rows} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+          <CartesianGrid vertical={false} />
+          <XAxis
+            dataKey="shortLabel"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={10}
+            interval={0}
+          />
+          <YAxis hide allowDecimals={false} />
+          <ChartTooltip
+            cursor={{ fill: "var(--muted)" }}
+            content={<ChartTooltipContent hideLabel nameKey="label" />}
+          />
+          <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive>
+            {rows.map((row, index) => (
+              <Cell
+                key={row.key}
+                fill={`var(--chart-${(index % 5) + 1})`}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ChartContainer>
+      <div className="mt-2 grid gap-1">
+        {rows.map((row, index) => (
+          <div key={row.key} className="flex items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+              <span
+                className="size-2.5 rounded-[3px]"
+                style={{ backgroundColor: `var(--chart-${(index % 5) + 1})` }}
+              />
+              <span className="truncate">{row.label}</span>
+            </span>
+            <span className="text-sm font-medium tabular-nums">
+              {formatNumber(row.value)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PlanBars({ rows }: { rows: PlanChartRow[] }) {
+  if (rows.length === 0) {
+    return <ChartEmpty title="لا توجد باقات كافية للمقارنة" />;
+  }
+
+  const maxValue = Math.max(
+    ...rows.flatMap((row) => [row.products, row.prices]),
+    1
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span className="size-2.5 rounded-[3px] bg-[var(--chart-3)]" />
+          المنتجات المرتبطة
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="size-2.5 rounded-[3px] bg-[var(--chart-5)]" />
+          صفوف الأسعار
+        </span>
+      </div>
+      <div className="grid gap-3 xl:grid-cols-2">
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className="rounded-lg border bg-muted/15 p-4"
+            title={row.label}
+          >
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-medium">{row.label}</p>
+                <p className="text-xs text-muted-foreground">مقارنة داخل الباقة</p>
+              </div>
+              <Badge variant="outline">
+                {formatNumber(row.products + row.prices)}
+              </Badge>
+            </div>
+            <ComparisonBar
+              label="المنتجات"
+              value={row.products}
+              maxValue={maxValue}
+              className="bg-[var(--chart-3)]"
+            />
+            <ComparisonBar
+              label="الأسعار"
+              value={row.prices}
+              maxValue={maxValue}
+              className="bg-[var(--chart-5)]"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ComparisonBar({
+  label,
+  value,
+  maxValue,
+  className,
+}: {
+  label: string;
+  value: number;
+  maxValue: number;
+  className: string;
+}) {
+  const width = `${Math.max(4, Math.round((value / maxValue) * 100))}%`;
+
+  return (
+    <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_2.5rem] items-center gap-3 py-1.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full transition-[width] duration-500 ${className}`}
+          style={{ width }}
+        />
+      </div>
+      <span className="text-left text-sm font-medium tabular-nums">
+        {formatNumber(value)}
+      </span>
+    </div>
+  );
+}
+
+function ChartLegendMini({
+  rows,
+}: {
+  rows: Array<{ key: string; label: string; value: number; fill: string }>;
+}) {
+  return (
+    <div className="mt-2 grid gap-1">
+      {rows.map((row) => (
+        <div key={row.key} className="flex items-center justify-between gap-3">
+          <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+            <span
+              className="size-2.5 rounded-[3px]"
+              style={{ backgroundColor: row.fill }}
+            />
+            {row.label}
+          </span>
+          <span className="text-sm font-medium tabular-nums">
+            {formatNumber(row.value)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChartEmpty({ title }: { title: string }) {
+  return (
+    <div className="flex h-44 items-center justify-center rounded-lg border border-dashed bg-muted/20 px-4 text-center text-sm text-muted-foreground">
+      {title}
+    </div>
+  );
+}
+
+function EmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 p-8 text-center">
+      <div className="flex size-12 items-center justify-center rounded-lg bg-background text-muted-foreground ring-1 ring-border">
+        <Utensils className="size-5" />
+      </div>
+      <h2 className="mt-4 text-base font-semibold">لا توجد باقات إضافات بعد</h2>
+      <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">
+        أنشئ أول باقة، اربطها بمنتجات المنيو، ثم أضف أسعارها حسب الباقات
+        الأساسية.
+      </p>
+      <Button onClick={onCreate} className="mt-5 gap-2">
+        <Plus className="size-4" />
+        إنشاء باقة
+      </Button>
+    </div>
+  );
+}
+
+function FiltersPanel({
+  searchTerm,
+  statusFilter,
+  categoryFilter,
+  categories,
+  resultCount,
+  totalCount,
+  hasActiveFilters,
+  onSearchChange,
+  onStatusChange,
+  onCategoryChange,
+  onReset,
+}: {
+  searchTerm: string;
+  statusFilter: string;
+  categoryFilter: string;
+  categories: AddonCategoryOption[];
+  resultCount: number;
+  totalCount: number;
+  hasActiveFilters: boolean;
+  onSearchChange: (value: string) => void;
+  onStatusChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
+  onReset: () => void;
+}) {
+  return (
+    <section className="rounded-lg border bg-background p-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(16rem,1fr)_12rem_14rem]">
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Search className="size-4 text-muted-foreground" />
+              البحث
+            </Label>
+            <Input
+              value={searchTerm}
+              onChange={(event) => onSearchChange(event.target.value)}
+              placeholder="ابحث باسم الباقة أو المنتج أو التصنيف"
+              className="h-10"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <SlidersHorizontal className="size-4 text-muted-foreground" />
+              الحالة
+            </Label>
+            <Select value={statusFilter} onValueChange={onStatusChange}>
+              <SelectTrigger className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل الحالات</SelectItem>
+                <SelectItem value="active">نشطة فقط</SelectItem>
+                <SelectItem value="inactive">غير نشطة فقط</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>التصنيف</Label>
+            <Select value={categoryFilter} onValueChange={onCategoryChange}>
+              <SelectTrigger className="h-10 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل التصنيفات</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.key} value={category.key}>
+                    {localizedName(category.label)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="secondary" className="h-9 px-3">
+            {formatNumber(resultCount)} من {formatNumber(totalCount)} باقة
+          </Badge>
+          {hasActiveFilters ? (
+            <Button variant="outline" onClick={onReset} className="gap-2">
+              <X className="size-4" />
+              مسح الفلاتر
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function NoFilterResults({ onReset }: { onReset: () => void }) {
+  return (
+    <div className="flex min-h-56 flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 p-8 text-center">
+      <Search className="size-8 text-muted-foreground" />
+      <h2 className="mt-4 text-base font-semibold">لا توجد نتائج مطابقة</h2>
+      <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">
+        جرّب تغيير البحث أو الحالة أو التصنيف لعرض باقات أكثر.
+      </p>
+      <Button onClick={onReset} variant="outline" className="mt-5 gap-2">
+        <X className="size-4" />
+        مسح الفلاتر
+      </Button>
+    </div>
+  );
+}
+
+function AddonPlanCard({
+  plan,
+  isMutating,
+  onEdit,
+  onToggle,
+  onArchive,
+}: {
+  plan: Addon;
+  isMutating: boolean;
+  onEdit: () => void;
+  onToggle: () => void;
+  onArchive: () => void;
+}) {
+  return (
+    <Card className="overflow-hidden shadow-none transition-colors hover:border-primary/35">
+      <CardHeader className="border-b bg-muted/15 pb-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-base">{localizedName(plan.name)}</CardTitle>
+              <Badge variant={plan.isActive ? "default" : "secondary"}>
+                {plan.isActive ? "نشطة" : "غير نشطة"}
+              </Badge>
+              <Badge variant="outline">{categoryLabel(plan.category)}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground" dir="ltr">
+              {plan.name.en || plan.name.ar}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon-sm"
+              disabled={isMutating}
+              onClick={onEdit}
+              title="تعديل"
+            >
+              <Edit3 className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              disabled={isMutating}
+              onClick={onToggle}
+              title="تفعيل أو إيقاف"
+            >
+              <Power className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              disabled={isMutating}
+              onClick={onArchive}
+              title="أرشفة"
+            >
+              <Archive className="size-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5 p-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <PlanStat label="الحد اليومي" value={plan.maxPerDay ?? 1} />
+          <PlanStat label="منتجات مرتبطة" value={plan.menuProductIds.length} />
+          <PlanStat label="أسعار الباقات" value={plan.planPrices.length} />
+        </div>
+
+        <section className="space-y-2">
+          <p className="text-sm font-medium">المنتجات المرتبطة</p>
+          {plan.menuProducts.length === 0 ? (
+            <p className="rounded-lg border border-dashed bg-muted/15 p-3 text-sm text-muted-foreground">
+              لا توجد تفاصيل منتجات من الخادم، لكن يوجد{" "}
+              {formatNumber(plan.menuProductIds.length)} معرفات مرتبطة.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {plan.menuProducts.map((product) => (
+                <Badge key={product.id} variant="secondary" className="h-7">
+                  {localizedName(product.name)}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <div className="overflow-hidden rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">الخطة الأساسية</TableHead>
+                <TableHead className="text-right">الأيام</TableHead>
+                <TableHead className="text-right">الوجبات</TableHead>
+                <TableHead className="text-right">السعر</TableHead>
+                <TableHead className="text-right">الحالة</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {plan.planPrices.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="h-20 text-center text-sm text-muted-foreground"
+                  >
+                    لا توجد أسعار مرتبطة بهذه الباقة.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                plan.planPrices.map((price) => (
+                  <TableRow key={price.basePlanId}>
+                    <TableCell>{localizedName(price.basePlanName)}</TableCell>
+                    <TableCell>{price.daysCount ?? "-"}</TableCell>
+                    <TableCell>{price.mealsCount ?? "-"}</TableCell>
+                    <TableCell>
+                      {price.priceLabel ??
+                        `${formatNumber(price.priceHalala / 100)} ر.س`}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={price.isActive ? "outline" : "secondary"}>
+                        {price.isActive ? "نشط" : "متوقف"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlanStat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-lg border bg-muted/20 p-3">
+      <p className="text-lg font-semibold tabular-nums">
+        {typeof value === "number" ? formatNumber(value) : value}
+      </p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+type PriceRowState = {
   basePlanId: string;
   priceHalala: string;
   isActive: boolean;
 };
 
-const emptyPlanForm = (): AddonPlanFormState => ({
-  nameAr: "",
-  nameEn: "",
-  descriptionAr: "",
-  descriptionEn: "",
-  category: "addons",
-  billingMode: "per_day",
-  maxPerDay: "1",
-  price: "0",
-  menuProductIds: "",
-  isActive: true,
-});
-
-const planToForm = (plan: Addon | null): AddonPlanFormState =>
-  plan
-    ? {
-        nameAr: plan.name.ar,
-        nameEn: plan.name.en,
-        descriptionAr: plan.description.ar,
-        descriptionEn: plan.description.en,
-        category: plan.category,
-        billingMode: plan.billingMode === "per_meal" ? "per_meal" : "per_day",
-        maxPerDay: String(plan.maxPerDay ?? 1),
-        price: String(plan.price ?? 0),
-        menuProductIds: (plan.menuProductIds ?? []).join(", "),
-        isActive: plan.isActive,
-      }
-    : emptyPlanForm();
-
-const planFormToData = (form: AddonPlanFormState) => {
-  const formData = new FormData();
-  const menuProductIds = form.menuProductIds
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  formData.append("kind", "plan");
-  formData.append("type", "subscription");
-  formData.append("name[ar]", form.nameAr);
-  formData.append("name[en]", form.nameEn);
-  formData.append("description[ar]", form.descriptionAr);
-  formData.append("description[en]", form.descriptionEn);
-  formData.append("category", form.category);
-  formData.append("price", form.price);
-  formData.append("priceHalala", String(Math.round(Number(form.price) * 100)));
-  formData.append("billingMode", form.billingMode);
-  formData.append("maxPerDay", form.maxPerDay);
-  formData.append("isActive", String(form.isActive));
-  formData.append("menuProductIds", JSON.stringify(menuProductIds));
-
-  menuProductIds.forEach((id) => formData.append("menuProductIds[]", id));
-
-  return formData;
+type PlanFormState = {
+  nameAr: string;
+  nameEn: string;
+  category: string;
+  maxPerDay: string;
+  isActive: boolean;
+  menuProductIds: string[];
+  prices: PriceRowState[];
 };
-
-const emptyPriceForm = (
-  plans: Addon[],
-  basePlans: BasePlanOption[]
-): AddonPriceFormState => ({
-  addonPlanId: plans[0] ? addonId(plans[0]) : "",
-  basePlanId: basePlans[0]?.id ?? "",
-  priceHalala: "0",
-  isActive: true,
-});
-
-const priceToForm = (
-  price: AddonPlanPrice | null,
-  plans: Addon[],
-  basePlans: BasePlanOption[]
-): AddonPriceFormState =>
-  price
-    ? {
-        addonPlanId: price.addonPlanId,
-        basePlanId: price.basePlanId,
-        priceHalala: String(price.priceHalala),
-        isActive: price.isActive,
-      }
-    : emptyPriceForm(plans, basePlans);
 
 function AddonPlanDialog({
   open,
   onOpenChange,
   plan,
-  onSubmit,
+  products,
+  basePlans,
+  categories,
   isSaving,
+  onSubmit,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   plan: Addon | null;
-  onSubmit: (formData: FormData) => void;
+  products: MenuProductPickerItem[];
+  basePlans: BasePlanPickerItem[];
+  categories: AddonCategoryOption[];
   isSaving: boolean;
+  onSubmit: (payload: AddonPlanWritePayload) => void;
 }) {
-  const [form, setForm] = useState<AddonPlanFormState>(() => planToForm(plan));
-
-  const updateField = <K extends keyof AddonPlanFormState>(
-    key: K,
-    value: AddonPlanFormState[K]
-  ) => setForm((current) => ({ ...current, [key]: value }));
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    onSubmit(planFormToData(form));
-  };
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        onOpenChange(nextOpen);
-        if (nextOpen) setForm(planToForm(plan));
-      }}
-    >
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{plan ? "Edit addon plan" : "Create addon plan"}</DialogTitle>
-          <DialogDescription>
-            Sends kind=plan, billingMode, maxPerDay, and menuProductIds to
-            /api/dashboard/addons.
-          </DialogDescription>
-        </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="Name Arabic"
-              value={form.nameAr}
-              onChange={(value) => updateField("nameAr", value)}
-              required
-            />
-            <Field
-              label="Name English"
-              value={form.nameEn}
-              onChange={(value) => updateField("nameEn", value)}
-              required
-            />
-            <Field
-              label="Description Arabic"
-              value={form.descriptionAr}
-              onChange={(value) => updateField("descriptionAr", value)}
-              required
-            />
-            <Field
-              label="Description English"
-              value={form.descriptionEn}
-              onChange={(value) => updateField("descriptionEn", value)}
-              required
-            />
-            <Field
-              label="Category"
-              value={form.category}
-              onChange={(value) => updateField("category", value)}
-              required
-            />
-            <div className="space-y-2">
-              <Label>Billing mode</Label>
-              <Select
-                value={form.billingMode}
-                onValueChange={(value: "per_day" | "per_meal") =>
-                  updateField("billingMode", value)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="per_day">Per day</SelectItem>
-                  <SelectItem value="per_meal">Per meal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Field
-              label="Max per day"
-              type="number"
-              value={form.maxPerDay}
-              onChange={(value) => updateField("maxPerDay", value)}
-              required
-            />
-            <Field
-              label="Base price SAR"
-              type="number"
-              value={form.price}
-              onChange={(value) => updateField("price", value)}
-              required
-            />
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Menu product IDs</Label>
-              <Input
-                value={form.menuProductIds}
-                onChange={(event) =>
-                  updateField("menuProductIds", event.target.value)
-                }
-                placeholder="Comma separated ObjectIds"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-3 rounded-md border p-3">
-            <Switch
-              checked={form.isActive}
-              onCheckedChange={(checked) => updateField("isActive", checked)}
-            />
-            <Label>Active addon plan</Label>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSaving}>
-              Save plan
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+  const [form, setForm] = useState<PlanFormState>(() =>
+    planToForm(plan, basePlans)
   );
-}
+  const [productSearch, setProductSearch] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
-function AddonPriceDialog({
-  open,
-  onOpenChange,
-  price,
-  plans,
-  basePlans,
-  onSubmit,
-  isSaving,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  price: AddonPlanPrice | null;
-  plans: Addon[];
-  basePlans: BasePlanOption[];
-  onSubmit: (payload: {
-    addonPlanId: string;
-    basePlanId: string;
-    priceHalala: number;
-    isActive: boolean;
-  }) => void;
-  isSaving: boolean;
-}) {
-  const [form, setForm] = useState<AddonPriceFormState>(() =>
-    priceToForm(price, plans, basePlans)
-  );
+  const filteredProducts = useMemo(() => {
+    const search = productSearch.trim().toLowerCase();
+    if (!search) return products;
 
-  const updateField = <K extends keyof AddonPriceFormState>(
-    key: K,
-    value: AddonPriceFormState[K]
-  ) => setForm((current) => ({ ...current, [key]: value }));
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    onSubmit({
-      addonPlanId: form.addonPlanId,
-      basePlanId: form.basePlanId,
-      priceHalala: Number(form.priceHalala),
-      isActive: form.isActive,
+    return products.filter((product) => {
+      const haystack = [
+        product.key,
+        product.category,
+        product.name.ar,
+        product.name.en,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(search);
     });
+  }, [productSearch, products]);
+
+  const selectedProducts = products.filter((product) =>
+    form.menuProductIds.includes(product.id)
+  );
+
+  const updateForm = <K extends keyof PlanFormState>(
+    key: K,
+    value: PlanFormState[K]
+  ) => {
+    setForm((current) => ({ ...current, [key]: value }));
+    setFormError(null);
+  };
+
+  const toggleProduct = (productId: string) => {
+    setForm((current) => {
+      const exists = current.menuProductIds.includes(productId);
+      return {
+        ...current,
+        menuProductIds: exists
+          ? current.menuProductIds.filter((id) => id !== productId)
+          : [...current.menuProductIds, productId],
+      };
+    });
+    setFormError(null);
+  };
+
+  const updatePrice = (
+    basePlanId: string,
+    patch: Partial<Pick<PriceRowState, "priceHalala" | "isActive">>
+  ) => {
+    setForm((current) => ({
+      ...current,
+      prices: current.prices.map((row) =>
+        row.basePlanId === basePlanId ? { ...row, ...patch } : row
+      ),
+    }));
+    setFormError(null);
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const payload = formToPayload(form);
+    if (!payload.name.ar || !payload.name.en) {
+      setFormError("الاسم العربي والإنجليزي مطلوبان.");
+      return;
+    }
+    if (payload.menuProductIds.length === 0) {
+      setFormError("اختر منتجا واحدا على الأقل من المنيو.");
+      return;
+    }
+    if (payload.planPrices.length === 0) {
+      setFormError("يجب إضافة سعر واحد على الأقل.");
+      return;
+    }
+
+    onSubmit(payload);
   };
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(nextOpen) => {
-        onOpenChange(nextOpen);
-        if (nextOpen) setForm(priceToForm(price, plans, basePlans));
-      }}
+      onOpenChange={onOpenChange}
     >
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>{price ? "Edit matrix row" : "Create matrix row"}</DialogTitle>
+      <DialogContent
+        className="grid max-h-[92dvh] w-[calc(100%-1rem)] max-w-[72rem] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-[72rem] [&_*]:min-w-0"
+        dir="rtl"
+      >
+        <DialogHeader className="border-b px-5 py-4 text-right">
+          <DialogTitle>{plan ? "تعديل باقة إضافة" : "إنشاء باقة إضافة"}</DialogTitle>
           <DialogDescription>
-            Uses priceHalala directly. No VAT or total calculations happen in
-            the frontend.
+            اربط منتجات موجودة مسبقا، ثم أدخل أسعار الباقة بالهللة لكل خطة
+            اشتراك أساسية.
           </DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Addon plan</Label>
-              <Select
-                value={form.addonPlanId}
-                onValueChange={(value) => updateField("addonPlanId", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select addon plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {plans.map((plan) => (
-                    <SelectItem key={addonId(plan)} value={addonId(plan)}>
-                      {localizedName(plan.name)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+        <form
+          id="addon-plan-form"
+          className="min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-5"
+          onSubmit={handleSubmit}
+        >
+          <div className="space-y-4">
+            <section className="space-y-4 rounded-lg border bg-muted/10 p-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 shrink-0 text-primary" />
+                <h3 className="text-sm font-semibold">بيانات الباقة</h3>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Field
+                  label="الاسم بالعربي"
+                  value={form.nameAr}
+                  onChange={(value) => updateForm("nameAr", value)}
+                  required
+                />
+                <Field
+                  label="الاسم بالإنجليزي"
+                  value={form.nameEn}
+                  onChange={(value) => updateForm("nameEn", value)}
+                  required
+                  dir="ltr"
+                />
+              </div>
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_9rem] md:items-end">
+                <div className="space-y-2">
+                  <Label>التصنيف</Label>
+                  <Select
+                    value={form.category}
+                    onValueChange={(value) => updateForm("category", value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.key} value={category.key}>
+                          {localizedName(category.label)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Field
+                  label="الحد اليومي"
+                  type="number"
+                  value={form.maxPerDay}
+                  onChange={(value) => updateForm("maxPerDay", value)}
+                  required
+                />
+                <div className="flex h-10 items-center justify-between gap-3 rounded-md border bg-background px-3">
+                  <Label>نشطة</Label>
+                  <Switch
+                    checked={form.isActive}
+                    onCheckedChange={(checked) =>
+                      updateForm("isActive", checked)
+                    }
+                  />
+                </div>
+              </div>
+            </section>
+
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.72fr)] xl:items-start">
+              <section className="space-y-3 rounded-lg border bg-muted/10 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">مصفوفة الأسعار</h3>
+                    <p className="text-xs text-muted-foreground">
+                      أدخل السعر بالهللة لكل خطة أساسية، ويمكن تعطيل أي صف بدون حذفه.
+                    </p>
+                  </div>
+                  <Badge variant="outline">
+                    {formatNumber(form.prices.filter((price) => price.isActive).length)} نشطة
+                  </Badge>
+                </div>
+                {basePlans.length === 0 ? (
+                  <p className="rounded-lg border border-dashed bg-background p-4 text-sm text-muted-foreground">
+                    لا توجد خطط أساسية من الخادم.
+                  </p>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {basePlans.map((basePlan) => {
+                      const row = form.prices.find(
+                        (price) => price.basePlanId === basePlan.id
+                      );
+
+                      return (
+                        <div
+                          key={basePlan.id}
+                          className="rounded-lg border bg-background p-3 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="line-clamp-2 text-sm font-semibold leading-6">
+                                {basePlan.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {basePlan.daysCount ?? "-"} يوم ·{" "}
+                                {basePlan.mealsCount ?? "-"} وجبة
+                              </p>
+                            </div>
+                            <Switch
+                              checked={row?.isActive ?? true}
+                              onCheckedChange={(checked) =>
+                                updatePrice(basePlan.id, {
+                                  isActive: checked,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="mt-3 space-y-2">
+                            <Label className="text-xs">السعر بالهللة</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="1"
+                              inputMode="numeric"
+                              value={row?.priceHalala ?? "0"}
+                              onChange={(event) =>
+                                updatePrice(basePlan.id, {
+                                  priceHalala: event.target.value,
+                                })
+                              }
+                              className="h-10 text-right"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+
+              <div className="space-y-4">
+                <section className="space-y-3 rounded-lg border bg-muted/10 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold">ربط المنتجات</h3>
+                      <p className="text-xs text-muted-foreground">
+                        اختر من منتجات المنيو المتاحة للاشتراكات فقط.
+                      </p>
+                    </div>
+                    <Badge variant="outline">
+                      {formatNumber(form.menuProductIds.length)} مختارة
+                    </Badge>
+                  </div>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={productSearch}
+                      onChange={(event) => setProductSearch(event.target.value)}
+                      className="pr-9"
+                      placeholder="ابحث باسم المنتج أو الكود"
+                    />
+                  </div>
+                  <div className="max-h-[19rem] overflow-y-auto overflow-x-hidden rounded-lg border bg-background">
+                    {filteredProducts.length === 0 ? (
+                      <p className="p-4 text-sm text-muted-foreground">
+                        لا توجد منتجات مطابقة.
+                      </p>
+                    ) : (
+                      <div className="divide-y">
+                        {filteredProducts.map((product) => {
+                          const checked = form.menuProductIds.includes(product.id);
+                          return (
+                            <button
+                              key={product.id}
+                              type="button"
+                              className="flex w-full items-center gap-3 px-3 py-3 text-right transition hover:bg-muted/50"
+                              onClick={() => toggleProduct(product.id)}
+                            >
+                              <Checkbox checked={checked} />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-medium">
+                                  {localizedName(product.name)}
+                                </span>
+                                <span className="block truncate text-xs text-muted-foreground">
+                                  {product.key || product.category || product.id}
+                                </span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="space-y-2 rounded-lg border bg-muted/10 p-4">
+                  <h3 className="text-sm font-semibold">المنتجات المختارة</h3>
+                  {selectedProducts.length === 0 ? (
+                    <p className="rounded-md border border-dashed bg-background p-3 text-sm text-muted-foreground">
+                      اختر منتجا واحدا على الأقل.
+                    </p>
+                  ) : (
+                    <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto overflow-x-hidden">
+                      {selectedProducts.map((product) => (
+                        <Badge key={product.id} variant="secondary">
+                          {localizedName(product.name)}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {formError ? (
+                  <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                    {formError}
+                  </p>
+                ) : null}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Base plan</Label>
-              <Select
-                value={form.basePlanId}
-                onValueChange={(value) => updateField("basePlanId", value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select base plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {basePlans.map((plan) => (
-                    <SelectItem key={plan.id} value={plan.id}>
-                      {plan.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Field
-              label="Price halala"
-              type="number"
-              value={form.priceHalala}
-              onChange={(value) => updateField("priceHalala", value)}
-              required
-            />
           </div>
-          <div className="flex items-center gap-3 rounded-md border p-3">
-            <Switch
-              checked={form.isActive}
-              onCheckedChange={(checked) => updateField("isActive", checked)}
-            />
-            <Label>Active matrix row</Label>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSaving || !form.addonPlanId || !form.basePlanId}
-            >
-              Save price
-            </Button>
-          </DialogFooter>
         </form>
+
+        <DialogFooter className="border-t bg-background px-5 py-4">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isSaving}
+            onClick={() => onOpenChange(false)}
+          >
+            إلغاء
+          </Button>
+          <Button type="submit" form="addon-plan-form" disabled={isSaving}>
+            حفظ الباقة
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -842,12 +1365,14 @@ function Field({
   onChange,
   type = "text",
   required = false,
+  dir,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  type?: HTMLInputTypeAttribute;
+  type?: "text" | "number";
   required?: boolean;
+  dir?: "rtl" | "ltr";
 }) {
   return (
     <div className="space-y-2">
@@ -856,36 +1381,124 @@ function Field({
         type={type}
         value={value}
         required={required}
+        dir={dir}
         onChange={(event) => onChange(event.target.value)}
       />
     </div>
   );
 }
 
-function normalizeBasePlans(response: unknown): BasePlanOption[] {
-  const record =
-    response && typeof response === "object" && !Array.isArray(response)
-      ? (response as Record<string, unknown>)
-      : {};
-  const data = Array.isArray(record.data) ? record.data : [];
+type ChartRow = {
+  key: string;
+  label: string;
+  shortLabel: string;
+  value: number;
+};
 
-  return data
-    .map((item) => {
-      const plan =
-        item && typeof item === "object" && !Array.isArray(item)
-          ? (item as Record<string, unknown>)
-          : {};
-      const name =
-        plan.name && typeof plan.name === "object"
-          ? (plan.name as Record<string, unknown>)
-          : {};
-      const id = String(plan.id ?? plan._id ?? "");
-      if (!id) return null;
+type PlanChartRow = {
+  key: string;
+  label: string;
+  shortLabel: string;
+  products: number;
+  prices: number;
+};
 
+function toCategoryRows(plans: Addon[]): ChartRow[] {
+  const counts = new Map<string, number>();
+  plans.forEach((plan) => {
+    counts.set(plan.category, (counts.get(plan.category) ?? 0) + 1);
+  });
+
+  return Array.from(counts.entries()).map(([key, value]) => ({
+    key,
+    label: categoryLabel(key),
+    shortLabel: compactLabel(categoryLabel(key), 9),
+    value,
+  }));
+}
+
+function toPlanRows(plans: Addon[]): PlanChartRow[] {
+  return plans.map((plan) => {
+    const label = localizedName(plan.name);
+    return {
+      key: addonId(plan),
+      label,
+      shortLabel: compactLabel(label, 12),
+      products: plan.menuProductIds.length,
+      prices: plan.planPrices.length,
+    };
+  });
+}
+
+function planToForm(
+  plan: Addon | null,
+  basePlans: BasePlanPickerItem[]
+): PlanFormState {
+  const priceMap = new Map(
+    (plan?.planPrices ?? []).map((price) => [price.basePlanId, price])
+  );
+
+  return {
+    nameAr: plan?.name.ar ?? "",
+    nameEn: plan?.name.en ?? "",
+    category: plan?.category ?? "snack",
+    maxPerDay: String(plan?.maxPerDay ?? 1),
+    isActive: plan?.isActive ?? true,
+    menuProductIds: plan?.menuProductIds ?? [],
+    prices: basePlans.map((basePlan) => {
+      const price = priceMap.get(basePlan.id);
       return {
-        id,
-        label: String(name.ar ?? name.en ?? plan.displayName ?? id),
+        basePlanId: basePlan.id,
+        priceHalala: String(price?.priceHalala ?? 0),
+        isActive: price?.isActive ?? true,
       };
-    })
-    .filter((item): item is BasePlanOption => item !== null);
+    }),
+  };
+}
+
+function formToPayload(form: PlanFormState): AddonPlanWritePayload {
+  return {
+    name: {
+      ar: form.nameAr.trim(),
+      en: form.nameEn.trim(),
+    },
+    category: form.category,
+    maxPerDay: Math.max(0, Number(form.maxPerDay) || 0),
+    isActive: form.isActive,
+    menuProductIds: Array.from(new Set(form.menuProductIds.filter(Boolean))),
+    planPrices: form.prices.map((price) => ({
+      basePlanId: price.basePlanId,
+      priceHalala: Math.max(0, Math.round(Number(price.priceHalala) || 0)),
+      isActive: price.isActive,
+    })),
+  };
+}
+
+function addonId(addon: Addon) {
+  return addon.id || addon._id;
+}
+
+function localizedName(
+  value?: { ar?: string; en?: string } | string | null
+) {
+  if (typeof value === "string") return value || "-";
+  return value?.ar || value?.en || "-";
+}
+
+function categoryLabel(category: string) {
+  const labels: Record<string, string> = {
+    juice: "عصائر",
+    snack: "سناك",
+    small_salad: "سلطة صغيرة",
+  };
+
+  return labels[category] ?? category.replaceAll("_", " ");
+}
+
+function compactLabel(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;
+}
+
+function formatNumber(value: number) {
+  return value.toLocaleString("ar-EG");
 }

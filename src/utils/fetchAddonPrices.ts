@@ -2,6 +2,7 @@ import api from "@/lib/apis";
 import type {
   AddonPlanPrice,
   AddonPlanPricesResponse,
+  LocalizedName,
 } from "@/types/addonTypes";
 
 export type AddonPlanPricePayload = {
@@ -34,17 +35,33 @@ const asNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const asLocalized = (value: unknown): LocalizedName | undefined => {
+  if (typeof value === "string") return { ar: value, en: value };
+  const record = asRecord(value);
+  if (Object.keys(record).length === 0) return undefined;
+
+  return {
+    ar: String(record.ar ?? record.arabic ?? ""),
+    en: String(record.en ?? record.english ?? ""),
+  };
+};
+
 const normalizePriceRow = (value: unknown): AddonPlanPrice => {
   const row = asRecord(value);
+  const basePlanName =
+    typeof row.basePlanName === "string"
+      ? row.basePlanName
+      : asLocalized(row.basePlanName);
+
   return {
     ...(row as Partial<AddonPlanPrice>),
     id: row.id === undefined ? undefined : String(row.id),
     _id: row._id === undefined ? undefined : String(row._id),
     addonPlanId: String(row.addonPlanId ?? ""),
-    addonPlanName: asRecord(row.addonPlanName),
+    addonPlanName: asLocalized(row.addonPlanName),
     category: row.category === undefined ? undefined : String(row.category),
     basePlanId: String(row.basePlanId ?? ""),
-    basePlanName: asRecord(row.basePlanName),
+    basePlanName,
     daysCount:
       row.daysCount === undefined ? undefined : asNumber(row.daysCount),
     mealsCount:
