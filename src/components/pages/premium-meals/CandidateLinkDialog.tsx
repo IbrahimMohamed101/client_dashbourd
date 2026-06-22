@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Link2, Search } from "lucide-react";
+import { Link2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import type {
   PremiumUpgradeCandidateDto,
   PremiumUpgradeCandidateFilters,
@@ -34,11 +33,8 @@ import {
   usePremiumUpgradeCandidatesQuery,
 } from "@/hooks/usePremiumUpgradesQuery";
 import { SelectField } from "./PremiumUpgradeFilters";
-import {
-  PremiumCandidateCard,
-  ReadOnlyItem,
-  StateToggleLine,
-} from "./PremiumCandidateCard";
+import { MenuSourcePicker } from "./MenuSourcePicker";
+import { ReadOnlyItem, StateToggleLine } from "./PremiumCandidateCard";
 
 type LinkFormState = {
   displayGroupKey: string;
@@ -79,6 +75,13 @@ export function CandidateLinkDialog({
       selectionType: initialSelectionType ?? "all",
     });
     setSelectedId("");
+    setForm({
+      displayGroupKey: "premium_proteins",
+      upgradeDeltaSarInput: "0",
+      isEnabled: true,
+      isVisible: true,
+      sortOrder: "10",
+    });
   }, [open, initialSelectionType]);
 
   const candidatesQuery = usePremiumUpgradeCandidatesQuery(filters, open);
@@ -87,7 +90,12 @@ export function CandidateLinkDialog({
   const selected = candidates.find((candidate) => candidate.id === selectedId);
 
   function updateFilters(next: Partial<PremiumUpgradeCandidateFilters>) {
-    setFilters((current) => ({ ...current, ...next, page: 1 }));
+    setFilters((current) => ({
+      ...current,
+      ...next,
+      q: next.q ?? current.q,
+      page: 1,
+    }));
   }
 
   function selectCandidate(candidate: PremiumUpgradeCandidateDto) {
@@ -101,11 +109,13 @@ export function CandidateLinkDialog({
     }
 
     setSelectedId(candidate.id);
-    setForm((current) => ({
-      ...current,
+    setForm({
       displayGroupKey: defaultDisplayGroupForSelection(candidate.selectionType),
       upgradeDeltaSarInput: String(candidate.upgradeDeltaHalala / 100),
-    }));
+      isEnabled: true,
+      isVisible: true,
+      sortOrder: form.sortOrder || "10",
+    });
   }
 
   function submit(event: FormEvent) {
@@ -144,37 +154,49 @@ export function CandidateLinkDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
-        className="max-h-[90dvh] w-[calc(100%-1.5rem)] overflow-y-auto sm:max-w-[72rem]"
+        className="max-h-[90dvh] w-[calc(100%-1.5rem)] overflow-y-auto sm:max-w-2xl"
         dir="rtl"
       >
         <DialogHeader>
           <DialogTitle>ربط عنصر من المنيو كترقية مميزة</DialogTitle>
           <DialogDescription>
-            اختر عنصرا موجودا من المنيو. هذه العملية تنشئ ربط PremiumUpgradeConfig
-            فقط ولا تعدل منتج المنيو أو خيار المنيو.
+            اختر منتجا أو خيارا موجودا من المنيو ثم حدد إعدادات ظهوره كترقية
+            مميزة.
           </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-5" onSubmit={submit}>
-          <CandidateFilters
-            filters={filters}
-            onChange={updateFilters}
-          />
-
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <CandidateGrid
+          <div className="space-y-2">
+            <Label>العنصر من المنيو</Label>
+            <MenuSourcePicker
               candidates={candidates}
               selectedId={selectedId}
               loading={candidatesQuery.isLoading}
               onSelect={selectCandidate}
-            />
-
-            <LinkConfigPanel
-              candidate={selected ?? null}
-              form={form}
-              onChange={setForm}
+              includeLinked={filters.includeLinked}
+              onIncludeLinkedChange={(includeLinked) =>
+                updateFilters({ includeLinked })
+              }
+              sourceTypeFilter={filters.sourceType}
+              onSourceTypeFilterChange={(sourceType) =>
+                updateFilters({ sourceType })
+              }
+              selectionTypeFilter={filters.selectionType}
+              onSelectionTypeFilterChange={(selectionType) =>
+                updateFilters({ selectionType })
+              }
             />
           </div>
+
+          <AdvancedCandidateFilters filters={filters} onChange={updateFilters} />
+
+          <SelectedCandidateSummary candidate={selected ?? null} />
+
+          <LinkConfigPanel
+            candidate={selected ?? null}
+            form={form}
+            onChange={setForm}
+          />
 
           <DialogFooter className="gap-2 sm:justify-start">
             <Button
@@ -194,7 +216,7 @@ export function CandidateLinkDialog({
   );
 }
 
-function CandidateFilters({
+function AdvancedCandidateFilters({
   filters,
   onChange,
 }: {
@@ -202,21 +224,9 @@ function CandidateFilters({
   onChange: (filters: Partial<PremiumUpgradeCandidateFilters>) => void;
 }) {
   return (
-    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 md:grid-cols-4">
-      <div className="space-y-2 md:col-span-2">
-        <Label>بحث اختياري</Label>
-        <div className="relative">
-          <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={filters.q}
-            onChange={(event) => onChange({ q: event.target.value })}
-            className="pr-9"
-            placeholder="ابحث بالاسم أو المفتاح"
-          />
-        </div>
-      </div>
+    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 md:grid-cols-3">
       <SelectField
-        label="مصدر العنصر"
+        label="نوع المصدر"
         value={filters.sourceType}
         onValueChange={(sourceType) => onChange({ sourceType })}
         options={[
@@ -235,67 +245,61 @@ function CandidateFilters({
           ["premium_large_salad", "سلطة كبيرة مميزة"],
         ]}
       />
-      <div className="flex items-center justify-between rounded-lg border bg-background px-3 py-2 md:col-span-4">
-        <div>
-          <p className="text-sm font-medium">إظهار العناصر المربوطة مسبقا</p>
-          <p className="text-xs text-muted-foreground">
-            تظهر للمراجعة فقط وتبقى معطلة حتى لا يتم إنشاء ربط مكرر.
-          </p>
-        </div>
-        <Switch
+      <label className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
+        <span>
+          <span className="block text-sm font-medium">إظهار المرتبط مسبقا</span>
+          <span className="block text-xs text-muted-foreground">
+            يظهر للمعاينة فقط ويكون معطلا داخل القائمة.
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          className="size-4 accent-primary"
           checked={filters.includeLinked}
-          onCheckedChange={(includeLinked) => onChange({ includeLinked })}
+          onChange={(event) => onChange({ includeLinked: event.target.checked })}
         />
-      </div>
+      </label>
     </div>
   );
 }
 
-function CandidateGrid({
-  candidates,
-  selectedId,
-  loading,
-  onSelect,
+function SelectedCandidateSummary({
+  candidate,
 }: {
-  candidates: PremiumUpgradeCandidateDto[];
-  selectedId: string;
-  loading: boolean;
-  onSelect: (candidate: PremiumUpgradeCandidateDto) => void;
+  candidate: PremiumUpgradeCandidateDto | null;
 }) {
-  if (loading) {
+  if (!candidate) {
     return (
-      <div className="rounded-lg border bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-        جار تحميل عناصر المنيو المؤهلة...
-      </div>
-    );
-  }
-
-  if (candidates.length === 0) {
-    return (
-      <div className="rounded-lg border bg-muted/20 p-6 text-center text-sm leading-6 text-muted-foreground">
-        لا توجد عناصر مؤهلة غير مربوطة. فعّل خيار إظهار العناصر المربوطة
-        لمراجعتها.
+      <div className="rounded-lg border bg-muted/20 p-5 text-center text-sm text-muted-foreground">
+        اختر عنصر من المنيو أولا لعرض مصدر العنصر ونوع الترقية.
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border p-3">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="font-semibold">العناصر المتاحة للربط</h3>
-        <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
-          {candidates.length} عنصر
-        </span>
+    <div className="space-y-4 rounded-lg border p-4">
+      <div>
+        <h3 className="font-semibold">
+          {candidate.name.ar || candidate.name.en || candidate.key}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {candidate.name.en || candidate.key}
+        </p>
       </div>
-      <div className="grid max-h-[560px] gap-3 overflow-y-auto pr-1 md:grid-cols-2">
-        {candidates.map((candidate) => (
-          <PremiumCandidateCard
-            key={candidate.id}
-            candidate={candidate}
-            selected={candidate.id === selectedId}
-            onSelect={() => onSelect(candidate)}
-          />
-        ))}
+      <div className="grid gap-3 text-sm sm:grid-cols-2">
+        <ReadOnlyItem
+          label="مصدر العنصر"
+          value={premiumSourceTypeLabel(candidate.sourceType)}
+        />
+        <ReadOnlyItem
+          label="نوع الترقية"
+          value={premiumSelectionTypeLabel(candidate.selectionType)}
+        />
+        <ReadOnlyItem label="سياق المصدر" value={getSourceContext(candidate)} />
+        <ReadOnlyItem
+          label="فرق السعر الحالي"
+          value={formatPremiumSar(candidate.upgradeDeltaHalala / 100)}
+        />
       </div>
     </div>
   );
@@ -317,38 +321,17 @@ function LinkConfigPanel({
   return (
     <aside className="space-y-4 rounded-lg border p-4">
       <div>
-        <h3 className="font-semibold">إعداد الربط</h3>
+        <h3 className="font-semibold">إعدادات ظهور الترقية</h3>
         <p className="text-sm text-muted-foreground">
-          اختر بطاقة من القائمة لتفعيل حقول الإعداد.
+          بعد اختيار العنصر، عدل مجموعة العرض والسعر والترتيب.
         </p>
       </div>
 
-      {candidate ? (
-        <div className="grid gap-3 text-sm">
-          <ReadOnlyItem
-            label="مصدر العنصر"
-            value={premiumSourceTypeLabel(candidate.sourceType)}
-          />
-          <ReadOnlyItem
-            label="نوع الترقية"
-            value={premiumSelectionTypeLabel(candidate.selectionType)}
-          />
-          <ReadOnlyItem
-            label="سياق المصدر"
-            value={getSourceContext(candidate)}
-          />
-          <ReadOnlyItem
-            label="فرق السعر الحالي"
-            value={formatPremiumSar(candidate.upgradeDeltaHalala / 100)}
-          />
-        </div>
-      ) : (
-        <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
-          لم يتم اختيار عنصر بعد.
-        </div>
-      )}
-
-      <div className={candidate ? "space-y-3" : "pointer-events-none space-y-3 opacity-50"}>
+      <div
+        className={
+          candidate ? "space-y-3" : "pointer-events-none space-y-3 opacity-50"
+        }
+      >
         <SelectField
           label="مجموعة العرض"
           value={form.displayGroupKey}

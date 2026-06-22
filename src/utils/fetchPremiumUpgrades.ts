@@ -42,7 +42,7 @@ export const defaultPremiumUpgradeCandidateFilters: PremiumUpgradeCandidateFilte
     selectionType: "all",
     includeLinked: false,
     page: 1,
-    limit: 20,
+    limit: 100,
   };
 
 const premiumErrorMessages: Record<string, string> = {

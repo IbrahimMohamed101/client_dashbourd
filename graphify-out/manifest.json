@@ -1230,7 +1230,7 @@
     "semantic_hash": "bb764a9e2cdc12b435aa85ccee797580"
   },
   "src/routeTree.gen.ts": {
-    "mtime": 1782163493.4086325,
+    "mtime": 1782166524.9486096,
     "ast_hash": "e9f35458de8a7f1815c003397efd4bb9",
     "semantic_hash": ""
   },
@@ -2005,8 +2005,63 @@
     "semantic_hash": ""
   },
   "src/routes/_protected/premium-meals/index.tsx": {
-    "mtime": 1782163784.8985436,
-    "ast_hash": "1a50805bc2883ab5dbd7b8b226427be5",
+    "mtime": 1782166524.8743396,
+    "ast_hash": "f81320b0fb74bad1569d7c0c0d790344",
+    "semantic_hash": ""
+  },
+  "src/components/pages/premium-meals/ArchivePremiumUpgradeDialog.tsx": {
+    "mtime": 1782166547.692741,
+    "ast_hash": "00f349bf9435d3b63551233a878f9cf7",
+    "semantic_hash": ""
+  },
+  "src/components/pages/premium-meals/CandidateLinkDialog.tsx": {
+    "mtime": 1782166694.2570598,
+    "ast_hash": "9997754721c7f9d044cb64cb1d8e88a8",
+    "semantic_hash": ""
+  },
+  "src/components/pages/premium-meals/EditPremiumUpgradeDialog.tsx": {
+    "mtime": 1782166547.694833,
+    "ast_hash": "236b58cd827fcf6f83a8b2abb23d0610",
+    "semantic_hash": ""
+  },
+  "src/components/pages/premium-meals/PremiumCandidateCard.tsx": {
+    "mtime": 1782166253.0050719,
+    "ast_hash": "32eaf6e2bbbea7239d637dd64f57fd79",
+    "semantic_hash": ""
+  },
+  "src/components/pages/premium-meals/PremiumMealsPage.tsx": {
+    "mtime": 1782166515.6952834,
+    "ast_hash": "439c46ba7b2daa01936825f09ead1e82",
+    "semantic_hash": ""
+  },
+  "src/components/pages/premium-meals/PremiumUpgradeFilters.tsx": {
+    "mtime": 1782166314.034063,
+    "ast_hash": "ebaf9b3ce1a4f19ccb980a8daa646136",
+    "semantic_hash": ""
+  },
+  "src/components/pages/premium-meals/PremiumUpgradesTable.tsx": {
+    "mtime": 1782166374.389791,
+    "ast_hash": "f4938610568b76cab5753157ba52efc2",
+    "semantic_hash": ""
+  },
+  "src/components/pages/premium-meals/ReadinessCard.tsx": {
+    "mtime": 1782166291.5563421,
+    "ast_hash": "93a9aa095125276acef7b1dc9e8c4052",
+    "semantic_hash": ""
+  },
+  "src/hooks/usePremiumUpgradesQuery.ts": {
+    "mtime": 1782166209.0450222,
+    "ast_hash": "ad924ebb2bf7dcae703eee1571fd13e7",
+    "semantic_hash": ""
+  },
+  "src/types/premiumUpgradeTypes.ts": {
+    "mtime": 1782166139.7353537,
+    "ast_hash": "9e6510094663d6c170876f8862dbef3f",
+    "semantic_hash": ""
+  },
+  "src/utils/fetchPremiumUpgrades.ts": {
+    "mtime": 1782166188.8351164,
+    "ast_hash": "ed9de2320a68b3cc307af1886a5d6dac",
     "semantic_hash": ""
   }
 }
