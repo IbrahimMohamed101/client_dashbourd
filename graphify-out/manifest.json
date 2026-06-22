@@ -2015,8 +2015,8 @@
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/CandidateLinkDialog.tsx": {
-    "mtime": 1782166694.2570598,
-    "ast_hash": "9997754721c7f9d044cb64cb1d8e88a8",
+    "mtime": 1782168030.9146883,
+    "ast_hash": "c84361e3ff9fb1fba1681623dca3a8a6",
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/EditPremiumUpgradeDialog.tsx": {
@@ -2060,8 +2060,13 @@
     "semantic_hash": ""
   },
   "src/utils/fetchPremiumUpgrades.ts": {
-    "mtime": 1782166188.8351164,
-    "ast_hash": "ed9de2320a68b3cc307af1886a5d6dac",
+    "mtime": 1782167845.744242,
+    "ast_hash": "a3300c2e92a928ac9fe502442c0980cf",
+    "semantic_hash": ""
+  },
+  "src/components/pages/premium-meals/MenuSourcePicker.tsx": {
+    "mtime": 1782167889.539878,
+    "ast_hash": "bbf818ff26622f7a36ca165be5015ae1",
     "semantic_hash": ""
   }
 }

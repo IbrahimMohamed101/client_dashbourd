@@ -125,28 +125,13 @@ export function MenuSourcePicker({
 
             <CandidateList
               candidates={filteredCandidates}
+              unfilteredCount={candidates.length}
               selectedId={selectedId}
               loading={loading}
+              includeLinked={includeLinked}
+              onIncludeLinkedChange={onIncludeLinkedChange}
               onSelect={choose}
             />
-
-            {!loading && candidates.length === 0 && !includeLinked ? (
-              <div className="rounded-lg border bg-muted/20 p-3 text-sm leading-6 text-muted-foreground">
-                <p>
-                  لا توجد عناصر متاحة للربط. قد تكون كل العناصر المؤهلة مربوطة
-                  بالفعل.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => onIncludeLinkedChange(true)}
-                >
-                  عرض العناصر المربوطة مسبقا
-                </Button>
-              </div>
-            ) : null}
           </div>
         </PopoverContent>
       </Popover>
@@ -156,13 +141,19 @@ export function MenuSourcePicker({
 
 function CandidateList({
   candidates,
+  unfilteredCount,
   selectedId,
   loading,
+  includeLinked,
+  onIncludeLinkedChange,
   onSelect,
 }: {
   candidates: PremiumUpgradeCandidateDto[];
+  unfilteredCount: number;
   selectedId: string;
   loading: boolean;
+  includeLinked: boolean;
+  onIncludeLinkedChange: (value: boolean) => void;
   onSelect: (candidate: PremiumUpgradeCandidateDto) => void;
 }) {
   if (loading) {
@@ -174,6 +165,35 @@ function CandidateList({
   }
 
   if (candidates.length === 0) {
+    if (unfilteredCount === 0 && !includeLinked) {
+      return (
+        <div className="rounded-lg border bg-muted/20 p-4 text-sm leading-6 text-muted-foreground">
+          <p>
+            لا توجد عناصر متاحة للربط. قد تكون كل العناصر المؤهلة مربوطة
+            بالفعل.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => onIncludeLinkedChange(true)}
+          >
+            عرض العناصر المربوطة مسبقا
+          </Button>
+        </div>
+      );
+    }
+
+    if (unfilteredCount === 0 && includeLinked) {
+      return (
+        <div className="rounded-lg border bg-muted/20 p-4 text-sm leading-6 text-muted-foreground">
+          لا توجد بيانات مرشحة من الخادم. يرجى مراجعة endpoint الخاصة
+          بالمرشحين.
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-lg border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
         لا توجد عناصر مطابقة.
