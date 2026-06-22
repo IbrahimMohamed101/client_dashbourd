@@ -245,9 +245,9 @@
     "semantic_hash": "a6ceaaa744bb3831dc45c5cb7bc3e779"
   },
   "src/components/pages/menu/meal-builder/MealBuilderPage.tsx": {
-    "mtime": 1780950095.5878096,
-    "ast_hash": "9556c71c97a17d9c3df08f69e284edb0",
-    "semantic_hash": "9556c71c97a17d9c3df08f69e284edb0"
+    "mtime": 1781993807.0962663,
+    "ast_hash": "674cd71e2fea342b1cf00712bd6129de",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/meal-builder/MealBuilderPanels.tsx": {
     "mtime": 1780886512.2073495,
@@ -275,14 +275,14 @@
     "semantic_hash": "84d46322b9c6f6419673ccff8008e3be"
   },
   "src/components/pages/menu/meal-builder/mealBuilderConstants.ts": {
-    "mtime": 1780885868.0870903,
-    "ast_hash": "e489326cb02f1ee7aa0e25abbe8b9051",
-    "semantic_hash": "e489326cb02f1ee7aa0e25abbe8b9051"
+    "mtime": 1781991910.1651824,
+    "ast_hash": "458913bf0081412798a032c2f361b51b",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/meal-builder/mealBuilderUtils.ts": {
-    "mtime": 1780946089.4484696,
-    "ast_hash": "e7d0087a3cdfc16c75d0b16b2773a940",
-    "semantic_hash": "e7d0087a3cdfc16c75d0b16b2773a940"
+    "mtime": 1781991986.2461927,
+    "ast_hash": "12c36f6d13d866b8bc42f74c02774794",
+    "semantic_hash": ""
   },
   "src/components/pages/menu/meal-builder/mealBuilderVisualModel.ts": {
     "mtime": 1780946115.1372166,
@@ -855,9 +855,9 @@
     "semantic_hash": "3f4a7adf5a2bff8f7e1cb6f1fda18d2d"
   },
   "src/constants/NavLinksData.tsx": {
-    "mtime": 1780681298.3269162,
-    "ast_hash": "d5804d3d02a8fcf5d5f497b07f793685",
-    "semantic_hash": "d5804d3d02a8fcf5d5f497b07f793685"
+    "mtime": 1781993876.1784203,
+    "ast_hash": "d220463125cfe8593907dd48b192269c",
+    "semantic_hash": ""
   },
   "src/constants/SectionCardsData.tsx": {
     "mtime": 1781734734.154242,
@@ -885,14 +885,14 @@
     "semantic_hash": "afddd0a423dccb7e5097cf726d9af506"
   },
   "src/constants/routeTranslations.ts": {
-    "mtime": 1780681298.3269162,
-    "ast_hash": "03be1f81f9148e00401ffda5924b42cc",
-    "semantic_hash": "03be1f81f9148e00401ffda5924b42cc"
+    "mtime": 1781993903.0519958,
+    "ast_hash": "d69da6b659c2305faebe4ce3ef1d4a4a",
+    "semantic_hash": ""
   },
   "src/constants/routes.ts": {
-    "mtime": 1780783351.255437,
-    "ast_hash": "7cae390ffb678654e893e3f4abb03e50",
-    "semantic_hash": "7cae390ffb678654e893e3f4abb03e50"
+    "mtime": 1781993884.9152222,
+    "ast_hash": "bbcb080398e4eb04971dd2b09b5e25de",
+    "semantic_hash": ""
   },
   "src/hooks/menu/index.ts": {
     "mtime": 1780881644.6151216,
@@ -900,9 +900,9 @@
     "semantic_hash": "a280fc209b4e8e55c8f4a5dadfbd0fc1"
   },
   "src/hooks/menu/useMealBuilder.ts": {
-    "mtime": 1780946079.3647964,
-    "ast_hash": "f8bce54a240b302447a498bec731d839",
-    "semantic_hash": "f8bce54a240b302447a498bec731d839"
+    "mtime": 1781991936.5617335,
+    "ast_hash": "f4223346aa80b7cec7236c366b8a1bf2",
+    "semantic_hash": ""
   },
   "src/hooks/menu/useMealPlannerMenuPreview.ts": {
     "mtime": 1780713317.866096,
@@ -1230,9 +1230,9 @@
     "semantic_hash": "bb764a9e2cdc12b435aa85ccee797580"
   },
   "src/routeTree.gen.ts": {
-    "mtime": 1781973455.9466596,
-    "ast_hash": "20fc37af6359fbe99deba1203d42b8ae",
-    "semantic_hash": "20fc37af6359fbe99deba1203d42b8ae"
+    "mtime": 1781993787.2688818,
+    "ast_hash": "e9f35458de8a7f1815c003397efd4bb9",
+    "semantic_hash": ""
   },
   "src/router.tsx": {
     "mtime": 1780681298.3449981,
@@ -1495,9 +1495,9 @@
     "semantic_hash": "7531b047bbe91ad5cb8f60669e0bfaa5"
   },
   "src/types/mealBuilderTypes.ts": {
-    "mtime": 1780946044.7146878,
-    "ast_hash": "e1f95c2708548103efb8e0b9fb62d4f3",
-    "semantic_hash": "e1f95c2708548103efb8e0b9fb62d4f3"
+    "mtime": 1781992030.863276,
+    "ast_hash": "03c0c2c10a977eb3f89fee4aa5900688",
+    "semantic_hash": ""
   },
   "src/types/mealPlannerMenuTypes.ts": {
     "mtime": 1780713317.8637438,
@@ -2002,6 +2002,11 @@
   "src/components/pages/addons/addon-plan-form-utils.ts": {
     "mtime": 1781968306.9329274,
     "ast_hash": "52fd287ad394f35d619b6ea3feb31e10",
+    "semantic_hash": ""
+  },
+  "src/routes/_protected/premium-meals/index.tsx": {
+    "mtime": 1781993787.155047,
+    "ast_hash": "df861f4a4686e3925b45a5acd897e292",
     "semantic_hash": ""
   }
 }
