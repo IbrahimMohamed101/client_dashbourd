@@ -1230,7 +1230,7 @@
     "semantic_hash": "bb764a9e2cdc12b435aa85ccee797580"
   },
   "src/routeTree.gen.ts": {
-    "mtime": 1781993787.2688818,
+    "mtime": 1782163493.4086325,
     "ast_hash": "e9f35458de8a7f1815c003397efd4bb9",
     "semantic_hash": ""
   },
@@ -2005,8 +2005,8 @@
     "semantic_hash": ""
   },
   "src/routes/_protected/premium-meals/index.tsx": {
-    "mtime": 1781993787.155047,
-    "ast_hash": "df861f4a4686e3925b45a5acd897e292",
+    "mtime": 1782163784.8985436,
+    "ast_hash": "1a50805bc2883ab5dbd7b8b226427be5",
     "semantic_hash": ""
   }
 }
