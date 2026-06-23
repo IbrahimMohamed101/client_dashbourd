@@ -12,7 +12,6 @@ import {
 import type { PremiumUpgradeCandidateDto } from "@/types/premiumUpgradeTypes";
 import {
   formatPremiumSar,
-  getSourceContext,
   premiumNameAr,
   premiumSelectionTypeLabel,
   premiumSourceTypeLabel,
@@ -47,6 +46,7 @@ export function MenuSourcePicker({
   const filteredCandidates = useMemo(() => {
     const text = query.trim().toLowerCase();
     if (!text) return candidates;
+
     return candidates.filter((candidate) => {
       const haystack = [
         candidate.name.ar,
@@ -55,10 +55,13 @@ export function MenuSourcePicker({
         candidate.premiumKey,
         candidate.sourceProductKey,
         candidate.sourceGroupKey,
+        premiumSourceTypeLabel(candidate.sourceType),
+        premiumSelectionTypeLabel(candidate.selectionType),
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
+
       return haystack.includes(text);
     });
   }, [candidates, query]);
@@ -67,6 +70,7 @@ export function MenuSourcePicker({
     if (candidate.isLinked || !candidate.eligibilityDiagnostics.eligible) return;
     onSelect(candidate);
     setOpen(false);
+    setQuery("");
   }
 
   return (
@@ -76,12 +80,15 @@ export function MenuSourcePicker({
           <Button
             type="button"
             variant="outline"
-            className="h-auto min-h-14 w-full justify-between gap-3 px-4 py-3 text-right"
+            className={cn(
+              "h-auto min-h-14 w-full justify-between gap-3 px-4 py-3 text-right",
+              selected && "border-primary bg-primary/5"
+            )}
           >
             <span className="min-w-0 flex-1">
               {selected ? (
                 <span className="block">
-                  <span className="block font-semibold">
+                  <span className="block truncate font-semibold">
                     {premiumNameAr(selected.name)}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
@@ -101,26 +108,34 @@ export function MenuSourcePicker({
         </PopoverTrigger>
         <PopoverContent
           align="start"
-          className="w-[min(42rem,calc(100vw-2rem))] p-3"
+          side="bottom"
+          sideOffset={8}
+          className="z-[70] w-[min(44rem,calc(100vw-2rem))] max-h-[min(78vh,660px)] overflow-hidden p-0"
           dir="rtl"
         >
-          <div className="space-y-3">
-            <div>
-              <h3 className="font-semibold">اختر عنصر من المنيو</h3>
-              <p className="text-xs text-muted-foreground">
-                تظهر العناصر المؤهلة غير المربوطة مباشرة. البحث هنا اختياري
-                داخل القائمة فقط.
-              </p>
-            </div>
+          <div className="flex max-h-[min(78vh,660px)] min-h-0 flex-col">
+            <div className="border-b p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">اختر عنصر من المنيو</h3>
+                  <p className="text-xs text-muted-foreground">
+                    تظهر العناصر المؤهلة غير المربوطة مباشرة. البحث هنا اختياري داخل القائمة فقط.
+                  </p>
+                </div>
+                <Badge variant="secondary" className="shrink-0">
+                  {filteredCandidates.length} / {candidates.length}
+                </Badge>
+              </div>
 
-            <div className="relative">
-              <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="pr-9"
-                placeholder="ابحث داخل العناصر المعروضة"
-              />
+              <div className="relative mt-3">
+                <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  className="pr-9"
+                  placeholder="ابحث داخل العناصر المعروضة"
+                />
+              </div>
             </div>
 
             <CandidateList
@@ -158,8 +173,10 @@ function CandidateList({
 }) {
   if (loading) {
     return (
-      <div className="rounded-lg border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
-        جار تحميل عناصر المنيو...
+      <div className="p-3">
+        <div className="rounded-lg border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
+          جار تحميل عناصر المنيو...
+        </div>
       </div>
     );
   }
@@ -167,42 +184,50 @@ function CandidateList({
   if (candidates.length === 0) {
     if (unfilteredCount === 0 && !includeLinked) {
       return (
-        <div className="rounded-lg border bg-muted/20 p-4 text-sm leading-6 text-muted-foreground">
-          <p>
-            لا توجد عناصر متاحة للربط. قد تكون كل العناصر المؤهلة مربوطة
-            بالفعل.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => onIncludeLinkedChange(true)}
-          >
-            عرض العناصر المربوطة مسبقا
-          </Button>
+        <div className="p-3">
+          <div className="rounded-lg border bg-muted/20 p-4 text-sm leading-6 text-muted-foreground">
+            <p>
+              لا توجد عناصر متاحة للربط. قد تكون كل العناصر المؤهلة مربوطة بالفعل.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => onIncludeLinkedChange(true)}
+            >
+              عرض العناصر المربوطة مسبقا
+            </Button>
+          </div>
         </div>
       );
     }
 
     if (unfilteredCount === 0 && includeLinked) {
       return (
-        <div className="rounded-lg border bg-muted/20 p-4 text-sm leading-6 text-muted-foreground">
-          لا توجد بيانات مرشحة من الخادم. يرجى مراجعة endpoint الخاصة
-          بالمرشحين.
+        <div className="p-3">
+          <div className="rounded-lg border bg-muted/20 p-4 text-sm leading-6 text-muted-foreground">
+            لا توجد بيانات مرشحة من الخادم. يرجى مراجعة endpoint الخاصة بالمرشحين.
+          </div>
         </div>
       );
     }
 
     return (
-      <div className="rounded-lg border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
-        لا توجد عناصر مطابقة.
+      <div className="p-3">
+        <div className="rounded-lg border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
+          لا توجد عناصر مطابقة.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
+    <div
+      className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-3"
+      onWheel={(event) => event.stopPropagation()}
+      onTouchMove={(event) => event.stopPropagation()}
+    >
       {candidates.map((candidate) => {
         const selected = candidate.id === selectedId;
         const disabled =
@@ -223,13 +248,13 @@ function CandidateList({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-semibold">{premiumNameAr(candidate.name)}</p>
+                <p className="truncate font-semibold">{premiumNameAr(candidate.name)}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {candidate.name.en || candidate.key}
                 </p>
               </div>
               {selected ? (
-                <Badge>
+                <Badge className="shrink-0">
                   <CheckCircle2 className="size-3" />
                   محدد
                 </Badge>
@@ -246,11 +271,7 @@ function CandidateList({
               <Badge variant="outline">
                 {formatPremiumSar(candidate.upgradeDeltaHalala / 100)}
               </Badge>
-            </div>
-
-            <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-              <span>المصدر: {getSourceContext(candidate)}</span>
-              <span>المفتاح: {candidate.premiumKey}</span>
+              <Badge variant="outline">{candidate.premiumKey}</Badge>
             </div>
 
             {candidate.isLinked ? (
