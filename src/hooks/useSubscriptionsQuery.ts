@@ -10,6 +10,7 @@ import {
   fetchSubscriptionAudit,
   searchSubscriptionsByPhone,
   manualDeductSubscription,
+  fetchSubscriptionManualDeductions,
   fetchSubscriptionLifecycle,
 } from "@/utils/fetchSubscriptionsData";
 import { queryOptions, useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
@@ -80,6 +81,17 @@ export const subscriptionLifecycleQueryOptions = (id: string) =>
 
 export const useSubscriptionLifecycleQuery = (id: string) =>
   useQuery(subscriptionLifecycleQueryOptions(id));
+
+export const manualDeductionsQueryOptions = (id: string | null) =>
+  queryOptions({
+    queryKey: ["subscription-manual-deductions", id],
+    queryFn: () => fetchSubscriptionManualDeductions(id as string),
+    enabled: Boolean(id),
+    staleTime: 1000 * 30,
+  });
+
+export const useSubscriptionManualDeductionsQuery = (id: string | null) =>
+  useQuery(manualDeductionsQueryOptions(id));
 
 export const useFreezeSubscriptionMutation = () => {
   const queryClient = useQueryClient();
@@ -154,6 +166,7 @@ export const useManualDeductSubscriptionMutation = () => {
       queryClient.invalidateQueries({ queryKey: ["subscription-details", variables.id] });
       queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] });
       queryClient.invalidateQueries({ queryKey: ["subscriptions-search"] });
+      queryClient.invalidateQueries({ queryKey: ["subscription-manual-deductions", variables.id] });
     },
   });
 };
