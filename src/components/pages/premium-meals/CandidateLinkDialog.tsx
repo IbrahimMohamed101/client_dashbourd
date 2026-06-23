@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link2 } from "lucide-react";
 import { toast } from "sonner";
@@ -62,6 +62,29 @@ export function CandidateLinkDialog({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      {open ? (
+        <CandidateLinkDialogContent
+          key={initialSelectionType ?? "all"}
+          initialSelectionType={initialSelectionType}
+          onClose={onClose}
+          onCreated={onCreated}
+        />
+      ) : null}
+    </Dialog>
+  );
+}
+
+function CandidateLinkDialogContent({
+  initialSelectionType,
+  onClose,
+  onCreated,
+}: {
+  initialSelectionType?: PremiumUpgradeSelectionType | "all";
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const [filters, setFilters] = useState<PremiumUpgradeCandidateFilters>({
     ...defaultPremiumUpgradeCandidateFilters,
     selectionType: initialSelectionType ?? "all",
@@ -69,17 +92,7 @@ export function CandidateLinkDialog({
   const [selectedId, setSelectedId] = useState("");
   const [form, setForm] = useState<LinkFormState>(defaultLinkForm);
 
-  useEffect(() => {
-    if (!open) return;
-    setFilters({
-      ...defaultPremiumUpgradeCandidateFilters,
-      selectionType: initialSelectionType ?? "all",
-    });
-    setSelectedId("");
-    setForm(defaultLinkForm);
-  }, [open, initialSelectionType]);
-
-  const candidatesQuery = usePremiumUpgradeCandidatesQuery(filters, open);
+  const candidatesQuery = usePremiumUpgradeCandidatesQuery(filters, true);
   const createMutation = useCreatePremiumUpgradeMutation(onCreated);
   const candidates = candidatesQuery.data?.data ?? [];
   const selected = candidates.find((candidate) => candidate.id === selectedId);
@@ -148,84 +161,82 @@ export function CandidateLinkDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent
-        className="grid max-h-[92dvh] w-[calc(100%-1rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0"
-        dir="rtl"
-      >
-        <DialogHeader className="border-b px-5 py-4 text-right">
-          <DialogTitle>ربط عنصر من المنيو كترقية مميزة</DialogTitle>
-          <DialogDescription>
-            اختر منتجا أو خيارا موجودا من المنيو ثم حدد إعدادات ظهوره كترقية مميزة.
-          </DialogDescription>
-        </DialogHeader>
+    <DialogContent
+      className="grid max-h-[92dvh] w-[calc(100%-1rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0"
+      dir="rtl"
+    >
+      <DialogHeader className="border-b px-5 py-4 text-right">
+        <DialogTitle>ربط عنصر من المنيو كترقية مميزة</DialogTitle>
+        <DialogDescription>
+          اختر منتجا أو خيارا موجودا من المنيو ثم حدد إعدادات ظهوره كترقية مميزة.
+        </DialogDescription>
+      </DialogHeader>
 
-        <form className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5" onSubmit={submit}>
-          <div className="space-y-5">
-            <section className="space-y-3 rounded-lg border bg-muted/10 p-4">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h3 className="font-semibold">اختيار عنصر المنيو</h3>
-                  <p className="text-sm text-muted-foreground">
-                    القائمة تعرض عناصر المنيو المؤهلة وغير المربوطة. البحث داخل القائمة اختياري.
-                  </p>
-                </div>
-                <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-                  {candidates.length} عنصر
-                </span>
+      <form className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5" onSubmit={submit}>
+        <div className="space-y-5">
+          <section className="space-y-3 rounded-lg border bg-muted/10 p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="font-semibold">اختيار عنصر المنيو</h3>
+                <p className="text-sm text-muted-foreground">
+                  القائمة تعرض عناصر المنيو المؤهلة وغير المربوطة. البحث داخل القائمة اختياري.
+                </p>
               </div>
+              <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                {candidates.length} عنصر
+              </span>
+            </div>
 
-              <div className="space-y-2">
-                <Label>العنصر من المنيو</Label>
-                <MenuSourcePicker
-                  candidates={candidates}
-                  selectedId={selectedId}
-                  loading={candidatesQuery.isLoading}
-                  onSelect={selectCandidate}
-                  includeLinked={filters.includeLinked}
-                  onIncludeLinkedChange={(includeLinked) =>
-                    updateFilters({ includeLinked })
-                  }
-                  sourceTypeFilter={filters.sourceType}
-                  onSourceTypeFilterChange={(sourceType) =>
-                    updateFilters({ sourceType })
-                  }
-                  selectionTypeFilter={filters.selectionType}
-                  onSelectionTypeFilterChange={(selectionType) =>
-                    updateFilters({ selectionType })
-                  }
-                />
-              </div>
-
-              <AdvancedCandidateFilters filters={filters} onChange={updateFilters} />
-            </section>
-
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-              <SelectedCandidateSummary candidate={selected ?? null} />
-
-              <LinkConfigPanel
-                candidate={selected ?? null}
-                form={form}
-                onChange={setForm}
+            <div className="space-y-2">
+              <Label>العنصر من المنيو</Label>
+              <MenuSourcePicker
+                candidates={candidates}
+                selectedId={selectedId}
+                loading={candidatesQuery.isLoading}
+                onSelect={selectCandidate}
+                includeLinked={filters.includeLinked}
+                onIncludeLinkedChange={(includeLinked) =>
+                  updateFilters({ includeLinked })
+                }
+                sourceTypeFilter={filters.sourceType}
+                onSourceTypeFilterChange={(sourceType) =>
+                  updateFilters({ sourceType })
+                }
+                selectionTypeFilter={filters.selectionType}
+                onSelectionTypeFilterChange={(selectionType) =>
+                  updateFilters({ selectionType })
+                }
               />
             </div>
 
-            <DialogFooter className="sticky bottom-0 -mx-4 border-t bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-5 sm:px-5 sm:justify-start">
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || !selected}
-              >
-                <Link2 data-icon="inline-start" />
-                ربط كترقية مميزة
-              </Button>
-              <Button type="button" variant="outline" onClick={onClose}>
-                إلغاء
-              </Button>
-            </DialogFooter>
+            <AdvancedCandidateFilters filters={filters} onChange={updateFilters} />
+          </section>
+
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+            <SelectedCandidateSummary candidate={selected ?? null} />
+
+            <LinkConfigPanel
+              candidate={selected ?? null}
+              form={form}
+              onChange={setForm}
+            />
           </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+
+          <DialogFooter className="sticky bottom-0 -mx-4 border-t bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-5 sm:px-5 sm:justify-start">
+            <Button
+              type="submit"
+              disabled={createMutation.isPending || !selected}
+            >
+              <Link2 data-icon="inline-start" />
+              ربط كترقية مميزة
+            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              إلغاء
+            </Button>
+          </DialogFooter>
+        </div>
+      </form>
+    </DialogContent>
   );
 }
 
