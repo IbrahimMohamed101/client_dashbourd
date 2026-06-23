@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import {
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
   Clock,
   CreditCard,
-  ShieldAlert,
+  MapPin,
+  PackageCheck,
   Store,
   Truck,
   User,
@@ -18,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrder, isPickupRequest } from "@/types/dashboardOpsTypes";
 
@@ -32,11 +33,10 @@ type DetailRow = {
   label: string;
   value: unknown;
   ltr?: boolean;
+  important?: boolean;
 };
 
 type RecordValue = Record<string, unknown>;
-
-const EMPTY_TEXT = "غير متوفر";
 
 function asRecord(value: unknown): RecordValue | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -48,48 +48,42 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-function getText(value: unknown, fallback = EMPTY_TEXT): string {
-  if (value === null || value === undefined || value === "") return fallback;
+function hasValue(value: unknown): boolean {
+  if (value === null || value === undefined || value === "") return false;
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+
+function text(value: unknown, fallback = ""): string {
+  if (!hasValue(value)) return fallback;
   if (typeof value === "boolean") return value ? "نعم" : "لا";
   if (typeof value === "number") return String(value);
   if (typeof value === "string") return value;
-  if (Array.isArray(value))
-    return value.length ? `${value.length} عنصر` : fallback;
+  if (Array.isArray(value)) return value.map((entry) => text(entry)).filter(Boolean).join("، ");
 
   const record = asRecord(value);
   if (!record) return fallback;
 
-  const preferred =
-    record.ar ||
-    record.en ||
-    record.name ||
-    record.label ||
-    record.title ||
-    record.key ||
-    record.id;
-
-  return typeof preferred === "string" && preferred.trim()
-    ? preferred
-    : fallback;
-}
-
-function formatDateTime(value: unknown) {
-  if (!value || typeof value !== "string") return EMPTY_TEXT;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("ar-EG", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
-
-function formatHalala(value: unknown) {
-  if (typeof value !== "number") return getText(value);
-  return `${(value / 100).toFixed(2)} ر.س`;
+  const name = asRecord(record.name);
+  const display = asRecord(record.display);
+  return text(
+    record.displayName ||
+      record.ar ||
+      record.en ||
+      name?.ar ||
+      name?.en ||
+      display?.ar ||
+      display?.en ||
+      record.label ||
+      record.title ||
+      record.key ||
+      record.id,
+    fallback
+  );
 }
 
 function sourceLabel(item: UnifiedQueueItem) {
-  if (isPickupRequest(item)) return "طلب استلام";
+  if (isPickupRequest(item)) return "استلام من الفرع";
   if (isOneTimeOrder(item)) return "طلب فردي";
   return "اشتراك يومي";
 }
@@ -102,24 +96,20 @@ function getRawRecord(item: UnifiedQueueItem) {
   return asRecord(item.rawData);
 }
 
-function getV2OrderSummary(item: UnifiedQueueItem) {
-  return asRecord(getRawRecord(item)?.orderSummary);
+function getOrderSummary(item: UnifiedQueueItem) {
+  return asRecord(getRawRecord(item)?.orderSummary) || item.orderSummary;
 }
 
-function getV2Kitchen(item: UnifiedQueueItem) {
-  return asRecord(getRawRecord(item)?.kitchen);
+function getKitchen(item: UnifiedQueueItem) {
+  return asRecord(getRawRecord(item)?.kitchen) || item.kitchen;
 }
 
-function getV2Fulfillment(item: UnifiedQueueItem) {
-  return asRecord(getRawRecord(item)?.fulfillment);
+function getFulfillment(item: UnifiedQueueItem) {
+  return asRecord(getRawRecord(item)?.fulfillment) || item.fulfillment;
 }
 
-function getV2Payment(item: UnifiedQueueItem) {
-  return asRecord(getRawRecord(item)?.payment);
-}
-
-function getV2Timestamps(item: UnifiedQueueItem) {
-  return asRecord(getRawRecord(item)?.timestamps);
+function getPayment(item: UnifiedQueueItem) {
+  return asRecord(getRawRecord(item)?.payment) || item.payment || item.paymentValidity;
 }
 
 function Section({
@@ -132,7 +122,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border/70 bg-background p-4 shadow-sm">
+    <section className="rounded-2xl border border-border/70 bg-background p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
         <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
           {icon}
@@ -145,21 +135,27 @@ function Section({
 }
 
 function DetailGrid({ rows }: { rows: DetailRow[] }) {
+  const visibleRows = rows.filter((row) => hasValue(row.value));
+
+  if (!visibleRows.length) {
+    return <p className="text-sm text-muted-foreground">لا توجد بيانات مهمة للعرض.</p>;
+  }
+
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {rows.map((row) => (
+      {visibleRows.map((row) => (
         <div
           key={row.label}
-          className="min-w-0 rounded-lg bg-muted/35 px-3 py-2"
+          className={`min-w-0 rounded-xl px-3 py-2 ${
+            row.important ? "border border-primary/20 bg-primary/5" : "bg-muted/35"
+          }`}
         >
-          <p className="text-xs font-medium text-muted-foreground">
-            {row.label}
-          </p>
+          <p className="text-xs font-medium text-muted-foreground">{row.label}</p>
           <p
-            className="mt-1 text-sm font-semibold break-words text-foreground"
+            className="mt-1 break-words text-sm font-semibold text-foreground"
             dir={row.ltr ? "ltr" : "rtl"}
           >
-            {getText(row.value)}
+            {text(row.value)}
           </p>
         </div>
       ))}
@@ -167,116 +163,70 @@ function DetailGrid({ rows }: { rows: DetailRow[] }) {
   );
 }
 
+function getMealTitle(meal: RecordValue, index: number) {
+  const product = asRecord(meal.product);
+  const display = asRecord(meal.display);
+  return text(
+    display?.titleAr ||
+      meal.productName ||
+      meal.name ||
+      product?.displayName ||
+      product?.name ||
+      meal.mealTypeLabel ||
+      meal.mealType,
+    `وجبة ${index + 1}`
+  );
+}
+
 function MealCard({ meal, index }: { meal: unknown; index: number }) {
   const record = asRecord(meal) || {};
-  const product = asRecord(record.product);
   const protein = asRecord(record.protein);
   const premium = asRecord(record.premium);
   const carbs = asArray(record.carbs || record.carbSelections);
-  const sauces = asArray(record.sauce);
+  const sauces = asArray(record.sauce || record.sauces);
   const sides = asArray(record.sides);
   const options = asArray(record.options || record.selectedOptions);
+  const display = asRecord(record.display);
 
   return (
-    <div className="rounded-lg border border-border/60 p-3">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className="rounded-xl border border-border/60 bg-card/70 p-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-semibold">
-            وجبة {getText(record.slotIndex || index + 1)}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {getText(
-              record.mealType || record.selectionType,
-              "نوع الوجبة غير محدد"
-            )}
-          </p>
+          <p className="font-semibold">{getMealTitle(record, index)}</p>
+          {display?.subtitleAr || record.selectionType || record.mealType ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {text(display?.subtitleAr || record.selectionType || record.mealType)}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Badge variant="secondary" className="rounded-md">
-            ×{getText(record.quantity || 1)}
+            ×{text(record.quantity || 1)}
           </Badge>
           {premium?.isPremium || record.isPremium ? (
             <Badge className="rounded-md bg-amber-500 text-white">
-              Premium
+              {text(premium?.labelAr, "Premium")}
             </Badge>
           ) : null}
         </div>
       </div>
 
-      <DetailGrid
-        rows={[
-          {
-            label: "المنتج",
-            value:
-              product?.name ||
-              record.productName ||
-              product?.key ||
-              record.productKey,
-          },
-          {
-            label: "البروتين",
-            value:
-              protein?.name ||
-              record.proteinName ||
-              protein?.key ||
-              record.proteinKey,
-          },
-          {
-            label: "جرامات البروتين",
-            value: protein?.grams || record.proteinGrams,
-          },
-          {
-            label: "الكارب",
-            value: carbs.length
-              ? carbs.map((entry) => getText(entry)).join("، ")
-              : record.carbId,
-          },
-          { label: "السلطة", value: record.salad || record.customSalad },
-          {
-            label: "الصوص",
-            value: sauces.length
-              ? sauces.map((entry) => getText(entry)).join("، ")
-              : null,
-          },
-          {
-            label: "الجوانب",
-            value: sides.length
-              ? sides.map((entry) => getText(entry)).join("، ")
-              : null,
-          },
-          {
-            label: "الاختيارات",
-            value: options.length
-              ? options.map((entry) => getText(entry)).join("، ")
-              : null,
-          },
-          { label: "ملاحظات الوجبة", value: record.notes },
-        ]}
-      />
-    </div>
-  );
-}
-
-function AddonCard({ addon, index }: { addon: unknown; index: number }) {
-  const record = asRecord(addon) || {};
-
-  return (
-    <div className="rounded-lg border border-border/60 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="font-semibold">
-          {getText(
-            record.name || record.key || record.addonId || record.id,
-            `إضافة ${index + 1}`
-          )}
+      {display?.preparationTextAr ? (
+        <p className="mb-3 rounded-lg bg-primary/5 px-3 py-2 text-sm font-medium text-primary">
+          {text(display.preparationTextAr)}
         </p>
-        <Badge variant="secondary" className="rounded-md">
-          ×{getText(record.quantity || 1)}
-        </Badge>
-      </div>
+      ) : null}
+
       <DetailGrid
         rows={[
-          { label: "التصنيف", value: record.category },
-          { label: "السعر", value: formatHalala(record.priceHalala) },
+          { label: "البروتين", value: protein?.displayName || protein?.name || record.proteinName },
+          { label: "جرامات البروتين", value: protein?.grams || record.proteinGrams },
+          { label: "الكارب", value: carbs.map((entry) => text(entry)).filter(Boolean).join("، ") },
+          { label: "السلطة", value: record.salad || record.customSalad },
+          { label: "الصوص", value: sauces.map((entry) => text(entry)).filter(Boolean).join("، ") },
+          { label: "الجوانب", value: sides.map((entry) => text(entry)).filter(Boolean).join("، ") },
+          { label: "الاختيارات", value: options.map((entry) => text(entry)).filter(Boolean).join("، ") },
+          { label: "ملاحظات", value: record.notes },
         ]}
       />
     </div>
@@ -284,175 +234,116 @@ function AddonCard({ addon, index }: { addon: unknown; index: number }) {
 }
 
 function KitchenSection({ item }: { item: UnifiedQueueItem }) {
-  const kitchen = getV2Kitchen(item);
-  const meals = kitchen?.meals
-    ? asArray(kitchen.meals)
+  const kitchen = getKitchen(item);
+  const meals = asArray(asRecord(kitchen)?.meals).length
+    ? asArray(asRecord(kitchen)?.meals)
     : item.kitchenDetails?.mealSlots?.length
       ? item.kitchenDetails.mealSlots
       : item.materializedMeals?.length
         ? item.materializedMeals
         : item.mealSlots || [];
-  const addons = kitchen?.addons
-    ? asArray(kitchen.addons)
+  const addons = asArray(asRecord(kitchen)?.addons).length
+    ? asArray(asRecord(kitchen)?.addons)
     : item.kitchenDetails?.addons?.length
       ? item.kitchenDetails.addons
       : item.addonSelections || [];
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-xs font-bold text-muted-foreground">
-          الوجبات المطلوب تجهيزها
-        </p>
-        {meals.length ? (
-          meals.map((meal, index) => (
+      {meals.length ? (
+        <div className="space-y-3">
+          {meals.map((meal, index) => (
             <MealCard key={index} meal={meal} index={index} />
-          ))
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            لا توجد وجبات تفصيلية.
-          </p>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+          لا توجد تفاصيل وجبات محددة. اتبع ملاحظات الطلب أو اختيار الشيف إن وجدت.
+        </div>
+      )}
 
-      <div className="space-y-2">
-        <p className="text-xs font-bold text-muted-foreground">الإضافات</p>
-        {addons.length ? (
-          addons.map((addon, index) => (
-            <AddonCard key={index} addon={addon} index={index} />
-          ))
-        ) : (
-          <p className="text-sm text-muted-foreground">لا توجد إضافات.</p>
-        )}
-      </div>
+      {addons.length ? (
+        <div className="rounded-xl border bg-muted/20 p-3">
+          <p className="mb-2 text-xs font-bold text-muted-foreground">الإضافات</p>
+          <div className="flex flex-wrap gap-2">
+            {addons.map((addon, index) => (
+              <Badge key={index} variant="secondary" className="rounded-md">
+                {text(addon, `إضافة ${index + 1}`)}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function PaymentGate({ item }: { item: UnifiedQueueItem }) {
-  const payment = getV2Payment(item);
-  const canPrepare = payment?.canPrepare ?? item.paymentValidity?.canPrepare;
-  const canFulfill = payment?.canFulfill ?? item.paymentValidity?.canFulfill;
-  const hasBlock =
-    payment?.pendingUnpaid ||
-    payment?.superseded ||
-    payment?.revisionMismatch ||
+function PaymentNotice({ item }: { item: UnifiedQueueItem }) {
+  const payment = getPayment(item);
+  const record = asRecord(payment);
+  const hasWarning =
+    record?.pendingUnpaid ||
+    record?.superseded ||
+    record?.revisionMismatch ||
     item.paymentValidity?.pendingUnpaid ||
     item.paymentValidity?.superseded ||
     item.paymentValidity?.revisionMismatch;
 
+  if (!hasWarning && !record?.paymentRequired && !item.paymentValidity?.paymentRequired) {
+    return null;
+  }
+
   return (
-    <div className="space-y-3">
-      {hasBlock ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800">
-          يوجد مانع دفع أو مراجعة. لا تعتمد على العرض فقط، نفذ الإجراء وسيؤكد
-          backend الصلاحية النهائية.
+    <Section title="الدفع" icon={<CreditCard className="h-4 w-4" />}>
+      {hasWarning ? (
+        <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+          يوجد مانع دفع أو مراجعة. تحقق قبل تنفيذ الإجراء.
         </div>
       ) : null}
       <DetailGrid
         rows={[
-          {
-            label: "حالة الدفع",
-            value:
-              payment?.paymentStatus ||
-              item.paymentStatus ||
-              item.paymentValidity?.paymentStatus,
-          },
-          {
-            label: "الدفع مطلوب",
-            value:
-              payment?.paymentRequired ?? item.paymentValidity?.paymentRequired,
-          },
-          {
-            label: "مدفوع/مطبق",
-            value:
-              payment?.paymentApplied ?? item.paymentValidity?.paymentApplied,
-          },
-          { label: "يمكن التجهيز", value: canPrepare },
-          { label: "يمكن التسليم", value: canFulfill },
-          {
-            label: "سبب المنع",
-            value: payment?.reason || item.paymentValidity?.reason,
-          },
+          { label: "حالة الدفع", value: record?.paymentStatus || item.paymentStatus || item.paymentValidity?.paymentStatus },
+          { label: "الدفع مطلوب", value: record?.paymentRequired ?? item.paymentValidity?.paymentRequired },
+          { label: "سبب المنع", value: record?.reason || item.paymentValidity?.reason },
         ]}
       />
-    </div>
+    </Section>
   );
 }
 
 function DataQualitySection({ item }: { item: UnifiedQueueItem }) {
   const warnings = item.dataQuality?.warnings || [];
-
-  if (item.dataQuality?.isComplete !== false && warnings.length === 0) {
-    return null;
-  }
+  if (!warnings.length && item.dataQuality?.isComplete !== false) return null;
 
   return (
-    <Section
-      title="تنبيهات جودة البيانات"
-      icon={<ShieldAlert className="h-4 w-4" />}
-    >
+    <Section title="تنبيهات مهمة" icon={<AlertTriangle className="h-4 w-4" />}>
       <div className="space-y-2">
-        <Badge
-          variant="outline"
-          className="rounded-md border-amber-500/30 bg-amber-500/10 text-amber-800"
-        >
-          بيانات غير مكتملة
-        </Badge>
-        {warnings.map((warning, index) => (
-          <div
-            key={`${warning.code}-${index}`}
-            className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-900"
-          >
-            {getText(warning.messageAr || warning.messageEn || warning.code)}
-          </div>
-        ))}
+        {warnings.length ? (
+          warnings.map((warning, index) => (
+            <div key={`${warning.code}-${index}`} className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-300">
+              {warning.messageAr || warning.messageEn || warning.code}
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">بعض بيانات الطلب غير مكتملة.</p>
+        )}
       </div>
     </Section>
   );
 }
 
-function OperationsActionsSummary({ item }: { item: UnifiedQueueItem }) {
-  const disabled = item.actions?.disabled || [];
-
-  if (!item.allowedActions?.length && !disabled.length) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        لا توجد إجراءات متاحة حالياً.
-      </p>
-    );
+function ActionsSummary({ item }: { item: UnifiedQueueItem }) {
+  if (!item.allowedActions?.length) {
+    return <p className="text-sm text-muted-foreground">لا توجد إجراءات متاحة حالياً.</p>;
   }
 
   return (
-    <div className="space-y-3">
-      {item.allowedActions?.length ? (
-        <div className="flex flex-wrap gap-2">
-          {item.allowedActions.map((action) => (
-            <Badge key={action.id} variant="outline" className="rounded-md">
-              {action.label}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-      {disabled.length ? (
-        <div className="space-y-2">
-          {disabled.map((action) => (
-            <div
-              key={action.id}
-              className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
-            >
-              <span className="font-semibold text-foreground">
-                {getText(action.label || action.id)}
-              </span>
-              {action.reason || action.reasonLabel ? (
-                <span className="mr-2">
-                  - {getText(action.reasonLabel || action.reason)}
-                </span>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
+    <div className="flex flex-wrap gap-2">
+      {item.allowedActions.map((action) => (
+        <Badge key={action.id} variant="outline" className="rounded-md">
+          {action.label}
+        </Badge>
+      ))}
     </div>
   );
 }
@@ -464,250 +355,99 @@ export function OperationsOrderDetailsDialog({
 }: OperationsOrderDetailsDialogProps) {
   if (!item) return null;
 
-  const orderSummary = getV2OrderSummary(item);
-  const fulfillment = getV2Fulfillment(item);
-  const timestamps = getV2Timestamps(item);
-  const delivery = asRecord(fulfillment?.delivery);
-  const pickup = asRecord(fulfillment?.pickup);
+  const orderSummary = getOrderSummary(item);
+  const fulfillment = getFulfillment(item);
+  const delivery = asRecord(asRecord(fulfillment)?.delivery);
+  const pickup = asRecord(asRecord(fulfillment)?.pickup);
+  const address = item.context.addressSummary || item.delivery?.addressSummary;
+  const window = item.context.window || delivery?.window || item.delivery?.window || item.delivery?.deliveryWindow;
+  const notes = asRecord(orderSummary)?.notes || item.notes || item.context.notes;
+  const allergies = asRecord(orderSummary)?.allergies;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         dir="rtl"
-        className="max-h-[85dvh] overflow-y-scroll rounded-2xl p-0 sm:max-w-3xl lg:max-h-[80dvh] lg:max-w-5xl"
+        className="grid max-h-[92dvh] w-[calc(100%-1rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-2xl p-0 sm:max-w-5xl"
       >
         <div className="border-b bg-muted/30 px-5 py-4 sm:px-6">
           <DialogHeader className="gap-2 pl-10 text-right">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="rounded-md">
-                {sourceLabel(item)}
-              </Badge>
-              <Badge variant="outline" className="rounded-md">
-                {modeLabel(item.mode)}
-              </Badge>
-              <Badge className="rounded-md">
-                {item.statusLabel || item.status}
-              </Badge>
+              <Badge variant="secondary" className="rounded-md">{sourceLabel(item)}</Badge>
+              <Badge variant="outline" className="rounded-md">{modeLabel(item.mode)}</Badge>
+              <Badge className="rounded-md">{item.statusLabel || item.status}</Badge>
             </div>
-            <DialogTitle className="text-xl font-bold">
-              تفاصيل الطلب
-            </DialogTitle>
+            <DialogTitle className="text-xl font-bold">تفاصيل الطلب</DialogTitle>
             <DialogDescription className="text-right break-words">
-              تفاصيل التحضير والتنفيذ الظاهرة للمستخدم فقط.
+              عرض مختصر للبيانات المهمة للتجهيز والتوصيل فقط.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="overflow-y-auto px-5 py-4 sm:px-6">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Section title="العميل والملخص" icon={<User className="h-4 w-4" />}>
+        <div className="custom-scrollbar min-h-0 overflow-y-auto px-5 py-4 sm:px-6">
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Section title="العميل" icon={<User className="h-4 w-4" />}>
               <DetailGrid
                 rows={[
-                  { label: "الاسم", value: item.customer?.name },
-                  { label: "الهاتف", value: item.customer?.phone, ltr: true },
-                  {
-                    label: "عدد الوجبات",
-                    value: orderSummary?.mealCount ?? item.context?.mealCount,
-                  },
-                  { label: "إجمالي العناصر", value: orderSummary?.itemCount },
-                  { label: "يوجد Premium", value: orderSummary?.hasPremium },
-                  { label: "يوجد إضافات", value: orderSummary?.hasAddons },
-                  {
-                    label: "ملاحظات",
-                    value:
-                      orderSummary?.notes || item.notes || item.context?.notes,
-                  },
-                  { label: "حساسية", value: orderSummary?.allergies },
+                  { label: "الاسم", value: item.customer?.name, important: true },
+                  { label: "الهاتف", value: item.customer?.phone, ltr: true, important: true },
+                  { label: "المرجع", value: item.reference || item.orderNumber, ltr: true },
+                  { label: "عدد الوجبات", value: asRecord(orderSummary)?.mealCount ?? item.context?.mealCount },
+                  { label: "ملاحظات", value: notes },
+                  { label: "حساسية", value: allergies },
                 ]}
               />
             </Section>
 
-            <Section
-              title="الخطة والتنفيذ"
-              icon={<CalendarDays className="h-4 w-4" />}
-            >
+            <Section title="الموعد والمسار" icon={<CalendarDays className="h-4 w-4" />}>
               <DetailGrid
                 rows={[
-                  {
-                    label: "التاريخ",
-                    value: item.context?.date || item.delivery?.date,
-                  },
-                  {
-                    label: "نوع التنفيذ",
-                    value: item.fulfillmentType || fulfillment?.type,
-                  },
+                  { label: "التاريخ", value: item.context?.date || item.delivery?.date, important: true },
+                  { label: "الوقت", value: window, important: true },
+                  { label: "نوع التنفيذ", value: item.fulfillmentType || asRecord(fulfillment)?.type },
                   { label: "الخطة", value: item.plan?.name || item.plan?.key },
-                  {
-                    label: "جرامات البروتين",
-                    value:
-                      item.plan?.proteinGrams != null
-                        ? `${item.plan.proteinGrams}g`
-                        : null,
-                  },
-                  {
-                    label: "وجبات اليوم",
-                    value: orderSummary?.mealCount ?? item.context?.mealCount,
-                  },
-                  {
-                    label: "المتبقي",
-                    value:
-                      item.plan?.remainingMeals ?? item.pickup?.remainingMeals,
-                  },
+                  { label: "المتبقي", value: item.plan?.remainingMeals ?? item.pickup?.remainingMeals },
                 ]}
               />
             </Section>
           </div>
 
-          <Separator className="my-4" />
-
-          <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-            <Section
-              title="تفاصيل تجهيز المطبخ"
-              icon={<Utensils className="h-4 w-4" />}
-            >
+          <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <Section title="تجهيز المطبخ" icon={<Utensils className="h-4 w-4" />}>
               <KitchenSection item={item} />
             </Section>
 
             <div className="space-y-4">
               <Section
-                title="الاستلام / التوصيل"
-                icon={
-                  item.mode === "delivery" ? (
-                    <Truck className="h-4 w-4" />
-                  ) : (
-                    <Store className="h-4 w-4" />
-                  )
-                }
+                title={item.mode === "delivery" ? "التوصيل" : "الاستلام"}
+                icon={item.mode === "delivery" ? <Truck className="h-4 w-4" /> : <Store className="h-4 w-4" />}
               >
                 <DetailGrid
                   rows={[
-                    {
-                      label: "الوقت",
-                      value:
-                        item.context?.window ||
-                        delivery?.window ||
-                        item.delivery?.deliveryWindow,
-                    },
-                    {
-                      label: "العنوان",
-                      value:
-                        item.mode === "delivery"
-                          ? item.context?.addressSummary ||
-                            item.delivery?.addressSummary
-                          : null,
-                    },
-                    {
-                      label: "ملاحظات العنوان",
-                      value:
-                        item.mode === "delivery"
-                          ? item.context?.addressNotes
-                          : null,
-                    },
-                    {
-                      label: "الفرع",
-                      value:
-                        pickup?.branchId ||
-                        item.pickup?.branchId ||
-                        item.context?.branch,
-                    },
-                    {
-                      label: "الموقع",
-                      value:
-                        pickup?.locationId ||
-                        item.pickup?.locationId ||
-                        item.pickup?.pickupLocationId,
-                    },
-                    {
-                      label: "كود الاستلام",
-                      value:
-                        item.context?.pickupCode || item.pickup?.pickupCode,
-                      ltr: true,
-                    },
-                    {
-                      label: "حالة كود الاستلام",
-                      value:
-                        pickup?.pickupCodeState || item.pickup?.pickupCodeState,
-                    },
-                    {
-                      label: "حالة التوصيل",
-                      value: delivery?.status || item.delivery?.status,
-                    },
+                    { label: "العنوان", value: item.mode === "delivery" ? address : null, important: true },
+                    { label: "ملاحظات العنوان", value: item.mode === "delivery" ? item.context?.addressNotes : null },
+                    { label: "الفرع", value: pickup?.branchId || item.pickup?.branchId || item.context?.branch },
+                    { label: "كود الاستلام", value: item.context?.pickupCode || item.pickup?.pickupCode, ltr: true },
+                    { label: "حالة التوصيل", value: delivery?.status || item.delivery?.status },
                   ]}
                 />
               </Section>
 
-              <Section
-                title="الدفع والسماح بالإجراءات"
-                icon={<CreditCard className="h-4 w-4" />}
-              >
-                <PaymentGate item={item} />
+              <Section title="الإجراءات المتاحة" icon={<CheckCircle2 className="h-4 w-4" />}>
+                <ActionsSummary item={item} />
               </Section>
 
+              <PaymentNotice item={item} />
               <DataQualitySection item={item} />
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <Section
-              title="الإجراءات المتاحة"
-              icon={<CheckCircle2 className="h-4 w-4" />}
-            >
-              <OperationsActionsSummary item={item} />
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                القائمة المعروضة مساعدة للمستخدم. عند تنفيذ أي إجراء يبقى
-                backend هو المرجع النهائي لحالة الدفع، الدور، والانتقال الصحيح.
-              </p>
-            </Section>
-          </div>
-
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <Section title="التوقيت" icon={<Clock className="h-4 w-4" />}>
-              <DetailGrid
-                rows={[
-                  {
-                    label: "تم الإنشاء",
-                    value: formatDateTime(
-                      timestamps?.createdAt || item.timestamps?.createdAt
-                    ),
-                  },
-                  {
-                    label: "آخر تحديث",
-                    value: formatDateTime(
-                      timestamps?.updatedAt || item.timestamps?.updatedAt
-                    ),
-                  },
-                  {
-                    label: "جاهز للاستلام",
-                    value: formatDateTime(item.pickup?.pickupPreparedAt),
-                  },
-                  {
-                    label: "تم إصدار الكود",
-                    value: formatDateTime(item.pickup?.pickupCodeIssuedAt),
-                  },
-                  {
-                    label: "تم التحقق من الاستلام",
-                    value: formatDateTime(item.pickup?.pickupVerifiedAt),
-                  },
-                  {
-                    label: "لم يحضر",
-                    value: formatDateTime(item.pickup?.pickupNoShowAt),
-                  },
-                ]}
-              />
-            </Section>
-
-            <Section
-              title="تنبيهات تشغيلية"
-              icon={<ShieldAlert className="h-4 w-4" />}
-            >
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>لا يتم عرض الحقول الخام أو بيانات debug في هذه النافذة.</p>
-                <p>
-                  الإضافات منفصلة عن عدد الوجبات ولا يجب احتسابها كوجبات اشتراك.
-                </p>
-                <p>Premium يظهر كوسم داخل الوجبة ولا يضيف وجبة إضافية.</p>
-              </div>
-            </Section>
+          <div className="mt-4 rounded-2xl border bg-muted/20 p-4 text-xs leading-6 text-muted-foreground">
+            <div className="mb-2 flex items-center gap-2 font-bold text-foreground">
+              <PackageCheck className="h-4 w-4 text-primary" />
+              ملاحظة تشغيلية
+            </div>
+            يتم إخفاء الحقول الفارغة والبيانات الخام تلقائياً. الإجراءات نفسها تظل من الباكند فقط حسب allowedActions.
           </div>
 
           <div className="h-2" />
