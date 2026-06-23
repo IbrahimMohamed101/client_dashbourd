@@ -55,6 +55,12 @@ interface OperationsQueueTableProps {
   onFulfill?: (item: UnifiedQueueItem) => void;
 }
 
+type VisibleAction = QueueAction & {
+  color: string;
+  icon: string;
+  requiresReason: boolean;
+};
+
 const actionIcons: Record<string, ReactNode> = {
   start_preparation: <ChefHat className="ml-1.5 h-3.5 w-3.5" />,
   prepare: <ChefHat className="ml-1.5 h-3.5 w-3.5" />,
@@ -265,23 +271,59 @@ function disabledReason(action: QueueAction) {
   return safeText(action.reasonLabel || action.reason, "");
 }
 
-function getVisibleActions(item: UnifiedQueueItem) {
-  const allowedIds = new Set(item.allowedActions.map((action) => action.id));
-  const disabled = (item.actions?.disabled || [])
-    .filter((action) => !allowedIds.has(action.id))
-    .map((action) => ({
-      id: action.id,
-      label: safeText(action.label, action.id),
-      color: action.color || "gray",
-      icon: action.icon || "",
-      endpoint: action.endpoint,
-      method: action.method,
-      reason: action.reason,
-      reasonLabel: action.reasonLabel,
-      requiresReason: Boolean(action.requiresReason),
-    }));
+function normalizeAction(action: QueueAction): VisibleAction | null {
+  const id = safeText(action.id, "").trim();
+  if (!id) return null;
 
-  return [...item.allowedActions, ...disabled];
+  return {
+    id,
+    label: safeText(action.label, id),
+    color: action.color || "gray",
+    icon: action.icon || "",
+    endpoint: action.endpoint,
+    method: action.method,
+    reason: action.reason,
+    reasonLabel: action.reasonLabel,
+    requiresReason: Boolean(action.requiresReason),
+  };
+}
+
+function actionLabelKey(action: VisibleAction) {
+  return safeText(action.label, action.id).trim().toLowerCase();
+}
+
+function appendUniqueAction(
+  target: VisibleAction[],
+  action: QueueAction,
+  seenIds: Set<string>,
+  seenLabels: Set<string>
+) {
+  const normalized = normalizeAction(action);
+  if (!normalized) return;
+
+  const labelKey = actionLabelKey(normalized);
+  if (seenIds.has(normalized.id) || (labelKey && seenLabels.has(labelKey))) {
+    return;
+  }
+
+  seenIds.add(normalized.id);
+  if (labelKey) seenLabels.add(labelKey);
+  target.push(normalized);
+}
+
+function getVisibleActions(item: UnifiedQueueItem) {
+  const result: VisibleAction[] = [];
+  const seenIds = new Set<string>();
+  const seenLabels = new Set<string>();
+
+  item.allowedActions.forEach((action) =>
+    appendUniqueAction(result, action, seenIds, seenLabels)
+  );
+  (item.actions?.disabled || []).forEach((action) =>
+    appendUniqueAction(result, action, seenIds, seenLabels)
+  );
+
+  return result;
 }
 
 const columnHelper = createColumnHelper<UnifiedQueueItem>();
