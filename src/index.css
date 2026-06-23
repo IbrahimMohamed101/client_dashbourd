@@ -154,6 +154,14 @@
   }
 }
 
+[data-slot="dialog-content"].max-w-5xl {
+  max-width: min(calc(100vw - 1rem), 64rem) !important;
+}
+
+[data-slot="dialog-content"].max-w-2xl {
+  max-width: min(calc(100vw - 1.5rem), 42rem) !important;
+}
+
 /* Custom scrollbar for delivery list and similar scrollable containers */
 .custom-scrollbar {
   scrollbar-width: thin;
