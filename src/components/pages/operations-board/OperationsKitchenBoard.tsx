@@ -1,18 +1,8 @@
 import { useState } from "react";
-import {
-  CalendarDays,
-  Lock,
-  Clock,
-  PackageCheck,
-  Truck,
-  ShoppingBag,
-  CheckCircle2,
-  AlertTriangle,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
+import { OperationsQueueCharts } from "./OperationsQueueCharts";
 import { OperationsQueueTable } from "./OperationsQueueTable";
 
 interface OperationsKitchenBoardProps {
@@ -68,29 +58,6 @@ function matchesKitchenFilter(
   return itemStatus === filter;
 }
 
-function computeCounts(items: UnifiedQueueItem[]) {
-  const count = (predicate: (item: UnifiedQueueItem) => boolean) =>
-    items.filter(predicate).length;
-
-  return {
-    total: items.length,
-    subscriptionsToday: count(
-      (i) => i.entityType === "subscription_day" || i.source === "subscription"
-    ),
-    lockedDays: count((i) => i.status === "locked"),
-    inPreparation: count((i) => i.status === "in_preparation"),
-    readyForPickup: count((i) => i.status === "ready_for_pickup"),
-    outForDelivery: count((i) => i.status === "out_for_delivery"),
-    fulfilled: count((i) => i.status === "fulfilled"),
-    individualOrders: count(
-      (i) => i.source === "one_time_order" || i.entityType === "order"
-    ),
-    notPrepared: count((i) =>
-      ["open", "locked", "confirmed"].includes(i.status)
-    ),
-  };
-}
-
 export function OperationsKitchenBoard({
   items = [],
   isPending,
@@ -98,8 +65,6 @@ export function OperationsKitchenBoard({
 }: OperationsKitchenBoardProps) {
   const [statusFilter, setStatusFilter] = useState<KitchenStatusFilter>("all");
   const [localSearch, setLocalSearch] = useState("");
-
-  const counts = computeCounts(items);
 
   const filteredItems = items.filter((item) => {
     const matchesStatus = matchesKitchenFilter(item.status, statusFilter);
@@ -117,86 +82,14 @@ export function OperationsKitchenBoard({
     return matchesStatus && matchesSearch;
   });
 
-  const cards = [
-    {
-      title: "إجمالي العناصر",
-      value: counts.total,
-      icon: <CalendarDays className="h-5 w-5 text-blue-500" />,
-      color: "border-l-blue-500",
-    },
-    {
-      title: "اشتراكات اليوم",
-      value: counts.subscriptionsToday,
-      icon: <CalendarDays className="h-5 w-5 text-blue-500" />,
-      color: "border-l-blue-500",
-    },
-    {
-      title: "الأيام المقفولة",
-      value: counts.lockedDays,
-      icon: <Lock className="h-5 w-5 text-slate-500" />,
-      color: "border-l-slate-500",
-    },
-    {
-      title: "قيد التحضير",
-      value: counts.inPreparation,
-      icon: <Clock className="h-5 w-5 text-amber-500" />,
-      color: "border-l-amber-500",
-    },
-    {
-      title: "جاهز للاستلام",
-      value: counts.readyForPickup,
-      icon: <PackageCheck className="h-5 w-5 text-green-500" />,
-      color: "border-l-green-500",
-    },
-    {
-      title: "خرج للتوصيل",
-      value: counts.outForDelivery,
-      icon: <Truck className="h-5 w-5 text-indigo-500" />,
-      color: "border-l-indigo-500",
-    },
-    {
-      title: "الطلبات الفردية",
-      value: counts.individualOrders,
-      icon: <ShoppingBag className="h-5 w-5 text-purple-500" />,
-      color: "border-l-purple-500",
-    },
-    {
-      title: "تم الاستلام",
-      value: counts.fulfilled,
-      icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
-      color: "border-l-emerald-500",
-    },
-    {
-      title: "لم يُحضّر",
-      value: counts.notPrepared,
-      icon: <AlertTriangle className="h-5 w-5 text-red-500" />,
-      color: "border-l-red-500",
-    },
-  ];
-
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {cards.map((card, idx) => (
-          <Card
-            key={idx}
-            className={`border-l-4 ${card.color} flex flex-col justify-between`}
-          >
-            <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
-              <CardTitle className="text-sm font-medium leading-5 text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              {card.icon}
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="text-xl font-bold sm:text-2xl">{card.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <OperationsQueueCharts
+        items={items}
+        title="ضغط المطبخ اليوم"
+        description="توزيع حالات التحضير ومصادر الطلبات بدلا من كروت أرقام كثيرة."
+      />
 
-      {/* Filters */}
       <div className="flex flex-col gap-4 rounded-xl border bg-card p-3 shadow-sm sm:p-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="relative w-full shrink-0 xl:max-w-sm">
           <Input
@@ -242,7 +135,6 @@ export function OperationsKitchenBoard({
         </div>
       </div>
 
-      {/* Table */}
       <OperationsQueueTable
         items={filteredItems}
         isPending={isPending}
