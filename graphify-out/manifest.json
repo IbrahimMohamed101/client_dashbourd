@@ -2010,18 +2010,18 @@
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/ArchivePremiumUpgradeDialog.tsx": {
-    "mtime": 1782166547.692741,
-    "ast_hash": "00f349bf9435d3b63551233a878f9cf7",
+    "mtime": 1782219331.2264564,
+    "ast_hash": "9591a823b323bee2358114c674a636a7",
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/CandidateLinkDialog.tsx": {
-    "mtime": 1782168030.9146883,
-    "ast_hash": "c84361e3ff9fb1fba1681623dca3a8a6",
+    "mtime": 1782220751.427977,
+    "ast_hash": "776ff89b4f9df4da15346e2ae6ae5364",
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/EditPremiumUpgradeDialog.tsx": {
-    "mtime": 1782166547.694833,
-    "ast_hash": "236b58cd827fcf6f83a8b2abb23d0610",
+    "mtime": 1782219641.8032105,
+    "ast_hash": "c788a73bdbc24c4a1f562554bf7a25c7",
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/PremiumCandidateCard.tsx": {
@@ -2030,8 +2030,8 @@
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/PremiumMealsPage.tsx": {
-    "mtime": 1782166515.6952834,
-    "ast_hash": "439c46ba7b2daa01936825f09ead1e82",
+    "mtime": 1782219062.922548,
+    "ast_hash": "dc49ca2a3f97ece3eba03316839d490f",
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/PremiumUpgradeFilters.tsx": {
@@ -2040,8 +2040,8 @@
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/PremiumUpgradesTable.tsx": {
-    "mtime": 1782166374.389791,
-    "ast_hash": "f4938610568b76cab5753157ba52efc2",
+    "mtime": 1782219062.922548,
+    "ast_hash": "4c8c94dbc7e964a62cd97293af20cf5b",
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/ReadinessCard.tsx": {
@@ -2050,8 +2050,8 @@
     "semantic_hash": ""
   },
   "src/hooks/usePremiumUpgradesQuery.ts": {
-    "mtime": 1782170772.6268618,
-    "ast_hash": "dc7533b22e4981244471adcffe36ab92",
+    "mtime": 1782219062.922548,
+    "ast_hash": "416365080443755c7573eeefdb82ec41",
     "semantic_hash": ""
   },
   "src/types/premiumUpgradeTypes.ts": {
@@ -2065,8 +2065,8 @@
     "semantic_hash": ""
   },
   "src/components/pages/premium-meals/MenuSourcePicker.tsx": {
-    "mtime": 1782170423.1889122,
-    "ast_hash": "04623b899918ae2636c88434d938d303",
+    "mtime": 1782219062.922548,
+    "ast_hash": "a87fcecde37232bbfccc87299c69ce53",
     "semantic_hash": ""
   }
 }

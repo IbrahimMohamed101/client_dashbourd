@@ -40,14 +40,17 @@ const deductionSchema = z.object({
   notes: z.string().optional(),
 });
 
-export type DeductionFormValues = z.infer<typeof deductionSchema>;
+export type DeductionFormInputValues = z.input<typeof deductionSchema>;
+export type DeductionFormValues = z.output<typeof deductionSchema>;
+export type DeductionFormReturn = UseFormReturn<
+  DeductionFormInputValues,
+  unknown,
+  DeductionFormValues
+>;
 
 interface DeductionFormProps {
   subscription: Subscription;
-  onSubmit: (
-    values: DeductionFormValues,
-    form: UseFormReturn<DeductionFormValues>
-  ) => void;
+  onSubmit: (values: DeductionFormValues, form: DeductionFormReturn) => void;
   onCancel: () => void;
   isPending: boolean;
 }
@@ -100,7 +103,10 @@ export function DeductionForm({
     subscription.remainingRegularMeals ?? subscription.remainingMeals;
   const premiumRemaining =
     subscription.remainingPremiumMeals ?? subscription.premiumRemaining ?? 0;
-  const addonBalances = subscription.addonBalances ?? [];
+  const addonBalances = useMemo(
+    () => subscription.addonBalances ?? [],
+    [subscription.addonBalances]
+  );
 
   const defaultAddons = useMemo(
     () =>
@@ -113,7 +119,11 @@ export function DeductionForm({
     [addonBalances]
   );
 
-  const form = useForm<DeductionFormValues>({
+  const form = useForm<
+    DeductionFormInputValues,
+    unknown,
+    DeductionFormValues
+  >({
     resolver: zodResolver(deductionSchema),
     defaultValues: {
       regularMeals: 0,
@@ -213,7 +223,11 @@ export function DeductionForm({
                           min={0}
                           max={regularRemaining}
                           inputMode="numeric"
-                          {...field}
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          value={Number(field.value ?? 0)}
+                          onChange={field.onChange}
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
@@ -236,7 +250,11 @@ export function DeductionForm({
                           min={0}
                           max={premiumRemaining}
                           inputMode="numeric"
-                          {...field}
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          value={Number(field.value ?? 0)}
+                          onChange={field.onChange}
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
@@ -279,7 +297,11 @@ export function DeductionForm({
                                 max={addon.remainingQty}
                                 inputMode="numeric"
                                 className="w-24 text-center"
-                                {...field}
+                                name={field.name}
+                                ref={field.ref}
+                                onBlur={field.onBlur}
+                                value={Number(field.value ?? 0)}
+                                onChange={field.onChange}
                               />
                             </FormControl>
                           </div>

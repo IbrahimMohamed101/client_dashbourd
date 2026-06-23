@@ -38,8 +38,7 @@ import { getApiErrorMessage } from "@/lib/apiErrors";
 
 import { CustomerSearch } from "./CustomerSearch";
 import { DeductionForm } from "./DeductionForm";
-import type { DeductionFormValues } from "./DeductionForm";
-import type { UseFormReturn } from "react-hook-form";
+import type { DeductionFormReturn, DeductionFormValues } from "./DeductionForm";
 
 const columnHelper = createColumnHelper<Subscription>();
 
@@ -125,7 +124,7 @@ export default function ManualDeductionPage() {
 
   const onDeductionSubmit = async (
     values: DeductionFormValues,
-    form: UseFormReturn<DeductionFormValues>
+    form: DeductionFormReturn
   ) => {
     if (!selectedSubscription) return;
 
