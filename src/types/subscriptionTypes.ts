@@ -35,6 +35,52 @@ export interface AddonSubscription {
   _id?: string;
 }
 
+export interface ManualDeductionAddonBalance {
+  addonId: string;
+  name: string;
+  remainingQty: number;
+  totalQty?: number;
+  consumedQty?: number;
+}
+
+export interface ManualDeductionAddonPayload {
+  addonId: string;
+  qty: number;
+}
+
+export interface ManualDeductionPayload {
+  regularMeals: number;
+  premiumMeals: number;
+  addons?: ManualDeductionAddonPayload[];
+  reason: string;
+  notes?: string;
+}
+
+export interface ManualDeductionResponse {
+  success?: boolean;
+  status?: boolean;
+  data: {
+    subscriptionId: string;
+    deducted?: {
+      regularMeals?: number;
+      premiumMeals?: number;
+      total?: number;
+      addons?: ManualDeductionAddonPayload[];
+    };
+    remaining?: {
+      regularMeals?: number;
+      premiumMeals?: number;
+      totalMeals?: number;
+      addons?: Array<{
+        addonId: string;
+        remainingQty: number;
+      }>;
+    };
+    businessDate?: string;
+    fulfillmentMethod?: string;
+  };
+}
+
 export interface DeliveryAddress {
   line1?: string;
   line2?: string;
@@ -108,10 +154,12 @@ export interface Subscription {
   premiumRemaining: number;
   premiumPrice: number;
   addonSubscriptions: AddonSubscription[];
+  addonBalances?: ManualDeductionAddonBalance[];
   selectedGrams: number;
   selectedMealsPerDay: number;
   basePlanPriceHalala: number;
   checkoutCurrency: string;
+  fulfillmentMethod?: string;
   deliveryMode: string;
   deliveryAddress: DeliveryAddress | null;
   deliveryZoneId: string | null;
