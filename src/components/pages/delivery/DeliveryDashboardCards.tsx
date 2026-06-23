@@ -1,124 +1,303 @@
-import { Package, Truck, CheckCircle, XCircle } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
-import type {
-  UnifiedQueueItem,
-  DashboardOpsStatusFilter,
-} from "@/types/dashboardOpsTypes";
-import { countByFilter } from "@/types/dashboardOpsTypes";
-
-// ── Card definitions ──
-
-interface StatCard {
-  key: DashboardOpsStatusFilter;
-  label: string;
-  icon: typeof Package;
-  colorClass: string;
-  bgClass: string;
-}
-
-const STAT_CARDS: StatCard[] = [
-  {
-    key: "all",
-    label: "إجمالي طلبات اليوم",
-    icon: Package,
-    colorClass: "text-foreground",
-    bgClass: "bg-muted/30",
-  },
-  {
-    key: "out_for_delivery",
-    label: "جاري التوصيل",
-    icon: Truck,
-    colorClass: "text-blue-600 dark:text-blue-400",
-    bgClass: "bg-blue-50 dark:bg-blue-950/30",
-  },
-  {
-    key: "preparing",
-    label: "قيد التحضير",
-    icon: Package, // Or another suitable icon
-    colorClass: "text-orange-600 dark:text-orange-400",
-    bgClass: "bg-orange-50 dark:bg-orange-950/30",
-  },
-  {
-    key: "delivered",
-    label: "تم التسليم",
-    icon: CheckCircle,
-    colorClass: "text-green-600 dark:text-green-400",
-    bgClass: "bg-green-50 dark:bg-green-950/30",
-  },
-  {
-    key: "canceled",
-    label: "ملغي",
-    icon: XCircle,
-    colorClass: "text-red-600 dark:text-red-400",
-    bgClass: "bg-red-50 dark:bg-red-950/30",
-  },
-];
-
-// ── Props ──
+import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
+import { countByFilter, isOneTimeOrder } from "@/types/dashboardOpsTypes";
 
 interface DeliveryDashboardCardsProps {
   data: UnifiedQueueItem[];
   isLoading: boolean;
 }
 
-// ── Component ──
+const chartConfig = {
+  count: {
+    label: "العدد",
+    color: "var(--chart-1)",
+  },
+  status1: { label: "حالة 1", color: "var(--chart-1)" },
+  status2: { label: "حالة 2", color: "var(--chart-2)" },
+  status3: { label: "حالة 3", color: "var(--chart-3)" },
+  status4: { label: "حالة 4", color: "var(--chart-4)" },
+  status5: { label: "حالة 5", color: "var(--chart-5)" },
+} satisfies ChartConfig;
+
+const PIE_COLORS = [
+  "var(--color-status1)",
+  "var(--color-status2)",
+  "var(--color-status3)",
+  "var(--color-status4)",
+  "var(--color-status5)",
+];
+
+function formatNumber(value: number) {
+  return value.toLocaleString("ar-EG");
+}
+
+function getDeliveryWindow(item: UnifiedQueueItem) {
+  return item.context.window || item.delivery?.window || item.delivery?.deliveryWindow || "غير محدد";
+}
+
+function getSourceLabel(item: UnifiedQueueItem) {
+  return isOneTimeOrder(item) ? "طلب فردي" : "اشتراك";
+}
+
+function aggregateByLabel<T>(items: T[], getLabel: (item: T) => string, limit = 5) {
+  const map = new Map<string, number>();
+  items.forEach((item) => {
+    const label = getLabel(item) || "غير محدد";
+    map.set(label, (map.get(label) ?? 0) + 1);
+  });
+
+  const rows = Array.from(map.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+
+  if (rows.length <= limit) return rows;
+  const visible = rows.slice(0, limit - 1);
+  const other = rows.slice(limit - 1).reduce((sum, row) => sum + row.count, 0);
+  return [...visible, { label: "أخرى", count: other }];
+}
+
+function buildStatusRows(data: UnifiedQueueItem[]) {
+  return [
+    { label: "قيد التحضير", count: countByFilter(data, "preparing") },
+    { label: "في الطريق", count: countByFilter(data, "out_for_delivery") },
+    { label: "تم التسليم", count: countByFilter(data, "delivered") },
+    { label: "ملغي", count: countByFilter(data, "canceled") },
+  ].filter((row) => row.count > 0);
+}
+
+function buildActionRows(data: UnifiedQueueItem[]) {
+  const needsAction = data.filter((item) => item.allowedActions?.length).length;
+  const noAction = Math.max(0, data.length - needsAction);
+
+  return [
+    { label: "يحتاج إجراء", count: needsAction },
+    { label: "بدون إجراء", count: noAction },
+  ].filter((row) => row.count > 0);
+}
+
+function LoadingCharts() {
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
+      <Card className="rounded-2xl">
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-64" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[260px] w-full" />
+        </CardContent>
+      </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-44" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[170px] w-full" />
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-44" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[170px] w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function EmptyChart({ message }: { message: string }) {
+  return (
+    <div className="flex h-[220px] items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center text-sm text-muted-foreground">
+      {message}
+    </div>
+  );
+}
+
+function LegendList({ data }: { data: Array<{ label: string; count: number }> }) {
+  return (
+    <div className="grid gap-2">
+      {data.map((item, index) => (
+        <div
+          key={item.label}
+          className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg bg-muted/30 px-3 py-2"
+        >
+          <span
+            className="size-2.5 rounded-[3px]"
+            style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+          />
+          <span className="truncate text-xs text-muted-foreground">{item.label}</span>
+          <span className="text-sm font-semibold tabular-nums">
+            {formatNumber(item.count)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function DeliveryDashboardCards({
   data,
   isLoading,
 }: DeliveryDashboardCardsProps) {
-  // We'll show up to 4 cards on desktop, maybe stack differently if we add 'preparing'
-  // Actually, adding 'preparing' makes it 5 cards. We should decide if we want 4 or 5.
-  // The user had 4. I'll stick to 4 for the grid (4 columns) or adjust the grid.
-  // Let's keep the user's original 4 (Total, Out for Delivery, Delivered, Canceled)
-  // but use the correct keys. I'll remove 'preparing' for now unless they want it.
+  if (isLoading) return <LoadingCharts />;
 
-  const activeCards = STAT_CARDS.filter((c) => c.key !== "preparing");
+  const statusData = buildStatusRows(data);
+  const windowData = aggregateByLabel(data, getDeliveryWindow, 5);
+  const actionData = buildActionRows(data);
+  const sourceData = aggregateByLabel(data, getSourceLabel, 3);
+  const total = data.length;
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
-      {activeCards.map((card) => {
-        const count = countByFilter(data, card.key);
-        const Icon = card.icon;
-
-        if (isLoading) {
-          return (
-            <div
-              key={card.key}
-              className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm md:p-4"
-            >
-              <Skeleton className="h-8 w-8 rounded-lg md:h-10 md:w-10" />
-              <div className="space-y-1">
-                <Skeleton className="h-3 w-12" />
-                <Skeleton className="h-4 w-8" />
-              </div>
-            </div>
-          );
-        }
-
-        return (
-          <div
-            key={card.key}
-            className="group space-y-5 rounded-xl border bg-card p-3 shadow-sm transition-all hover:border-blue-200 hover:shadow-md md:gap-4 md:p-4 dark:hover:border-blue-900"
-          >
-            <div className="flex min-w-0 justify-between gap-5">
-              <p className="truncate text-[10px] font-medium text-muted-foreground md:text-xs lg:text-xl">
-                {card.label}
-              </p>
-
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg md:h-10 md:w-10 ${card.bgClass}`}
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
+      <Card className="rounded-2xl shadow-sm">
+        <CardHeader className="gap-1 pb-2">
+          <CardTitle className="text-base font-semibold">حالة توصيلات اليوم</CardTitle>
+          <CardDescription>
+            توزيع واضح لحالة الطلبات بدلا من كروت أرقام كثيرة. الإجمالي: {formatNumber(total)}.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {statusData.length ? (
+            <ChartContainer config={chartConfig} className="h-[260px] w-full">
+              <BarChart
+                data={statusData}
+                layout="vertical"
+                margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
               >
-                <Icon className={`h-4 w-4 md:h-5 md:w-5 ${card.colorClass}`} />
-              </div>
-            </div>
+                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                <XAxis type="number" hide allowDecimals={false} />
+                <YAxis
+                  dataKey="label"
+                  type="category"
+                  axisLine={false}
+                  tickLine={false}
+                  width={98}
+                  tickMargin={8}
+                  tick={{ fontSize: 12 }}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="line" />}
+                />
+                <Bar
+                  dataKey="count"
+                  radius={[8, 8, 8, 8]}
+                  fill="var(--color-count)"
+                  barSize={20}
+                />
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <EmptyChart message="لا توجد حالات توصيل للعرض حتى الآن." />
+          )}
+        </CardContent>
+      </Card>
 
-            <p className="text-sm font-bold tracking-tight md:text-xl">
-              {count}
-            </p>
-          </div>
-        );
-      })}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+        <Card className="rounded-2xl shadow-sm">
+          <CardHeader className="gap-1 pb-2">
+            <CardTitle className="text-base font-semibold">نوافذ التوصيل</CardTitle>
+            <CardDescription>يساعد الكابتن يعرف ضغط كل وقت بسرعة.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-[12rem_minmax(0,1fr)] xl:grid-cols-1">
+            {windowData.length ? (
+              <ChartContainer config={chartConfig} className="mx-auto h-[170px] w-full max-w-[220px]">
+                <PieChart>
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent hideLabel />}
+                  />
+                  <Pie
+                    data={windowData}
+                    dataKey="count"
+                    nameKey="label"
+                    innerRadius={44}
+                    outerRadius={70}
+                    paddingAngle={3}
+                  >
+                    {windowData.map((entry, index) => (
+                      <Cell
+                        key={entry.label}
+                        fill={PIE_COLORS[index % PIE_COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ChartContainer>
+            ) : (
+              <EmptyChart message="لا توجد نوافذ توصيل." />
+            )}
+            <LegendList data={windowData} />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl shadow-sm">
+          <CardHeader className="gap-1 pb-2">
+            <CardTitle className="text-base font-semibold">الإجراءات ونوع الطلب</CardTitle>
+            <CardDescription>مختصر لما يحتاج تدخل الآن.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {actionData.length ? (
+              <ChartContainer config={chartConfig} className="h-[150px] w-full">
+                <BarChart data={actionData} margin={{ top: 12, right: 12, left: 12, bottom: 6 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis hide allowDecimals={false} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="dot" />}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="var(--color-count)"
+                    radius={[8, 8, 0, 0]}
+                    barSize={42}
+                  />
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <EmptyChart message="لا توجد إجراءات." />
+            )}
+            <LegendList data={sourceData} />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
