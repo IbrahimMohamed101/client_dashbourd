@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { User, Phone, Package, AlertCircle } from "lucide-react";
+import { AlertCircle, Phone, Package, PlusCircle, User } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -16,7 +16,10 @@ import {
   useManualDeductSubscriptionMutation,
 } from "@/hooks/useSubscriptionsQuery";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Subscription } from "@/types/subscriptionTypes";
+import type {
+  ManualDeductionResponse,
+  Subscription,
+} from "@/types/subscriptionTypes";
 import {
   Table,
   TableBody,
@@ -31,6 +34,7 @@ import {
   useReactTable,
   createColumnHelper,
 } from "@tanstack/react-table";
+import { getApiErrorMessage } from "@/lib/apiErrors";
 
 import { CustomerSearch } from "./CustomerSearch";
 import { DeductionForm } from "./DeductionForm";
@@ -45,16 +49,9 @@ type ManualDeductionSubscription = Subscription & {
   fulfillmentMethod?: string;
 };
 
-type ManualDeductionResult = {
-  data?: {
-    remaining?: {
-      regularMeals?: number;
-      premiumMeals?: number;
-      totalMeals?: number;
-    };
-    fulfillmentMethod?: string;
-  };
-};
+function getAddonCount(subscription: Subscription) {
+  return subscription.addonBalances?.filter((addon) => addon.remainingQty > 0).length ?? 0;
+}
 
 export default function ManualDeductionPage() {
   const [searchPhone, setSearchPhone] = useState("");
@@ -86,14 +83,19 @@ export default function ManualDeductionPage() {
 
       return {
         ...sub,
-        userName: customer?.name,
-        user: { fullName: customer?.name, phone: customer?.phone },
+        userName: customer?.name ?? sub.userName,
+        user: {
+          ...sub.user,
+          fullName: customer?.name ?? sub.user?.fullName,
+          phone: customer?.phone ?? sub.user?.phone,
+        },
         remainingMeals: totalRemaining,
         remainingRegularMeals: regularRemaining,
         remainingPremiumMeals: premiumRemaining,
         premiumRemaining,
+        addonBalances: sub.addonBalances ?? [],
         hasDeliveryDeductionToday: today?.hasDeliveryDeductionToday ?? false,
-        deliveryMode: sub.fulfillmentMethod ?? "delivery",
+        deliveryMode: sub.fulfillmentMethod ?? sub.deliveryMode ?? "delivery",
       };
     }
   );
@@ -117,89 +119,80 @@ export default function ManualDeductionPage() {
   ) => {
     if (!selectedSubscription) return;
 
-    if (
-      selectedSubscription.deliveryMode === "delivery" &&
-      selectedSubscription.hasDeliveryDeductionToday
-    ) {
-      toast.error("لا يمكن الخصم: تم خصم وجبة توصيل اليوم لهذا الاشتراك");
-      return;
-    }
+    const addons = values.addons
+      .filter((addon) => Number(addon.qty) > 0)
+      .map((addon) => ({ addonId: addon.addonId, qty: Number(addon.qty) }));
+    const totalSelected =
+      Number(values.regularMeals || 0) +
+      Number(values.premiumMeals || 0) +
+      addons.reduce((sum, addon) => sum + addon.qty, 0);
 
-    if (values.regularMeals === 0 && values.premiumMeals === 0) {
+    if (totalSelected === 0) {
       form.setError("regularMeals", {
         type: "manual",
-        message: "الرجاء إدخال عدد الوجبات المراد خصمها",
+        message: "ادخل كمية واحدة على الأقل من الوجبات أو الإضافات",
       });
-      return;
-    }
-
-    const regularRemaining =
-      selectedSubscription.remainingRegularMeals ??
-      selectedSubscription.remainingMeals;
-    const premiumRemaining =
-      selectedSubscription.remainingPremiumMeals ??
-      selectedSubscription.premiumRemaining ??
-      0;
-
-    if (values.regularMeals > regularRemaining) {
-      toast.error(`عدد الوجبات العادية يتجاوز الرصيد (${regularRemaining})`);
-      return;
-    }
-
-    if (values.premiumMeals > premiumRemaining) {
-      toast.error(`عدد الوجبات المميزة يتجاوز الرصيد (${premiumRemaining})`);
       return;
     }
 
     try {
-      const result = await deductMutation.mutateAsync({
+      const result = (await deductMutation.mutateAsync({
         id: selectedSubscription.id,
         data: {
-          regularMeals: values.regularMeals,
-          premiumMeals: values.premiumMeals,
+          regularMeals: Number(values.regularMeals || 0),
+          premiumMeals: Number(values.premiumMeals || 0),
+          ...(addons.length ? { addons } : {}),
           reason: values.reason.trim(),
           notes: values.notes?.trim() || undefined,
         },
-      });
+      })) as ManualDeductionResponse;
 
-      toast.success("تم خصم الوجبات بنجاح");
-      form.reset();
+      toast.success("تم تنفيذ الخصم اليدوي بنجاح");
 
-      const remaining = (result as ManualDeductionResult)?.data?.remaining;
+      const remaining = result?.data?.remaining;
       if (remaining) {
-        setSelectedSubscription((current) =>
-          current
-            ? {
-                ...current,
-                remainingMeals: remaining.totalMeals ?? current.remainingMeals,
-                remainingRegularMeals:
-                  remaining.regularMeals ?? current.remainingRegularMeals,
-                remainingPremiumMeals:
-                  remaining.premiumMeals ?? current.remainingPremiumMeals,
-                premiumRemaining:
-                  remaining.premiumMeals ?? current.premiumRemaining,
-                hasDeliveryDeductionToday:
-                  current.deliveryMode === "delivery"
-                    ? true
-                    : current.hasDeliveryDeductionToday,
-              }
-            : current
-        );
+        setSelectedSubscription((current) => {
+          if (!current) return current;
+          const remainingAddons = remaining.addons ?? [];
+          return {
+            ...current,
+            remainingMeals: remaining.totalMeals ?? current.remainingMeals,
+            remainingRegularMeals:
+              remaining.regularMeals ?? current.remainingRegularMeals,
+            remainingPremiumMeals:
+              remaining.premiumMeals ?? current.remainingPremiumMeals,
+            premiumRemaining:
+              remaining.premiumMeals ?? current.premiumRemaining,
+            addonBalances: (current.addonBalances ?? []).map((addon) => {
+              const updated = remainingAddons.find(
+                (row) => row.addonId === addon.addonId
+              );
+              return updated
+                ? { ...addon, remainingQty: updated.remainingQty }
+                : addon;
+            }),
+          };
+        });
       }
 
-      // Refresh search
+      form.reset({
+        regularMeals: 0,
+        premiumMeals: 0,
+        addons: (selectedSubscription.addonBalances ?? []).map((addon) => ({
+          addonId: addon.addonId,
+          name: addon.name,
+          remainingQty: addon.remainingQty,
+          qty: 0,
+        })),
+        reason: "cashier_walk_in",
+        notes: "",
+      });
+
       await queryClient.invalidateQueries({
         queryKey: ["subscriptions-search", searchPhone],
       });
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      const message =
-        errorObj?.response?.data?.message ||
-        errorObj?.message ||
-        "حدث خطأ أثناء الخصم";
+      const message = getApiErrorMessage(err) || "حدث خطأ أثناء تنفيذ الخصم";
       toast.error(message);
     }
   };
@@ -219,7 +212,7 @@ export default function ManualDeductionPage() {
       id: "userPhone",
       header: "الهاتف",
       cell: (info) => (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground" dir="ltr">
           <Phone className="h-4 w-4" />
           {info.getValue()}
         </div>
@@ -257,8 +250,18 @@ export default function ManualDeductionPage() {
         cell: (info) => <Badge variant="outline">{info.getValue()} وجبة</Badge>,
       }
     ),
+    columnHelper.display({
+      id: "addons",
+      header: "الإضافات",
+      cell: ({ row }) => (
+        <Badge variant="secondary" className="gap-1">
+          <PlusCircle className="h-3 w-3" />
+          {getAddonCount(row.original)} متاح
+        </Badge>
+      ),
+    }),
     columnHelper.accessor("deliveryMode", {
-      header: "طريقة الاستلام",
+      header: "طريقة التنفيذ",
       cell: (info) => {
         const isDelivery = info.getValue() === "delivery";
         return (
@@ -273,19 +276,24 @@ export default function ManualDeductionPage() {
       header: "",
       cell: (info) => {
         const row = info.row.original;
-        const blocked =
+        const alreadyDeductedToday =
           row.deliveryMode === "delivery" && row.hasDeliveryDeductionToday;
 
         return (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={blocked}
-            title={blocked ? "تم خصم توصيل اليوم لهذا الاشتراك" : undefined}
-            onClick={() => handleSelectSubscription(row)}
-          >
-            {blocked ? "تم الخصم اليوم" : "اختيار"}
-          </Button>
+          <div className="flex flex-col gap-2">
+            {alreadyDeductedToday ? (
+              <Badge variant="outline" className="w-fit border-amber-500/30 bg-amber-500/10 text-amber-700">
+                يوجد خصم توصيل اليوم
+              </Badge>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleSelectSubscription(row)}
+            >
+              اختيار
+            </Button>
+          </div>
         );
       },
     }),
@@ -298,16 +306,14 @@ export default function ManualDeductionPage() {
   });
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6" dir="rtl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            خصم يدوي من الاشتراك
-          </h1>
-          <p className="text-muted-foreground">
-            ابحث عن العميل بالهاتف ثم اختر الاشتراك وقم بالخصم
-          </p>
-        </div>
+    <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6" dir="rtl">
+      <div className="rounded-2xl border bg-card p-5 shadow-sm">
+        <h1 className="text-2xl font-bold text-foreground">
+          خصم يدوي من الاشتراك
+        </h1>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+          ابحث عن العميل بالهاتف، اختر الاشتراك، ثم نفذ خصم وجبات عادية أو مميزة أو إضافات في معاملة واحدة.
+        </p>
       </div>
 
       <CustomerSearch
@@ -324,11 +330,11 @@ export default function ManualDeductionPage() {
             <CardHeader>
               <CardTitle className="text-lg">اختر الاشتراك</CardTitle>
               <CardDescription>
-                تم العثور على {subscriptions.length} اشتراك
+                تم العثور على {subscriptions.length} اشتراك. الخصم النهائي يتم التحقق منه من الخادم.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-hidden rounded-md border">
+              <div className="overflow-x-auto rounded-md border">
                 <Table>
                   <TableHeader className="bg-muted/50">
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -336,7 +342,7 @@ export default function ManualDeductionPage() {
                         {headerGroup.headers.map((header) => (
                           <TableHead
                             key={header.id}
-                            className="py-3 text-right font-semibold"
+                            className="whitespace-nowrap py-3 text-right font-semibold"
                           >
                             {flexRender(
                               header.column.columnDef.header,
@@ -351,7 +357,7 @@ export default function ManualDeductionPage() {
                     {table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className="py-3 text-right">
+                          <TableCell key={cell.id} className="whitespace-nowrap py-3 text-right">
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()
@@ -381,6 +387,7 @@ export default function ManualDeductionPage() {
 
       {selectedSubscription && (
         <DeductionForm
+          key={selectedSubscription.id}
           subscription={selectedSubscription}
           onSubmit={onDeductionSubmit}
           onCancel={handleCancelDeduction}
