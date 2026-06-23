@@ -1,5 +1,7 @@
 import api from "@/lib/apis";
 import type {
+  ManualDeductionPayload,
+  ManualDeductionResponse,
   SubscriptionAddonEntitlementPayload,
   SubscriptionBalancesPayload,
   SubscriptionBalancesResponse,
@@ -111,13 +113,11 @@ export const createSubscription = async (data: Record<string, unknown>) => {
   return response.data;
 };
 
-// ----- Quote endpoint -----
 export const fetchSubscriptionQuote = async (data: Record<string, unknown>) => {
   const response = await api.post("/api/dashboard/subscriptions/quote", data);
   return response.data;
 };
 
-// ----- Skip/Unskip days -----
 export const skipSubscriptionDay = async (subscriptionId: string, date: string) => {
   const response = await api.post(`/api/dashboard/subscriptions/${subscriptionId}/days/${date}/skip`);
   return response.data;
@@ -128,7 +128,6 @@ export const unskipSubscriptionDay = async (subscriptionId: string, date: string
   return response.data;
 };
 
-// ----- Audit log -----
 export const fetchSubscriptionAuditLog = async (subscriptionId: string) => {
   const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}/audit-log`);
   return response.data;
@@ -153,7 +152,6 @@ export const fetchSubscriptionDays = async (
   return response.data;
 };
 
-// ----- Delivery -----
 export const fetchSubscriptionDelivery = async (subscriptionId: string) => {
   const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}`);
   return response.data;
@@ -167,7 +165,6 @@ export const updateSubscriptionDelivery = async (
   return response.data;
 };
 
-// ----- Balances -----
 export const fetchSubscriptionBalances = async (
   subscriptionId: string
 ): Promise<SubscriptionBalancesResponse> => {
@@ -188,7 +185,6 @@ export const updateSubscriptionBalances = async (
   return response.data;
 };
 
-// ----- Addon entitlements -----
 export const fetchSubscriptionAddonEntitlements = async (subscriptionId: string) => {
   const response = await api.get(subscriptionAddonEntitlementsUrl(subscriptionId));
   return response.data;
@@ -251,13 +247,13 @@ export const deleteSubscriptionAddonEntitlement = async (
   );
 };
 
-// ----- Manual Deduction -----
 export const searchSubscriptionsByPhone = async (phone: string) => {
   try {
-    const response = await api.get(`/api/dashboard/subscriptions/search?phone=${encodeURIComponent(phone)}`);
+    const response = await api.get(
+      `/api/dashboard/subscriptions/search?phone=${encodeURIComponent(phone)}`
+    );
     return response.data;
   } catch (error: unknown) {
-    // 404 means "customer not found" — treat as empty result, not an error
     if ((error as ApiStatusError)?.response?.status === 404) {
       return { data: { customer: null, subscriptions: [], today: null } };
     }
@@ -265,18 +261,23 @@ export const searchSubscriptionsByPhone = async (phone: string) => {
   }
 };
 
+export const fetchSubscriptionManualDeductions = async (subscriptionId: string) => {
+  const response = await api.get(
+    `/api/dashboard/subscriptions/${subscriptionId}/manual-deductions`
+  );
+  return response.data;
+};
+
 export const manualDeductSubscription = async ({
   id,
   data,
 }: {
   id: string;
-  data: {
-    regularMeals: number;
-    premiumMeals: number;
-    reason: string;
-    notes?: string;
-  };
-}) => {
-  const response = await api.post(`/api/dashboard/subscriptions/${id}/manual-deduction`, data);
+  data: ManualDeductionPayload;
+}): Promise<ManualDeductionResponse> => {
+  const response = await api.post(
+    `/api/dashboard/subscriptions/${id}/manual-deduction`,
+    data
+  );
   return response.data;
 };
