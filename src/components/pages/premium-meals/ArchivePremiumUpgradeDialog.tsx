@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { toast } from "sonner";
 
@@ -26,16 +26,43 @@ export function ArchivePremiumUpgradeDialog({
   onClose: () => void;
   onArchived: () => void;
 }) {
+  return (
+    <Dialog open={Boolean(row)} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>أرشفة ترقية مميزة</DialogTitle>
+          <DialogDescription>
+            سيتم أرشفة إعداد الترقية فقط. لن يتم حذف منتج المنيو أو خيار المنيو،
+            ولن يتم تعديل سجلات العملاء التاريخية.
+          </DialogDescription>
+        </DialogHeader>
+        {row ? (
+          <ArchivePremiumUpgradeForm
+            key={row.id}
+            row={row}
+            onClose={onClose}
+            onArchived={onArchived}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ArchivePremiumUpgradeForm({
+  row,
+  onClose,
+  onArchived,
+}: {
+  row: PremiumUpgradeConfigDto;
+  onClose: () => void;
+  onArchived: () => void;
+}) {
   const [reason, setReason] = useState("");
   const archiveMutation = useArchivePremiumUpgradeMutation(onArchived);
 
-  useEffect(() => {
-    setReason("");
-  }, [row?.id]);
-
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!row) return;
     if (reason.trim().length < 3) {
       toast.error("اكتب سبب الأرشفة بوضوح.");
       return;
@@ -47,42 +74,31 @@ export function ArchivePremiumUpgradeDialog({
   }
 
   return (
-    <Dialog open={Boolean(row)} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md" dir="rtl">
-        <DialogHeader>
-          <DialogTitle>أرشفة ترقية مميزة</DialogTitle>
-          <DialogDescription>
-            سيتم أرشفة إعداد الترقية فقط. لن يتم حذف منتج المنيو أو خيار المنيو،
-            ولن يتم تعديل سجلات العملاء التاريخية.
-          </DialogDescription>
-        </DialogHeader>
-        <form className="space-y-4" onSubmit={submit}>
-          <div className="rounded-lg border bg-muted/20 p-3 text-sm">
-            {row ? premiumNameAr(row.sourceName) : ""}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="archive-reason">سبب الأرشفة</Label>
-            <Textarea
-              id="archive-reason"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder="مثال: لم يعد متاحا من المورد"
-            />
-          </div>
-          <DialogFooter className="gap-2 sm:justify-start">
-            <Button
-              type="submit"
-              variant="destructive"
-              disabled={archiveMutation.isPending}
-            >
-              أرشفة
-            </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
-              إلغاء
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <form className="space-y-4" onSubmit={submit}>
+      <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+        {premiumNameAr(row.sourceName)}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="archive-reason">سبب الأرشفة</Label>
+        <Textarea
+          id="archive-reason"
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder="مثال: لم يعد متاحا من المورد"
+        />
+      </div>
+      <DialogFooter className="gap-2 sm:justify-start">
+        <Button
+          type="submit"
+          variant="destructive"
+          disabled={archiveMutation.isPending}
+        >
+          أرشفة
+        </Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          إلغاء
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }
