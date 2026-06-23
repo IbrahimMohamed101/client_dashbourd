@@ -80,14 +80,24 @@ export default function ManualDeductionPage() {
       const regularRemaining =
         sub.remainingRegularMeals ??
         Math.max(0, totalRemaining - premiumRemaining);
+      const user = sub.user ?? {
+        id: customer?.id ?? sub.userId ?? "",
+        fullName: customer?.name ?? sub.userName ?? "—",
+        phone: customer?.phone ?? "",
+        email: "",
+        isActive: true,
+      };
 
       return {
         ...sub,
         userName: customer?.name ?? sub.userName,
         user: {
-          ...sub.user,
-          fullName: customer?.name ?? sub.user?.fullName,
-          phone: customer?.phone ?? sub.user?.phone,
+          ...user,
+          id: user.id ?? customer?.id ?? sub.userId ?? "",
+          fullName: customer?.name ?? user.fullName ?? "—",
+          phone: customer?.phone ?? user.phone ?? "",
+          email: user.email ?? "",
+          isActive: user.isActive ?? true,
         },
         remainingMeals: totalRemaining,
         remainingRegularMeals: regularRemaining,
