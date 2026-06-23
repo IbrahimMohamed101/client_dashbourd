@@ -24,7 +24,6 @@ import {
   defaultDisplayGroupForSelection,
   defaultPremiumUpgradeCandidateFilters,
   formatPremiumSar,
-  getSourceContext,
   premiumSelectionTypeLabel,
   premiumSourceTypeLabel,
 } from "@/utils/fetchPremiumUpgrades";
@@ -44,6 +43,14 @@ type LinkFormState = {
   sortOrder: string;
 };
 
+const defaultLinkForm: LinkFormState = {
+  displayGroupKey: "premium_proteins",
+  upgradeDeltaSarInput: "0",
+  isEnabled: true,
+  isVisible: true,
+  sortOrder: "10",
+};
+
 export function CandidateLinkDialog({
   open,
   initialSelectionType,
@@ -60,13 +67,7 @@ export function CandidateLinkDialog({
     selectionType: initialSelectionType ?? "all",
   });
   const [selectedId, setSelectedId] = useState("");
-  const [form, setForm] = useState<LinkFormState>({
-    displayGroupKey: "premium_proteins",
-    upgradeDeltaSarInput: "0",
-    isEnabled: true,
-    isVisible: true,
-    sortOrder: "10",
-  });
+  const [form, setForm] = useState<LinkFormState>(defaultLinkForm);
 
   useEffect(() => {
     if (!open) return;
@@ -75,13 +76,7 @@ export function CandidateLinkDialog({
       selectionType: initialSelectionType ?? "all",
     });
     setSelectedId("");
-    setForm({
-      displayGroupKey: "premium_proteins",
-      upgradeDeltaSarInput: "0",
-      isEnabled: true,
-      isVisible: true,
-      sortOrder: "10",
-    });
+    setForm(defaultLinkForm);
   }, [open, initialSelectionType]);
 
   const candidatesQuery = usePremiumUpgradeCandidatesQuery(filters, open);
@@ -109,13 +104,14 @@ export function CandidateLinkDialog({
     }
 
     setSelectedId(candidate.id);
-    setForm({
+    setForm((current) => ({
+      ...current,
       displayGroupKey: defaultDisplayGroupForSelection(candidate.selectionType),
       upgradeDeltaSarInput: String(candidate.upgradeDeltaHalala / 100),
       isEnabled: true,
       isVisible: true,
-      sortOrder: form.sortOrder || "10",
-    });
+      sortOrder: current.sortOrder || "10",
+    }));
   }
 
   function submit(event: FormEvent) {
@@ -154,62 +150,79 @@ export function CandidateLinkDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent
-        className="max-h-[90dvh] w-[calc(100%-1.5rem)] overflow-y-auto sm:max-w-2xl"
+        className="grid max-h-[92dvh] w-[calc(100%-1rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0"
         dir="rtl"
       >
-        <DialogHeader>
+        <DialogHeader className="border-b px-5 py-4 text-right">
           <DialogTitle>ربط عنصر من المنيو كترقية مميزة</DialogTitle>
           <DialogDescription>
-            اختر منتجا أو خيارا موجودا من المنيو ثم حدد إعدادات ظهوره كترقية
-            مميزة.
+            اختر منتجا أو خيارا موجودا من المنيو ثم حدد إعدادات ظهوره كترقية مميزة.
           </DialogDescription>
         </DialogHeader>
 
-        <form className="space-y-5" onSubmit={submit}>
-          <div className="space-y-2">
-            <Label>العنصر من المنيو</Label>
-            <MenuSourcePicker
-              candidates={candidates}
-              selectedId={selectedId}
-              loading={candidatesQuery.isLoading}
-              onSelect={selectCandidate}
-              includeLinked={filters.includeLinked}
-              onIncludeLinkedChange={(includeLinked) =>
-                updateFilters({ includeLinked })
-              }
-              sourceTypeFilter={filters.sourceType}
-              onSourceTypeFilterChange={(sourceType) =>
-                updateFilters({ sourceType })
-              }
-              selectionTypeFilter={filters.selectionType}
-              onSelectionTypeFilterChange={(selectionType) =>
-                updateFilters({ selectionType })
-              }
-            />
+        <form className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5" onSubmit={submit}>
+          <div className="space-y-5">
+            <section className="space-y-3 rounded-lg border bg-muted/10 p-4">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="font-semibold">اختيار عنصر المنيو</h3>
+                  <p className="text-sm text-muted-foreground">
+                    القائمة تعرض عناصر المنيو المؤهلة وغير المربوطة. البحث داخل القائمة اختياري.
+                  </p>
+                </div>
+                <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                  {candidates.length} عنصر
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <Label>العنصر من المنيو</Label>
+                <MenuSourcePicker
+                  candidates={candidates}
+                  selectedId={selectedId}
+                  loading={candidatesQuery.isLoading}
+                  onSelect={selectCandidate}
+                  includeLinked={filters.includeLinked}
+                  onIncludeLinkedChange={(includeLinked) =>
+                    updateFilters({ includeLinked })
+                  }
+                  sourceTypeFilter={filters.sourceType}
+                  onSourceTypeFilterChange={(sourceType) =>
+                    updateFilters({ sourceType })
+                  }
+                  selectionTypeFilter={filters.selectionType}
+                  onSelectionTypeFilterChange={(selectionType) =>
+                    updateFilters({ selectionType })
+                  }
+                />
+              </div>
+
+              <AdvancedCandidateFilters filters={filters} onChange={updateFilters} />
+            </section>
+
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+              <SelectedCandidateSummary candidate={selected ?? null} />
+
+              <LinkConfigPanel
+                candidate={selected ?? null}
+                form={form}
+                onChange={setForm}
+              />
+            </div>
+
+            <DialogFooter className="sticky bottom-0 -mx-4 border-t bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-5 sm:px-5 sm:justify-start">
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || !selected}
+              >
+                <Link2 data-icon="inline-start" />
+                ربط كترقية مميزة
+              </Button>
+              <Button type="button" variant="outline" onClick={onClose}>
+                إلغاء
+              </Button>
+            </DialogFooter>
           </div>
-
-          <AdvancedCandidateFilters filters={filters} onChange={updateFilters} />
-
-          <SelectedCandidateSummary candidate={selected ?? null} />
-
-          <LinkConfigPanel
-            candidate={selected ?? null}
-            form={form}
-            onChange={setForm}
-          />
-
-          <DialogFooter className="gap-2 sm:justify-start">
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || !selected}
-            >
-              <Link2 data-icon="inline-start" />
-              ربط كترقية مميزة
-            </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
-              إلغاء
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -224,7 +237,7 @@ function AdvancedCandidateFilters({
   onChange: (filters: Partial<PremiumUpgradeCandidateFilters>) => void;
 }) {
   return (
-    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 md:grid-cols-3">
+    <div className="grid gap-3 rounded-lg border bg-background p-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
       <SelectField
         label="نوع المصدر"
         value={filters.sourceType}
@@ -245,13 +258,8 @@ function AdvancedCandidateFilters({
           ["premium_large_salad", "سلطة كبيرة مميزة"],
         ]}
       />
-      <label className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
-        <span>
-          <span className="block text-sm font-medium">إظهار المرتبط مسبقا</span>
-          <span className="block text-xs text-muted-foreground">
-            يظهر للمعاينة فقط ويكون معطلا داخل القائمة.
-          </span>
-        </span>
+      <label className="flex min-h-10 items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-2">
+        <span className="text-sm font-medium">إظهار المرتبط مسبقا</span>
         <input
           type="checkbox"
           className="size-4 accent-primary"
@@ -270,14 +278,14 @@ function SelectedCandidateSummary({
 }) {
   if (!candidate) {
     return (
-      <div className="rounded-lg border bg-muted/20 p-5 text-center text-sm text-muted-foreground">
+      <section className="flex min-h-52 items-center justify-center rounded-lg border border-dashed bg-muted/20 p-5 text-center text-sm text-muted-foreground">
         اختر عنصر من المنيو أولا لعرض مصدر العنصر ونوع الترقية.
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="space-y-4 rounded-lg border p-4">
+    <section className="space-y-4 rounded-lg border p-4">
       <div>
         <h3 className="font-semibold">
           {candidate.name.ar || candidate.name.en || candidate.key}
@@ -295,13 +303,13 @@ function SelectedCandidateSummary({
           label="نوع الترقية"
           value={premiumSelectionTypeLabel(candidate.selectionType)}
         />
-        <ReadOnlyItem label="سياق المصدر" value={getSourceContext(candidate)} />
+        <ReadOnlyItem label="مفتاح الترقية" value={candidate.premiumKey} />
         <ReadOnlyItem
           label="فرق السعر الحالي"
           value={formatPremiumSar(candidate.upgradeDeltaHalala / 100)}
         />
       </div>
-    </div>
+    </section>
   );
 }
 
