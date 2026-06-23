@@ -262,7 +262,7 @@ export function DeductionForm({
                     <FormField
                       key={addon.addonId}
                       control={form.control}
-                      name={`addons.${index}.qty`}
+                      name={`addons.${index}.qty` as const}
                       render={({ field }) => (
                         <FormItem className="rounded-xl border bg-card p-3">
                           <div className="flex items-start justify-between gap-3">
