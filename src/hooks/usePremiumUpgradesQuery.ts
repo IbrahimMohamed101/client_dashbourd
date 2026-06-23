@@ -30,6 +30,7 @@ const PREMIUM_LIST_STALE_TIME = 2 * 60 * 1000;
 const PREMIUM_READINESS_STALE_TIME = 2 * 60 * 1000;
 const PREMIUM_CANDIDATES_STALE_TIME = 5 * 60 * 1000;
 const PREMIUM_CACHE_GC_TIME = 15 * 60 * 1000;
+const PREMIUM_UPGRADES_CANDIDATES_QUERY_VERSION = "v2";
 
 export function usePremiumUpgradesQuery(filters: PremiumUpgradeListFilters) {
   return useQuery({
@@ -59,7 +60,11 @@ export function usePremiumUpgradeCandidatesQuery(
   enabled: boolean
 ) {
   return useQuery({
-    queryKey: [PREMIUM_UPGRADES_CANDIDATES_QUERY_KEY, filters],
+    queryKey: [
+      PREMIUM_UPGRADES_CANDIDATES_QUERY_KEY,
+      PREMIUM_UPGRADES_CANDIDATES_QUERY_VERSION,
+      filters,
+    ],
     queryFn: () => fetchPremiumUpgradeCandidates(filters),
     enabled,
     staleTime: PREMIUM_CANDIDATES_STALE_TIME,
