@@ -30,19 +30,14 @@ const chartConfig = {
     label: "العدد",
     color: "var(--chart-1)",
   },
-  status1: { label: "حالة 1", color: "var(--chart-1)" },
-  status2: { label: "حالة 2", color: "var(--chart-2)" },
-  status3: { label: "حالة 3", color: "var(--chart-3)" },
-  status4: { label: "حالة 4", color: "var(--chart-4)" },
-  status5: { label: "حالة 5", color: "var(--chart-5)" },
 } satisfies ChartConfig;
 
 const PIE_COLORS = [
-  "var(--color-status1)",
-  "var(--color-status2)",
-  "var(--color-status3)",
-  "var(--color-status4)",
-  "var(--color-status5)",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
 ];
 
 function formatNumber(value: number) {
