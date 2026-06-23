@@ -5,11 +5,8 @@ import { Button } from "@/components/ui/button";
 import type {
   PremiumUpgradeConfigDto,
   PremiumUpgradeListFilters,
-  PremiumUpgradeSelectionType,
 } from "@/types/premiumUpgradeTypes";
-import {
-  defaultPremiumUpgradeListFilters,
-} from "@/utils/fetchPremiumUpgrades";
+import { defaultPremiumUpgradeListFilters } from "@/utils/fetchPremiumUpgrades";
 import {
   usePremiumUpgradeInvalidation,
   usePremiumUpgradeReadinessQuery,
@@ -27,9 +24,6 @@ export function PremiumMealsPage() {
     defaultPremiumUpgradeListFilters
   );
   const [candidateOpen, setCandidateOpen] = useState(false);
-  const [candidateSelectionType, setCandidateSelectionType] = useState<
-    PremiumUpgradeSelectionType | "all"
-  >("all");
   const [editingRow, setEditingRow] =
     useState<PremiumUpgradeConfigDto | null>(null);
   const [archiveRow, setArchiveRow] =
@@ -43,11 +37,6 @@ export function PremiumMealsPage() {
   const total = listQuery.data?.meta?.total ?? rows.length;
   const totalPages = Math.max(1, Math.ceil(total / filters.limit));
   const loading = listQuery.isFetching || readinessQuery.isFetching;
-
-  function openCandidateDialog(selectionType: PremiumUpgradeSelectionType | "all" = "all") {
-    setCandidateSelectionType(selectionType);
-    setCandidateOpen(true);
-  }
 
   return (
     <div
@@ -82,7 +71,7 @@ export function PremiumMealsPage() {
               />
               تحديث
             </Button>
-            <Button type="button" onClick={() => openCandidateDialog()}>
+            <Button type="button" onClick={() => setCandidateOpen(true)}>
               <Link2 data-icon="inline-start" />
               ربط عنصر من المنيو كترقية مميزة
             </Button>
@@ -111,7 +100,6 @@ export function PremiumMealsPage() {
 
       <CandidateLinkDialog
         open={candidateOpen}
-        initialSelectionType={candidateSelectionType}
         onClose={() => setCandidateOpen(false)}
         onCreated={() => setCandidateOpen(false)}
       />
@@ -120,10 +108,6 @@ export function PremiumMealsPage() {
         row={editingRow}
         onClose={() => setEditingRow(null)}
         onSaved={() => setEditingRow(null)}
-        onReplaceSource={(row) => {
-          setEditingRow(null);
-          openCandidateDialog(row.selectionType);
-        }}
       />
 
       <ArchivePremiumUpgradeDialog
