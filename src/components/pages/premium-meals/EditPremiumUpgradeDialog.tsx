@@ -22,18 +22,16 @@ import {
   premiumSourceTypeLabel,
 } from "@/utils/fetchPremiumUpgrades";
 import { SelectField } from "./PremiumUpgradeFilters";
-import { ReadOnlyItem, ReplacementHelp } from "./PremiumCandidateCard";
+import { ReadOnlyItem } from "./PremiumCandidateCard";
 
 export function EditPremiumUpgradeDialog({
   row,
   onClose,
   onSaved,
-  onReplaceSource,
 }: {
   row: PremiumUpgradeConfigDto | null;
   onClose: () => void;
   onSaved: () => void;
-  onReplaceSource?: (row: PremiumUpgradeConfigDto) => void;
 }) {
   const [form, setForm] = useState({
     displayGroupKey: row?.displayGroup.key ?? "premium_proteins",
@@ -83,8 +81,7 @@ export function EditPremiumUpgradeDialog({
         <DialogHeader>
           <DialogTitle>تعديل إعداد الترقية</DialogTitle>
           <DialogDescription>
-            يمكن تعديل مجموعة العرض، فرق السعر، والترتيب فقط. لتغيير مصدر
-            العنصر، استخدم إجراء الاستبدال أو أرشف هذا الربط وأنشئ ربطا جديدا.
+            عدّل مجموعة العرض، فرق سعر الترقية، والترتيب فقط.
           </DialogDescription>
         </DialogHeader>
 
@@ -94,18 +91,11 @@ export function EditPremiumUpgradeDialog({
               <ReadOnlyItem label="الاسم" value={premiumNameAr(row.sourceName)} />
               <ReadOnlyItem label="مفتاح الترقية" value={row.premiumKey} />
               <ReadOnlyItem label="نوع المصدر" value={premiumSourceTypeLabel(row.sourceType)} />
-              <ReadOnlyItem label="مفتاح المصدر" value={row.sourceKey} />
               <ReadOnlyItem label="نوع الترقية" value={premiumSelectionTypeLabel(row.selectionType)} />
               <ReadOnlyItem label="المراجعة الحالية" value={row.revision} />
               <ReadOnlyItem label="الحالة" value={row.status === "active" ? "نشط" : "مؤرشف"} />
               <ReadOnlyItem label="مجموعة العرض الحالية" value={premiumDisplayGroupLabel(row.displayGroup.key)} />
             </div>
-
-            <ReplacementHelp
-              onOpenCandidates={
-                onReplaceSource ? () => onReplaceSource(row) : undefined
-              }
-            />
 
             <div className="grid gap-3 md:grid-cols-3">
               <SelectField
