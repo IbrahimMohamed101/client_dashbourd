@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import React from "react";
-import { useForm } from "react-hook-form";
+import { useMemo } from "react";
+import type { ReactNode } from "react";
+import { useForm, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Minus, Calendar, Package } from "lucide-react";
+import { Calendar, Minus, Package, PlusCircle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -24,9 +25,17 @@ import {
 } from "@/components/ui/form";
 import type { Subscription } from "@/types/subscriptionTypes";
 
+const addonDeductionSchema = z.object({
+  addonId: z.string(),
+  name: z.string(),
+  remainingQty: z.number(),
+  qty: z.coerce.number().min(0, "الرقم غير صحيح"),
+});
+
 const deductionSchema = z.object({
   regularMeals: z.coerce.number().min(0, "الرقم غير صحيح"),
   premiumMeals: z.coerce.number().min(0, "الرقم غير صحيح"),
+  addons: z.array(addonDeductionSchema),
   reason: z.string().min(1, "الرجاء إدخال سبب الخصم"),
   notes: z.string().optional(),
 });
@@ -35,7 +44,10 @@ export type DeductionFormValues = z.infer<typeof deductionSchema>;
 
 interface DeductionFormProps {
   subscription: Subscription;
-  onSubmit: (values: DeductionFormValues, form: any) => void;
+  onSubmit: (
+    values: DeductionFormValues,
+    form: UseFormReturn<DeductionFormValues>
+  ) => void;
   onCancel: () => void;
   isPending: boolean;
 }
@@ -44,14 +56,22 @@ function BalanceCard({
   label,
   value,
   icon,
+  tone = "default",
 }: {
   label: string;
   value: string | number;
-  icon: React.ReactNode;
+  icon: ReactNode;
+  tone?: "default" | "primary";
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+    <div
+      className={
+        tone === "primary"
+          ? "flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3"
+          : "flex items-center gap-3 rounded-xl border bg-card p-3"
+      }
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
         {icon}
       </div>
       <div>
@@ -62,69 +82,100 @@ function BalanceCard({
   );
 }
 
-export const DeductionForm: React.FC<DeductionFormProps> = ({
+const REASONS = [
+  ["cashier_walk_in", "استلام يدوي من الكاشير"],
+  ["customer_support_correction", "تصحيح من خدمة العملاء"],
+  ["balance_correction", "تصحيح رصيد"],
+  ["manual_pickup", "استلام يدوي"],
+  ["other", "سبب آخر"],
+] as const;
+
+export function DeductionForm({
   subscription,
   onSubmit,
   onCancel,
   isPending,
-}) => {
+}: DeductionFormProps) {
   const regularRemaining =
     subscription.remainingRegularMeals ?? subscription.remainingMeals;
   const premiumRemaining =
     subscription.remainingPremiumMeals ?? subscription.premiumRemaining ?? 0;
+  const addonBalances = subscription.addonBalances ?? [];
+
+  const defaultAddons = useMemo(
+    () =>
+      addonBalances.map((addon) => ({
+        addonId: addon.addonId,
+        name: addon.name,
+        remainingQty: addon.remainingQty,
+        qty: 0,
+      })),
+    [addonBalances]
+  );
 
   const form = useForm<DeductionFormValues>({
-    resolver: zodResolver(deductionSchema) as any,
-    defaultValues: { regularMeals: 0, premiumMeals: 0, reason: "", notes: "" },
+    resolver: zodResolver(deductionSchema),
+    defaultValues: {
+      regularMeals: 0,
+      premiumMeals: 0,
+      addons: defaultAddons,
+      reason: "cashier_walk_in",
+      notes: "",
+    },
   });
+
+  const watched = form.watch();
+  const selectedAddonTotal =
+    watched.addons?.reduce((sum, addon) => sum + Number(addon.qty || 0), 0) ?? 0;
+  const selectedTotal =
+    Number(watched.regularMeals || 0) +
+    Number(watched.premiumMeals || 0) +
+    selectedAddonTotal;
 
   const handleSubmit = (values: DeductionFormValues) => {
     onSubmit(values, form);
   };
 
   return (
-    <Card>
+    <Card className="shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Minus className="h-5 w-5" />
-          تفاصيل الخصم
+          تنفيذ خصم يدوي
         </CardTitle>
         <CardDescription>
-          {subscription.userName} —{" "}
-          {subscription.planName || subscription.plan?.name}
+          {subscription.userName} — {subscription.planName || subscription.plan?.name}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <BalanceCard
             label="الرصيد الكلي"
-            value={subscription.remainingMeals}
+            value={`${subscription.remainingMeals} وجبة`}
+            icon={<Package className="h-4 w-4" />}
+            tone="primary"
+          />
+          <BalanceCard
+            label="وجبات عادية"
+            value={`${regularRemaining} متاح`}
             icon={<Package className="h-4 w-4" />}
           />
           <BalanceCard
-            label="الوجبات العادية"
-            value={regularRemaining}
+            label="وجبات مميزة"
+            value={`${premiumRemaining} متاح`}
             icon={<Package className="h-4 w-4" />}
           />
-          <BalanceCard
-            label="الوجبات المميزة"
-            value={premiumRemaining}
-            icon={<Package className="h-4 w-4" />}
-          />
-          {subscription.startDate && (
+          {subscription.endDate ? (
             <BalanceCard
-              label="تاريخ البداية"
-              value={new Date(subscription.startDate).toLocaleDateString(
-                "ar-EG"
-              )}
-              icon={<Calendar className="h-4 w-4" />}
-            />
-          )}
-          {subscription.endDate && (
-            <BalanceCard
-              label="تاريخ النهاية"
+              label="نهاية الاشتراك"
               value={new Date(subscription.endDate).toLocaleDateString("ar-EG")}
               icon={<Calendar className="h-4 w-4" />}
+            />
+          ) : (
+            <BalanceCard
+              label="إضافات متاحة"
+              value={addonBalances.length}
+              icon={<PlusCircle className="h-4 w-4" />}
             />
           )}
         </div>
@@ -134,100 +185,172 @@ export const DeductionForm: React.FC<DeductionFormProps> = ({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-4"
+            className="space-y-5"
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border bg-muted/20 p-4">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold">خصم الوجبات</h3>
+                  <p className="text-sm text-muted-foreground">
+                    اكتب الكمية المطلوبة. الخادم هو صاحب القرار النهائي عند عدم كفاية الرصيد.
+                  </p>
+                </div>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  الإجمالي: {selectedTotal}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="regularMeals"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>وجبات عادية</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={regularRemaining}
+                          inputMode="numeric"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        المتاح الآن: {regularRemaining}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="premiumMeals"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>وجبات مميزة</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={premiumRemaining}
+                          inputMode="numeric"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        المتاح الآن: {premiumRemaining}
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {addonBalances.length ? (
+              <div className="rounded-2xl border bg-muted/20 p-4">
+                <div className="mb-4">
+                  <h3 className="font-semibold">خصم الإضافات</h3>
+                  <p className="text-sm text-muted-foreground">
+                    الإضافات مستقلة عن الوجبات ولا تقلل رصيد الوجبات الأساسية.
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {addonBalances.map((addon, index) => (
+                    <FormField
+                      key={addon.addonId}
+                      control={form.control}
+                      name={`addons.${index}.qty`}
+                      render={({ field }) => (
+                        <FormItem className="rounded-xl border bg-card p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <FormLabel>{addon.name}</FormLabel>
+                              <p className="text-xs text-muted-foreground">
+                                المتاح: {addon.remainingQty} من {addon.totalQty ?? addon.remainingQty}
+                              </p>
+                            </div>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={addon.remainingQty}
+                                inputMode="numeric"
+                                className="w-24 text-center"
+                                {...field}
+                              />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
               <FormField
-                control={form.control as any}
-                name="regularMeals"
+                control={form.control}
+                name="reason"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الوجبات العادية المراد خصمها</FormLabel>
+                    <FormLabel>سبب الخصم *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={regularRemaining}
+                      <select
                         {...field}
-                      />
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+                      >
+                        {REASONS.map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">
-                      الرصيد المتاح: {regularRemaining}
-                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
               <FormField
-                control={form.control as any}
-                name="premiumMeals"
+                control={form.control}
+                name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الوجبات المميزة المراد خصمها</FormLabel>
+                    <FormLabel>ملاحظات</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={premiumRemaining}
+                      <Textarea
+                        placeholder="أي تفاصيل إضافية تساعد في مراجعة العملية..."
+                        className="min-h-20"
                         {...field}
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground">
-                      الرصيد المتاح: {premiumRemaining}
-                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            <FormField
-              control={form.control as any}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>سبب الخصم *</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="مثال: استلام يدوي، تصحيح خطأ، إلخ"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control as any}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ملاحظات (اختياري)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="أي ملاحظات إضافية..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="submit"
-                disabled={isPending}
-                className="min-w-[120px]"
-              >
-                {isPending ? "جاري الخصم..." : "تأكيد الخصم"}
-              </Button>
-              <Button type="button" variant="outline" onClick={onCancel}>
-                إلغاء
-              </Button>
+            <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs leading-6 text-muted-foreground">
+                سيتم إرسال العملية كمعاملة واحدة. لو أي رصيد غير كافٍ سيرفض الخادم العملية بالكامل.
+              </p>
+              <div className="flex gap-3">
+                <Button type="submit" disabled={isPending} className="min-w-[120px]">
+                  {isPending ? "جاري الخصم..." : "تأكيد الخصم"}
+                </Button>
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  إلغاء
+                </Button>
+              </div>
             </div>
           </form>
         </Form>
       </CardContent>
     </Card>
   );
-};
+}
