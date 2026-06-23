@@ -1,5 +1,6 @@
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { getPickupItems } from "@/lib/operationsBoard";
+import { OperationsQueueCharts } from "./OperationsQueueCharts";
 import { OperationsQueueTable } from "./OperationsQueueTable";
 
 interface OperationsPickupBoardProps {
@@ -23,11 +24,18 @@ export function OperationsPickupBoard({
   const pickupItems = getPickupItems(items);
 
   return (
-    <OperationsQueueTable
-      items={pickupItems}
-      isPending={isPending}
-      onAction={onAction}
-      onFulfill={onFulfill}
-    />
+    <div className="flex flex-col gap-5 sm:gap-6">
+      <OperationsQueueCharts
+        items={pickupItems}
+        title="استلام الفرع"
+        description="ملخص بصري لحالات طلبات الاستلام والإجراءات المطلوبة."
+      />
+      <OperationsQueueTable
+        items={pickupItems}
+        isPending={isPending}
+        onAction={onAction}
+        onFulfill={onFulfill}
+      />
+    </div>
   );
 }
