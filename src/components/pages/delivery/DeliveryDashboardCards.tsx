@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
-import { countByFilter, isOneTimeOrder } from "@/types/dashboardOpsTypes";
+import { isOneTimeOrder } from "@/types/dashboardOpsTypes";
 
 interface DeliveryDashboardCardsProps {
   data: UnifiedQueueItem[];
@@ -55,6 +55,10 @@ function formatNumber(value: number) {
   return value.toLocaleString("ar-EG");
 }
 
+function getStatusLabel(item: UnifiedQueueItem) {
+  return item.statusLabel || item.ui?.label || item.status || "غير محدد";
+}
+
 function getDeliveryWindow(item: UnifiedQueueItem) {
   return item.context.window || item.delivery?.window || item.delivery?.deliveryWindow || "غير محدد";
 }
@@ -78,15 +82,6 @@ function aggregateByLabel<T>(items: T[], getLabel: (item: T) => string, limit = 
   const visible = rows.slice(0, limit - 1);
   const other = rows.slice(limit - 1).reduce((sum, row) => sum + row.count, 0);
   return [...visible, { label: "أخرى", count: other }];
-}
-
-function buildStatusRows(data: UnifiedQueueItem[]) {
-  return [
-    { label: "قيد التحضير", count: countByFilter(data, "preparing") },
-    { label: "في الطريق", count: countByFilter(data, "out_for_delivery") },
-    { label: "تم التسليم", count: countByFilter(data, "delivered") },
-    { label: "ملغي", count: countByFilter(data, "canceled") },
-  ].filter((row) => row.count > 0);
 }
 
 function buildActionRows(data: UnifiedQueueItem[]) {
@@ -171,7 +166,7 @@ export function DeliveryDashboardCards({
 }: DeliveryDashboardCardsProps) {
   if (isLoading) return <LoadingCharts />;
 
-  const statusData = buildStatusRows(data);
+  const statusData = aggregateByLabel(data, getStatusLabel, 6);
   const windowData = aggregateByLabel(data, getDeliveryWindow, 5);
   const actionData = buildActionRows(data);
   const sourceData = aggregateByLabel(data, getSourceLabel, 3);
