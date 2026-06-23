@@ -23,7 +23,6 @@ import type {
 } from "@/types/premiumUpgradeTypes";
 import {
   formatPremiumSar,
-  getSourceContext,
   premiumNameAr,
   premiumSelectionTypeLabel,
   premiumSourceTypeLabel,
@@ -161,7 +160,7 @@ function DesktopRows({
   onArchive: (row: PremiumUpgradeConfigDto) => void;
 }) {
   return (
-    <div className="hidden md:block">
+    <div className="hidden overflow-x-auto md:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -169,9 +168,8 @@ function DesktopRows({
             <TableHead className="text-right">مفتاح الترقية</TableHead>
             <TableHead className="text-right">نوع الترقية</TableHead>
             <TableHead className="text-right">نوع المصدر</TableHead>
-            <TableHead className="text-right">سياق المصدر</TableHead>
             <TableHead className="text-right">فرق السعر</TableHead>
-            <TableHead className="text-right">الحالة</TableHead>
+            <TableHead className="text-right">حالة العرض</TableHead>
             <TableHead className="text-right">الصلاحية</TableHead>
             <TableHead className="text-right">حالة المصدر</TableHead>
             <TableHead className="text-right">الترتيب</TableHead>
@@ -181,13 +179,13 @@ function DesktopRows({
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={11} className="h-28 text-center text-muted-foreground">
+              <TableCell colSpan={10} className="h-28 text-center text-muted-foreground">
                 جار تحميل الترقيات...
               </TableCell>
             </TableRow>
           ) : rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={11} className="h-28 text-center text-muted-foreground">
+              <TableCell colSpan={10} className="h-28 text-center text-muted-foreground">
                 لا توجد ترقيات مطابقة للتصفية الحالية.
               </TableCell>
             </TableRow>
@@ -244,11 +242,6 @@ function PremiumUpgradeRow({
           {premiumSourceTypeLabel(row.sourceType)}
         </Badge>
       </TableCell>
-      <TableCell>
-        <p className="max-w-[220px] truncate text-xs text-muted-foreground">
-          {getSourceContext(row)}
-        </p>
-      </TableCell>
       <TableCell className="font-medium">
         {formatPremiumSar(row.upgradeDeltaSar)}
       </TableCell>
@@ -290,7 +283,7 @@ function PremiumUpgradeMobileCard({
             {row.sourceName.en || row.sourceKey}
           </p>
         </div>
-        <StatusBadge status={row.status} />
+        <CustomerStateBadge row={row} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-sm">
@@ -298,7 +291,6 @@ function PremiumUpgradeMobileCard({
         <ReadOnlyItem label="فرق السعر" value={formatPremiumSar(row.upgradeDeltaSar)} />
         <ReadOnlyItem label="نوع الترقية" value={premiumSelectionTypeLabel(row.selectionType)} />
         <ReadOnlyItem label="نوع المصدر" value={premiumSourceTypeLabel(row.sourceType)} />
-        <ReadOnlyItem label="سياق المصدر" value={getSourceContext(row)} />
         <ReadOnlyItem label="الترتيب" value={row.sortOrder} />
       </div>
 
@@ -322,8 +314,8 @@ function StateControls({
   const stateMutation = useUpdatePremiumUpgradeStateMutation();
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <StatusBadge status={row.status} />
+    <div className="flex min-w-[15rem] flex-wrap items-center gap-3">
+      <CustomerStateBadge row={row} />
       <StateToggleLine
         label="مفعل"
         checked={row.isEnabled}
@@ -350,12 +342,24 @@ function StateControls({
   );
 }
 
-function StatusBadge({ status }: { status: PremiumUpgradeConfigDto["status"] }) {
-  return (
-    <Badge variant={status === "active" ? "default" : "secondary"}>
-      {status === "active" ? "نشط" : "مؤرشف"}
-    </Badge>
-  );
+function CustomerStateBadge({ row }: { row: PremiumUpgradeConfigDto }) {
+  if (row.status === "archived") {
+    return <Badge variant="secondary">مؤرشف</Badge>;
+  }
+
+  if (!row.isEnabled && !row.isVisible) {
+    return <Badge variant="secondary">معطل ومخفي</Badge>;
+  }
+
+  if (!row.isEnabled) {
+    return <Badge variant="secondary">معطل</Badge>;
+  }
+
+  if (!row.isVisible) {
+    return <Badge variant="outline">مخفي عن العميل</Badge>;
+  }
+
+  return <Badge>نشط للعميل</Badge>;
 }
 
 function Actions({
