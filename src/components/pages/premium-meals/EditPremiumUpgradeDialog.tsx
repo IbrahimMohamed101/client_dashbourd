@@ -117,7 +117,7 @@ function EditPremiumUpgradeForm({
           ]}
         />
         <NumberField
-          label="فرق سعر الترقية بالريال"
+          label="فرق سعر بالريال"
           value={form.upgradeDeltaSarInput}
           min="0"
           step="0.01"

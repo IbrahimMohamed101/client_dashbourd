@@ -222,7 +222,7 @@ function CandidateLinkDialogContent({
             />
           </div>
 
-          <DialogFooter className="sticky bottom-0 -mx-4 border-t bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-5 sm:px-5 sm:justify-start">
+          <DialogFooter className="sticky bottom-0 -mx-4 border-t px-4 pt-4 sm:-mx-5 sm:px-5 sm:justify-start">
             <Button
               type="submit"
               disabled={createMutation.isPending || !selected}
