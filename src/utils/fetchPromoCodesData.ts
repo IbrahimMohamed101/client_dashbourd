@@ -3,6 +3,7 @@ import type {
   PromoCodeDTO,
   PromoCodePayload,
   PromoCodesListResponse,
+  PromoCodeValidationResult,
 } from "@/types/financeTypes";
 import {
   promoCodeToggleUrl,
@@ -10,9 +11,6 @@ import {
 } from "@/utils/promoCodeApiContract";
 
 interface FetchPromoCodesListParams {
-  page?: number;
-  limit?: number;
-  q?: string;
   includeDeleted?: boolean;
 }
 
@@ -21,7 +19,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function readNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" ? value : fallback;
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function readPromoCodes(value: unknown): PromoCodeDTO[] | null {
@@ -30,27 +28,36 @@ function readPromoCodes(value: unknown): PromoCodeDTO[] | null {
 
 function normalizePromoCodesListResponse(payload: unknown): PromoCodesListResponse {
   const root = isRecord(payload) ? payload : {};
-  const dataNode = isRecord(root.data) ? root.data : root;
+  const envelopeData = isRecord(root.data) ? root.data : root.data;
+  const dataNode = isRecord(envelopeData) ? envelopeData : root;
   const nestedDataNode = isRecord(dataNode.data) ? dataNode.data : dataNode;
   const data =
+    readPromoCodes(root.data) ??
     readPromoCodes(dataNode.items) ??
     readPromoCodes(dataNode.data) ??
     readPromoCodes(nestedDataNode.items) ??
     readPromoCodes(payload) ??
     [];
-  const metaNode = isRecord(dataNode.meta) ? dataNode.meta : dataNode;
+  const metaNode = isRecord(root.meta)
+    ? root.meta
+    : isRecord(dataNode.meta)
+      ? dataNode.meta
+      : dataNode;
   const total = readNumber(metaNode.total, data.length);
   const totalPages = readNumber(
     metaNode.totalPages,
-    readNumber(metaNode.lastPage, 1)
+    readNumber(metaNode.lastPage, Math.max(1, Math.ceil(total / Math.max(data.length, 1))))
   );
+  const currentPage = readNumber(metaNode.currentPage, readNumber(metaNode.page, 1));
 
   return {
     data,
     meta: {
       total,
       totalPages,
-      currentPage: readNumber(metaNode.currentPage, readNumber(metaNode.page, 1)),
+      currentPage,
+      page: currentPage,
+      limit: readNumber(metaNode.limit, data.length || 20),
       lastPage: readNumber(metaNode.lastPage, totalPages),
     },
   };
@@ -70,17 +77,27 @@ function normalizePromoCodeDetailResponse(payload: unknown): PromoCodeDTO | null
   return payload as unknown as PromoCodeDTO;
 }
 
+function normalizePromoCodeValidationResponse(
+  payload: unknown
+): PromoCodeValidationResult | null {
+  if (!isRecord(payload)) return null;
+
+  if (isRecord(payload.data)) {
+    if (isRecord(payload.data.data)) {
+      return payload.data.data as unknown as PromoCodeValidationResult;
+    }
+
+    return payload.data as unknown as PromoCodeValidationResult;
+  }
+
+  return payload as unknown as PromoCodeValidationResult;
+}
+
 export const fetchPromoCodesList = async ({
-  page = 1,
-  limit = 20,
-  q = "",
   includeDeleted = false,
-}: FetchPromoCodesListParams): Promise<PromoCodesListResponse> => {
+}: FetchPromoCodesListParams = {}): Promise<PromoCodesListResponse> => {
   const response = await api.get<unknown>("/api/dashboard/promo-codes", {
     params: {
-      page,
-      limit,
-      q: q || undefined,
       includeDeleted,
     },
   });
@@ -116,9 +133,9 @@ export const updatePromoCode = async ({
   return normalizePromoCodeDetailResponse(response.data);
 };
 
-export const deletePromoCode = async (id: string): Promise<unknown> => {
+export const deletePromoCode = async (id: string): Promise<PromoCodeDTO | null> => {
   const response = await api.delete<unknown>(`/api/dashboard/promo-codes/${id}`);
-  return response.data;
+  return normalizePromoCodeDetailResponse(response.data);
 };
 
 export const togglePromoCode = async (
@@ -130,7 +147,7 @@ export const togglePromoCode = async (
 
 export const validatePromoCode = async (
   data: Record<string, unknown>
-): Promise<unknown> => {
+): Promise<PromoCodeValidationResult | null> => {
   const response = await api.post<unknown>(promoCodeValidateUrl(), data);
-  return response.data;
+  return normalizePromoCodeValidationResponse(response.data);
 };
