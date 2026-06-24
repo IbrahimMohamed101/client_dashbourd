@@ -2,13 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Loader } from "@/components/global/loader";
 import { PromoCodesTable } from "@/components/pages/promo-codes/PromoCodesTable";
-import { getPromoCodeStatus } from "@/components/pages/promo-codes/promo-codes-columns";
-import { getPromoCodesSectionCards } from "@/constants/SectionCardsData";
+import { PromoCodesDashboardCharts } from "@/components/pages/promo-codes/PromoCodesDashboardCharts";
 import { promoCodesListQueryOptions } from "@/hooks/usePromoCodesQuery";
 import { Card, CardContent } from "@/components/ui/card";
 import { Ticket } from "lucide-react";
-import { SectionCards } from "@/components/custom/section-cards";
-import type { PromoCodeDTO } from "@/types/financeTypes";
 
 export const Route = createFileRoute("/_protected/promo-codes/")({
   component: RouteComponent,
@@ -24,17 +21,6 @@ function RouteComponent() {
     promoCodesListQueryOptions(false)
   );
   const promos = promoResponse?.data || [];
-  const promoSummary = {
-    totalPromoCodes: promos.length,
-    activePromoCodes: promos.filter(
-      (promo: PromoCodeDTO) => getPromoCodeStatus(promo.state) === "active"
-    ).length,
-    totalUses: promos.reduce(
-      (acc: number, curr: PromoCodeDTO) =>
-        acc + (curr.currentUsageCount ?? curr.usedCount ?? 0),
-      0
-    ),
-  };
 
   return (
     <div className="space-y-8 px-4 lg:px-6">
@@ -49,7 +35,7 @@ function RouteComponent() {
                 أكواد الخصم والعروض
               </h1>
               <p className="text-sm text-muted-foreground">
-                إدارة كوبونات الاشتراكات، حدود الاستخدام، الأرشفة ومعاينة التحقق من الخصم.
+                لوحة تحكم تحليلية لإدارة كوبونات الاشتراكات، الصلاحية، الاستخدام، الأرشفة ومعاينة التحقق من الخصم.
               </p>
             </div>
           </div>
@@ -66,10 +52,7 @@ function RouteComponent() {
         </CardContent>
       </Card>
 
-      <SectionCards
-        cardsData={getPromoCodesSectionCards(promoSummary)}
-        className="px-0!"
-      />
+      <PromoCodesDashboardCharts promos={promos} />
 
       <PromoCodesTable />
     </div>
