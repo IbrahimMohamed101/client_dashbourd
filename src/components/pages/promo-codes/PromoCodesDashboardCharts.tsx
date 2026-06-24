@@ -373,7 +373,7 @@ export function PromoCodesDashboardCharts({
                   content={
                     <ChartTooltipContent
                       indicator="dot"
-                      labelFormatter={(_, payload) => {
+                      labelFormatter={(label, payload) => {
                         const row = payload?.[0]?.payload as
                           | { name?: string; limit?: number | null }
                           | undefined;
@@ -381,7 +381,7 @@ export function PromoCodesDashboardCharts({
                           ? ` / ${formatNumber(row.limit)}`
                           : " / غير محدود";
 
-                        return `${row?.name ?? "كود خصم"}${limitLabel}`;
+                        return `${row?.name ?? label ?? "كود خصم"}${limitLabel}`;
                       }}
                     />
                   }
