@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Archive,
   Ban,
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -17,8 +18,9 @@ import {
   Edit,
   Eye,
   MoreHorizontal,
+  Power,
+  PowerOff,
   Ticket,
-  Trash2,
 } from "lucide-react";
 import type {
   PromoCodeDisplayStatus,
@@ -31,28 +33,39 @@ export const promoCodeText = {
   name: "الاسم",
   discount: "القيمة",
   usage: "الاستخدامات",
+  startsAt: "تاريخ البدء",
   expiresAt: "تاريخ الانتهاء",
+  appliesTo: "ينطبق على",
   status: "الحالة",
   actions: "إجراءات",
   options: "خيارات التحكم",
   viewDetails: "عرض التفاصيل",
+  previewValidation: "معاينة التحقق",
   edit: "تعديل الكود",
-  delete: "حذف الكود",
+  archive: "أرشفة الكود",
+  activate: "تفعيل الكود",
+  deactivate: "تعطيل الكود",
   notSpecified: "غير محدد",
+  unlimited: "غير محدود",
   unnamed: "بدون اسم",
   active: "نشط",
   expired: "منتهي",
   inactive: "غير نشط",
-  percentage: "خصم مئوي",
+  archived: "مؤرشف",
+  percentage: "نسبة مئوية",
   fixed: "مبلغ ثابت",
+  subscription: "اشتراك",
+  addon_plans: "خطط الإضافات",
+  all: "الكل",
 } as const;
 
 export function getPromoCodeStatus(
-  state: PromoCodeStateDTO
+  state?: PromoCodeStateDTO | null
 ): PromoCodeDisplayStatus {
-  if (state.isExpired) return "expired";
+  if (state?.isDeleted) return "archived";
+  if (state?.isExpired) return "expired";
 
-  if (state.isCurrentlyValid && state.isStarted && !state.isDeleted) {
+  if (state?.isCurrentlyValid && state?.isStarted) {
     return "active";
   }
 
@@ -60,7 +73,20 @@ export function getPromoCodeStatus(
 }
 
 export function getPromoCodeName(promo: PromoCodeDTO): string {
-  return promo.name?.ar || promo.name?.en || "";
+  return promo.name?.ar || promo.name?.en || promo.title || "";
+}
+
+export function formatHalala(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return promoCodeText.notSpecified;
+  }
+
+  return new Intl.NumberFormat("ar-SA", {
+    style: "currency",
+    currency: "SAR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value / 100);
 }
 
 export function formatPromoCodeDate(value: string | null | undefined): string {
@@ -69,10 +95,13 @@ export function formatPromoCodeDate(value: string | null | undefined): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return promoCodeText.notSpecified;
 
-  return new Intl.DateTimeFormat("ar-EG", {
+  return new Intl.DateTimeFormat("ar-SA", {
+    timeZone: "Asia/Riyadh",
     year: "numeric",
     month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 
@@ -81,7 +110,23 @@ export function formatPromoCodeDiscount(promo: PromoCodeDTO): string {
     return `${promo.discountValue}%`;
   }
 
-  return `${promo.discountValue} ${promo.currency || "SAR"}`;
+  return formatHalala(promo.discountValue);
+}
+
+export function formatAppliesTo(value: PromoCodeDTO["appliesTo"]): string {
+  if (value === "subscription" || value === "subscriptions") {
+    return promoCodeText.subscription;
+  }
+
+  if (value === "addon_plans") {
+    return promoCodeText.addon_plans;
+  }
+
+  if (value === "all") {
+    return promoCodeText.all;
+  }
+
+  return promoCodeText.notSpecified;
 }
 
 const statusConfig: Record<
@@ -110,18 +155,30 @@ const statusConfig: Record<
     className:
       "gap-1.5 rounded-full border-muted/30 bg-muted/40 px-3 py-1 font-bold text-muted-foreground",
   },
+  archived: {
+    label: promoCodeText.archived,
+    icon: Archive,
+    className:
+      "gap-1.5 rounded-full border-slate-500/20 bg-slate-500/10 px-3 py-1 font-bold text-slate-500",
+  },
 };
 
 interface PromoCodesColumnsOptions {
   onEdit: (promo: PromoCodeDTO) => void;
-  onDelete: (id: string) => void;
+  onArchive: (promo: PromoCodeDTO) => void;
   onView: (id: string) => void;
+  onValidate: (promo: PromoCodeDTO) => void;
+  onToggle: (promo: PromoCodeDTO) => void;
+  isActionPending?: boolean;
 }
 
 export function getPromoCodesColumns({
   onEdit,
-  onDelete,
+  onArchive,
   onView,
+  onValidate,
+  onToggle,
+  isActionPending = false,
 }: PromoCodesColumnsOptions): ColumnDef<PromoCodeDTO>[] {
   return [
     {
@@ -148,7 +205,7 @@ export function getPromoCodesColumns({
               <Ticket className="size-5" />
             </div>
             <div className="min-w-0">
-              <span className="block font-mono text-lg font-black tracking-wider text-foreground/90 uppercase">
+              <span className="block font-mono text-lg font-black tracking-wider text-foreground/90 uppercase" dir="ltr">
                 {promo.code}
               </span>
               <span className="block max-w-48 truncate text-xs text-muted-foreground">
@@ -169,7 +226,7 @@ export function getPromoCodesColumns({
 
         return (
           <div className="flex flex-col">
-            <span className="text-base font-bold">
+            <span className="text-base font-bold" dir="ltr">
               {formatPromoCodeDiscount(promo)}
             </span>
             <span className="text-[10px] font-medium text-muted-foreground uppercase">
@@ -178,6 +235,15 @@ export function getPromoCodesColumns({
           </div>
         );
       },
+    },
+    {
+      id: "appliesTo",
+      header: promoCodeText.appliesTo,
+      cell: ({ row }) => (
+        <Badge variant="secondary" className="rounded-full px-3 py-1">
+          {formatAppliesTo(row.original.appliesTo)}
+        </Badge>
+      ),
     },
     {
       id: "usage",
@@ -240,6 +306,9 @@ export function getPromoCodesColumns({
       header: promoCodeText.actions,
       cell: ({ row }) => {
         const promo = row.original;
+        const isArchived = getPromoCodeStatus(promo.state) === "archived";
+        const hasUsage = (promo.currentUsageCount ?? promo.usedCount ?? 0) > 0;
+        const ToggleIcon = promo.isActive ? PowerOff : Power;
 
         return (
           <DropdownMenu>
@@ -253,32 +322,52 @@ export function getPromoCodesColumns({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-48 rounded-2xl border-muted-foreground/10 p-2 shadow-2xl"
+              className="w-56 rounded-2xl border-muted-foreground/10 p-2 shadow-2xl"
+              dir="rtl"
             >
               <DropdownMenuLabel className="px-3 pb-2 text-xs font-bold text-muted-foreground">
                 {promoCodeText.options}
               </DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => onView(promo.id)}
+                disabled={isArchived}
                 className="cursor-pointer gap-2.5 rounded-xl px-3 py-2 transition-colors focus:bg-primary/10 focus:text-primary"
               >
                 <Eye className="size-4" />
                 {promoCodeText.viewDetails}
               </DropdownMenuItem>
               <DropdownMenuItem
+                onClick={() => onValidate(promo)}
+                disabled={isArchived}
+                className="cursor-pointer gap-2.5 rounded-xl px-3 py-2 transition-colors focus:bg-primary/10 focus:text-primary"
+              >
+                <Ticket className="size-4" />
+                {promoCodeText.previewValidation}
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 onClick={() => onEdit(promo)}
+                disabled={isArchived}
                 className="cursor-pointer gap-2.5 rounded-xl px-3 py-2 transition-colors focus:bg-primary/10 focus:text-primary"
               >
                 <Edit className="size-4" />
                 {promoCodeText.edit}
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onToggle(promo)}
+                disabled={isArchived || isActionPending}
+                className="cursor-pointer gap-2.5 rounded-xl px-3 py-2 transition-colors focus:bg-primary/10 focus:text-primary"
+              >
+                <ToggleIcon className="size-4" />
+                {promo.isActive ? promoCodeText.deactivate : promoCodeText.activate}
+              </DropdownMenuItem>
               <DropdownMenuSeparator className="my-1 bg-muted-foreground/10" />
               <DropdownMenuItem
-                onClick={() => onDelete(promo.id)}
+                onClick={() => onArchive(promo)}
+                disabled={isArchived || hasUsage || isActionPending}
                 className="cursor-pointer gap-2.5 rounded-xl px-3 py-2 text-rose-500 transition-colors focus:bg-rose-500/10 focus:text-rose-600"
               >
-                <Trash2 className="size-4" />
-                {promoCodeText.delete}
+                <Archive className="size-4" />
+                {promoCodeText.archive}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
