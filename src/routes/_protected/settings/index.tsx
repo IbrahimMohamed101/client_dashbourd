@@ -1,204 +1,223 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, type FormEvent } from "react";
-import { SaveIcon, SettingsIcon } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  useSettingsQuery,
-  useUpdateSettingsMutation,
-} from "@/hooks/useSettingsQuery";
+  ArrowLeft,
+  BadgePercent,
+  Clock3,
+  Crown,
+  MapPin,
+  MenuSquare,
+  SettingsIcon,
+  ShieldAlert,
+  SlidersHorizontal,
+  type LucideIcon,
+} from "lucide-react";
 
-type SettingsForm = {
-  vat_percentage: string;
-  skip_allowance: string;
-  premium_price: string;
-  subscription_delivery_fee_halala: string;
-  custom_salad_base_price: string;
-  custom_meal_base_price: string;
-};
-
-type SettingsField = {
-  key: keyof SettingsForm;
-  label: string;
-  hint: string;
-  suffix?: string;
-};
-
-const settingsFields: SettingsField[] = [
-  {
-    key: "vat_percentage",
-    label: "VAT percentage",
-    hint: "Backend value from vat_percentage",
-    suffix: "%",
-  },
-  {
-    key: "skip_allowance",
-    label: "Skip allowance",
-    hint: "Allowed subscription skips",
-  },
-  {
-    key: "premium_price",
-    label: "Premium meal price",
-    hint: "Premium add-on price",
-  },
-  {
-    key: "subscription_delivery_fee_halala",
-    label: "Subscription delivery fee",
-    hint: "Stored in halala",
-  },
-  {
-    key: "custom_salad_base_price",
-    label: "Custom salad base price",
-    hint: "Base price for custom salads",
-  },
-  {
-    key: "custom_meal_base_price",
-    label: "Custom meal base price",
-    hint: "Base price for custom meals",
-  },
-];
-
-const toText = (value: unknown) =>
-  value === null || value === undefined ? "" : String(value);
-
-const toNumberOrUndefined = (value: string) => {
-  if (!value.trim()) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
-
-const toPayload = (form: SettingsForm) =>
-  Object.fromEntries(
-    Object.entries(form)
-      .map(([key, value]) => [key, toNumberOrUndefined(value)] as const)
-      .filter(([, value]) => value !== undefined)
-  );
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export const Route = createFileRoute("/_protected/settings/")({
   component: SettingsPage,
 });
 
+type SettingsNavigationCard = {
+  title: string;
+  description: string;
+  owner: string;
+  route?: string;
+  icon: LucideIcon;
+  badge?: string;
+};
+
+const navigationCards: SettingsNavigationCard[] = [
+  {
+    title: "مناطق التوصيل",
+    description:
+      "إدارة أسماء مناطق التوصيل، ترتيب ظهورها، حالة التفعيل ورسوم التوصيل الخاصة بكل منطقة.",
+    owner: "Delivery Zones",
+    route: "/zones",
+    icon: MapPin,
+    badge: "رسوم التوصيل",
+  },
+  {
+    title: "ترقيات الوجبات",
+    description:
+      "إدارة أسعار وترتيب وظهور الوجبات أو البروتينات المميزة من شاشة الترقيات المخصصة.",
+    owner: "Premium Upgrades",
+    route: "/premium-meals",
+    icon: Crown,
+    badge: "أسعار المميز",
+  },
+  {
+    title: "قائمة الطعام وبناء الوجبات",
+    description:
+      "إدارة المنتجات، التصنيفات، خيارات التخصيص وأسعار الوجبات أو السلطات المخصصة من شاشة القائمة.",
+    owner: "Menu / Meal Builder",
+    route: "/menu",
+    icon: MenuSquare,
+    badge: "القائمة",
+  },
+  {
+    title: "ساعات عمل المطعم",
+    description:
+      "إدارة أوقات الفتح والإغلاق، نوافذ التوصيل، وأوقات الإقفال من شاشة ساعات العمل.",
+    owner: "Restaurant Hours",
+    route: "/restaurant-hours",
+    icon: Clock3,
+    badge: "الأوقات",
+  },
+  {
+    title: "خطط وسياسات الاشتراك",
+    description:
+      "سياسات الاشتراكات، حدود التخطي، والخطط يجب أن تدار من شاشة الاشتراكات أو الشاشة المالكة للعقد.",
+    owner: "Plans / Subscription Policy",
+    route: "/subscriptions",
+    icon: SlidersHorizontal,
+    badge: "السياسات",
+  },
+  {
+    title: "ضريبة القيمة المضافة",
+    description:
+      "ضريبة VAT معلومة مالية مملوكة للباك اند، ولا تظهر كحقل قابل للتعديل هنا إلا بعقد مالي موثق.",
+    owner: "Backend finance config",
+    icon: BadgePercent,
+    badge: "معلومة فقط",
+  },
+];
+
+const blockedControls = [
+  "لا يوجد نموذج تعديل عام.",
+  "لا يوجد زر حفظ أو إرسال مفاتيح مخفية.",
+  "لا يتم تحميل إعدادات من API عند فتح الشاشة.",
+  "لا يتم تعديل VAT أو الأسعار أو السياسات من هذه الصفحة.",
+];
+
 function SettingsPage() {
-  const { data, dataUpdatedAt, isLoading, isError } = useSettingsQuery();
-
-  if (isLoading) return <SettingsSkeleton />;
-
-  if (isError) {
-    return (
-      <div className="px-4 lg:px-6">
-        <Card>
-          <CardContent className="pt-6 text-sm text-destructive">
-            Unable to load dashboard settings.
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4 px-4 lg:px-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-normal">Settings</h1>
-          <p className="text-sm text-muted-foreground">
-            Contract-backed pricing and policy values from the dashboard
-            settings API.
-          </p>
-        </div>
-        <SettingsIcon className="size-6 text-muted-foreground" />
-      </div>
-
-      <SettingsFormContent key={dataUpdatedAt} settings={data?.data ?? {}} />
-    </div>
-  );
-}
-
-function SettingsFormContent({
-  settings,
-}: {
-  settings: Record<string, unknown>;
-}) {
-  const updateSettings = useUpdateSettingsMutation();
-  const initialForm = useMemo<SettingsForm>(
-    () => ({
-      vat_percentage: toText(settings.vat_percentage),
-      skip_allowance: toText(settings.skip_allowance),
-      premium_price: toText(settings.premium_price),
-      subscription_delivery_fee_halala: toText(
-        settings.subscription_delivery_fee_halala
-      ),
-      custom_salad_base_price: toText(settings.custom_salad_base_price),
-      custom_meal_base_price: toText(settings.custom_meal_base_price),
-    }),
-    [settings]
-  );
-  const [form, setForm] = useState<SettingsForm>(initialForm);
-
-  const updateField = (key: keyof SettingsForm, value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    updateSettings.mutate(toPayload(form));
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Core Values</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {settingsFields.map((field) => (
-            <div
-              key={field.key}
-              className="rounded-lg border bg-card p-4 shadow-sm"
-            >
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor={field.key}>{field.label}</Label>
-                  <p className="text-xs text-muted-foreground">{field.hint}</p>
-                </div>
-                {field.suffix ? (
-                  <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-                    {field.suffix}
-                  </span>
-                ) : null}
-              </div>
-              <Input
-                id={field.key}
-                type="number"
-                inputMode="decimal"
-                value={form[field.key]}
-                onChange={(event) =>
-                  updateField(field.key, event.target.value)
-                }
-                placeholder="Fetched value"
-              />
+    <div className="space-y-8 px-4 lg:px-6" dir="rtl">
+      <Card className="bg-gradient-to-br from-primary/10 via-background to-background text-foreground shadow-none">
+        <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary shadow-inner">
+              <SettingsIcon className="size-6 text-primary-foreground" />
             </div>
-          ))}
+            <div className="space-y-1">
+              <h1 className="text-xl font-bold tracking-tight">
+                الإعدادات العامة
+              </h1>
+              <p className="max-w-3xl text-sm text-muted-foreground">
+                تم توزيع الإعدادات على الشاشات المختصة لتجنب التعارض في الأسعار والسياسات. هذه الصفحة دليل سريع فقط وليست محرر إعدادات عام.
+              </p>
+            </div>
+          </div>
+          <Badge variant="secondary" className="w-fit rounded-full px-4 py-1.5">
+            Navigation only
+          </Badge>
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={updateSettings.isPending}>
-          <SaveIcon className="size-4" />
-          Save settings
-        </Button>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
+        <Card className="rounded-2xl shadow-sm">
+          <CardHeader className="gap-1 pb-2">
+            <CardTitle className="text-base font-semibold">
+              اختر الشاشة المالكة للإعداد
+            </CardTitle>
+            <CardDescription>
+              كل كارت يفتح الشاشة الصحيحة بدل تكرار نفس التحكم داخل إعدادات عامة.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {navigationCards.map((card) => (
+              <SettingsOwnerCard key={card.title} card={card} />
+            ))}
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4">
+          <Card className="rounded-2xl border-amber-500/20 bg-amber-500/5 shadow-sm">
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold text-amber-700 dark:text-amber-300">
+                <ShieldAlert className="size-5" />
+                قواعد مهمة
+              </CardTitle>
+              <CardDescription>
+                هذه الصفحة لا تملك أي إعداد قابل للحفظ.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {blockedControls.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-xl border border-amber-500/10 bg-background/60 px-3 py-2 text-sm text-muted-foreground"
+                >
+                  {item}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl shadow-sm">
+            <CardHeader className="gap-1 pb-2">
+              <CardTitle className="text-base font-semibold">
+                لا توجد إعدادات عامة قابلة للتعديل هنا
+              </CardTitle>
+              <CardDescription>
+                اختر القسم المختص لإدارة الإعداد. أي إعداد غير موثق يجب اعتباره VERIFY_IN_BACKEND_BEFORE_USE.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
       </div>
-    </form>
+    </div>
   );
 }
 
-function SettingsSkeleton() {
-  return (
-    <div className="space-y-4 px-4 lg:px-6">
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-80 w-full" />
+function SettingsOwnerCard({ card }: { card: SettingsNavigationCard }) {
+  const Icon = card.icon;
+  const content = (
+    <div className="group flex h-full flex-col justify-between gap-5 rounded-2xl border border-muted-foreground/10 bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
+            <Icon className="size-5" />
+          </div>
+          {card.badge ? (
+            <Badge variant="outline" className="rounded-full text-[11px]">
+              {card.badge}
+            </Badge>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <div>
+            <h3 className="font-black text-foreground">{card.title}</h3>
+            <p className="mt-1 text-xs font-medium text-muted-foreground" dir="ltr">
+              {card.owner}
+            </p>
+          </div>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {card.description}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2 text-sm font-bold text-primary">
+        <span>{card.route ? "فتح الشاشة" : "معلومة فقط"}</span>
+        {card.route ? <ArrowLeft className="size-4" /> : null}
+      </div>
     </div>
+  );
+
+  if (!card.route) return content;
+
+  return (
+    <Link to={card.route} className="block h-full focus:outline-none">
+      {content}
+    </Link>
   );
 }
