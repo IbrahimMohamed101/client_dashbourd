@@ -12,8 +12,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useValidatePromoCodeMutation } from "@/hooks/usePromoCodesQuery";
-import type { PromoCodeDTO, PromoCodeValidationResult } from "@/types/financeTypes";
-import { formatHalala, formatPromoCodeDiscount, getPromoCodeName } from "./promo-codes-columns";
+import type {
+  PromoCodeDTO,
+  PromoCodeValidationResult,
+} from "@/types/financeTypes";
+import {
+  formatHalala,
+  formatPromoCodeDiscount,
+  getPromoCodeName,
+} from "./promo-codes-columns";
 import { Calculator, TicketCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -80,7 +87,7 @@ function formatBreakdownValue(key: string, value: unknown): string {
     return "غير محدد";
   }
 
-  return JSON.stringify(value);
+  return JSON.stringify(value) ?? "غير محدد";
 }
 
 const breakdownLabels: Record<string, string> = {
