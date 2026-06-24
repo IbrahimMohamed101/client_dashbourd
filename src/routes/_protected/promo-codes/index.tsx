@@ -13,7 +13,7 @@ import type { PromoCodeDTO } from "@/types/financeTypes";
 export const Route = createFileRoute("/_protected/promo-codes/")({
   component: RouteComponent,
   loader: ({ context }) =>
-    context.queryClient.ensureQueryData(promoCodesListQueryOptions(1, 20)),
+    context.queryClient.ensureQueryData(promoCodesListQueryOptions(false)),
   pendingComponent: () => (
     <Loader variant="full-screen" label="جاري تحميل أكواد الخصم..." />
   ),
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_protected/promo-codes/")({
 
 function RouteComponent() {
   const { data: promoResponse } = useSuspenseQuery(
-    promoCodesListQueryOptions(1, 20)
+    promoCodesListQueryOptions(false)
   );
   const promos = promoResponse?.data || [];
   const promoSummary = {
@@ -30,7 +30,8 @@ function RouteComponent() {
       (promo: PromoCodeDTO) => getPromoCodeStatus(promo.state) === "active"
     ).length,
     totalUses: promos.reduce(
-      (acc: number, curr: PromoCodeDTO) => acc + (curr.usedCount || 0),
+      (acc: number, curr: PromoCodeDTO) =>
+        acc + (curr.currentUsageCount ?? curr.usedCount ?? 0),
       0
     ),
   };
@@ -48,7 +49,7 @@ function RouteComponent() {
                 أكواد الخصم والعروض
               </h1>
               <p className="text-sm text-muted-foreground">
-                إدارة كوبونات الخصم والعروض الترويجية وحدود الاستخدام.
+                إدارة كوبونات الاشتراكات، حدود الاستخدام، الأرشفة ومعاينة التحقق من الخصم.
               </p>
             </div>
           </div>
