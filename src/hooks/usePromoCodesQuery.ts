@@ -15,15 +15,10 @@ import {
   validatePromoCode,
 } from "@/utils/fetchPromoCodesData";
 
-export const promoCodesListQueryOptions = (
-  page: number = 1,
-  limit: number = 20,
-  q: string = ""
-) =>
+export const promoCodesListQueryOptions = (includeDeleted: boolean = false) =>
   queryOptions({
-    queryKey: ["promo-codes-list", { page, limit, q }],
-    queryFn: () =>
-      fetchPromoCodesList({ page, limit, q, includeDeleted: false }),
+    queryKey: ["promo-codes-list", { includeDeleted }],
+    queryFn: () => fetchPromoCodesList({ includeDeleted }),
     placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 5,
   });
@@ -35,12 +30,8 @@ export const promoCodeDetailQueryOptions = (id: string) =>
     staleTime: 1000 * 60 * 5,
   });
 
-export const usePromoCodesListQuery = (
-  page: number = 1,
-  limit: number = 20,
-  q: string = ""
-) => {
-  return useQuery(promoCodesListQueryOptions(page, limit, q));
+export const usePromoCodesListQuery = (includeDeleted: boolean = false) => {
+  return useQuery(promoCodesListQueryOptions(includeDeleted));
 };
 
 export const usePromoCodeDetailQuery = (id: string | null) => {
@@ -80,8 +71,9 @@ export const useDeletePromoCodeMutation = () => {
 
   return useMutation({
     mutationFn: deletePromoCode,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["promo-codes-list"] });
+      queryClient.invalidateQueries({ queryKey: ["promo-code-detail", id] });
     },
   });
 };
@@ -91,8 +83,9 @@ export const useTogglePromoCodeMutation = () => {
 
   return useMutation({
     mutationFn: togglePromoCode,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["promo-codes-list"] });
+      queryClient.invalidateQueries({ queryKey: ["promo-code-detail", id] });
     },
   });
 };
