@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -32,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PlusIcon, SearchIcon, Ticket, Trash2 } from "lucide-react";
+import { Archive, PlusIcon, SearchIcon, Ticket } from "lucide-react";
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import {
@@ -44,20 +46,51 @@ import {
 import {
   useDeletePromoCodeMutation,
   usePromoCodesListQuery,
+  useTogglePromoCodeMutation,
 } from "@/hooks/usePromoCodesQuery";
 import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import type { PromoCodeDTO, StatusFilter } from "@/types/financeTypes";
 import { PromoCodeDialog } from "./PromoCodeDialog";
 import PromoCodeDetailDialog from "./PromoCodeDetailDialog";
+import { PromoCodeValidationDialog } from "./PromoCodeValidationDialog";
 
 interface PromoCodesToolbarProps {
   statusFilter: StatusFilter;
   onStatusFilterChange: (value: StatusFilter) => void;
   searchInput: string;
   onSearchInputChange: (value: string) => void;
+  includeDeleted: boolean;
+  onIncludeDeletedChange: (value: boolean) => void;
   onAdd: () => void;
   table: ReturnType<typeof useReactTable<PromoCodeDTO>>;
+}
+
+function readApiErrorMessage(error: unknown, fallback: string): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "data" in error.response
+  ) {
+    const data = error.response.data;
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "error" in data &&
+      typeof data.error === "object" &&
+      data.error !== null &&
+      "message" in data.error &&
+      typeof data.error.message === "string"
+    ) {
+      return data.error.message;
+    }
+  }
+
+  return fallback;
 }
 
 function PromoCodesToolbar({
@@ -65,82 +98,118 @@ function PromoCodesToolbar({
   onStatusFilterChange,
   searchInput,
   onSearchInputChange,
+  includeDeleted,
+  onIncludeDeletedChange,
   onAdd,
   table,
 }: PromoCodesToolbarProps) {
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <div className="flex items-center gap-3">
-        <Select
-          value={statusFilter}
-          onValueChange={(value) => onStatusFilterChange(value as StatusFilter)}
-        >
-          <SelectTrigger className="w-40" size="sm">
-            <SelectValue placeholder={promoCodeText.status} />
-          </SelectTrigger>
-          <SelectContent dir="rtl">
-            <SelectGroup>
-              <SelectItem value="all">الكل</SelectItem>
-              <SelectItem value="active">{promoCodeText.active}</SelectItem>
-              <SelectItem value="expired">{promoCodeText.expired}</SelectItem>
-              <SelectItem value="inactive">{promoCodeText.inactive}</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => onStatusFilterChange(value as StatusFilter)}
+          >
+            <SelectTrigger className="w-full sm:w-44" size="sm">
+              <SelectValue placeholder={promoCodeText.status} />
+            </SelectTrigger>
+            <SelectContent dir="rtl">
+              <SelectGroup>
+                <SelectItem value="all">الكل</SelectItem>
+                <SelectItem value="active">{promoCodeText.active}</SelectItem>
+                <SelectItem value="expired">{promoCodeText.expired}</SelectItem>
+                <SelectItem value="inactive">{promoCodeText.inactive}</SelectItem>
+                <SelectItem value="archived">{promoCodeText.archived}</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
 
-        <div className="relative flex-1">
+          <label className="flex h-9 items-center justify-between gap-3 rounded-xl border border-muted-foreground/10 px-3 text-sm font-medium sm:min-w-44">
+            <span>عرض المؤرشفة</span>
+            <Switch
+              checked={includeDeleted}
+              onCheckedChange={onIncludeDeletedChange}
+            />
+          </label>
+        </div>
+
+        <div className="relative min-w-0 flex-1">
           <SearchIcon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="البحث عن كود خصم..."
+            placeholder="البحث عن الكود، الاسم أو الوصف..."
             value={searchInput}
             onChange={(event) => onSearchInputChange(event.target.value)}
-            className="max-w-lg pr-9"
+            className="pr-9"
           />
         </div>
 
-        <Button onClick={onAdd} className="bg-primary">
-          <PlusIcon />
-          إضافة كود جديد
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={onAdd} className="bg-primary">
+            <PlusIcon />
+            إضافة كود جديد
+          </Button>
 
-        <DataTableViewOptions table={table} />
+          <DataTableViewOptions table={table} />
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        البحث والصفحات تتم محليًا لضمان تجربة مستقرة لأن العقد الحالي لا يضمن دعم q/page/limit من الباك اند.
+      </p>
     </div>
   );
+}
+
+function buildPromoSearchText(promo: PromoCodeDTO): string {
+  const metadataName =
+    promo.metadata &&
+    typeof promo.metadata === "object" &&
+    "name" in promo.metadata &&
+    typeof promo.metadata.name === "object" &&
+    promo.metadata.name !== null
+      ? Object.values(promo.metadata.name as Record<string, unknown>)
+          .filter((value): value is string => typeof value === "string")
+          .join(" ")
+      : "";
+
+  return [
+    promo.code,
+    getPromoCodeName(promo),
+    promo.title,
+    promo.description,
+    metadataName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 export function PromoCodesTable() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchInput, setSearchInput] = useState("");
-  const searchQuery = useDebounce(searchInput, 500);
+  const searchQuery = useDebounce(searchInput, 300);
+  const [includeDeleted, setIncludeDeleted] = useState(false);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editData, setEditData] = useState<PromoCodeDTO | undefined>();
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [archivePromo, setArchivePromo] = useState<PromoCodeDTO | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const deleteMutation = useDeletePromoCodeMutation();
-  const { data: response, isLoading } = usePromoCodesListQuery(
-    pagination.pageIndex + 1,
-    pagination.pageSize,
-    searchQuery
-  );
+  const [validationPromo, setValidationPromo] = useState<PromoCodeDTO | null>(null);
+  const archiveMutation = useDeletePromoCodeMutation();
+  const toggleMutation = useTogglePromoCodeMutation();
+  const { data: response, isLoading } = usePromoCodesListQuery(includeDeleted);
 
   const data = useMemo(() => {
     const serverData = response?.data || [];
     const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
     const searchFilteredData = normalizedSearchQuery
-      ? serverData.filter((promo) => {
-          const promoName = getPromoCodeName(promo).toLowerCase();
-          const promoCode = promo.code.toLowerCase();
-          return (
-            promoCode.includes(normalizedSearchQuery) ||
-            promoName.includes(normalizedSearchQuery)
-          );
-        })
+      ? serverData.filter((promo) =>
+          buildPromoSearchText(promo).includes(normalizedSearchQuery)
+        )
       : serverData;
 
     if (statusFilter === "all") {
@@ -152,14 +221,6 @@ export function PromoCodesTable() {
     );
   }, [response?.data, searchQuery, statusFilter]);
 
-  const meta = response?.meta || {
-    total: 0,
-    totalPages: 1,
-    currentPage: 1,
-    lastPage: 1,
-  };
-
-  // Stable column definitions avoid unnecessary react-table recalculation.
   const columns = useMemo(
     () =>
       getPromoCodesColumns({
@@ -167,10 +228,13 @@ export function PromoCodesTable() {
           setEditData(promo);
           setIsDialogOpen(true);
         },
-        onDelete: setDeleteId,
+        onArchive: setArchivePromo,
         onView: setDetailId,
+        onValidate: setValidationPromo,
+        onToggle: handleTogglePromo,
+        isActionPending: archiveMutation.isPending || toggleMutation.isPending,
       }),
-    []
+    [archiveMutation.isPending, toggleMutation.isPending]
   );
 
   const table = useReactTable({
@@ -179,21 +243,33 @@ export function PromoCodesTable() {
     state: {
       pagination,
     },
-    pageCount: meta.lastPage ?? meta.totalPages,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
-  async function handleDeleteConfirm() {
-    if (!deleteId) return;
+  async function handleArchiveConfirm() {
+    if (!archivePromo) return;
 
     try {
-      await deleteMutation.mutateAsync(deleteId);
-      toast.success("تم حذف كود الخصم بنجاح");
-      setDeleteId(null);
-    } catch {
-      toast.error("حدث خطأ أثناء الحذف");
+      await archiveMutation.mutateAsync(archivePromo.id);
+      toast.success("تمت أرشفة كود الخصم وتعطيله بنجاح");
+      setArchivePromo(null);
+    } catch (error) {
+      toast.error(
+        readApiErrorMessage(error, "حدث خطأ أثناء أرشفة كود الخصم")
+      );
+    }
+  }
+
+  async function handleTogglePromo(promo: PromoCodeDTO) {
+    try {
+      await toggleMutation.mutateAsync(promo.id);
+      toast.success(promo.isActive ? "تم تعطيل كود الخصم" : "تم تفعيل كود الخصم");
+    } catch (error) {
+      toast.error(
+        readApiErrorMessage(error, "حدث خطأ أثناء تغيير حالة كود الخصم")
+      );
     }
   }
 
@@ -202,14 +278,23 @@ export function PromoCodesTable() {
     setIsDialogOpen(true);
   }
 
+  function resetFirstPage() {
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }
+
   function handleStatusFilterChange(value: StatusFilter) {
     setStatusFilter(value);
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    resetFirstPage();
   }
 
   function handleSearchInputChange(value: string) {
     setSearchInput(value);
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    resetFirstPage();
+  }
+
+  function handleIncludeDeletedChange(value: boolean) {
+    setIncludeDeleted(value);
+    resetFirstPage();
   }
 
   return (
@@ -219,6 +304,8 @@ export function PromoCodesTable() {
         onStatusFilterChange={handleStatusFilterChange}
         searchInput={searchInput}
         onSearchInputChange={handleSearchInputChange}
+        includeDeleted={includeDeleted}
+        onIncludeDeletedChange={handleIncludeDeletedChange}
         onAdd={handleAdd}
         table={table}
       />
@@ -265,7 +352,7 @@ export function PromoCodesTable() {
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-4 text-right">
+                      <td key={cell.id} className="px-4 py-4 text-right align-middle">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
@@ -280,16 +367,16 @@ export function PromoCodesTable() {
                     colSpan={columns.length}
                     className="h-64 text-center"
                   >
-                    <div className="flex flex-col items-center justify-center gap-4 opacity-50 grayscale">
+                    <div className="flex flex-col items-center justify-center gap-4 opacity-70">
                       <div className="flex size-20 items-center justify-center rounded-full bg-muted">
                         <Ticket className="size-10 text-muted-foreground" />
                       </div>
                       <div>
                         <p className="text-lg font-black text-muted-foreground">
-                          لا توجد أكواد خصم
+                          لا توجد أكواد خصم.
                         </p>
-                        <p className="mt-1 text-sm text-muted-foreground/60">
-                          جرّب تغيير كلمة البحث أو أضف كودًا جديدًا
+                        <p className="mt-1 text-sm text-muted-foreground/70">
+                          جرّب تغيير الفلاتر أو أضف كود خصم جديد للاشتراكات.
                         </p>
                       </div>
                     </div>
@@ -302,7 +389,7 @@ export function PromoCodesTable() {
 
         <DataTablePagination
           table={table}
-          totalItems={meta.total}
+          totalItems={data.length}
           itemsLabel="أكواد الخصم"
         />
       </div>
@@ -319,28 +406,39 @@ export function PromoCodesTable() {
         onClose={() => setDetailId(null)}
       />
 
+      <PromoCodeValidationDialog
+        promoCode={validationPromo}
+        onClose={() => setValidationPromo(null)}
+      />
+
       <AlertDialog
-        open={Boolean(deleteId)}
-        onOpenChange={(open) => !open && setDeleteId(null)}
+        open={Boolean(archivePromo)}
+        onOpenChange={(open) => !open && setArchivePromo(null)}
       >
-        <AlertDialogContent className="rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl">
+        <AlertDialogContent className="rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl" dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-3 text-xl font-black">
               <div className="flex size-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
-                <Trash2 className="size-5" />
+                <Archive className="size-5" />
               </div>
-              هل أنت متأكد من الحذف؟
+              هل تريد أرشفة كود الخصم؟
             </AlertDialogTitle>
             <AlertDialogDescription className="pt-2 text-right font-medium text-muted-foreground">
-              سيتم حذف كود الخصم بشكل ناعم مع الحفاظ على سجل الاستخدامات.
+              سيتم أرشفة كود الخصم وتعطيله. هل تريد المتابعة؟
+              {archivePromo ? (
+                <span className="mt-3 block font-mono text-sm font-black uppercase text-foreground" dir="ltr">
+                  {archivePromo.code}
+                </span>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4 flex-row-reverse gap-2">
             <AlertDialogAction
-              onClick={handleDeleteConfirm}
+              onClick={handleArchiveConfirm}
+              disabled={archiveMutation.isPending}
               className="h-11 rounded-xl bg-rose-500 px-6 transition-all hover:bg-rose-600 active:scale-95"
             >
-              نعم، احذف الكود
+              {archiveMutation.isPending ? "جاري الأرشفة..." : "نعم، أرشف الكود"}
             </AlertDialogAction>
             <AlertDialogCancel className="mt-0 h-11 rounded-xl border-muted-foreground/10 px-6 hover:bg-muted/50">
               إلغاء
