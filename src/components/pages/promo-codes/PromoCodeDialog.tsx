@@ -22,24 +22,29 @@ import { Switch } from "@/components/ui/switch";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Ticket } from "lucide-react";
+import { Info, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCreatePromoCodeMutation,
   useUpdatePromoCodeMutation,
 } from "@/hooks/usePromoCodesQuery";
-import type { PromoCodeDTO, PromoCodePayload } from "@/types/financeTypes";
+import type {
+  PromoCodeAppliesTo,
+  PromoCodeDTO,
+  PromoCodePayload,
+} from "@/types/financeTypes";
 
 const promoCodeSchema = z.object({
   code: z.string().min(1, "مطلوب"),
   nameAr: z.string().optional(),
   nameEn: z.string().optional(),
-  discountType: z.enum(["percentage", "fixed_amount"]),
+  discountType: z.enum(["percentage", "fixed"]),
   discountValue: z
     .string()
     .min(1, "مطلوب")
@@ -48,44 +53,115 @@ const promoCodeSchema = z.object({
   usageLimitPerUser: z.string().optional(),
   startsAt: z.string().optional(),
   expiresAt: z.string().optional(),
-  appliesTo: z.string().optional(),
+  appliesTo: z.enum(["subscription", "addon_plans", "all"]),
   isActive: z.boolean(),
 });
 
 type PromoCodeFormValues = z.infer<typeof promoCodeSchema>;
 
-function formatDateInputValue(value?: string | null): string {
+function readApiErrorMessage(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "data" in error.response
+  ) {
+    const data = error.response.data;
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "error" in data &&
+      typeof data.error === "object" &&
+      data.error !== null &&
+      "message" in data.error &&
+      typeof data.error.message === "string"
+    ) {
+      return data.error.message;
+    }
+  }
+
+  return "حدث خطأ أثناء حفظ كود الخصم";
+}
+
+function formatDateTimeInputValue(value?: string | null): string {
   if (!value) return "";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
 
-  return date.toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Riyadh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const readPart = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "00";
+
+  return `${readPart("year")}-${readPart("month")}-${readPart("day")}T${readPart("hour")}:${readPart("minute")}`;
+}
+
+function riyadhDateTimeInputToIso(value?: string): string | null {
+  if (!value) return null;
+
+  const [datePart, timePart = "00:00"] = value.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+
+  if ([year, month, day, hour, minute].some((part) => !Number.isFinite(part))) {
+    return null;
+  }
+
+  return new Date(Date.UTC(year, month - 1, day, hour - 3, minute)).toISOString();
+}
+
+function formatFixedDiscountInput(value?: number | null): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "";
+
+  return (value / 100).toString();
 }
 
 function getDefaultValues(editData?: PromoCodeDTO): PromoCodeFormValues {
+  const discountType = editData?.discountType === "fixed_amount" ? "fixed" : editData?.discountType ?? "percentage";
+
   return {
     code: editData?.code ?? "",
     nameAr: editData?.name?.ar ?? "",
     nameEn: editData?.name?.en ?? "",
-    discountType:
-      editData?.discountType === "fixed"
-        ? "fixed_amount"
-        : editData?.discountType ?? "percentage",
-    discountValue: editData?.discountValue?.toString() ?? "",
+    discountType: discountType === "fixed" ? "fixed" : "percentage",
+    discountValue:
+      discountType === "fixed"
+        ? formatFixedDiscountInput(editData?.discountValue)
+        : editData?.discountValue?.toString() ?? "",
     usageLimitTotal: editData?.usageLimitTotal?.toString() ?? "",
     usageLimitPerUser: editData?.usageLimitPerUser?.toString() ?? "",
-    startsAt: formatDateInputValue(editData?.startsAt),
-    expiresAt: formatDateInputValue(editData?.expiresAt),
-    appliesTo: editData?.appliesTo ?? "subscriptions",
+    startsAt: formatDateTimeInputValue(editData?.startsAt),
+    expiresAt: formatDateTimeInputValue(editData?.expiresAt),
+    appliesTo:
+      editData?.appliesTo === "addon_plans" || editData?.appliesTo === "all"
+        ? editData.appliesTo
+        : "subscription",
     isActive: editData?.isActive ?? true,
   };
 }
 
+function optionalInteger(value?: string): number | null {
+  if (!value) return null;
+
+  return Math.max(0, Math.floor(Number(value)));
+}
+
 function toPromoCodePayload(values: PromoCodeFormValues): PromoCodePayload {
-  const usageLimitTotal = values.usageLimitTotal
-    ? Number(values.usageLimitTotal)
-    : null;
+  const isFixedDiscount = values.discountType === "fixed";
+  const discountValue = isFixedDiscount
+    ? Math.round(Number(values.discountValue) * 100)
+    : Number(values.discountValue);
 
   return {
     code: values.code.trim().toUpperCase(),
@@ -94,17 +170,12 @@ function toPromoCodePayload(values: PromoCodeFormValues): PromoCodePayload {
       en: values.nameEn?.trim() ?? "",
     },
     discountType: values.discountType,
-    discountValue: Number(values.discountValue),
-    usageLimitTotal,
-    usageLimit: usageLimitTotal,
-    usageLimitPerUser: values.usageLimitPerUser
-      ? Number(values.usageLimitPerUser)
-      : null,
-    startsAt: values.startsAt ? new Date(values.startsAt).toISOString() : null,
-    endsAt: values.expiresAt
-      ? new Date(values.expiresAt).toISOString()
-      : null,
-    appliesTo: values.appliesTo?.trim() || "subscriptions",
+    discountValue,
+    usageLimitTotal: optionalInteger(values.usageLimitTotal),
+    usageLimitPerUser: optionalInteger(values.usageLimitPerUser),
+    startsAt: riyadhDateTimeInputToIso(values.startsAt),
+    expiresAt: riyadhDateTimeInputToIso(values.expiresAt),
+    appliesTo: values.appliesTo as PromoCodeAppliesTo,
     isActive: values.isActive,
   };
 }
@@ -128,6 +199,7 @@ export function PromoCodeDialog({
   const createMutation = useCreatePromoCodeMutation();
   const updateMutation = useUpdatePromoCodeMutation();
   const discountType = form.watch("discountType");
+  const appliesTo = form.watch("appliesTo");
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   async function onSubmit(values: PromoCodeFormValues) {
@@ -145,14 +217,17 @@ export function PromoCodeDialog({
       toast.success("تم إنشاء كود الخصم بنجاح");
       form.reset(getDefaultValues());
       onClose();
-    } catch {
-      toast.error("حدث خطأ أثناء حفظ كود الخصم");
+    } catch (error) {
+      toast.error(readApiErrorMessage(error));
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl sm:max-w-2xl">
+      <DialogContent
+        className="max-h-[90vh] overflow-y-auto rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl sm:max-w-2xl"
+        dir="rtl"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl font-black">
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -161,12 +236,21 @@ export function PromoCodeDialog({
             {isEditing ? "تعديل كود الخصم" : "إضافة كود جديد"}
           </DialogTitle>
           <DialogDescription className="text-right font-medium text-muted-foreground">
-            أدخل بيانات كود الخصم الأساسية فقط.
+            أدخل بيانات الكود الأساسية. الحساب النهائي والقيود المتقدمة يقررها الباك اند.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 text-sm text-muted-foreground">
+              <div className="flex items-start gap-2">
+                <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+                <p>
+                  المبلغ الثابت يُكتب بالريال في الواجهة، ويتم إرساله للباك اند بالهللة. مثال: 25 ر.س يتم إرسالها كـ 2500.
+                </p>
+              </div>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
@@ -175,7 +259,13 @@ export function PromoCodeDialog({
                   <FormItem>
                     <FormLabel>الكود</FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value ?? ""} dir="ltr" />
+                      <Input
+                        {...field}
+                        value={field.value ?? ""}
+                        dir="ltr"
+                        className="font-mono uppercase"
+                        onChange={(event) => field.onChange(event.target.value.toUpperCase())}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -188,9 +278,23 @@ export function PromoCodeDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>ينطبق على</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""} dir="ltr" />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value} dir="rtl">
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="subscription">اشتراك</SelectItem>
+                        <SelectItem value="addon_plans">خطط الإضافات</SelectItem>
+                        <SelectItem value="all">الكل</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {appliesTo !== "subscription" ? (
+                      <FormDescription>
+                        الطلبات العادية غير مدعومة، وخصومات الإضافات تحتاج مستهلك تحقق منفصل من الباك اند.
+                      </FormDescription>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -230,15 +334,15 @@ export function PromoCodeDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>نوع الخصم</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} dir="rtl">
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="percentage">خصم مئوي</SelectItem>
-                        <SelectItem value="fixed_amount">مبلغ ثابت</SelectItem>
+                        <SelectItem value="percentage">نسبة مئوية</SelectItem>
+                        <SelectItem value="fixed">مبلغ ثابت</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -251,17 +355,30 @@ export function PromoCodeDialog({
                 name="discountValue"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>قيمة الخصم</FormLabel>
+                    <FormLabel>
+                      {discountType === "percentage" ? "نسبة الخصم" : "قيمة الخصم بالريال"}
+                    </FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        type="number"
-                        min="0"
-                        step={discountType === "percentage" ? "1" : "0.01"}
-                        dir="ltr"
-                      />
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          value={field.value ?? ""}
+                          type="number"
+                          min="0"
+                          step={discountType === "percentage" ? "1" : "0.01"}
+                          dir="ltr"
+                          className="pl-12"
+                        />
+                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                          {discountType === "percentage" ? "%" : "ر.س"}
+                        </span>
+                      </div>
                     </FormControl>
+                    <FormDescription>
+                      {discountType === "percentage"
+                        ? "مثال: 10 تعني خصم 10%."
+                        : "مثال: 25 تعني 25.00 ر.س وسيتم إرسالها 2500 هللة."}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -279,6 +396,8 @@ export function PromoCodeDialog({
                         value={field.value ?? ""}
                         type="number"
                         min="0"
+                        step="1"
+                        placeholder="اتركه فارغًا لغير محدود"
                         dir="ltr"
                       />
                     </FormControl>
@@ -299,6 +418,8 @@ export function PromoCodeDialog({
                         value={field.value ?? ""}
                         type="number"
                         min="0"
+                        step="1"
+                        placeholder="اتركه فارغًا لغير محدود"
                         dir="ltr"
                       />
                     </FormControl>
@@ -312,15 +433,16 @@ export function PromoCodeDialog({
                 name="startsAt"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>تاريخ البدء</FormLabel>
+                    <FormLabel>تاريخ ووقت البدء</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         value={field.value ?? ""}
-                        type="date"
+                        type="datetime-local"
                         dir="ltr"
                       />
                     </FormControl>
+                    <FormDescription>يُعرض ويُرسل حسب توقيت الرياض.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -331,15 +453,16 @@ export function PromoCodeDialog({
                 name="expiresAt"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>تاريخ الانتهاء</FormLabel>
+                    <FormLabel>تاريخ ووقت الانتهاء</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         value={field.value ?? ""}
-                        type="date"
+                        type="datetime-local"
                         dir="ltr"
                       />
                     </FormControl>
+                    <FormDescription>اتركه فارغًا إذا لم يكن له تاريخ انتهاء.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -350,8 +473,13 @@ export function PromoCodeDialog({
               control={form.control}
               name="isActive"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between rounded-lg border border-muted-foreground/10 p-3">
-                  <FormLabel>مفعّل</FormLabel>
+                <FormItem className="flex items-center justify-between rounded-2xl border border-muted-foreground/10 bg-muted/20 p-4">
+                  <div>
+                    <FormLabel>مفعّل</FormLabel>
+                    <FormDescription>
+                      عند التعطيل لن يكون الكود صالحًا حتى لو كانت باقي الشروط صحيحة.
+                    </FormDescription>
+                  </div>
                   <FormControl>
                     <Switch
                       checked={field.value}
