@@ -84,7 +84,9 @@ function buildFeeRangeRows(zones: DeliveryZone[]) {
     if (match) match.count += 1;
   });
 
-  return rows.filter((row) => row.count > 0).map(({ label, count }) => ({ label, count }));
+  return rows
+    .filter((row) => row.count > 0)
+    .map(({ label, count }) => ({ label, count }));
 }
 
 function buildTopFeeRows(zones: DeliveryZone[]) {
@@ -94,7 +96,6 @@ function buildTopFeeRows(zones: DeliveryZone[]) {
     .map((zone) => ({
       label: getZoneName(zone),
       fee: zone.deliveryFeeHalala,
-      formattedFee: formatSAR(zone.deliveryFeeHalala),
     }));
 }
 
