@@ -10,10 +10,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  buildOperationsActionPayload,
-  safeText,
-} from "@/lib/operationsBoard";
+import { buildOperationsActionPayload, safeText } from "@/lib/operationsBoard";
 import type {
   DashboardOpsActionRequest,
   UnifiedQueueItem,
@@ -156,13 +153,15 @@ export function DeliveryCard({
     item.selectionNotice?.ar || item.selectionNotice?.en || "";
   const addressNotes = item.context.addressNotes || "";
   const deliveryWindow =
-    item.context.window || item.delivery?.window || item.delivery?.deliveryWindow;
+    item.context.window ||
+    item.delivery?.window ||
+    item.delivery?.deliveryWindow;
   const hasDetails =
     Boolean(
       item.context.notes ||
-        item.context.addressNotes ||
-        item.notes ||
-        selectionNotice
+      item.context.addressNotes ||
+      item.notes ||
+      selectionNotice
     ) ||
     mealRows.length > 0 ||
     Boolean(item.dataQuality?.warnings?.length);
@@ -172,8 +171,8 @@ export function DeliveryCard({
   };
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-sm transition-all hover:border-primary/30 hover:shadow-md">
-      <div className="mb-5 flex items-start justify-between gap-3">
+    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-md">
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex items-center gap-2">
             <Badge
@@ -200,7 +199,7 @@ export function DeliveryCard({
         ) : null}
       </div>
 
-      <div className="mb-4 flex flex-col gap-3.5">
+      <div className="mb-3 flex flex-col gap-3">
         <div className="flex items-center gap-3 text-sm">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <Phone className="h-4 w-4" />
@@ -214,7 +213,7 @@ export function DeliveryCard({
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <MapPin className="h-4 w-4" />
           </div>
-          <p className="mt-1.5 line-clamp-2 font-medium leading-relaxed text-muted-foreground">
+          <p className="mt-1.5 line-clamp-2 leading-relaxed font-medium text-muted-foreground">
             {item.context.addressSummary || "لا يوجد عنوان مسجل"}
           </p>
         </div>
@@ -247,7 +246,7 @@ export function DeliveryCard({
         </div>
       </div>
 
-      <div className="mb-4 rounded-xl border bg-muted/20 p-3">
+      <div className="mb-3 rounded-xl border bg-muted/20 p-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-xs font-black text-muted-foreground">
             الوجبات
@@ -286,7 +285,7 @@ export function DeliveryCard({
 
       <div className="flex-1" />
 
-      <div className="mb-6 space-y-2.5 rounded-xl bg-muted/30 p-4">
+      <div className="mb-4 space-y-2.5 rounded-xl bg-muted/30 p-3">
         <DeliveryTimeline status={item.status} variant="compact" />
         <div className="flex justify-between px-0.5 text-[10px] font-black text-muted-foreground">
           <span>تحضير</span>
@@ -295,7 +294,7 @@ export function DeliveryCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 border-t pt-4">
+      <div className="flex items-center gap-2 border-t pt-3">
         <div className="flex flex-1 items-center gap-2">
           {item.allowedActions?.length ? (
             item.allowedActions.map((action) => {
@@ -348,7 +347,7 @@ export function DeliveryCard({
               <span className="mb-1.5 block font-black text-sky-700 dark:text-sky-400">
                 ملاحظات العنوان:
               </span>
-              <p className="font-medium leading-relaxed text-sky-800 dark:text-sky-300">
+              <p className="leading-relaxed font-medium text-sky-800 dark:text-sky-300">
                 {addressNotes}
               </p>
             </div>
@@ -359,7 +358,7 @@ export function DeliveryCard({
               <span className="mb-1.5 block font-black text-blue-700 dark:text-blue-400">
                 ملاحظة:
               </span>
-              <p className="font-medium leading-relaxed text-blue-800 dark:text-blue-300">
+              <p className="leading-relaxed font-medium text-blue-800 dark:text-blue-300">
                 {item.context.notes || item.notes}
               </p>
             </div>
@@ -370,7 +369,7 @@ export function DeliveryCard({
               <span className="mb-1.5 block font-black text-amber-700 dark:text-amber-400">
                 اختيار الوجبات:
               </span>
-              <p className="font-medium leading-relaxed text-amber-800 dark:text-amber-300">
+              <p className="leading-relaxed font-medium text-amber-800 dark:text-amber-300">
                 {selectionNotice}
               </p>
             </div>
@@ -385,7 +384,7 @@ export function DeliveryCard({
                 {mealRows.map((meal, index) => (
                   <p
                     key={meal.id}
-                    className="font-medium leading-relaxed text-muted-foreground"
+                    className="leading-relaxed font-medium text-muted-foreground"
                   >
                     {index + 1}. {meal.title} x{meal.quantity}
                   </p>
@@ -403,7 +402,7 @@ export function DeliveryCard({
                 {item.dataQuality.warnings.map((warning, index) => (
                   <p
                     key={`${warning.code}-${index}`}
-                    className="font-medium leading-relaxed text-muted-foreground"
+                    className="leading-relaxed font-medium text-muted-foreground"
                   >
                     {warning.messageAr || warning.messageEn || warning.code}
                   </p>

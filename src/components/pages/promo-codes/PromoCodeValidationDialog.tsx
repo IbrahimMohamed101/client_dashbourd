@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -105,6 +105,29 @@ export function PromoCodeValidationDialog({
   promoCode,
   onClose,
 }: PromoCodeValidationDialogProps) {
+  return (
+    <Dialog
+      open={Boolean(promoCode)}
+      onOpenChange={(open) => !open && onClose()}
+    >
+      {promoCode ? (
+        <PromoCodeValidationContent
+          key={promoCode.id}
+          promoCode={promoCode}
+          onClose={onClose}
+        />
+      ) : null}
+    </Dialog>
+  );
+}
+
+function PromoCodeValidationContent({
+  promoCode,
+  onClose,
+}: {
+  promoCode: PromoCodeDTO;
+  onClose: () => void;
+}) {
   const [userId, setUserId] = useState("");
   const [planId, setPlanId] = useState("");
   const [daysCount, setDaysCount] = useState("");
@@ -112,31 +135,19 @@ export function PromoCodeValidationDialog({
   const [vatPercentage, setVatPercentage] = useState("15");
   const [result, setResult] = useState<PromoCodeValidationResult | null>(null);
   const mutation = useValidatePromoCodeMutation();
-  const promoName = promoCode ? getPromoCodeName(promoCode) : "";
-
-  useEffect(() => {
-    if (!promoCode) return;
-
-    setResult(null);
-    setUserId("");
-    setPlanId("");
-    setDaysCount("");
-    setSubtotalSar("");
-    setVatPercentage("15");
-  }, [promoCode]);
+  const promoName = getPromoCodeName(promoCode);
+  const breakdown = result?.breakdown;
 
   const breakdownEntries = useMemo(() => {
-    if (!result?.breakdown) return [];
+    if (!breakdown) return [];
 
-    return Object.entries(result.breakdown).filter(([, value]) => {
+    return Object.entries(breakdown).filter(([, value]) => {
       if (typeof value === "object" && value !== null) return false;
       return true;
     });
-  }, [result?.breakdown]);
+  }, [breakdown]);
 
   async function handleValidate() {
-    if (!promoCode) return;
-
     const subtotalHalala = toHalalaInput(subtotalSar);
 
     if (subtotalSar && subtotalHalala === undefined) {
@@ -165,149 +176,159 @@ export function PromoCodeValidationDialog({
   }
 
   return (
-    <Dialog open={Boolean(promoCode)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className="max-h-[90vh] overflow-y-auto rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl sm:max-w-3xl"
-        dir="rtl"
-      >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl font-black">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Calculator className="size-5" />
-            </div>
-            معاينة التحقق من كود الخصم
-          </DialogTitle>
-          <DialogDescription className="text-right font-medium text-muted-foreground">
-            هذه المعاينة تسأل الباك اند عن صلاحية الكود وقيمة الخصم. الداشبورد لا يحسب الخصم النهائي محليًا.
-          </DialogDescription>
-        </DialogHeader>
+    <DialogContent
+      className="max-h-[90vh] overflow-y-auto rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl sm:max-w-3xl"
+      dir="rtl"
+    >
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-3 text-xl font-black">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Calculator className="size-5" />
+          </div>
+          معاينة التحقق من كود الخصم
+        </DialogTitle>
+        <DialogDescription className="text-right font-medium text-muted-foreground">
+          هذه المعاينة تسأل الباك اند عن صلاحية الكود وقيمة الخصم. الداشبورد لا
+          يحسب الخصم النهائي محليًا.
+        </DialogDescription>
+      </DialogHeader>
 
-        {promoCode ? (
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-mono text-lg font-black tracking-wider uppercase" dir="ltr">
-                    {promoCode.code}
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p
+                className="font-mono text-lg font-black tracking-wider uppercase"
+                dir="ltr"
+              >
+                {promoCode.code}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {promoName || "بدون اسم"}
+              </p>
+            </div>
+            <Badge
+              variant="secondary"
+              className="rounded-full px-3 py-1"
+              dir="ltr"
+            >
+              {formatPromoCodeDiscount(promoCode)}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="promo-user-id">معرّف العميل</Label>
+            <Input
+              id="promo-user-id"
+              value={userId}
+              onChange={(event) => setUserId(event.target.value)}
+              placeholder="اختياري"
+              dir="ltr"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="promo-plan-id">معرّف الخطة</Label>
+            <Input
+              id="promo-plan-id"
+              value={planId}
+              onChange={(event) => setPlanId(event.target.value)}
+              placeholder="اختياري"
+              dir="ltr"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="promo-days-count">عدد الأيام</Label>
+            <Input
+              id="promo-days-count"
+              value={daysCount}
+              onChange={(event) => setDaysCount(event.target.value)}
+              type="number"
+              min="0"
+              placeholder="مثال: 20"
+              dir="ltr"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="promo-subtotal">قيمة الاشتراك بالريال</Label>
+            <Input
+              id="promo-subtotal"
+              value={subtotalSar}
+              onChange={(event) => setSubtotalSar(event.target.value)}
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="مثال: 1000"
+              dir="ltr"
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="promo-vat">نسبة الضريبة</Label>
+            <Input
+              id="promo-vat"
+              value={vatPercentage}
+              onChange={(event) => setVatPercentage(event.target.value)}
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="15"
+              dir="ltr"
+            />
+          </div>
+        </div>
+
+        {result ? (
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+            <div className="mb-4 flex items-center gap-2 font-bold text-emerald-600">
+              <TicketCheck className="size-5" />
+              الكود صالح حسب نتيجة الباك اند
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-muted-foreground/10 bg-background/70 p-3">
+                <p className="text-xs text-muted-foreground">
+                  قيمة الخصم المطبقة
+                </p>
+                <p className="mt-1 font-black" dir="ltr">
+                  {formatHalala(result.promo?.discountAmountHalala)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-muted-foreground/10 bg-background/70 p-3">
+                <p className="text-xs text-muted-foreground">هل تم التطبيق؟</p>
+                <p className="mt-1 font-black">
+                  {result.promo?.isApplied ? "نعم" : "لا"}
+                </p>
+              </div>
+              {breakdownEntries.map(([key, value]) => (
+                <div
+                  key={key}
+                  className="rounded-xl border border-muted-foreground/10 bg-background/70 p-3"
+                >
+                  <p className="text-xs text-muted-foreground">
+                    {breakdownLabels[key] ?? key}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {promoName || "بدون اسم"}
+                  <p className="mt-1 font-black" dir="ltr">
+                    {formatBreakdownValue(key, value)}
                   </p>
                 </div>
-                <Badge variant="secondary" className="rounded-full px-3 py-1" dir="ltr">
-                  {formatPromoCodeDiscount(promoCode)}
-                </Badge>
-              </div>
+              ))}
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="promo-user-id">معرّف العميل</Label>
-                <Input
-                  id="promo-user-id"
-                  value={userId}
-                  onChange={(event) => setUserId(event.target.value)}
-                  placeholder="اختياري"
-                  dir="ltr"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="promo-plan-id">معرّف الخطة</Label>
-                <Input
-                  id="promo-plan-id"
-                  value={planId}
-                  onChange={(event) => setPlanId(event.target.value)}
-                  placeholder="اختياري"
-                  dir="ltr"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="promo-days-count">عدد الأيام</Label>
-                <Input
-                  id="promo-days-count"
-                  value={daysCount}
-                  onChange={(event) => setDaysCount(event.target.value)}
-                  type="number"
-                  min="0"
-                  placeholder="مثال: 20"
-                  dir="ltr"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="promo-subtotal">قيمة الاشتراك بالريال</Label>
-                <Input
-                  id="promo-subtotal"
-                  value={subtotalSar}
-                  onChange={(event) => setSubtotalSar(event.target.value)}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="مثال: 1000"
-                  dir="ltr"
-                />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="promo-vat">نسبة الضريبة</Label>
-                <Input
-                  id="promo-vat"
-                  value={vatPercentage}
-                  onChange={(event) => setVatPercentage(event.target.value)}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="15"
-                  dir="ltr"
-                />
-              </div>
-            </div>
-
-            {result ? (
-              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                <div className="mb-4 flex items-center gap-2 font-bold text-emerald-600">
-                  <TicketCheck className="size-5" />
-                  الكود صالح حسب نتيجة الباك اند
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-muted-foreground/10 bg-background/70 p-3">
-                    <p className="text-xs text-muted-foreground">قيمة الخصم المطبقة</p>
-                    <p className="mt-1 font-black" dir="ltr">
-                      {formatHalala(result.promo?.discountAmountHalala)}
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-muted-foreground/10 bg-background/70 p-3">
-                    <p className="text-xs text-muted-foreground">هل تم التطبيق؟</p>
-                    <p className="mt-1 font-black">
-                      {result.promo?.isApplied ? "نعم" : "لا"}
-                    </p>
-                  </div>
-                  {breakdownEntries.map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="rounded-xl border border-muted-foreground/10 bg-background/70 p-3"
-                    >
-                      <p className="text-xs text-muted-foreground">
-                        {breakdownLabels[key] ?? key}
-                      </p>
-                      <p className="mt-1 font-black" dir="ltr">
-                        {formatBreakdownValue(key, value)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </div>
         ) : null}
+      </div>
 
-        <DialogFooter className="flex-row-reverse gap-2 pt-2">
-          <Button type="button" onClick={handleValidate} disabled={mutation.isPending}>
-            {mutation.isPending ? "جاري التحقق..." : "تحقق من الكود"}
-          </Button>
-          <Button type="button" variant="outline" onClick={onClose}>
-            إغلاق
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter className="flex-row-reverse gap-2 pt-2">
+        <Button
+          type="button"
+          onClick={handleValidate}
+          disabled={mutation.isPending}
+        >
+          {mutation.isPending ? "جاري التحقق..." : "تحقق من الكود"}
+        </Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          إغلاق
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   );
 }

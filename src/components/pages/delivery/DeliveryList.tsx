@@ -50,7 +50,7 @@ export function DeliveryList({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between px-1">
         <h2 className="text-sm font-semibold opacity-80">جميع التوصيلات</h2>
         <span className="text-[10px] font-medium text-muted-foreground">
@@ -58,7 +58,7 @@ export function DeliveryList({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {data.map((item) => (
           <DeliveryCard
             key={item.id}

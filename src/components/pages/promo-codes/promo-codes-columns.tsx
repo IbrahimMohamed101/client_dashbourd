@@ -190,7 +190,7 @@ export function getPromoCodesColumns({
         </span>
       ),
       enableHiding: false,
-      size: 50,
+      size: 56,
     },
     {
       accessorKey: "code",
@@ -200,15 +200,18 @@ export function getPromoCodesColumns({
         const promoName = getPromoCodeName(promo);
 
         return (
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Ticket className="size-5" />
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Ticket className="size-4" />
             </div>
             <div className="min-w-0">
-              <span className="block font-mono text-lg font-black tracking-wider text-foreground/90 uppercase" dir="ltr">
+              <span
+                className="block truncate font-mono text-base font-black tracking-wider text-foreground/90 uppercase"
+                dir="ltr"
+              >
                 {promo.code}
               </span>
-              <span className="block max-w-48 truncate text-xs text-muted-foreground">
+              <span className="block truncate text-xs text-muted-foreground">
                 {promoName || promoCodeText.unnamed}
               </span>
             </div>
@@ -216,6 +219,7 @@ export function getPromoCodesColumns({
         );
       },
       enableHiding: false,
+      size: 250,
     },
     {
       accessorKey: "discountValue",
@@ -225,8 +229,8 @@ export function getPromoCodesColumns({
         const isPercentage = promo.discountType === "percentage";
 
         return (
-          <div className="flex flex-col">
-            <span className="text-base font-bold" dir="ltr">
+          <div className="flex flex-col whitespace-nowrap">
+            <span className="text-sm font-black" dir="ltr">
               {formatPromoCodeDiscount(promo)}
             </span>
             <span className="text-[10px] font-medium text-muted-foreground uppercase">
@@ -235,15 +239,17 @@ export function getPromoCodesColumns({
           </div>
         );
       },
+      size: 132,
     },
     {
       id: "appliesTo",
       header: promoCodeText.appliesTo,
       cell: ({ row }) => (
-        <Badge variant="secondary" className="rounded-full px-3 py-1">
+        <Badge variant="secondary" className="rounded-full px-2.5 py-1">
           {formatAppliesTo(row.original.appliesTo)}
         </Badge>
       ),
+      size: 132,
     },
     {
       id: "usage",
@@ -257,15 +263,15 @@ export function getPromoCodesColumns({
           : 0;
 
         return (
-          <div className="flex flex-col items-center">
+          <div className="flex max-w-28 flex-col items-center">
             <div className="flex items-center gap-1.5" dir="ltr">
-              <span className="text-base font-bold">{usageCount}</span>
+              <span className="text-sm font-black">{usageCount}</span>
               <span className="text-xs text-muted-foreground">/</span>
               <span className="text-xs text-muted-foreground">
                 {usageLimit ?? "∞"}
               </span>
             </div>
-            <div className="mt-1.5 h-1.5 w-20 overflow-hidden rounded-full bg-muted/50">
+            <div className="mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-muted/50">
               <div
                 className="h-full origin-right bg-primary"
                 style={{ transform: `scaleX(${usagePercentage / 100})` }}
@@ -274,16 +280,18 @@ export function getPromoCodesColumns({
           </div>
         );
       },
+      size: 140,
     },
     {
       accessorKey: "expiresAt",
       header: promoCodeText.expiresAt,
       cell: ({ row }) => (
-        <div className="flex items-center gap-2 font-medium text-muted-foreground">
-          <CalendarIcon className="size-4 opacity-50" />
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <CalendarIcon className="size-3.5 shrink-0 opacity-50" />
           {formatPromoCodeDate(row.original.expiresAt)}
         </div>
       ),
+      size: 190,
     },
     {
       id: "derivedStatus",
@@ -300,6 +308,7 @@ export function getPromoCodesColumns({
           </Badge>
         );
       },
+      size: 132,
     },
     {
       id: "actions",
@@ -322,8 +331,7 @@ export function getPromoCodesColumns({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-56 rounded-2xl border-muted-foreground/10 p-2 shadow-2xl"
-              dir="rtl"
+              className="w-56 rounded-2xl border-muted-foreground/10 p-2 text-right shadow-2xl"
             >
               <DropdownMenuLabel className="px-3 pb-2 text-xs font-bold text-muted-foreground">
                 {promoCodeText.options}
@@ -358,7 +366,9 @@ export function getPromoCodesColumns({
                 className="cursor-pointer gap-2.5 rounded-xl px-3 py-2 transition-colors focus:bg-primary/10 focus:text-primary"
               >
                 <ToggleIcon className="size-4" />
-                {promo.isActive ? promoCodeText.deactivate : promoCodeText.activate}
+                {promo.isActive
+                  ? promoCodeText.deactivate
+                  : promoCodeText.activate}
               </DropdownMenuItem>
               <DropdownMenuSeparator className="my-1 bg-muted-foreground/10" />
               <DropdownMenuItem
@@ -374,6 +384,7 @@ export function getPromoCodesColumns({
         );
       },
       enableHiding: false,
+      size: 82,
     },
   ];
 }

@@ -3,6 +3,8 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Label,
+  LabelList,
   Pie,
   PieChart,
   XAxis,
@@ -42,6 +44,10 @@ const PIE_COLORS = [
 
 function formatNumber(value: number) {
   return value.toLocaleString("ar-EG");
+}
+
+function formatAxisLabel(value: string) {
+  return value.length > 18 ? `${value.slice(0, 17)}…` : value;
 }
 
 function getStatusLabel(item: UnifiedQueueItem) {
@@ -146,11 +152,12 @@ export function OperationsQueueCharts({
         </CardHeader>
         <CardContent>
           {statusData.length ? (
-            <ChartContainer config={chartConfig} className="h-[260px] w-full">
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
               <BarChart
                 data={statusData}
                 layout="vertical"
-                margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+                margin={{ top: 8, right: 36, left: 8, bottom: 8 }}
+                barCategoryGap={10}
               >
                 <CartesianGrid horizontal={false} strokeDasharray="3 3" />
                 <XAxis type="number" hide allowDecimals={false} />
@@ -159,20 +166,29 @@ export function OperationsQueueCharts({
                   type="category"
                   axisLine={false}
                   tickLine={false}
-                  width={110}
+                  width={150}
                   tickMargin={8}
+                  interval={0}
+                  tickFormatter={formatAxisLabel}
                   tick={{ fontSize: 12 }}
                 />
                 <ChartTooltip
                   cursor={false}
-                  content={<ChartTooltipContent indicator="line" />}
+                  content={<ChartTooltipContent indicator="line" labelKey="label" />}
                 />
                 <Bar
                   dataKey="count"
                   radius={[8, 8, 8, 8]}
                   fill="var(--color-count)"
-                  barSize={18}
-                />
+                  barSize={20}
+                >
+                  <LabelList
+                    dataKey="count"
+                    position="right"
+                    className="fill-foreground font-semibold"
+                    formatter={(value: number) => formatNumber(value)}
+                  />
+                </Bar>
               </BarChart>
             </ChartContainer>
           ) : (
@@ -195,7 +211,7 @@ export function OperationsQueueCharts({
                 <PieChart>
                   <ChartTooltip
                     cursor={false}
-                    content={<ChartTooltipContent hideLabel />}
+                    content={<ChartTooltipContent hideLabel nameKey="label" />}
                   />
                   <Pie
                     data={sourceData}
@@ -205,6 +221,22 @@ export function OperationsQueueCharts({
                     outerRadius={70}
                     paddingAngle={3}
                   >
+                    <Label
+                      position="center"
+                      content={() => (
+                        <text
+                          x="50%"
+                          y="50%"
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          className="fill-foreground text-sm font-bold"
+                        >
+                          {formatNumber(
+                            sourceData.reduce((sum, row) => sum + row.count, 0)
+                          )}
+                        </text>
+                      )}
+                    />
                     {sourceData.map((entry, index) => (
                       <Cell
                         key={entry.label}
@@ -236,19 +268,29 @@ export function OperationsQueueCharts({
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
+                    interval={0}
+                    minTickGap={0}
+                    tickFormatter={formatAxisLabel}
                     tick={{ fontSize: 12 }}
                   />
                   <YAxis hide allowDecimals={false} />
                   <ChartTooltip
                     cursor={false}
-                    content={<ChartTooltipContent indicator="dot" />}
+                    content={<ChartTooltipContent indicator="dot" labelKey="label" />}
                   />
                   <Bar
                     dataKey="count"
                     fill="var(--color-count)"
                     radius={[8, 8, 0, 0]}
                     barSize={42}
-                  />
+                  >
+                    <LabelList
+                      dataKey="count"
+                      position="top"
+                      className="fill-foreground font-semibold"
+                      formatter={(value: number) => formatNumber(value)}
+                    />
+                  </Bar>
                 </BarChart>
               </ChartContainer>
             ) : (

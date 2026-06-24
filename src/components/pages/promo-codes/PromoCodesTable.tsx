@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -104,12 +104,14 @@ function PromoCodesToolbar({
   table,
 }: PromoCodesToolbarProps) {
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="rounded-xl border border-muted-foreground/10 bg-card px-3 py-2.5 shadow-sm">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Select
             value={statusFilter}
-            onValueChange={(value) => onStatusFilterChange(value as StatusFilter)}
+            onValueChange={(value) =>
+              onStatusFilterChange(value as StatusFilter)
+            }
           >
             <SelectTrigger className="w-full sm:w-44" size="sm">
               <SelectValue placeholder={promoCodeText.status} />
@@ -119,8 +121,12 @@ function PromoCodesToolbar({
                 <SelectItem value="all">الكل</SelectItem>
                 <SelectItem value="active">{promoCodeText.active}</SelectItem>
                 <SelectItem value="expired">{promoCodeText.expired}</SelectItem>
-                <SelectItem value="inactive">{promoCodeText.inactive}</SelectItem>
-                <SelectItem value="archived">{promoCodeText.archived}</SelectItem>
+                <SelectItem value="inactive">
+                  {promoCodeText.inactive}
+                </SelectItem>
+                <SelectItem value="archived">
+                  {promoCodeText.archived}
+                </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -153,8 +159,9 @@ function PromoCodesToolbar({
           <DataTableViewOptions table={table} />
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">
-        البحث والصفحات تتم محليًا لضمان تجربة مستقرة لأن العقد الحالي لا يضمن دعم q/page/limit من الباك اند.
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        البحث والصفحات تتم محليًا لضمان تجربة مستقرة لأن العقد الحالي لا يضمن
+        دعم q/page/limit من الباك اند.
       </p>
     </div>
   );
@@ -191,16 +198,34 @@ export function PromoCodesTable() {
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 20,
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editData, setEditData] = useState<PromoCodeDTO | undefined>();
   const [archivePromo, setArchivePromo] = useState<PromoCodeDTO | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [validationPromo, setValidationPromo] = useState<PromoCodeDTO | null>(null);
+  const [validationPromo, setValidationPromo] = useState<PromoCodeDTO | null>(
+    null
+  );
   const archiveMutation = useDeletePromoCodeMutation();
   const toggleMutation = useTogglePromoCodeMutation();
   const { data: response, isLoading } = usePromoCodesListQuery(includeDeleted);
+
+  const handleTogglePromo = useCallback(
+    async (promo: PromoCodeDTO) => {
+      try {
+        await toggleMutation.mutateAsync(promo.id);
+        toast.success(
+          promo.isActive ? "تم تعطيل كود الخصم" : "تم تفعيل كود الخصم"
+        );
+      } catch (error) {
+        toast.error(
+          readApiErrorMessage(error, "حدث خطأ أثناء تغيير حالة كود الخصم")
+        );
+      }
+    },
+    [toggleMutation]
+  );
 
   const data = useMemo(() => {
     const serverData = response?.data || [];
@@ -234,7 +259,7 @@ export function PromoCodesTable() {
         onToggle: handleTogglePromo,
         isActionPending: archiveMutation.isPending || toggleMutation.isPending,
       }),
-    [archiveMutation.isPending, toggleMutation.isPending]
+    [archiveMutation.isPending, handleTogglePromo, toggleMutation.isPending]
   );
 
   const table = useReactTable({
@@ -256,20 +281,7 @@ export function PromoCodesTable() {
       toast.success("تمت أرشفة كود الخصم وتعطيله بنجاح");
       setArchivePromo(null);
     } catch (error) {
-      toast.error(
-        readApiErrorMessage(error, "حدث خطأ أثناء أرشفة كود الخصم")
-      );
-    }
-  }
-
-  async function handleTogglePromo(promo: PromoCodeDTO) {
-    try {
-      await toggleMutation.mutateAsync(promo.id);
-      toast.success(promo.isActive ? "تم تعطيل كود الخصم" : "تم تفعيل كود الخصم");
-    } catch (error) {
-      toast.error(
-        readApiErrorMessage(error, "حدث خطأ أثناء تغيير حالة كود الخصم")
-      );
+      toast.error(readApiErrorMessage(error, "حدث خطأ أثناء أرشفة كود الخصم"));
     }
   }
 
@@ -298,7 +310,10 @@ export function PromoCodesTable() {
   }
 
   return (
-    <div className="w-full flex-col justify-start gap-6" dir="rtl">
+    <div
+      className="flex min-h-[32rem] w-full flex-1 flex-col justify-start gap-3"
+      dir="rtl"
+    >
       <PromoCodesToolbar
         statusFilter={statusFilter}
         onStatusFilterChange={handleStatusFilterChange}
@@ -310,13 +325,13 @@ export function PromoCodesTable() {
         table={table}
       />
 
-      <div className="relative mt-4 flex flex-col gap-4 overflow-auto px-4 lg:px-6">
+      <div className="relative flex min-h-[27rem] flex-1 flex-col gap-2 overflow-hidden">
         <div
-          className="overflow-hidden rounded-lg border bg-card"
+          className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-sm"
           style={{ contain: "layout paint" }}
         >
-          <Table className="table-fixed">
-            <TableHeader className="sticky top-0 z-10 bg-muted">
+          <Table className="min-w-[1214px] table-fixed">
+            <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow
                   key={headerGroup.id}
@@ -325,7 +340,8 @@ export function PromoCodesTable() {
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="py-4 text-right font-medium"
+                      className="h-11 px-4 py-2 text-right text-xs font-black text-muted-foreground"
+                      style={{ width: header.getSize() }}
                     >
                       {header.isPlaceholder
                         ? null
@@ -350,14 +366,18 @@ export function PromoCodesTable() {
                 </TableRow>
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} className="h-[66px]">
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-4 text-right align-middle">
+                      <TableCell
+                        key={cell.id}
+                        className="px-4 py-2 text-right align-middle"
+                        style={{ width: cell.column.getSize() }}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
                         )}
-                      </td>
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))
@@ -415,7 +435,10 @@ export function PromoCodesTable() {
         open={Boolean(archivePromo)}
         onOpenChange={(open) => !open && setArchivePromo(null)}
       >
-        <AlertDialogContent className="rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl" dir="rtl">
+        <AlertDialogContent
+          className="rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl"
+          dir="rtl"
+        >
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-3 text-xl font-black">
               <div className="flex size-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-500">
@@ -426,7 +449,10 @@ export function PromoCodesTable() {
             <AlertDialogDescription className="pt-2 text-right font-medium text-muted-foreground">
               سيتم أرشفة كود الخصم وتعطيله. هل تريد المتابعة؟
               {archivePromo ? (
-                <span className="mt-3 block font-mono text-sm font-black uppercase text-foreground" dir="ltr">
+                <span
+                  className="mt-3 block font-mono text-sm font-black text-foreground uppercase"
+                  dir="ltr"
+                >
                   {archivePromo.code}
                 </span>
               ) : null}
@@ -438,7 +464,9 @@ export function PromoCodesTable() {
               disabled={archiveMutation.isPending}
               className="h-11 rounded-xl bg-rose-500 px-6 transition-all hover:bg-rose-600 active:scale-95"
             >
-              {archiveMutation.isPending ? "جاري الأرشفة..." : "نعم، أرشف الكود"}
+              {archiveMutation.isPending
+                ? "جاري الأرشفة..."
+                : "نعم، أرشف الكود"}
             </AlertDialogAction>
             <AlertDialogCancel className="mt-0 h-11 rounded-xl border-muted-foreground/10 px-6 hover:bg-muted/50">
               إلغاء

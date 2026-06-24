@@ -50,7 +50,7 @@ function getZoneDisplayName(zone: DeliveryZone): string {
   return zone.name.ar || zone.name.en || "منطقة بدون اسم";
 }
 
-export function formatSARFromHalala(value: number | null | undefined): string {
+function formatSARFromHalala(value: number | null | undefined): string {
   const halala = typeof value === "number" && Number.isFinite(value) ? value : 0;
   return new Intl.NumberFormat("ar-SA", {
     style: "currency",
