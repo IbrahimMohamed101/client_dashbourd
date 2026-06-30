@@ -72,7 +72,7 @@ export function NavUser() {
             <DropdownMenuItem asChild>
               <Link to="/profile">
                 <UserIcon />
-                Profile
+                الملف الشخصي
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
