@@ -641,6 +641,33 @@ Use these scripts after credentials and safe data are available. Every protected
 |---|---|---|---|
 | None | None | No frontend fixes applied. | Known P1 items require backend contract confirmation and authenticated runtime retest. |
 
+## QA-008 Route Cleanup Review
+
+Reviewed on 2026-06-30. No route files were deleted because the redirect-only behavior is not fully proven dead code, and one legacy add-ons table still links to the add-on redirect routes even though the active `/addons` route uses dialogs/cards.
+
+| Route | Current Behavior | Linked Anywhere? | Intended Flow | Recommendation | Safe To Change Now? |
+|---|---|---|---|---|---|
+| `/packages/create` | `beforeLoad` redirects to `/packages`; component renders `null`. | No active source link found. Only docs/route tree references. | Unclear. Package list has no visible create route link; update flow uses `/packages/$planId/update`. | Keep for now as redirect-only/backward-compatible route; document as redirect-only until product confirms whether package creation is intentionally disabled or should be restored. | No code deletion now; docs-only clarification is safe. |
+| `/addons/create` | `beforeLoad` redirects to `/addons`; no component. | Yes, legacy `src/components/pages/addons/addons-table.tsx` links to it, but that table is not imported by the active `/addons` route. | Active `/addons` route creates add-on plans through `AddonPlanDialog` on the list page. | Keep redirect for backward compatibility; remove or repair legacy table links only when unused component cleanup is explicitly in scope. Mark runtime test as redirect-only unless the legacy table is reintroduced. | No code change now. |
+| `/addons/$addonId/update` | `beforeLoad` redirects to `/addons`; no component. | Yes, legacy `src/components/pages/addons/addons-columns.tsx` links to it, but active `/addons` route edits through `AddonPlanDialog`. | Active `/addons` route edits add-on plans through in-page dialog/cards. | Keep redirect for backward compatibility; do not delete while legacy table/columns remain. Add docs/tests expectation that direct route redirects to `/addons`. | No code change now. |
+
+## QA-002 Dependency Audit Review
+
+Commands run on 2026-06-30:
+- `npm audit`: 8 vulnerability groups reported: 2 low, 2 moderate, 4 high. All show fix available through `npm audit fix`; no `--force` was run.
+- `npm outdated`: many patch/minor updates available; major updates also available for some packages (`@eslint/js`, `eslint`, `@types/node`, `@vitejs/plugin-react`, `lucide-react`, `react-day-picker`, `recharts`, `typescript`, `vite`, etc.). No dependency updates were applied in this QA-only step.
+
+| Package | Severity | Direct/Transitive | Used At Runtime? | Fix Available? | Risk | Recommended Action |
+|---|---|---|---|---|---|---|
+| `@babel/core` | Low | Transitive via `@tanstack/router-plugin`, `@vitejs/plugin-react`, `eslint-plugin-react-hooks`, `shadcn` | No browser runtime; build/dev tooling only | Yes, via `npm audit fix` / package updates | Arbitrary file read via sourceMappingURL during tooling use | Include in controlled dependency patch; retest typecheck/lint/build. |
+| `esbuild` | Low | Transitive via direct `vite` and `tsx` | No production browser runtime; dev/build server tooling | Yes, `vite` wanted patch is `7.3.6` | Windows dev-server arbitrary file read advisory | Patch `vite` in a dedicated dependency update; verify dev/build. |
+| `form-data` | High | Transitive via direct `axios` | Unlikely in browser bundle; Node adapter dependency | Yes, `axios` wanted minor is `1.18.1` and audit fix available | CRLF injection in multipart field names/filenames in Node usage | Consider safe minor update of `axios` in dependency patch; verify upload/image paths and build. |
+| `hono` | High | Transitive via `shadcn` -> `@modelcontextprotocol/sdk` | No dashboard runtime; CLI/tooling dependency | Yes, `shadcn` wanted patch/minor is `4.12.0` | Multiple server/middleware advisories if tooling server is exposed | Patch `shadcn` separately; low dashboard runtime urgency. |
+| `js-cookie` | High | Direct dependency | Yes, used for `dashboardToken` cookie in auth/session flow | Yes, wanted/latest `3.0.8` | Cookie attribute/prototype hijack advisory affects auth token handling | Highest-priority safe patch candidate: update `js-cookie` to `3.0.8`, then runtime login/logout regression. Not applied without explicit dependency-change approval. |
+| `js-yaml` | Moderate | Transitive via `eslint` / `cosmiconfig` | No browser runtime; tooling/config only | Yes, audit fix available | Quadratic-complexity DoS parsing crafted YAML in tooling | Patch through tooling updates; verify lint. |
+| `qs` | Moderate | Transitive via `shadcn` / Express tooling path | No dashboard runtime detected | Yes, audit fix available | DoS in `qs.stringify` with null/undefined comma arrays | Patch through `shadcn`/transitive update; low dashboard runtime urgency. |
+| `vite` | High | Direct dev dependency | No production browser runtime; dev/build tooling | Yes, wanted patch `7.3.6`, latest major `8.1.0` | Windows dev server file-system/UNC path advisories | Safe patch candidate: update within v7 to `7.3.6`; do not jump to v8 without approval. |
+
 ## Pre-Auth QA Continuation Summary
 
 ### Completed
