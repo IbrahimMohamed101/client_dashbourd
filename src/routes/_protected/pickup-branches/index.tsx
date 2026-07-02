@@ -39,21 +39,9 @@ import {
   useSettingsQuery,
   useUpdateSettingsMutation,
 } from "@/hooks/useSettingsQuery";
+import type { PickupLocationSetting } from "@/types/settingsTypes";
 
-type PickupBranch = {
-  id: string;
-  name: {
-    ar: string;
-    en: string;
-  };
-  address: {
-    ar: string;
-    en: string;
-  };
-  isActive: boolean;
-  latitude?: number;
-  longitude?: number;
-};
+type PickupBranch = PickupLocationSetting;
 
 type PickupBranchForm = {
   id: string;
@@ -65,6 +53,8 @@ type PickupBranchForm = {
   longitude: string;
   isActive: boolean;
 };
+
+type PickupBranchFormErrors = Partial<Record<keyof PickupBranchForm, string>>;
 
 const emptyForm = (): PickupBranchForm => ({
   id: "",
@@ -176,6 +166,32 @@ const formToBranch = (form: PickupBranchForm): PickupBranch => {
   };
 };
 
+const validateBranchForm = (form: PickupBranchForm): PickupBranchFormErrors => {
+  const errors: PickupBranchFormErrors = {};
+  const requiredFields: Array<[keyof PickupBranchForm, string]> = [
+    ["nameAr", "Arabic branch name is required."],
+    ["nameEn", "English branch name is required."],
+    ["addressAr", "Arabic branch address is required."],
+    ["addressEn", "English branch address is required."],
+  ];
+
+  requiredFields.forEach(([key, message]) => {
+    if (!String(form[key]).trim()) errors[key] = message;
+  });
+
+  (["latitude", "longitude"] as const).forEach((key) => {
+    const value = form[key].trim();
+    if (value && !Number.isFinite(Number(value))) {
+      errors[key] =
+        key === "latitude"
+          ? "Latitude must be a valid number."
+          : "Longitude must be a valid number.";
+    }
+  });
+
+  return errors;
+};
+
 export const Route = createFileRoute("/_protected/pickup-branches/")({
   component: PickupBranchesPage,
 });
@@ -189,6 +205,7 @@ function PickupBranchesPage() {
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<PickupBranchForm>(emptyForm);
+  const [formErrors, setFormErrors] = useState<PickupBranchFormErrors>({});
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   if (isLoading) {
@@ -214,11 +231,13 @@ function PickupBranchesPage() {
 
   const openCreateDialog = () => {
     setForm(emptyForm());
+    setFormErrors({});
     setDialogOpen(true);
   };
 
   const openEditDialog = (branch: PickupBranch) => {
     setForm(branchToForm(branch));
+    setFormErrors({});
     setDialogOpen(true);
   };
 
@@ -228,6 +247,10 @@ function PickupBranchesPage() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const nextErrors = validateBranchForm(form);
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     const nextBranch = formToBranch(form);
     const exists = branches.some((branch) => branch.id === nextBranch.id);
     const nextBranches = exists
@@ -351,6 +374,7 @@ function PickupBranchesPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         form={form}
+        errors={formErrors}
         onFormChange={setForm}
         onSubmit={handleSubmit}
         isSaving={updateSettings.isPending}
@@ -380,6 +404,7 @@ function BranchDialog({
   open,
   onOpenChange,
   form,
+  errors,
   onFormChange,
   onSubmit,
   isSaving,
@@ -387,6 +412,7 @@ function BranchDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   form: PickupBranchForm;
+  errors: PickupBranchFormErrors;
   onFormChange: React.Dispatch<React.SetStateAction<PickupBranchForm>>;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   isSaving: boolean;
@@ -412,22 +438,28 @@ function BranchDialog({
               label="Name Arabic"
               value={form.nameAr}
               onChange={(value) => updateField("nameAr", value)}
+              error={errors.nameAr}
+              required
             />
             <Field
               label="Name English"
               value={form.nameEn}
               onChange={(value) => updateField("nameEn", value)}
+              error={errors.nameEn}
               required
             />
             <Field
               label="Address Arabic"
               value={form.addressAr}
               onChange={(value) => updateField("addressAr", value)}
+              error={errors.addressAr}
+              required
             />
             <Field
               label="Address English"
               value={form.addressEn}
               onChange={(value) => updateField("addressEn", value)}
+              error={errors.addressEn}
               required
             />
             <Field
@@ -435,12 +467,14 @@ function BranchDialog({
               value={form.latitude}
               onChange={(value) => updateField("latitude", value)}
               type="number"
+              error={errors.latitude}
             />
             <Field
               label="Longitude"
               value={form.longitude}
               onChange={(value) => updateField("longitude", value)}
               type="number"
+              error={errors.longitude}
             />
           </div>
           <div className="flex items-center gap-3 rounded-lg border p-3">
@@ -470,12 +504,14 @@ function Field({
   onChange,
   type = "text",
   required = false,
+  error,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: React.HTMLInputTypeAttribute;
   required?: boolean;
+  error?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -485,8 +521,10 @@ function Field({
         inputMode={type === "number" ? "decimal" : undefined}
         value={value}
         required={required}
+        aria-invalid={Boolean(error)}
         onChange={(event) => onChange(event.target.value)}
       />
+      {error ? <p className="text-xs font-medium text-destructive">{error}</p> : null}
     </div>
   );
 }

@@ -1,4 +1,20 @@
+export interface PickupLocationSetting {
+  id: string;
+  name: {
+    ar: string;
+    en: string;
+  };
+  address: {
+    ar: string;
+    en: string;
+  };
+  isActive: boolean;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface DashboardSettings {
+  pickup_locations?: PickupLocationSetting[];
   [key: string]: unknown;
 }
 

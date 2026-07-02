@@ -230,7 +230,7 @@ These results are not a replacement for authenticated runtime QA.
 | /zones | src/routes/_protected/zones/index.tsx | Delivery Zones | admin/superadmin | archive/disable zone | archive/delete | /api/dashboard/zones/:id | DELETE | id | toast says disabled/not permanently deleted | API error toast | Blocked by Backend Contract | DELETE semantics must be confirmed as soft disable. |
 | /premium-meals | src/routes/_protected/premium-meals/index.tsx | Premium Upgrades | admin/superadmin | readiness/list/candidates/filter | read/search/filter | /api/dashboard/premium-upgrades/readiness, /premium-upgrades, /candidates | GET | filters, candidate params | tables/cards render | loading/empty/error cards | Blocked by Auth | Candidate endpoint source verified. |
 | /premium-meals | src/routes/_protected/premium-meals/index.tsx | Premium Upgrades | admin/superadmin | link/create/edit/state/archive | create/update/toggle/archive | /api/dashboard/premium-upgrades, /:id, /:id/state, /:id/archive | POST/PATCH/POST | candidate fields, upgradeDeltaHalala, display/order/state | toast, premium queries invalidated | validation/API toast | Needs Runtime Retest | SAR to halalas source verified. |
-| /pickup-branches | src/routes/_protected/pickup-branches/index.tsx | Pickup Branches | admin/superadmin | list/manage branches | create/update/toggle | route-local/dashboard branch contract | TBD | branch name/address/status fields | branch UI updates | validation/API error | Blocked by Backend Contract | Endpoint ownership needs runtime/source follow-up before signoff. |
+| /pickup-branches | src/routes/_protected/pickup-branches/index.tsx | Pickup Branches | admin/superadmin | list/manage branches | create/update/toggle | /api/dashboard/settings | GET/PATCH | pickup_locations array only; id, name.ar/en, address.ar/en, isActive, latitude?, longitude? | branch UI updates, settings query invalidated | validation/API error | Pending Runtime QA | Backend confirmed dashboard settings owns pickup_locations; runtime still needs credentials/data. |
 | /payments | src/routes/_protected/payments/index.tsx | Payments | admin/superadmin/cashier | list/filter/detail/breakdown | read/filter | /api/dashboard/payments, /:id, /:id/breakdown | GET | page/status/date/q/id | table/detail render | error state | Blocked by Auth | Needs paid/pending/failed fixtures. |
 | /payments | src/routes/_protected/payments/index.tsx | Payments | admin/superadmin/cashier | verify payment | update/action | /api/dashboard/payments/:id/verify | POST | payment id | toast/refetch | API error toast | Blocked by Test Data | Needs safe pending payment. |
 | /packages | src/routes/_protected/packages/index.tsx | Packages/Plans | admin/superadmin | list/create/update/toggle/tiers | CRUD/toggle | /api/dashboard/plans, /:id, /:id/toggle, /:id/grams | GET/POST/PUT/PATCH/POST | plan fields, grams, meals, policies | toast, packages query invalidated | validation/API toast | Blocked by Auth | /packages/create route redirects to /packages. |
@@ -387,14 +387,14 @@ Use these scripts after credentials and safe data are available. Every protected
 - Expected UI Checks: readiness/table loaders, mutation toasts, premium query invalidation, mobile dialogs/cards.
 
 ### Manual QA Script: /pickup-branches
-- Preconditions: admin/superadmin; active/inactive pickup branches; endpoint contract confirmation.
+- Preconditions: admin/superadmin; active/inactive pickup branches in `pickup_locations`; dashboard settings credentials/data.
 - Navigation: open `/pickup-branches`, exercise visible branch actions.
 - Read/List Tests: list/cards, empty and error states.
-- Create Tests: create safe branch if supported.
-- Update Tests: edit name/address/status if supported.
-- Delete/Archive/Disable Tests: disable/archive safe branch only.
-- Validation Tests: missing name/address, invalid location/contact.
-- Network Verification: endpoint/method TBD by backend contract; payload branch fields.
+- Create Tests: create safe branch with Arabic/English name and address.
+- Update Tests: edit Arabic/English name, Arabic/English address, coordinates, and `isActive`.
+- Delete/Archive/Disable Tests: remove only safe test branches from `pickup_locations`; use inactive toggle for non-destructive status testing.
+- Validation Tests: missing Arabic/English name, missing Arabic/English address, invalid latitude/longitude.
+- Network Verification: `GET /api/dashboard/settings`; `PATCH /api/dashboard/settings` with only `pickup_locations`, preserving other settings fields.
 - Expected UI Checks: loading, empty, error, success toast, list update, mobile controls, RTL copy.
 
 ### Manual QA Script: /payments
@@ -622,7 +622,7 @@ Use these scripts after credentials and safe data are available. Every protected
 | /promo-codes | list/create/edit/toggle/archive/validate | unused/used promo codes | admin | /api/dashboard/promo-codes* | Pending Backend Credentials/Data |
 | /zones | list/create/edit/toggle/archive | active/inactive zones | admin | /api/dashboard/zones* | Pending Backend Credentials/Data |
 | /premium-meals | readiness/list/candidate link/edit/archive | linked/unlinked premium data | admin | /api/dashboard/premium-upgrades* | Pending Backend Credentials/Data |
-| /pickup-branches | list/manage branches | active/inactive branches | admin | TBD branch endpoint | Pending Backend Credentials/Data |
+| /pickup-branches | list/manage branches | active/inactive branches | admin | GET/PATCH /api/dashboard/settings with `pickup_locations` only | Pending Backend Credentials/Data |
 | /payments | list/detail/breakdown/verify | pending/paid payments | admin/cashier | /api/dashboard/payments* | Pending Backend Credentials/Data |
 | /packages | list/create/edit/toggle/tiers | safe plan/tier fixtures | admin | /api/dashboard/plans* | Pending Backend Credentials/Data |
 | /operations | role boards/search/details/actions | kitchen/pickup/courier queue items | admin/kitchen/courier | /api/dashboard/ops/list, /ops/actions | Pending Backend Credentials/Data |
@@ -688,7 +688,7 @@ Commands run on 2026-06-30:
 ### Next Required From Backend
 - Credentials: admin/superadmin, courier, kitchen, cashier/restricted test accounts.
 - Seed data: safe customers, subscriptions, orders, deliveries, zones, promo codes, menu entities, premium upgrades, payments, accounting rows, and staff users.
-- Contract decisions: delivery endpoint ownership, courier allowedActions contract, promo archive DELETE semantics, zone archive DELETE semantics, pickup-branches endpoint ownership.
+- Contract decisions: promo archive DELETE semantics and zone archive DELETE semantics. Delivery endpoint ownership and pickup-branches settings ownership are confirmed; runtime QA remains pending credentials/data.
 
 ### Can Refactor Start?
 No. Refactor can only start after authenticated runtime QA is completed and P0/P1 issues are fixed or accepted with reason.
