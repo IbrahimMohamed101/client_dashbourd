@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DeliveryCard } from "./DeliveryCard";
 import type {
   DashboardOpsActionRequest,
+  QueueAction,
   UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
 
@@ -11,7 +12,7 @@ interface DeliveryListProps {
   isLoading: boolean;
   onActionClick: (
     item: UnifiedQueueItem,
-    action: string,
+    action: QueueAction,
     payload: DashboardOpsActionRequest
   ) => void;
   isActionLoading: boolean;

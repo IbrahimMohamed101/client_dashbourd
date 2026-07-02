@@ -53,6 +53,8 @@ export interface QueueAction {
   icon?: string;
   endpoint?: string;
   method?: string;
+  disabled?: boolean;
+  disabledReason?: string | null;
   requiresReason?: boolean;
   reason?: string | null;
   reasonLabel?: LocalizedText | null;
@@ -320,6 +322,8 @@ export interface UnifiedQueueItem {
     icon: string;
     endpoint?: string;
     method?: string;
+    disabled?: boolean;
+    disabledReason?: string | null;
     reason?: string | null;
     reasonLabel?: LocalizedText | null;
     requiresReason: boolean;

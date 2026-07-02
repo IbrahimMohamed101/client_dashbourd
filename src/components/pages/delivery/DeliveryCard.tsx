@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { buildOperationsActionPayload, safeText } from "@/lib/operationsBoard";
 import type {
   DashboardOpsActionRequest,
+  QueueAction,
   UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
 import { getBadgeClasses } from "@/types/dashboardOpsTypes";
@@ -61,7 +62,7 @@ interface DeliveryCardProps {
   item: UnifiedQueueItem;
   onActionClick: (
     item: UnifiedQueueItem,
-    action: string,
+    action: QueueAction,
     payload: DashboardOpsActionRequest
   ) => void;
   isActionLoading: boolean;
@@ -131,8 +132,12 @@ function getMealRows(item: UnifiedQueueItem) {
   return [];
 }
 
-function getActionLabel(actionId: string, fallback: string) {
-  return ACTION_CONFIG[actionId]?.label || safeText(fallback, actionId);
+function getActionConfig(actionId: string): ActionConfig {
+  return ACTION_CONFIG[actionId] ?? { label: actionId, variant: "outline" };
+}
+
+function getActionLabel(action: QueueAction) {
+  return safeText(action.label, ACTION_CONFIG[action.id]?.label || action.id);
 }
 
 export function DeliveryCard({
@@ -166,8 +171,14 @@ export function DeliveryCard({
     mealRows.length > 0 ||
     Boolean(item.dataQuality?.warnings?.length);
 
-  const handleAction = (actionId: string) => {
-    onActionClick(item, actionId, buildOperationsActionPayload(item, actionId));
+  const handleAction = (action: QueueAction) => {
+    if (action.disabled) return;
+
+    onActionClick(
+      item,
+      action,
+      buildOperationsActionPayload(item, action.id, action.reason ?? undefined)
+    );
   };
 
   return (
@@ -298,8 +309,7 @@ export function DeliveryCard({
         <div className="flex flex-1 items-center gap-2">
           {item.allowedActions?.length ? (
             item.allowedActions.map((action) => {
-              const config = ACTION_CONFIG[action.id];
-              if (!config) return null;
+              const config = getActionConfig(action.id);
 
               return (
                 <Button
@@ -307,10 +317,11 @@ export function DeliveryCard({
                   variant={config.variant}
                   size="sm"
                   className={`h-10 flex-1 rounded-xl px-3 text-xs font-bold active:scale-95 ${config.className ?? ""}`}
-                  disabled={isActionLoading}
-                  onClick={() => handleAction(action.id)}
+                  disabled={isActionLoading || action.disabled}
+                  title={action.disabledReason || action.reason || undefined}
+                  onClick={() => handleAction(action)}
                 >
-                  {getActionLabel(action.id, action.label)}
+                  {getActionLabel(action)}
                 </Button>
               );
             })

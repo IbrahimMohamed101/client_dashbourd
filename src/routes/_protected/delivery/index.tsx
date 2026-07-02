@@ -21,6 +21,7 @@ import {
 import type {
   DashboardOpsActionRequest,
   DashboardOpsStatusFilter,
+  QueueAction,
   UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
 import { matchesStatusFilter } from "@/types/dashboardOpsTypes";
@@ -144,33 +145,38 @@ function DeliveryDashboard() {
     setSearchStr("");
   };
 
-  const runAction = (action: string, payload: DashboardOpsActionRequest) => {
-    actionMutation.mutate({ action, payload });
+  const runAction = (
+    action: string,
+    payload: DashboardOpsActionRequest,
+    actionDef?: QueueAction
+  ) => {
+    actionMutation.mutate({ action, payload, actionDef });
   };
 
   const handleActionClick = (
     item: UnifiedQueueItem,
-    action: string,
+    action: QueueAction,
     payload: DashboardOpsActionRequest
   ) => {
-    const actionDef = item.allowedActions?.find((entry) => entry.id === action);
-
-    if (actionDef?.requiresReason || action === "cancel") {
+    if (action.requiresReason || action.id === "cancel") {
       setReasonDialog({
         open: true,
         item,
-        action,
-        actionLabel: actionDef?.label || "تعذر التوصيل",
+        action: action.id,
+        actionLabel: safeText(action.label, "تعذر التوصيل"),
         isDangerous: true,
       });
       return;
     }
 
-    runAction(action, payload);
+    runAction(action.id, payload, action);
   };
 
   const handleReasonSubmit = (values: { reason: string; notes?: string }) => {
     if (!reasonDialog.item || !reasonDialog.action) return;
+    const actionDef = reasonDialog.item.allowedActions?.find(
+      (entry) => entry.id === reasonDialog.action
+    );
 
     runAction(
       reasonDialog.action,
@@ -179,7 +185,8 @@ function DeliveryDashboard() {
         reasonDialog.action,
         values.reason,
         values.notes
-      )
+      ),
+      actionDef
     );
     setReasonDialog(EMPTY_REASON_DIALOG);
   };

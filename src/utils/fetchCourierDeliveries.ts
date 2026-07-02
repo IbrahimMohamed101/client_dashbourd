@@ -4,6 +4,7 @@ import type {
   DashboardOpsActionRequest,
   DashboardOpsActionResponse,
   DashboardOpsListResponse,
+  QueueAction,
   UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
 
@@ -25,7 +26,24 @@ const toItems = (response: CourierDeliveryResponse): unknown[] => {
 
 const hasFlag = (item: CourierDto, key: string) => item[key] === true;
 
-const courierActionsFor = (
+const asRecord = (value: unknown): CourierDto | null =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as CourierDto)
+    : null;
+
+const hasBackendAllowedActions = (item: CourierDto) => {
+  if (Array.isArray(item.allowedActions)) return true;
+
+  const actions = asRecord(item.actions);
+  return Boolean(
+    actions &&
+      (Array.isArray(actions.items) ||
+        Array.isArray(actions.allowedActions) ||
+        Array.isArray(actions.allowed))
+  );
+};
+
+const fallbackCourierActionsFor = (
   item: CourierDto,
   source: "subscription" | "one_time_order"
 ): UnifiedQueueItem["allowedActions"] => {
@@ -74,17 +92,26 @@ const courierActionsFor = (
   return actions;
 };
 
+const courierActionsFor = (
+  item: CourierDto,
+  source: "subscription" | "one_time_order"
+): UnifiedQueueItem["allowedActions"] | undefined =>
+  hasBackendAllowedActions(item)
+    ? undefined
+    : fallbackCourierActionsFor(item, source);
+
 const adaptCourierDto = (
   item: unknown,
   source: "subscription" | "one_time_order"
 ) => {
-  const record = item && typeof item === "object" ? (item as CourierDto) : {};
+  const record = asRecord(item) ?? {};
   const deliveryAddress = record.deliveryAddress;
   const id = String(record.id ?? "");
   const entityType = source === "one_time_order" ? "order" : "subscription_day";
   const mealCount = Number(record.mealCount ?? 0);
   const addonCount = Number(record.addonCount ?? 0);
   const premiumUpgradeCount = Number(record.premiumUpgradeCount ?? 0);
+  const fallbackAllowedActions = courierActionsFor(record, source);
 
   return {
     ...record,
@@ -124,7 +151,9 @@ const adaptCourierDto = (
       hasPremium: premiumUpgradeCount > 0,
       hasAddons: addonCount > 0,
     },
-    allowedActions: courierActionsFor(record, source),
+    ...(fallbackAllowedActions
+      ? { allowedActions: fallbackAllowedActions }
+      : {}),
   };
 };
 
@@ -162,13 +191,39 @@ export const fetchCourierDeliveryList = async (
 export const executeCourierDeliveryAction = async ({
   action,
   payload,
+  actionDef,
 }: {
   action: string;
   payload: DashboardOpsActionRequest;
+  actionDef?: QueueAction;
 }): Promise<DashboardOpsActionResponse> => {
   const id = payload.entityId;
   const isOrder =
     payload.entityType === "order" || payload.source === "one_time_order";
+  const reason = payload.reason || payload.payload?.reason;
+  const note = payload.note || payload.payload?.notes;
+  const requiresReason = actionDef?.requiresReason || action === "cancel";
+  const data =
+    requiresReason || reason || note
+      ? {
+          reason:
+            reason ||
+            actionDef?.reason ||
+            (action === "cancel" ? "customer_unreachable" : undefined),
+          note,
+        }
+      : undefined;
+
+  if (actionDef?.endpoint) {
+    const method = actionDef.method || "PUT";
+    const response = await api.request({
+      url: actionDef.endpoint,
+      method,
+      data,
+    });
+
+    return response.data;
+  }
 
   if (isOrder) {
     const endpointAction =
@@ -180,15 +235,7 @@ export const executeCourierDeliveryAction = async ({
 
     const response = await api.put(
       `/api/courier/orders/${id}/${endpointAction}`,
-      action === "cancel"
-        ? {
-            reason:
-              payload.reason ||
-              payload.payload?.reason ||
-              "customer_unreachable",
-            note: payload.note || payload.payload?.notes,
-          }
-        : undefined
+      data
     );
 
     return response.data;
@@ -205,15 +252,7 @@ export const executeCourierDeliveryAction = async ({
 
   const response = await api.put(
     `/api/courier/deliveries/${id}/${endpointAction}`,
-    action === "cancel"
-      ? {
-          reason:
-            payload.reason ||
-            payload.payload?.reason ||
-            "customer_unreachable",
-          note: payload.note || payload.payload?.notes,
-        }
-      : undefined
+    data
   );
 
   return response.data;

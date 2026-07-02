@@ -219,7 +219,7 @@ function normalizeAllowedActions(raw: unknown): UnifiedQueueItem["allowedActions
 
   if (!Array.isArray(sourceActions)) return [];
 
-  return sourceActions
+  const normalized = sourceActions
     .map((entry) => {
       if (typeof entry === "string") {
         return {
@@ -242,12 +242,23 @@ function normalizeAllowedActions(raw: unknown): UnifiedQueueItem["allowedActions
         icon: asString(action.icon) || "",
         endpoint: asString(action.endpoint) || undefined,
         method: asString(action.method) || undefined,
+        disabled: asBoolean(action.disabled) || undefined,
+        disabledReason: asString(action.disabledReason) || undefined,
         reason: asString(action.reason) || undefined,
         reasonLabel: asRecord(action.reasonLabel) as never,
         requiresReason: Boolean(action.requiresReason),
       };
     })
     .filter((action): action is NonNullable<typeof action> => action !== null);
+
+  return Array.from(
+    normalized
+      .reduce((actionsById, action) => {
+        if (!actionsById.has(action.id)) actionsById.set(action.id, action);
+        return actionsById;
+      }, new Map<string, (typeof normalized)[number]>())
+      .values()
+  );
 }
 
 function normalizeCustomer(raw: RawQueueRecord): UnifiedQueueItem["customer"] {

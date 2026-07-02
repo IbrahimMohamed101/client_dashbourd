@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { DashboardOpsActionRequest } from "@/types/dashboardOpsTypes";
+import type {
+  DashboardOpsActionRequest,
+  QueueAction,
+} from "@/types/dashboardOpsTypes";
 import {
   executeCourierDeliveryAction,
   fetchCourierDeliveryList,
@@ -27,10 +30,12 @@ export const useCourierDeliveryActionMutation = () => {
     mutationFn: ({
       action,
       payload,
+      actionDef,
     }: {
       action: string;
       payload: DashboardOpsActionRequest;
-    }) => executeCourierDeliveryAction({ action, payload }),
+      actionDef?: QueueAction;
+    }) => executeCourierDeliveryAction({ action, payload, actionDef }),
     onSuccess: () => {
       toast.success("Delivery status updated from the backend.");
       queryClient.invalidateQueries({ queryKey: ["courier-deliveries"] });
