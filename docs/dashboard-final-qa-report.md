@@ -3,11 +3,11 @@
 ## Executive Summary
 - Overall status: Not Ready
 - Tested branch: main
-- Tested commit: 0af3adabf264f42ef73af2b906be271ab34ba1a7
+- Tested commit: 5269c7c1e8e28c634daf791f9ae8a9725cd61a05
 - Backend/base URL: https://basicdiet145.onrender.com
-- Browser/device coverage: Chrome headless desktop unauthenticated route smoke; static route/API review. Mobile/tablet, authenticated mutation workflows, RTL visual verification, and dark/light authenticated screens are blocked by missing dashboard test credentials/token.
-- Date: 2026-06-28
-- Worktree note: QA did not start from a clean checkout. Existing modified files were present before QA: graphify-out files and src/components/layout/nav-user.tsx.
+- Browser/device coverage: Chrome headless desktop unauthenticated route smoke; static route/API review; direct backend auth-gate probes on 2026-07-02. Mobile/tablet, authenticated mutation workflows, RTL visual verification, and dark/light authenticated screens remain blocked because no valid dashboard QA credentials/token were available in this session.
+- Date: 2026-07-02
+- Worktree note: current uncommitted files are graphify-out hook output only. No frontend code changes were made during the 2026-07-02 authenticated QA rerun attempt.
 
 ## Command Results
 | Command | Status | Notes |
@@ -17,6 +17,21 @@
 | npm run lint | Pass | eslint . completed with exit code 0. |
 | npm run build | Pass | tsc -b && vite build completed; 3809 modules transformed. |
 | npm run dev | Pass | Vite 7.3.3 served at http://127.0.0.1:5173/. |
+| npm run typecheck | Pass | 2026-07-02 rerun: tsc --noEmit completed with exit code 0. |
+| npm run lint | Pass | 2026-07-02 rerun: eslint . completed with exit code 0. |
+| npm run build | Pass | 2026-07-02 rerun: tsc -b && vite build completed; 3809 modules transformed. |
+
+## Authenticated QA Rerun Attempt - 2026-07-02
+
+Backend contract blockers for delivery allowedActions and pickup branches settings were resolved before this continuation, but authenticated runtime QA could not be executed because no valid QA username/password or dashboard token was present in the user prompt, prior attachments, `.env`, repo docs, or tests.
+
+| Probe | Status | Evidence | Result |
+|---|---|---|---|
+| Credential search | Blocked | Searched prompt attachments, `.env`, repo docs, tests, and source for QA/admin/courier/kitchen/cashier credentials; only placeholder emails and `VITE_BACKEND_URL` were found. | No usable login material available. |
+| `GET /api/dashboard/auth/me` without token | 200 | `{"status":false,"data":{"user":null},"user":null}` | Confirms no active session/token. |
+| `GET /api/dashboard/settings` without token | 401 | `{"ok":false,"error":{"code":"UNAUTHORIZED","message":"Missing dashboard token"}}` | Protected settings and `/pickup-branches` runtime QA blocked. |
+| `GET /api/courier/deliveries/today` without token | 401 | `{"ok":false,"error":{"code":"UNAUTHORIZED","message":"Missing dashboard token"}}` | `/delivery` allowedActions runtime QA blocked. |
+| Placeholder login attempt | 401 | POST `/api/dashboard/auth/login` with `qa.admin@example.test` and a non-secret placeholder password returned `Invalid email or password`. | No authenticated role session established. |
 
 ## Route Inventory
 | Route | File | Protected? | API Dependencies | CRUD/Actions? | Smoke Status |
@@ -80,12 +95,12 @@
 ## Final Issue Register
 | ID | Severity | Owner | Route | Action/API | Issue | Evidence | Reproduce Steps | Expected | Actual | Suggested Fix | Fix Before Refactor? | Status |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| QA-001 | P1 Critical | Environment / Test Data | all protected routes | all authenticated workflows | Deep dashboard QA is blocked by missing valid dashboard credentials/token and seed data. | Chrome route smoke: every protected route redirects to /?redirect=...; direct GET /api/dashboard/zones returns 401 Missing dashboard token. | Open /zones or /promo-codes without a valid dashboardToken. | Authenticated QA account can load and mutate safe test records. | Login page only; mutation workflows cannot be verified. | Provide QA admin/kitchen/courier users, safe seed data, and destructive-action rules. | Yes | Open |
+| QA-001 | P1 Critical | Environment / Test Data | all protected routes | all authenticated workflows | Deep dashboard QA is blocked by missing valid dashboard credentials/token and seed data. | 2026-07-02 credential search found no usable QA credentials/token; `GET /api/dashboard/settings` and `GET /api/courier/deliveries/today` return 401 Missing dashboard token; placeholder login returns 401 Invalid email or password. | Attempt to run authenticated QA without a valid dashboardToken or valid role credentials. | Authenticated QA account can load and mutate safe test records. | Login/auth gate only; mutation workflows cannot be verified. | Provide admin/superadmin, courier, kitchen/operator, and cashier/restricted credentials plus safe seed data. | Yes | Open |
 | QA-002 | P2 Major | Security / Frontend dependency | repo | npm install/audit | Dependency audit reports 8 vulnerabilities, including high severity issues in form-data, hono, js-cookie, and vite. | npm audit output, 2026-06-28. | Run npm audit --audit-level=low. | No known high severity dependency advisories before refactor/release. | 4 high, 2 moderate, 2 low vulnerabilities. | Run controlled dependency update and regression test; do not blind npm audit fix on release branch. | Yes, if release-bound | Open |
-| QA-003 | P1 Critical | Integration / Contract | /delivery | list/actions | Dashboard delivery screen uses courier-app endpoints instead of dashboard endpoints. | src/utils/fetchCourierDeliveries.ts:141-142 calls /api/courier/deliveries/today and /api/courier/orders/today; actions use /api/courier/... at lines 182 and 207. | Load /delivery with dashboard token and inspect network. | Dashboard route should use documented dashboard-owned delivery/ops contract or explicitly approved courier contract. | Source shows courier contract use. | Confirm backend ownership; migrate to /api/dashboard delivery/ops endpoint if dashboard should not call courier APIs. | Yes | Open |
+| QA-003 | P1 Critical | Integration / Runtime QA | /delivery | list/actions | Delivery endpoint ownership is now confirmed as `/api/courier/*`, but runtime role/token compatibility remains unverified. | Backend decision says `/delivery` may continue using `/api/courier/*`; direct unauthenticated `GET /api/courier/deliveries/today` returns 401 Missing dashboard token. | Log in as admin/superadmin/courier and load `/delivery`; inspect list and mutation requests. | Dashboard admin/superadmin/courier tokens can read and mutate courier delivery/order actions through `/api/courier/*`. | Runtime blocked by missing credentials/token. | Run authenticated `/delivery` QA with real role fixtures; no endpoint migration needed unless runtime rejects valid dashboard tokens. | Yes | Contract resolved pending runtime QA |
 | QA-004 | P1 Critical | Frontend / Integration | /delivery, /operations courier board | courier actions | Courier delivery actions must render from backend allowedActions objects. | src/utils/fetchCourierDeliveries.ts now preserves backend allowedActions/actions and only falls back to can* flags for legacy responses; delivery action clicks pass backend endpoint/method/disabled metadata through the mutation. | Load /delivery with test data containing backend allowedActions. | Actions must come from backend allowedActions and be deduped. | Frontend now prefers canonical allowedActions and keeps boolean can* fallback only for compatibility. | Runtime QA still must verify allowedActions labels, disabled states, endpoints/methods, no duplicates, and action invalidation with real admin/superadmin/courier data. | Yes | Frontend fixed pending runtime QA |
-| QA-005 | P1 Critical | Integration / Contract | /promo-codes | archive | UI says archive/disable, but API function uses DELETE /api/dashboard/promo-codes/:id. Data-loss semantics are unclear. | src/utils/fetchPromoCodesData.ts:136-137; UI archive wording in src/components/pages/promo-codes/PromoCodesTable.tsx:447-469. | Archive a promo code and inspect network. | Archive should call a soft-delete/archive endpoint or DELETE must be documented as soft archive. | Frontend sends DELETE while promising archive. | Confirm backend semantics; rename function or use POST/PATCH archive endpoint. | Yes | Open |
-| QA-006 | P1 Critical | Integration / Contract | /zones | archive/disable | UI says zone is disabled and not permanently deleted, but API function uses DELETE /api/dashboard/zones/:id. | src/utils/fetchDeliveryZonesData.ts:114-117; UI wording src/components/pages/zones/ZonesTable.tsx:275-284. | Disable/archive a zone and inspect network. | Disable/archive should be soft and contractually clear. | Frontend sends DELETE while UI says not deleted. | Confirm backend soft-delete behavior or replace with explicit archive/disable endpoint. | Yes | Open |
+| QA-005 | P1 Critical | Integration / Runtime QA | /promo-codes | archive | Backend contract is now resolved as soft archive via DELETE, but runtime behavior is unverified. | Source still calls `DELETE /api/dashboard/promo-codes/:id`; user/backend confirmation says DELETE is soft archive; authenticated archive test could not run without credentials/token. | Log in as admin, archive an unused promo, request list with and without `includeDeleted=true`, then attempt archive on an in-use promo. | Unused promo is archived/disabled, still visible with `includeDeleted=true`; in-use promo returns `409 PROMO_IN_USE`. | Runtime blocked by missing credentials/token and safe promo fixtures. | Run authenticated promo archive QA; fix frontend only if payload/cache/UI diverges from confirmed backend behavior. | Yes | Contract resolved pending runtime QA |
+| QA-006 | P1 Critical | Integration / Runtime QA | /zones | archive/disable | Backend contract is now resolved as soft disable via DELETE, but runtime behavior is unverified. | Source calls `DELETE /api/dashboard/zones/:id`, `PATCH /:id/toggle`, and list filter `isActive`; user/backend confirmation says DELETE soft-disables zones. | Log in as admin, disable safe active zone, filter `isActive=false`, then toggle restore. | Disabled zone appears in inactive filter and can be restored with toggle; historical references survive. | Runtime blocked by missing credentials/token and safe zone fixtures. | Run authenticated zone soft-disable QA; fix frontend only if payload/cache/UI diverges from confirmed backend behavior. | Yes | Contract resolved pending runtime QA |
 | QA-007 | P2 Major | Backend / Contract | /api/dashboard/auth/me | unauth session | Unauthenticated /auth/me returns HTTP 200 with status:false/user:null, while protected resources return 401. | Direct request: GET /api/dashboard/auth/me returned 200 {"status":false,"data":{"user":null},"user":null}; GET /api/dashboard/zones returned 401 Missing dashboard token. | Call both endpoints without token. | Auth contract should be consistent and documented. | Mixed 200 false envelope and 401 error envelope. | Backend/API docs should define auth/me behavior; frontend is currently tolerant. | Before refactor if auth contracts are being cleaned | Open |
 | QA-008 | P3 Minor | Frontend UX / Route | /packages/create, /addons/create, /addons/$addonId/update | direct navigation | Direct create/update routes redirect to list routes instead of rendering create/update screens. | src/routes/_protected/packages/create.tsx:3-6; src/routes/_protected/addons/create.tsx:3-5; addons update route also redirects by source. | Navigate directly to /packages/create or /addons/create while authenticated. | Direct route should either not exist or should render/create screen consistently. | Route exists but immediately redirects. | Remove stale routes or document list-dialog workflow; update nav links/tests. | No, unless linked externally | Open |
 | QA-009 | P3 Minor | QA Process | repo | baseline | Required clean checkout condition was not met. | git status before QA showed modified graphify-out files and src/components/layout/nav-user.tsx. | Run git status --short --branch. | Clean worktree or explicit baseline exception. | Dirty worktree before QA. | Preserve user changes; rerun final QA after clean checkout if signoff requires it. | No | Open |
@@ -99,12 +114,12 @@
 - QA-002 may require dependency updates if these advisories are in frontend transitive runtime/build dependencies only; backend should separately audit its own repo.
 
 ## Integration / Contract Issues To Resolve
-- QA-003: Delivery dashboard endpoint ownership.
-- QA-005: Promo archive DELETE versus soft archive contract.
-- QA-006: Zone archive DELETE versus soft disable contract.
+- QA-003: Contract resolved; verify `/api/courier/*` with admin/superadmin/courier tokens at runtime.
+- QA-005: Contract resolved; verify promo DELETE soft archive, `409 PROMO_IN_USE`, and `includeDeleted=true` at runtime.
+- QA-006: Contract resolved; verify zone DELETE soft disable, inactive filter, and toggle restore at runtime.
 
 ## Environment / Test Data Issues
-- QA-001: No valid dashboard token/test account, no seeded safe records, and no role matrix were available. This blocks browser-level CRUD, forms, mutation payload verification, mobile authenticated screens, and dark/light authenticated screen review.
+- QA-001: No valid dashboard token/test account, no seeded safe records, and no role matrix were available in this session. This blocks browser-level CRUD, forms, mutation payload verification, mobile authenticated screens, and dark/light authenticated screen review.
 
 ## Unknown Issues Requiring More Evidence
 - Authenticated console/network errors on protected screens.
@@ -115,10 +130,10 @@
 
 ## P0/P1 Fix List Before Refactor
 - QA-001: Provide test credentials and data, then rerun authenticated QA.
-- QA-003: Resolve delivery dashboard endpoint ownership.
-- QA-004: Resolve backend-owned allowedActions contract for courier delivery.
-- QA-005: Confirm or fix promo archive semantics.
-- QA-006: Confirm or fix delivery-zone archive semantics.
+- QA-003: Run runtime test for confirmed `/api/courier/*` delivery endpoint ownership with valid admin/superadmin/courier tokens.
+- QA-004: Run runtime test for backend-owned allowedActions after frontend fix `fab2f169a3780336cdf07651e48679dbf0aa0df9`.
+- QA-005: Run runtime test for confirmed promo soft archive semantics.
+- QA-006: Run runtime test for confirmed delivery-zone soft disable semantics.
 
 ## P2/P3 Fix List Before Refactor
 - QA-002: Address dependency vulnerabilities or explicitly accept for non-release QA.
@@ -137,10 +152,10 @@
 | Auth | /api/dashboard/auth/login | POST | Not tested | Environment | Credentials unavailable. |
 | Auth | /api/dashboard/auth/me | GET | N/A | Backend / Contract | Returns 200 false envelope unauthenticated. |
 | Zones | /api/dashboard/zones | GET/POST | Source OK for q/isActive and deliveryFeeHalala | Unknown | Runtime blocked by auth. |
-| Zones | /api/dashboard/zones/:id | PUT/DELETE | Archive semantics unclear | Integration / Contract | DELETE is used for UI "disable/archive". |
+| Zones | /api/dashboard/zones/:id | PUT/DELETE | Contract resolved, runtime unverified | Integration / Runtime QA | Backend confirms DELETE soft-disables zones; authenticated inactive-filter/toggle-restore test still pending. |
 | Zones | /api/dashboard/zones/:id/toggle | PATCH | Source OK | Unknown | Runtime blocked by auth. |
 | Promo Codes | /api/dashboard/promo-codes | GET/POST | Source converts fixed SAR to halalas | Unknown | Runtime blocked by auth. |
-| Promo Codes | /api/dashboard/promo-codes/:id | GET/PUT/DELETE | Archive semantics unclear | Integration / Contract | DELETE is used for archive UI. |
+| Promo Codes | /api/dashboard/promo-codes/:id | GET/PUT/DELETE | Contract resolved, runtime unverified | Integration / Runtime QA | Backend confirms DELETE soft-archives promos; authenticated `409 PROMO_IN_USE` and `includeDeleted=true` tests still pending. |
 | Promo Codes | /api/dashboard/promo-codes/:id/toggle | PATCH | Source OK | Unknown | Runtime blocked by auth. |
 | Promo Codes | /api/dashboard/promo-codes/validate | POST | Source sends subtotalHalala | Unknown | Runtime blocked by auth. |
 | Restaurant Hours | /api/dashboard/settings/restaurant-hours | GET/PUT | Source uses canonical new payload fields | Unknown | Accepts weekly_schedule only as read fallback; PUT uses restaurant_hours. |
@@ -150,8 +165,8 @@
 | Manual Deduction | /api/dashboard/subscriptions/:id/manual-deduction | POST | Unknown | Unknown | Runtime blocked by auth. |
 | Operations | /api/dashboard/ops/list | GET | Unknown | Unknown | Runtime blocked by auth. |
 | Operations | /api/dashboard/ops/actions/:action | POST | Source builds entity/source/action payload | Unknown | Runtime blocked by auth. |
-| Delivery | /api/courier/deliveries/today, /api/courier/orders/today | GET | Contract questionable | Integration / Contract | Dashboard route uses courier endpoints. |
-| Delivery | /api/courier/deliveries/:id/:action, /api/courier/orders/:id/:action | PUT | Contract questionable | Integration / Contract | Dashboard route mutates courier endpoints. |
+| Delivery | /api/courier/deliveries/today, /api/courier/orders/today | GET | Contract resolved, runtime unverified | Integration / Runtime QA | Backend confirms `/delivery` may use `/api/courier/*`; direct unauthenticated probe returns 401 Missing dashboard token. |
+| Delivery | /api/courier/deliveries/:id/:action, /api/courier/orders/:id/:action or backend action endpoint | PUT or backend-provided method | Contract resolved, runtime unverified | Integration / Runtime QA | Frontend now uses backend `allowedActions` endpoint/method when present, fallback courier endpoints otherwise. |
 
 ## Unit Conversion Findings
 | Screen | Field | Expected Unit | Actual Unit | Status |
@@ -222,12 +237,12 @@ These results are not a replacement for authenticated runtime QA.
 | /promo-codes | src/routes/_protected/promo-codes/index.tsx | Promo Codes | admin/superadmin | list/search/filter/paginate/details/charts | read/search/filter | /api/dashboard/promo-codes, /:id | GET | includeDeleted, local filters | table/detail/charts render | error/empty state | Blocked by Auth | Needs active/archived promo fixtures. |
 | /promo-codes | src/routes/_protected/promo-codes/index.tsx | Promo Codes | admin/superadmin | create/update percentage/fixed code | create/update/validate | /api/dashboard/promo-codes, /:id | POST/PUT | code, name, discountType, discountValue, limits, appliesTo, dates, isActive | toast, list/detail invalidation | form/API validation shown | Needs Runtime Retest | Fixed SAR converted to halalas by source. |
 | /promo-codes | src/routes/_protected/promo-codes/index.tsx | Promo Codes | admin/superadmin | toggle active | toggle | /api/dashboard/promo-codes/:id/toggle | PATCH | id | toast, list/detail invalidation | API error toast | Blocked by Test Data | Needs inactive/active codes. |
-| /promo-codes | src/routes/_protected/promo-codes/index.tsx | Promo Codes | admin/superadmin | archive code | archive/delete | /api/dashboard/promo-codes/:id | DELETE | id | toast says archived/disabled | API error toast | Blocked by Backend Contract | DELETE semantics must be confirmed as soft archive. |
+| /promo-codes | src/routes/_protected/promo-codes/index.tsx | Promo Codes | admin/superadmin | archive code | archive/delete | /api/dashboard/promo-codes/:id | DELETE | id | toast says archived/disabled | API error toast | Pending Runtime QA | Backend confirms DELETE soft archive; verify unused archive, `409 PROMO_IN_USE`, and `includeDeleted=true`. |
 | /promo-codes | src/routes/_protected/promo-codes/index.tsx | Promo Codes | admin/superadmin | validate code preview | validate | /api/dashboard/promo-codes/validate | POST | promoCode, userId?, planId?, daysCount?, subtotalHalala?, vatPercentage? | backend result displayed | validation/API toast | Needs Runtime Retest | Dialog says backend computes final discount. |
 | /zones | src/routes/_protected/zones/index.tsx | Delivery Zones | admin/superadmin | list/search/filter/charts | read/search/filter | /api/dashboard/zones | GET | q, isActive | table/charts update | empty/error state | Blocked by Auth | Search/filter source verified. |
 | /zones | src/routes/_protected/zones/index.tsx | Delivery Zones | admin/superadmin | create/update zone | create/update/validate | /api/dashboard/zones, /:id | POST/PUT | name.ar, name.en, deliveryFeeHalala, isActive, sortOrder | toast, list/detail invalidation | required name/fee errors | Needs Runtime Retest | SAR to halalas source verified. |
 | /zones | src/routes/_protected/zones/index.tsx | Delivery Zones | admin/superadmin | toggle active | toggle | /api/dashboard/zones/:id/toggle | PATCH | id | toast, list/detail invalidation | API error toast | Blocked by Test Data | Needs active/inactive zone. |
-| /zones | src/routes/_protected/zones/index.tsx | Delivery Zones | admin/superadmin | archive/disable zone | archive/delete | /api/dashboard/zones/:id | DELETE | id | toast says disabled/not permanently deleted | API error toast | Blocked by Backend Contract | DELETE semantics must be confirmed as soft disable. |
+| /zones | src/routes/_protected/zones/index.tsx | Delivery Zones | admin/superadmin | archive/disable zone | archive/delete | /api/dashboard/zones/:id | DELETE | id | toast says disabled/not permanently deleted | API error toast | Pending Runtime QA | Backend confirms DELETE soft disable; verify `isActive=false` filter and toggle restore. |
 | /premium-meals | src/routes/_protected/premium-meals/index.tsx | Premium Upgrades | admin/superadmin | readiness/list/candidates/filter | read/search/filter | /api/dashboard/premium-upgrades/readiness, /premium-upgrades, /candidates | GET | filters, candidate params | tables/cards render | loading/empty/error cards | Blocked by Auth | Candidate endpoint source verified. |
 | /premium-meals | src/routes/_protected/premium-meals/index.tsx | Premium Upgrades | admin/superadmin | link/create/edit/state/archive | create/update/toggle/archive | /api/dashboard/premium-upgrades, /:id, /:id/state, /:id/archive | POST/PATCH/POST | candidate fields, upgradeDeltaHalala, display/order/state | toast, premium queries invalidated | validation/API toast | Needs Runtime Retest | SAR to halalas source verified. |
 | /pickup-branches | src/routes/_protected/pickup-branches/index.tsx | Pickup Branches | admin/superadmin | list/manage branches | create/update/toggle | /api/dashboard/settings | GET/PATCH | pickup_locations array only; id, name.ar/en, address.ar/en, isActive, latitude?, longitude? | branch UI updates, settings query invalidated | validation/API error | Pending Runtime QA | Backend confirmed dashboard settings owns pickup_locations; runtime still needs credentials/data. |
@@ -243,8 +258,8 @@ These results are not a replacement for authenticated runtime QA.
 | /menu | src/routes/_protected/menu/index.tsx | Menu / Meal Builder | admin/superadmin | create/update/archive/toggle/reorder/duplicate/publish/relations | CRUD/toggle/action | /api/dashboard/menu/* endpoints | POST/PATCH/DELETE | entity form fields, visibility, availability, relation ids, reorder items | toast, menu queries invalidated | validation/API toast | Needs Runtime Retest | Product-specific relation safety must be verified. |
 | /manual-deduction | src/routes/_protected/manual-deduction/index.tsx | Manual Deduction | admin/superadmin | search subscription by phone | search/read | /api/dashboard/subscriptions/search | GET | phone | subscription picker/balances render | no-results/error state | Blocked by Test Data | Needs phone fixtures. |
 | /manual-deduction | src/routes/_protected/manual-deduction/index.tsx | Manual Deduction | admin/superadmin | submit deduction | create/action | /api/dashboard/subscriptions/:id/manual-deduction | POST | regularMeals, premiumMeals, addon deductions?, reason, notes | backend balances update, history invalidated | empty submission blocked, insufficient balance error | Needs Runtime Retest | Verify add-ons are included atomically if UI supports. |
-| /delivery | src/routes/_protected/delivery/index.tsx | Delivery Dashboard | admin/superadmin/courier | list/cards/filter/reset/charts | read/filter | /api/courier/deliveries/today, /api/courier/orders/today | GET | date currently ignored by endpoint | delivery cards render | error/empty state | Blocked by Backend Contract | Dashboard screen uses courier endpoint family. |
-| /delivery | src/routes/_protected/delivery/index.tsx | Delivery Dashboard | admin/superadmin/courier | courier actions | action/update | /api/courier/deliveries/:id/:action, /api/courier/orders/:id/:action | PUT | reason?, note? | toast, courier/accounting queries invalidated | API error toast | Blocked by Backend Contract | Actions synthesized from booleans in source. |
+| /delivery | src/routes/_protected/delivery/index.tsx | Delivery Dashboard | admin/superadmin/courier | list/cards/filter/reset/charts | read/filter | /api/courier/deliveries/today, /api/courier/orders/today | GET | date currently ignored by endpoint | delivery cards render | error/empty state | Pending Runtime QA | Backend confirms dashboard delivery may use courier endpoint family; auth role testing pending. |
+| /delivery | src/routes/_protected/delivery/index.tsx | Delivery Dashboard | admin/superadmin/courier | courier actions | action/update | backend `allowedActions.endpoint`/method or `/api/courier/...` fallback | backend method or PUT fallback | reason?, note? | toast, courier/accounting queries invalidated | API error toast | Pending Runtime QA | Frontend fix `fab2f169a3780336cdf07651e48679dbf0aa0df9` uses backend allowedActions; runtime verification pending. |
 | /dashboard-users | src/routes/_protected/dashboard-users/index.tsx | Dashboard Users | admin/superadmin | list/create/update/delete/reset password | CRUD/action | /api/dashboard/dashboard-users, /:id, /:id/reset-password | GET/POST/PUT/DELETE/POST | staff user fields, role, password/reset | toast, staff query invalidated | validation/API toast | Blocked by Auth | Needs safe staff accounts. |
 | /addons | src/routes/_protected/addons/index.tsx | Add-ons | admin/superadmin | list/create/update/toggle/archive | CRUD/toggle/archive | /api/dashboard/addons, /:id, /:id/toggle | GET/POST/PUT/PATCH/DELETE | addon fields, prices, linked products/plans | toast, addons query invalidated | validation/API toast | Blocked by Auth | /addons/create and update routes redirect to list. |
 | /accounting | src/routes/_protected/accounting/index.tsx | Accounting | admin/superadmin | load daily report/filter | read/filter | /api/dashboard/accounting/daily-report | GET | date/status params | report cards/tables render | error state | Blocked by Auth | Needs finance data. |
@@ -475,7 +490,7 @@ Use these scripts after credentials and safe data are available. Every protected
 - Expected UI Checks: search/history loaders, no match/no history, deduction toast, subscription/search/history invalidation.
 
 ### Manual QA Script: /delivery
-- Preconditions: admin/superadmin/courier; assigned delivery, out-for-delivery delivery, one-time delivery order; endpoint ownership decision.
+- Preconditions: admin/superadmin/courier; assigned delivery, out-for-delivery delivery, one-time delivery order; confirmed `/api/courier/*` endpoint access for dashboard tokens.
 - Navigation: open `/delivery` as admin and courier, filter/reset, open every card/action.
 - Read/List Tests: merged deliveries/orders, customer/phone/address/window/status visible on mobile.
 - Create Tests: not supported.
@@ -545,6 +560,8 @@ Use these scripts after credentials and safe data are available. Every protected
 ## P1 Source Reviews
 
 ### QA-003 Source Review
+2026-07-02 update: backend confirmed `/delivery` may continue using `/api/courier/*` for admin, superadmin, and courier. Endpoint ownership is no longer a contract blocker, but runtime token/role compatibility remains unverified because no valid QA credentials/token were available. Direct unauthenticated `GET /api/courier/deliveries/today` returned 401 Missing dashboard token.
+
 - Files: `src/utils/fetchCourierDeliveries.ts`, `src/hooks/useCourierDeliveriesQuery.ts`, `src/routes/_protected/delivery/index.tsx`, `src/components/pages/delivery/*`.
 - Current endpoints: `GET /api/courier/deliveries/today`, `GET /api/courier/orders/today`, `PUT /api/courier/orders/:id/:endpointAction`, `PUT /api/courier/deliveries/:id/:endpointAction`.
 - Risk: `/delivery` is a protected dashboard route available to admin/superadmin/courier, but the data/mutation family is courier-app scoped. It is unknown whether dashboard Bearer tokens are accepted by courier endpoints or whether courier endpoint permissions expose the right admin/courier behavior.
@@ -561,6 +578,8 @@ Use these scripts after credentials and safe data are available. Every protected
 - Runtime retest needed: Yes. Verify no duplicate actions, no unavailable action appears, disabled actions cannot execute, backend endpoint/method are used, delivery data is invalidated/refetched, and failed action responses are shown.
 
 ### QA-005 Source Review
+2026-07-02 update: backend confirmed promo DELETE is soft archive, in-use promo should return `409 PROMO_IN_USE`, and `includeDeleted=true` should show archived promos. Contract ownership is no longer unclear; authenticated runtime behavior remains unverified because no valid admin credentials/token or safe promo fixtures were available.
+
 - Files: `src/utils/fetchPromoCodesData.ts`, `src/hooks/usePromoCodesQuery.ts`, `src/components/pages/promo-codes/PromoCodesTable.tsx`, `src/components/pages/promo-codes/promo-codes-columns.tsx`.
 - Current endpoint: Archive action calls `DELETE /api/dashboard/promo-codes/:id`; list supports `includeDeleted`.
 - UI wording: Arabic UI says archive/disable, e.g. "هل تريد أرشفة كود الخصم؟" and "سيتم أرشفة كود الخصم وتعطيله".
@@ -569,6 +588,8 @@ Use these scripts after credentials and safe data are available. Every protected
 - Runtime retest needed: Yes. Archive safe unused code, reload with/without includeDeleted, and verify record is disabled/archived not destroyed.
 
 ### QA-006 Source Review
+2026-07-02 update: backend confirmed zone DELETE soft-disables zones, `isActive=false` should show disabled zones, and toggle should restore disabled zones. Contract ownership is no longer unclear; authenticated runtime behavior remains unverified because no valid admin credentials/token or safe zone fixtures were available.
+
 - Files: `src/utils/fetchDeliveryZonesData.ts`, `src/hooks/useDeliveryZonesQuery.ts`, `src/components/pages/zones/ZonesTable.tsx`, `src/components/pages/zones/ZoneFormDialog.tsx`.
 - Current endpoint: Archive/disable action calls `DELETE /api/dashboard/zones/:id`; toggle calls `PATCH /api/dashboard/zones/:id/toggle`; list filter sends `isActive`.
 - UI wording: Arabic UI says disable, not permanent delete, e.g. "سيتم تعطيل المنطقة ولن تُحذف نهائياً".
@@ -679,16 +700,16 @@ Commands run on 2026-06-30:
 - Runtime checklist prepared: Added pending runtime checklist for all major routes.
 
 ### Still Blocked
-- Authenticated navigation: blocked until valid dashboard credentials/tokens exist.
-- Authenticated CRUD: blocked until safe seed data exists.
-- Runtime mutation payload verification: blocked until auth, records, and backend contracts are available.
+- Authenticated navigation: blocked until valid dashboard credentials/tokens are provided to this QA session.
+- Authenticated CRUD: blocked until valid role credentials and safe seed data are available.
+- Runtime mutation payload verification: blocked until auth and safe records are available.
 - Mobile authenticated UI: blocked until protected screens can load with data.
 - Dark/light authenticated UI: blocked until protected screens can load with data.
 
 ### Next Required From Backend
 - Credentials: admin/superadmin, courier, kitchen, cashier/restricted test accounts.
 - Seed data: safe customers, subscriptions, orders, deliveries, zones, promo codes, menu entities, premium upgrades, payments, accounting rows, and staff users.
-- Contract decisions: promo archive DELETE semantics and zone archive DELETE semantics. Delivery endpoint ownership and pickup-branches settings ownership are confirmed; runtime QA remains pending credentials/data.
+- Contract decisions: delivery endpoint ownership, pickup-branches settings ownership, promo soft archive, and zone soft disable are confirmed. Runtime QA remains pending credentials/data.
 
 ### Can Refactor Start?
 No. Refactor can only start after authenticated runtime QA is completed and P0/P1 issues are fixed or accepted with reason.
