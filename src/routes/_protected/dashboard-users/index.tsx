@@ -41,9 +41,21 @@ function RouteComponent() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
-          <StatCard label="إجمالي المستخدمين" value={data.meta.total} />
-          <StatCard label="الحسابات النشطة" value={activeUsers} />
-          <StatCard label="الصفحات الكلية" value={data.meta.totalPages} />
+          <StatCard
+            key="dashboard-users-total"
+            label="إجمالي المستخدمين"
+            value={data.meta.total}
+          />
+          <StatCard
+            key="dashboard-users-active"
+            label="الحسابات النشطة"
+            value={activeUsers}
+          />
+          <StatCard
+            key="dashboard-users-pages"
+            label="الصفحات الكلية"
+            value={data.meta.totalPages}
+          />
         </CardContent>
       </Card>
 
@@ -56,9 +68,9 @@ function RouteComponent() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {users.map((user) => (
+          {users.map((user, index) => (
             <div
-              key={user.id}
+              key={`${user.id}:${user.email || index}`}
               className="flex flex-col gap-2 rounded-xl border border-border/60 p-4 md:flex-row md:items-center md:justify-between"
             >
               <div className="space-y-1">

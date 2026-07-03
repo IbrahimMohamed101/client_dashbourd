@@ -3,13 +3,13 @@
 ## Executive Summary
 - Overall status: Not Ready
 - Tested branch: main
-- Tested commit: 5269c7c1e8e28c634daf791f9ae8a9725cd61a05 plus local QA fix pending commit
+- Tested commit: a463ea239c9e7c6bfd962ef48f914dd05f0a6f8f baseline plus the Issue #20 fix documented in this report
 - Backend/base URL: https://basicdiet145.onrender.com
 - Frontend API base decision: keep `VITE_BACKEND_URL=https://basicdiet145.onrender.com`. The Axios base URL is the host and every client API path already starts with `/api/...`; using `https://basicdiet145.onrender.com/api` would produce `/api/api/...`.
 - Browser/device coverage: authenticated Chrome headless route smoke for admin across desktop/tablet/mobile, corrected admin desktop/mobile route pass, dynamic detail route pass after one frontend P1 fix, role access checks for superadmin/courier/kitchen/cashier, dark/light theme checks, and RTL route rendering checks.
 - Runtime API coverage: authenticated dashboard/courier/settings/promo/zones probes and safe mutation checks against hosted QA seed data on 2026-07-03.
 - Date: 2026-07-03
-- Worktree note: pre-existing unrelated graphify output and `docs/BACKEND_CONTRACT_ALIGNMENT_PLAN.md` deletion were not touched. Relevant local changes are this QA report and `src/components/pages/one-time-orders/OneTimeOrderDetail.tsx`.
+- Worktree note: pre-existing unrelated graphify output and `docs/BACKEND_CONTRACT_ALIGNMENT_PLAN.md` deletion were not touched. Relevant Issue #20 changes are this QA report and `src/routes/_protected/dashboard-users/index.tsx`.
 
 ## Command Results
 | Command | Status | Notes |
@@ -26,6 +26,9 @@
 | npm run typecheck | Pass | 2026-07-03 final verification: tsc --noEmit completed with exit code 0. |
 | npm run lint | Pass | 2026-07-03 final verification: eslint . completed with exit code 0. |
 | npm run build | Pass | 2026-07-03 final verification: tsc -b && vite build completed; 3809 modules transformed. |
+| npm run typecheck | Pass | 2026-07-03 Issue #20 verification: tsc --noEmit completed with exit code 0. |
+| npm run lint | Pass | 2026-07-03 Issue #20 verification: eslint . completed with exit code 0. |
+| npm run build | Pass | 2026-07-03 Issue #20 verification: tsc -b && vite build completed; 3809 modules transformed. |
 
 ## Authenticated Runtime QA - 2026-07-03
 
@@ -43,7 +46,7 @@ Secure dashboard access was used through the agreed private local process. No us
 ### Runtime Route Coverage
 | Route/Group | Role | Viewports/Themes | Result | Evidence |
 |---|---|---|---|---|
-| `/dashboard`, `/users`, `/users/create`, `/subscriptions`, `/subscriptions/create`, `/settings`, `/restaurant-hours`, `/promo-codes`, `/zones`, `/premium-meals`, `/pickup-branches`, `/payments`, `/packages`, `/operations`, `/one-time-orders`, `/notifications`, `/menu`, `/manual-deduction`, `/delivery`, `/dashboard-users`, `/addons`, `/accounting` | admin | Desktop dark, tablet light, mobile light first pass; corrected desktop/mobile route classifier rerun | Passed with warning | Authenticated routes rendered without redirecting to login. `/dashboard-users` logs a React unique-key warning but still renders. |
+| `/dashboard`, `/users`, `/users/create`, `/subscriptions`, `/subscriptions/create`, `/settings`, `/restaurant-hours`, `/promo-codes`, `/zones`, `/premium-meals`, `/pickup-branches`, `/payments`, `/packages`, `/operations`, `/one-time-orders`, `/notifications`, `/menu`, `/manual-deduction`, `/delivery`, `/dashboard-users`, `/addons`, `/accounting` | admin | Desktop dark, tablet light, mobile light first pass; corrected desktop/mobile route classifier rerun | Passed with warning | Authenticated routes rendered without redirecting to login. `/dashboard-users` logged a React unique-key warning before the Issue #20 frontend fix. |
 | `/users/:userId` | admin | Desktop/mobile | Passed | Loaded seeded customer detail with no console or network errors. |
 | `/subscriptions/:subscriptionId` | admin | Desktop/mobile | Passed | Loaded seeded subscription detail with no console or network errors. |
 | `/one-time-orders/:orderId` | admin | Desktop/mobile | Failed, then fixed and passed | Initial render crashed on localized `{ ar, en }` item/branch names. Fixed in `OneTimeOrderDetail.tsx`; retest passed with no console/page errors. |
@@ -73,7 +76,7 @@ Secure dashboard access was used through the agreed private local process. No us
 | RUNTIME-001 | P1 Critical | Backend / Integration | `/delivery` | GET `/api/courier/deliveries/today` | 5 delivery rows returned with empty canonical `allowedActions`/`allowedActionIds` while legacy `canCancel:true` is still present. | Log in as admin/superadmin/courier, call GET `/api/courier/deliveries/today`, inspect first 5 rows. | Action-capable rows expose structured canonical `allowedActions` with id, label, method, endpoint, disabled/reason metadata. | Canonical action list is empty, so frontend correctly renders no action buttons. | Backend should populate canonical `allowedActions` for actionable delivery states or clear legacy `can*` flags when no action is allowed. | Failed |
 | RUNTIME-002 | P1 Critical | Integration / Seed Data | `/pickup-branches` | PATCH `/api/dashboard/settings` | PATCH with only `pickup_locations` returns 400 `INVALID`: existing `branch_postman_qa_main` must have non-empty `address.ar` and `address.en`. | Log in as admin, GET settings, PATCH same pickup list plus a valid QA branch using only `pickup_locations`. | Current settings data can be round-tripped by the frontend contract. | Existing legacy branch address shape blocks every save. | Migrate/normalize seeded `pickup_locations` to `{ address: { ar, en } }`, or backend should tolerate legacy branch address shape on read/patch. | Failed |
 | RUNTIME-003 | P1 Critical | Frontend | `/one-time-orders/:orderId` | UI render for GET `/api/dashboard/orders/:id` | Initial browser render threw `Objects are not valid as a React child (found: object with keys {ar, en})`. | Log in as admin and open seeded one-time order detail. | Localized item/branch names render as Arabic or English text. | Detail page rendered localized objects directly. | Fixed in `OneTimeOrderDetail.tsx` with localized display normalization and stable item keys. | Fixed - Verified |
-| RUNTIME-004 | P3 Minor | Frontend | `/dashboard-users` | UI render | React console warning: each child in list should have a unique key in `CardContent`. | Log in as admin and open `/dashboard-users` desktop/mobile. | No React console warnings. | Screen renders but logs key warning. | Add stable keys to the dashboard-users card/list render. | Open |
+| RUNTIME-004 | P3 Minor | Frontend | `/dashboard-users` | UI render | React console warning: each child in list should have a unique key in `CardContent`. | Log in as admin and open `/dashboard-users` desktop/mobile. | No React console warnings. | Screen rendered but logged key warning. | Added stable keys to dashboard-users stats and staff list card renders. | Fixed - pending runtime retest |
 
 ## Authenticated QA Rerun Attempt - 2026-07-02
 
@@ -160,11 +163,11 @@ Backend contract blockers for delivery allowedActions and pickup branches settin
 | QA-009 | P3 Minor | QA Process | repo | baseline | Required clean checkout condition was not met. | git status before QA showed modified graphify-out files and src/components/layout/nav-user.tsx. | Run git status --short --branch. | Clean worktree or explicit baseline exception. | Dirty worktree before QA. | Preserve user changes; rerun final QA after clean checkout if signoff requires it. | No | Open |
 | QA-010 | P1 Critical | Integration / Seed Data | /pickup-branches | PATCH /api/dashboard/settings | Settings-backed pickup branch save is blocked by existing legacy seed shape. | PATCH with only `pickup_locations` returned 400 `INVALID`: `branch_postman_qa_main` must have non-empty `address.ar` and `address.en`. | GET settings, append/edit valid pickup branch, PATCH `{ pickup_locations: nextBranches }`. | Existing settings can be round-tripped and only pickup_locations is patched. | Backend rejects current stored branch shape before save. | Migrate seed/settings data to the confirmed `{ address: { ar, en } }` contract or tolerate legacy shape on patch. | Yes | Failed |
 | QA-011 | P1 Critical | Frontend | /one-time-orders/:orderId | render detail | One-time order detail crashed on localized `{ ar, en }` item and branch names. | Initial browser detail route threw React child error; after `OneTimeOrderDetail.tsx` fix desktop/mobile retest passed with no console/page errors. | Open seeded one-time order detail. | Detail page renders localized strings. | Fixed by normalizing localized text and adding stable item keys. | Keep fix; covered by typecheck/lint/build. | Yes | Fixed and verified |
-| QA-012 | P3 Minor | Frontend | /dashboard-users | render list/cards | React unique-key warning appears on desktop/mobile. | Console warning: each child in a list should have a unique key in `CardContent`. | Open `/dashboard-users` as admin. | No React console warnings. | Screen renders but logs key warning. | Add stable keys in dashboard-users list/card render. | No | Open |
+| QA-012 | P3 Minor | Frontend | /dashboard-users | render list/cards | React unique-key warning appears on desktop/mobile. | Console warning: each child in a list should have a unique key in `CardContent`. | Open `/dashboard-users` as admin. | No React console warnings. | Screen rendered but logged key warning. | Added stable keys in dashboard-users stats and staff list card render. | No | Fixed - pending runtime retest |
 
 ## Frontend Issues To Fix
 - QA-011: Fixed locally. `/one-time-orders/:orderId` now normalizes localized `{ ar, en }` item and pickup branch names before rendering.
-- QA-012: Add stable keys to `/dashboard-users` card/list rendering to remove React key warnings.
+- QA-012: Fixed locally. `/dashboard-users` stats and staff list card rendering now use stable keys; typecheck/lint/build passed and runtime console retest remains pending.
 - QA-008: Remove or implement stale direct create/update routes.
 
 ## Backend Issues To Fix
@@ -251,12 +254,13 @@ Backend contract blockers for delivery allowedActions and pickup branches settin
 | Issue ID | File(s) Changed | What Changed | Why Safe |
 |---|---|---|---|
 | QA-011 / RUNTIME-003 | `src/components/pages/one-time-orders/OneTimeOrderDetail.tsx` | Localized `{ ar, en }` item and pickup branch names are normalized before rendering; item rows use a stable fallback key. | Narrow render-only fix for a confirmed React crash; no endpoint, payload, or workflow semantics changed. |
+| QA-012 / RUNTIME-004 | `src/routes/_protected/dashboard-users/index.tsx` | Dashboard user stat cards and staff list rows use stable keys. | Narrow render-only fix for a React warning; no endpoint, payload, or workflow semantics changed; typecheck/lint/build passed. |
 
 ## Risks Remaining
 - This is not a final release signoff because delivery action execution could not be verified while backend canonical `allowedActions` were empty.
 - Pickup branch save is blocked by invalid existing settings seed shape.
 - In-use promo archive `409 PROMO_IN_USE` still needs a valid used promo seed row.
-- `/dashboard-users` still logs a React key warning.
+- `/dashboard-users` React key warning has a frontend fix pending authenticated runtime console retest.
 - Refactor should not start until QA-004 and QA-010 are fixed or explicitly accepted.
 
 ## Release Recommendation
