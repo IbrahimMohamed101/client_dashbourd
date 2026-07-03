@@ -45,6 +45,16 @@ interface OneTimeOrderDetailProps {
   orderId: string;
 }
 
+function displayLocalizedText(value: unknown, fallback = "—") {
+  if (typeof value === "string") return value || fallback;
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const localized = value as Record<string, unknown>;
+    return String(localized.ar || localized.en || fallback);
+  }
+  if (value === null || value === undefined) return fallback;
+  return String(value);
+}
+
 export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
   orderId,
 }) => {
@@ -196,7 +206,12 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">الفرع</span>
-                <span className="font-medium">{order.pickup?.branchName || order.pickup?.branchId || "—"}</span>
+                <span className="font-medium">
+                  {displayLocalizedText(
+                    order.pickup?.branchName,
+                    order.pickup?.branchId || "—"
+                  )}
+                </span>
               </div>
               {order.pickup?.window && (
                 <div className="flex justify-between">
@@ -296,13 +311,15 @@ export const OneTimeOrderDetail: React.FC<OneTimeOrderDetailProps> = ({
             <CardContent>
               {order.items?.length > 0 ? (
                 <div className="space-y-3">
-                  {order.items.map((item) => (
+                  {order.items.map((item, index) => (
                     <div
-                      key={item.id}
+                      key={item.id || index}
                       className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3"
                     >
                       <div className="flex flex-col gap-0.5">
-                        <span className="font-medium">{item.name}</span>
+                        <span className="font-medium">
+                          {displayLocalizedText(item.name, "وجبة")}
+                        </span>
                         {item.notes && (
                           <span className="text-xs text-muted-foreground">ملاحظة: {item.notes}</span>
                         )}

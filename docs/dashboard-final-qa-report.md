@@ -3,11 +3,13 @@
 ## Executive Summary
 - Overall status: Not Ready
 - Tested branch: main
-- Tested commit: 5269c7c1e8e28c634daf791f9ae8a9725cd61a05
+- Tested commit: 5269c7c1e8e28c634daf791f9ae8a9725cd61a05 plus local QA fix pending commit
 - Backend/base URL: https://basicdiet145.onrender.com
-- Browser/device coverage: Chrome headless desktop unauthenticated route smoke; static route/API review; direct backend auth-gate probes on 2026-07-02. Mobile/tablet, authenticated mutation workflows, RTL visual verification, and dark/light authenticated screens remain blocked because no valid dashboard QA credentials/token were available in this session.
-- Date: 2026-07-02
-- Worktree note: current uncommitted files are graphify-out hook output only. No frontend code changes were made during the 2026-07-02 authenticated QA rerun attempt.
+- Frontend API base decision: keep `VITE_BACKEND_URL=https://basicdiet145.onrender.com`. The Axios base URL is the host and every client API path already starts with `/api/...`; using `https://basicdiet145.onrender.com/api` would produce `/api/api/...`.
+- Browser/device coverage: authenticated Chrome headless route smoke for admin across desktop/tablet/mobile, corrected admin desktop/mobile route pass, dynamic detail route pass after one frontend P1 fix, role access checks for superadmin/courier/kitchen/cashier, dark/light theme checks, and RTL route rendering checks.
+- Runtime API coverage: authenticated dashboard/courier/settings/promo/zones probes and safe mutation checks against hosted QA seed data on 2026-07-03.
+- Date: 2026-07-03
+- Worktree note: pre-existing unrelated graphify output and `docs/BACKEND_CONTRACT_ALIGNMENT_PLAN.md` deletion were not touched. Relevant local changes are this QA report and `src/components/pages/one-time-orders/OneTimeOrderDetail.tsx`.
 
 ## Command Results
 | Command | Status | Notes |
@@ -20,6 +22,58 @@
 | npm run typecheck | Pass | 2026-07-02 rerun: tsc --noEmit completed with exit code 0. |
 | npm run lint | Pass | 2026-07-02 rerun: eslint . completed with exit code 0. |
 | npm run build | Pass | 2026-07-02 rerun: tsc -b && vite build completed; 3809 modules transformed. |
+| npm run dev | Pass | 2026-07-03 authenticated QA served at http://127.0.0.1:5173/ against `VITE_BACKEND_URL=https://basicdiet145.onrender.com`. |
+| npm run typecheck | Pass | 2026-07-03 final verification: tsc --noEmit completed with exit code 0. |
+| npm run lint | Pass | 2026-07-03 final verification: eslint . completed with exit code 0. |
+| npm run build | Pass | 2026-07-03 final verification: tsc -b && vite build completed; 3809 modules transformed. |
+
+## Authenticated Runtime QA - 2026-07-03
+
+Secure dashboard access was used through the agreed private local process. No usernames, passwords, tokens, or screenshots are included in this report.
+
+### Role Sessions
+| Role Used | Setup | Auth Result | Notes |
+|---|---|---|---|
+| admin | Focused QA seed dashboard admin | Passed | Used for full route/API/mutation coverage. |
+| superadmin | QA-only dashboard staff user reset through admin | Passed | Used for role/access checks. |
+| courier | QA-only dashboard staff user reset through admin | Passed | Used for delivery access checks. |
+| kitchen | QA-only dashboard staff user reset through admin | Passed | Used for restricted delivery and operations checks. |
+| cashier | QA-only dashboard staff user reset through admin | Passed | Used for restricted delivery/menu and payments checks. |
+
+### Runtime Route Coverage
+| Route/Group | Role | Viewports/Themes | Result | Evidence |
+|---|---|---|---|---|
+| `/dashboard`, `/users`, `/users/create`, `/subscriptions`, `/subscriptions/create`, `/settings`, `/restaurant-hours`, `/promo-codes`, `/zones`, `/premium-meals`, `/pickup-branches`, `/payments`, `/packages`, `/operations`, `/one-time-orders`, `/notifications`, `/menu`, `/manual-deduction`, `/delivery`, `/dashboard-users`, `/addons`, `/accounting` | admin | Desktop dark, tablet light, mobile light first pass; corrected desktop/mobile route classifier rerun | Passed with warning | Authenticated routes rendered without redirecting to login. `/dashboard-users` logs a React unique-key warning but still renders. |
+| `/users/:userId` | admin | Desktop/mobile | Passed | Loaded seeded customer detail with no console or network errors. |
+| `/subscriptions/:subscriptionId` | admin | Desktop/mobile | Passed | Loaded seeded subscription detail with no console or network errors. |
+| `/one-time-orders/:orderId` | admin | Desktop/mobile | Failed, then fixed and passed | Initial render crashed on localized `{ ar, en }` item/branch names. Fixed in `OneTimeOrderDetail.tsx`; retest passed with no console/page errors. |
+| `/delivery`, `/operations`, disallowed `/dashboard` | courier | Desktop light | Passed | `/delivery` and `/operations` render; disallowed `/dashboard` redirects to `/operations`. |
+| `/operations`, `/one-time-orders`, disallowed `/delivery` | kitchen | Desktop light | Passed | Allowed screens render; disallowed `/delivery` redirects to `/operations`. |
+| `/dashboard`, `/payments`, disallowed `/delivery`, disallowed `/menu` | cashier | Desktop light | Passed | Allowed screens render; disallowed screens redirect to `/dashboard`. |
+| `/dashboard`, `/delivery`, `/accounting` | superadmin | Desktop light | Passed | All checked superadmin screens render. |
+
+### Runtime API/Action Evidence
+| Area | Role | Action/API | Method + Endpoint | Payload Summary | Response Summary | UI Result | Final Status |
+|---|---|---|---|---|---|---|---|
+| Delivery role access | admin/superadmin/courier | Load courier deliveries/orders | GET `/api/courier/deliveries/today`, GET `/api/courier/orders/today` | none | 200; deliveries returned 5 rows, orders returned 0 rows | `/delivery` renders for admin/superadmin/courier | Passed |
+| Delivery restricted access | kitchen/cashier | Attempt courier endpoints | GET `/api/courier/deliveries/today`, GET `/api/courier/orders/today` | none | 403 `FORBIDDEN` / insufficient dashboard permissions | Disallowed `/delivery` route redirects to role default | Passed |
+| Delivery allowedActions | admin/superadmin/courier | Inspect backend action metadata | GET `/api/courier/deliveries/today` | none | 200; 5 `preparing` rows contain `allowedActions: []` and `allowedActionIds: []` while legacy `canCancel: true` remains true | Frontend renders from canonical `allowedActions`; no duplicate action buttons observed | Failed / Backend |
+| Pickup branches read | admin | Load settings | GET `/api/dashboard/settings` | none | 200 with `pickup_locations` | `/pickup-branches` loads from settings | Passed |
+| Pickup branches save | admin | Add/edit active/inactive branch | PATCH `/api/dashboard/settings` | Only `pickup_locations` key; no other settings keys | 400 `INVALID`: existing `branch_postman_qa_main` lacks non-empty `address.ar` and `address.en` | Save is blocked for current seeded settings data | Failed / Integration |
+| Promo create percentage | admin | Create promo | POST `/api/dashboard/promo-codes` | code/name, `discountType: percentage`, percent value, usage limits | 201 | Query invalidation checked by subsequent list/includeDeleted probes | Passed |
+| Promo create fixed SAR | admin | Create/edit/toggle/archive fixed promo | POST/PUT/PATCH/DELETE `/api/dashboard/promo-codes...` | Fixed SAR converted to halala (`12.50` => `1250`; edit to `1500`) | 201 create, 200 edit, 200 toggle, 200 soft archive | `includeDeleted=true` showed archived promo | Passed |
+| Promo validate | admin | Validate fixed promo after toggle | POST `/api/dashboard/promo-codes/validate` | code, `subtotalHalala: 10000` | 400 after the promo was toggled inactive | Error behavior observed; active-valid path still needs a dedicated retest | Needs Retest |
+| Promo in-use archive | admin | Archive seeded in-use promo | DELETE `/api/dashboard/promo-codes/:id` | none | Blocked: `PMQAUSED10` was not present in `includeDeleted=true` list | Cannot verify `409 PROMO_IN_USE` with current seed | Blocked by Missing Data |
+| Zones CRUD/archive | admin | Create/edit/delete/filter/toggle zone | POST/PUT/DELETE/GET/PATCH `/api/dashboard/zones...` | Bilingual name, `deliveryFeeHalala: 1234`, edit to `2345` | 201 create, 200 edit, 200 soft disable, inactive filter showed disabled zone, 200 toggle restored | `/zones` route loads; query refetch validated by follow-up GETs | Passed |
+| One-time order detail | admin | Render seeded detail | GET `/api/dashboard/orders/:id` through UI | none | 200 data included localized item/branch names | Initial crash fixed; final route retest passed | Passed after frontend fix |
+
+### Runtime Issues Found
+| ID | Severity | Owner | Route | Action/API | Evidence | Reproduce Steps | Expected Behavior | Actual Behavior | Suggested Fix | Status |
+|---|---|---|---|---|---|---|---|---|---|---|
+| RUNTIME-001 | P1 Critical | Backend / Integration | `/delivery` | GET `/api/courier/deliveries/today` | 5 delivery rows returned with empty canonical `allowedActions`/`allowedActionIds` while legacy `canCancel:true` is still present. | Log in as admin/superadmin/courier, call GET `/api/courier/deliveries/today`, inspect first 5 rows. | Action-capable rows expose structured canonical `allowedActions` with id, label, method, endpoint, disabled/reason metadata. | Canonical action list is empty, so frontend correctly renders no action buttons. | Backend should populate canonical `allowedActions` for actionable delivery states or clear legacy `can*` flags when no action is allowed. | Failed |
+| RUNTIME-002 | P1 Critical | Integration / Seed Data | `/pickup-branches` | PATCH `/api/dashboard/settings` | PATCH with only `pickup_locations` returns 400 `INVALID`: existing `branch_postman_qa_main` must have non-empty `address.ar` and `address.en`. | Log in as admin, GET settings, PATCH same pickup list plus a valid QA branch using only `pickup_locations`. | Current settings data can be round-tripped by the frontend contract. | Existing legacy branch address shape blocks every save. | Migrate/normalize seeded `pickup_locations` to `{ address: { ar, en } }`, or backend should tolerate legacy branch address shape on read/patch. | Failed |
+| RUNTIME-003 | P1 Critical | Frontend | `/one-time-orders/:orderId` | UI render for GET `/api/dashboard/orders/:id` | Initial browser render threw `Objects are not valid as a React child (found: object with keys {ar, en})`. | Log in as admin and open seeded one-time order detail. | Localized item/branch names render as Arabic or English text. | Detail page rendered localized objects directly. | Fixed in `OneTimeOrderDetail.tsx` with localized display normalization and stable item keys. | Fixed - Verified |
+| RUNTIME-004 | P3 Minor | Frontend | `/dashboard-users` | UI render | React console warning: each child in list should have a unique key in `CardContent`. | Log in as admin and open `/dashboard-users` desktop/mobile. | No React console warnings. | Screen renders but logs key warning. | Add stable keys to the dashboard-users card/list render. | Open |
 
 ## Authenticated QA Rerun Attempt - 2026-07-02
 
@@ -95,45 +149,48 @@ Backend contract blockers for delivery allowedActions and pickup branches settin
 ## Final Issue Register
 | ID | Severity | Owner | Route | Action/API | Issue | Evidence | Reproduce Steps | Expected | Actual | Suggested Fix | Fix Before Refactor? | Status |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| QA-001 | P1 Critical | Environment / Test Data | all protected routes | all authenticated workflows | Deep dashboard QA is blocked by missing valid dashboard credentials/token and seed data. | 2026-07-02 credential search found no usable QA credentials/token; `GET /api/dashboard/settings` and `GET /api/courier/deliveries/today` return 401 Missing dashboard token; placeholder login returns 401 Invalid email or password. | Attempt to run authenticated QA without a valid dashboardToken or valid role credentials. | Authenticated QA account can load and mutate safe test records. | Login/auth gate only; mutation workflows cannot be verified. | Provide admin/superadmin, courier, kitchen/operator, and cashier/restricted credentials plus safe seed data. | Yes | Open |
+| QA-001 | P1 Critical | Environment / Test Data | all protected routes | all authenticated workflows | Valid runtime access is now available and authenticated QA was executed on 2026-07-03. | Admin, superadmin, courier, kitchen, and cashier sessions authenticated; protected route smoke and focused mutations ran against hosted QA seed data. | Log in with secure QA access and load protected routes. | Authenticated QA account can load and mutate safe test records. | Authenticated route/API testing is no longer blocked, but some focused seed rows are still missing or invalid. | Keep secure role access available and repair missing/invalid focused seed rows called out below. | Yes | Closed for auth access; seed gaps remain |
 | QA-002 | P2 Major | Security / Frontend dependency | repo | npm install/audit | Dependency audit reports 8 vulnerabilities, including high severity issues in form-data, hono, js-cookie, and vite. | npm audit output, 2026-06-28. | Run npm audit --audit-level=low. | No known high severity dependency advisories before refactor/release. | 4 high, 2 moderate, 2 low vulnerabilities. | Run controlled dependency update and regression test; do not blind npm audit fix on release branch. | Yes, if release-bound | Open |
-| QA-003 | P1 Critical | Integration / Runtime QA | /delivery | list/actions | Delivery endpoint ownership is now confirmed as `/api/courier/*`, but runtime role/token compatibility remains unverified. | Backend decision says `/delivery` may continue using `/api/courier/*`; direct unauthenticated `GET /api/courier/deliveries/today` returns 401 Missing dashboard token. | Log in as admin/superadmin/courier and load `/delivery`; inspect list and mutation requests. | Dashboard admin/superadmin/courier tokens can read and mutate courier delivery/order actions through `/api/courier/*`. | Runtime blocked by missing credentials/token. | Run authenticated `/delivery` QA with real role fixtures; no endpoint migration needed unless runtime rejects valid dashboard tokens. | Yes | Contract resolved pending runtime QA |
-| QA-004 | P1 Critical | Frontend / Integration | /delivery, /operations courier board | courier actions | Courier delivery actions must render from backend allowedActions objects. | src/utils/fetchCourierDeliveries.ts now preserves backend allowedActions/actions and only falls back to can* flags for legacy responses; delivery action clicks pass backend endpoint/method/disabled metadata through the mutation. | Load /delivery with test data containing backend allowedActions. | Actions must come from backend allowedActions and be deduped. | Frontend now prefers canonical allowedActions and keeps boolean can* fallback only for compatibility. | Runtime QA still must verify allowedActions labels, disabled states, endpoints/methods, no duplicates, and action invalidation with real admin/superadmin/courier data. | Yes | Frontend fixed pending runtime QA |
-| QA-005 | P1 Critical | Integration / Runtime QA | /promo-codes | archive | Backend contract is now resolved as soft archive via DELETE, but runtime behavior is unverified. | Source still calls `DELETE /api/dashboard/promo-codes/:id`; user/backend confirmation says DELETE is soft archive; authenticated archive test could not run without credentials/token. | Log in as admin, archive an unused promo, request list with and without `includeDeleted=true`, then attempt archive on an in-use promo. | Unused promo is archived/disabled, still visible with `includeDeleted=true`; in-use promo returns `409 PROMO_IN_USE`. | Runtime blocked by missing credentials/token and safe promo fixtures. | Run authenticated promo archive QA; fix frontend only if payload/cache/UI diverges from confirmed backend behavior. | Yes | Contract resolved pending runtime QA |
-| QA-006 | P1 Critical | Integration / Runtime QA | /zones | archive/disable | Backend contract is now resolved as soft disable via DELETE, but runtime behavior is unverified. | Source calls `DELETE /api/dashboard/zones/:id`, `PATCH /:id/toggle`, and list filter `isActive`; user/backend confirmation says DELETE soft-disables zones. | Log in as admin, disable safe active zone, filter `isActive=false`, then toggle restore. | Disabled zone appears in inactive filter and can be restored with toggle; historical references survive. | Runtime blocked by missing credentials/token and safe zone fixtures. | Run authenticated zone soft-disable QA; fix frontend only if payload/cache/UI diverges from confirmed backend behavior. | Yes | Contract resolved pending runtime QA |
-| QA-007 | P2 Major | Backend / Contract | /api/dashboard/auth/me | unauth session | Unauthenticated /auth/me returns HTTP 200 with status:false/user:null, while protected resources return 401. | Direct request: GET /api/dashboard/auth/me returned 200 {"status":false,"data":{"user":null},"user":null}; GET /api/dashboard/zones returned 401 Missing dashboard token. | Call both endpoints without token. | Auth contract should be consistent and documented. | Mixed 200 false envelope and 401 error envelope. | Backend/API docs should define auth/me behavior; frontend is currently tolerant. | Before refactor if auth contracts are being cleaned | Open |
+| QA-003 | P1 Critical | Integration / Runtime QA | /delivery | list/actions | Delivery endpoint ownership and role compatibility are runtime verified for `/api/courier/*`. | Admin/superadmin/courier received 200 from `/api/courier/deliveries/today`; kitchen/cashier received 403; UI route guard redirected disallowed roles. | Log in as each role and load/call `/delivery` courier APIs. | Dashboard admin/superadmin/courier tokens can read courier delivery/order actions; kitchen/cashier denied. | Runtime role compatibility behaves as expected. | No endpoint migration needed. Continue to QA-004 for action metadata. | Yes | Passed for role access |
+| QA-004 | P1 Critical | Backend / Integration | /delivery, /operations courier board | courier actions | Backend `allowedActions` is canonical, but runtime delivery rows returned empty canonical action lists while legacy `canCancel:true` remained. | GET `/api/courier/deliveries/today` as admin/superadmin/courier returned 5 `preparing` rows with `allowedActions: []` and `allowedActionIds: []`; no duplicate frontend actions rendered because no canonical actions existed. | Load `/delivery` with seeded delivery data and inspect API response/actions. | Action-capable rows expose structured `allowedActions` with id, label, method, endpoint, disabled/reason metadata. | Frontend uses canonical `allowedActions`; backend/runtime data did not provide actionable canonical metadata. | Backend should populate `allowedActions` or clear conflicting legacy `can*` flags. Retest action buttons/mutations after backend/data fix. | Yes | Failed - backend/data action metadata |
+| QA-005 | P1 Critical | Integration / Runtime QA | /promo-codes | archive | Unused promo soft archive is runtime verified; in-use `409 PROMO_IN_USE` remains blocked by missing seed row. | Created fixed promo, edited halala value, toggled, deleted, then confirmed archived promo appears with `includeDeleted=true`; seeded `PMQAUSED10` was absent from `includeDeleted=true`. | Log in as admin, archive unused promo, list with `includeDeleted=true`, then attempt archive on in-use promo. | Unused promo archives; in-use promo returns `409 PROMO_IN_USE`. | Unused archive path passed; in-use conflict path could not run because seed row was missing. | Add/restore a used promo seed row and retest `409 PROMO_IN_USE`; retest active validate before toggling inactive. | Yes | Partial pass; missing in-use seed |
+| QA-006 | P1 Critical | Integration / Runtime QA | /zones | archive/disable | Zone soft-disable contract is runtime verified. | Created zone with `deliveryFeeHalala:1234`, edited to `2345`, DELETE returned active false, `isActive=false` filter showed disabled zone, toggle restored active true. | Log in as admin, create/edit/delete/filter/toggle a safe QA zone. | Disabled zone appears in inactive filter and can be restored with toggle; SAR/halala conversion is preserved. | Behavior matched expected backend contract. | No frontend change needed. | Yes | Passed |
+| QA-007 | P2 Major | Backend / Contract | /api/dashboard/auth/me | unauth session | Backend confirmed unauthenticated `/auth/me` 200 false envelope is intentional. | 2026-07-02 unauthenticated probe returned 200 logged-out envelope; backend contract response says this means logged out. | Call `/api/dashboard/auth/me` without token. | Frontend treats 200 status:false user:null as logged-out bootstrap. | Behavior is documented by backend decision. | Keep frontend tolerant; no release blocker. | No | Closed |
 | QA-008 | P3 Minor | Frontend UX / Route | /packages/create, /addons/create, /addons/$addonId/update | direct navigation | Direct create/update routes redirect to list routes instead of rendering create/update screens. | src/routes/_protected/packages/create.tsx:3-6; src/routes/_protected/addons/create.tsx:3-5; addons update route also redirects by source. | Navigate directly to /packages/create or /addons/create while authenticated. | Direct route should either not exist or should render/create screen consistently. | Route exists but immediately redirects. | Remove stale routes or document list-dialog workflow; update nav links/tests. | No, unless linked externally | Open |
 | QA-009 | P3 Minor | QA Process | repo | baseline | Required clean checkout condition was not met. | git status before QA showed modified graphify-out files and src/components/layout/nav-user.tsx. | Run git status --short --branch. | Clean worktree or explicit baseline exception. | Dirty worktree before QA. | Preserve user changes; rerun final QA after clean checkout if signoff requires it. | No | Open |
+| QA-010 | P1 Critical | Integration / Seed Data | /pickup-branches | PATCH /api/dashboard/settings | Settings-backed pickup branch save is blocked by existing legacy seed shape. | PATCH with only `pickup_locations` returned 400 `INVALID`: `branch_postman_qa_main` must have non-empty `address.ar` and `address.en`. | GET settings, append/edit valid pickup branch, PATCH `{ pickup_locations: nextBranches }`. | Existing settings can be round-tripped and only pickup_locations is patched. | Backend rejects current stored branch shape before save. | Migrate seed/settings data to the confirmed `{ address: { ar, en } }` contract or tolerate legacy shape on patch. | Yes | Failed |
+| QA-011 | P1 Critical | Frontend | /one-time-orders/:orderId | render detail | One-time order detail crashed on localized `{ ar, en }` item and branch names. | Initial browser detail route threw React child error; after `OneTimeOrderDetail.tsx` fix desktop/mobile retest passed with no console/page errors. | Open seeded one-time order detail. | Detail page renders localized strings. | Fixed by normalizing localized text and adding stable item keys. | Keep fix; covered by typecheck/lint/build. | Yes | Fixed and verified |
+| QA-012 | P3 Minor | Frontend | /dashboard-users | render list/cards | React unique-key warning appears on desktop/mobile. | Console warning: each child in a list should have a unique key in `CardContent`. | Open `/dashboard-users` as admin. | No React console warnings. | Screen renders but logs key warning. | Add stable keys in dashboard-users list/card render. | No | Open |
 
 ## Frontend Issues To Fix
-- QA-004: Frontend fixed pending runtime QA. Delivery now renders backend allowedActions when present and uses can* booleans only as a legacy fallback.
+- QA-011: Fixed locally. `/one-time-orders/:orderId` now normalizes localized `{ ar, en }` item and pickup branch names before rendering.
+- QA-012: Add stable keys to `/dashboard-users` card/list rendering to remove React key warnings.
 - QA-008: Remove or implement stale direct create/update routes.
 
 ## Backend Issues To Fix
-- QA-007: Normalize/document unauthenticated /api/dashboard/auth/me response semantics.
+- QA-004 / RUNTIME-001: Populate canonical delivery `allowedActions` for actionable delivery rows or clear conflicting legacy `can*` flags.
+- QA-010 / RUNTIME-002: Normalize seeded/current `pickup_locations` data to the confirmed `{ address: { ar, en } }` contract or allow legacy address shape during patch normalization.
 - QA-002 may require dependency updates if these advisories are in frontend transitive runtime/build dependencies only; backend should separately audit its own repo.
 
 ## Integration / Contract Issues To Resolve
-- QA-003: Contract resolved; verify `/api/courier/*` with admin/superadmin/courier tokens at runtime.
-- QA-005: Contract resolved; verify promo DELETE soft archive, `409 PROMO_IN_USE`, and `includeDeleted=true` at runtime.
-- QA-006: Contract resolved; verify zone DELETE soft disable, inactive filter, and toggle restore at runtime.
+- QA-004: Retest `/delivery` action rendering and mutations after backend returns non-empty canonical `allowedActions` for actionable rows.
+- QA-005: Add/restore a used promo seed row and retest `409 PROMO_IN_USE`; also retest active promo validation before toggling inactive.
 
 ## Environment / Test Data Issues
-- QA-001: No valid dashboard token/test account, no seeded safe records, and no role matrix were available in this session. This blocks browser-level CRUD, forms, mutation payload verification, mobile authenticated screens, and dark/light authenticated screen review.
+- QA-001: Auth access is resolved for admin, superadmin, courier, kitchen, and cashier. Remaining data issues are specific: missing in-use promo seed and invalid legacy pickup branch address shape.
 
 ## Unknown Issues Requiring More Evidence
-- Authenticated console/network errors on protected screens.
-- Backend responses for create/update/delete/archive/toggle workflows.
+- Authenticated console/network errors beyond the routed screens and focus workflows covered on 2026-07-03.
+- Backend responses for non-focus create/update/delete/archive/toggle workflows.
 - Mobile/tablet clipping in dialogs and tables.
-- Dark/light mode regressions in authenticated layout.
-- RTL visual correctness beyond source-level dir="rtl" checks.
+- Dark/light mode regressions beyond headless route smoke.
+- RTL visual correctness beyond headless route smoke and source-level dir="rtl" checks.
 
 ## P0/P1 Fix List Before Refactor
-- QA-001: Provide test credentials and data, then rerun authenticated QA.
-- QA-003: Run runtime test for confirmed `/api/courier/*` delivery endpoint ownership with valid admin/superadmin/courier tokens.
-- QA-004: Run runtime test for backend-owned allowedActions after frontend fix `fab2f169a3780336cdf07651e48679dbf0aa0df9`.
-- QA-005: Run runtime test for confirmed promo soft archive semantics.
-- QA-006: Run runtime test for confirmed delivery-zone soft disable semantics.
+- QA-004: Backend/data must provide canonical delivery `allowedActions`; then retest action buttons, disabled states, method/endpoint execution, toasts, and invalidation.
+- QA-010: Backend/data must repair current `pickup_locations` so frontend can PATCH the settings-owned array.
+- QA-005: Restore in-use promo seed to verify `409 PROMO_IN_USE`.
+- QA-011: Keep the one-time order detail frontend fix and verify with CI commands.
 
 ## P2/P3 Fix List Before Refactor
 - QA-002: Address dependency vulnerabilities or explicitly accept for non-release QA.
@@ -193,15 +250,17 @@ Backend contract blockers for delivery allowedActions and pickup branches settin
 ## Safe Fixes Applied During QA
 | Issue ID | File(s) Changed | What Changed | Why Safe |
 |---|---|---|---|
-| None | None | No code fixes applied. | App builds/runs; high-risk findings need contract/test data confirmation. |
+| QA-011 / RUNTIME-003 | `src/components/pages/one-time-orders/OneTimeOrderDetail.tsx` | Localized `{ ar, en }` item and pickup branch names are normalized before rendering; item rows use a stable fallback key. | Narrow render-only fix for a confirmed React crash; no endpoint, payload, or workflow semantics changed. |
 
 ## Risks Remaining
-- This is not a complete senior QA signoff because authenticated CRUD/action testing could not be executed.
-- The highest data-risk findings are archive/delete semantics and delivery workflow contract ownership.
-- Any refactor started before resolving QA-001 would be refactoring an insufficiently tested dashboard.
+- This is not a final release signoff because delivery action execution could not be verified while backend canonical `allowedActions` were empty.
+- Pickup branch save is blocked by invalid existing settings seed shape.
+- In-use promo archive `409 PROMO_IN_USE` still needs a valid used promo seed row.
+- `/dashboard-users` still logs a React key warning.
+- Refactor should not start until QA-004 and QA-010 are fixed or explicitly accepted.
 
 ## Release Recommendation
-Not ready - fix frontend and backend issues first
+Not ready - fix backend issues first
 
 ## Pre-Auth QA Continuation Work
 
