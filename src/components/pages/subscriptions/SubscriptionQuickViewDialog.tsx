@@ -183,7 +183,7 @@ export function SubscriptionQuickViewDialog({
       >
         <div className="border-b bg-muted/30 px-5 py-4 sm:px-6">
           <DialogHeader className="gap-2 text-right">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between w-[95%]">
               <div className="space-y-2">
                 <DialogTitle className="flex items-center gap-2 text-xl font-bold">
                   <ReceiptText className="h-5 w-5 text-primary" />

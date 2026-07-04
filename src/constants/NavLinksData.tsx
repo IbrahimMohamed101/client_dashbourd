@@ -62,7 +62,7 @@ export const NavLinksData = {
       icon: <CalendarPlus />,
     },
     {
-      title: "الطلبات",
+      title: "طلبات لمره واحده",
       url: "/one-time-orders",
       icon: <ClipboardList />,
     },
