@@ -17,6 +17,19 @@ interface UserSelectionSectionProps {
   form: UseFormReturn<CreateSubscriptionSchemaType>;
 }
 
+function getUserDisplayName(user: User) {
+  return user.fullName?.trim() || user.phone?.trim() || user.email?.trim() || "مستخدم بدون اسم";
+}
+
+function getUserInitial(user: User) {
+  const displayName = getUserDisplayName(user);
+  return displayName.trim().charAt(0) || "?";
+}
+
+function getSearchText(user: User) {
+  return [user.fullName, user.phone, user.email].filter(Boolean).join(" ").toLowerCase();
+}
+
 export function UserSelectionSection({ form }: UserSelectionSectionProps) {
   const { data: usersResponse, isLoading } = useAllUsersQuery();
   const users = usersResponse?.data || [];
@@ -27,12 +40,7 @@ export function UserSelectionSection({ form }: UserSelectionSectionProps) {
   const getFilteredUsers = () => {
     if (!search.trim()) return users;
     const q = search.toLowerCase();
-    return users.filter(
-      (u: User) =>
-        u.fullName.toLowerCase().includes(q) ||
-        u.phone.includes(q) ||
-        u.email?.toLowerCase().includes(q)
-    );
+    return users.filter((u: User) => getSearchText(u).includes(q));
   };
 
   const selectedUser = users.find(
@@ -71,9 +79,11 @@ export function UserSelectionSection({ form }: UserSelectionSectionProps) {
               <Check className="size-4" />
             </div>
             <div>
-              <p className="text-sm font-semibold">{selectedUser.fullName}</p>
+              <p className="text-sm font-semibold">
+                {getUserDisplayName(selectedUser)}
+              </p>
               <p className="text-xs text-muted-foreground" dir="ltr">
-                {selectedUser.phone}
+                {selectedUser.phone || selectedUser.email || ""}
               </p>
             </div>
           </div>
@@ -116,12 +126,14 @@ export function UserSelectionSection({ form }: UserSelectionSectionProps) {
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    {user.fullName.charAt(0)}
+                    {getUserInitial(user)}
                   </div>
                   <div className="flex-1 text-start">
-                    <p className="text-sm font-medium">{user.fullName}</p>
+                    <p className="text-sm font-medium">
+                      {getUserDisplayName(user)}
+                    </p>
                     <p className="text-xs text-muted-foreground" dir="ltr">
-                      {user.phone}
+                      {user.phone || user.email || ""}
                     </p>
                   </div>
                   {user.activeSubscriptionsCount > 0 && (
