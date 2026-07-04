@@ -23,6 +23,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import type { DeliveryZone } from "@/types/deliveryZoneTypes";
+import { displayLocalizedText } from "@/utils/displayText";
 
 const chartConfig = {
   count: {
@@ -57,7 +58,7 @@ function formatSAR(value: number) {
 }
 
 function getZoneName(zone: DeliveryZone) {
-  return zone.name.ar || zone.name.en || "منطقة بدون اسم";
+  return displayLocalizedText(zone.name, "منطقة بدون اسم");
 }
 
 function buildStatusRows(zones: DeliveryZone[]) {

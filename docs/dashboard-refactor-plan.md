@@ -158,6 +158,13 @@ Manual QA after phase:
 - Confirm no React child/object render errors.
 - Confirm no unique-key warnings on touched list/card screens.
 
+Implementation note for Issue #23:
+- Added `src/utils/displayText.ts` with `displayLocalizedText` for safe string display of plain strings, numbers, and localized `{ ar, en }` values.
+- Added `getStableEntityKey` for the repeated one-time order item fallback-key pattern.
+- Applied the helpers only to render-only localized text/key paths in `/one-time-orders`, `/pickup-branches`, and `/zones`.
+- Left SAR/halala formatting untouched in this phase because the current duplicates are display-only but vary by context.
+- No endpoints, payloads, query keys, invalidation/refetch behavior, role routing, delivery actions, generated routes, or env base URL behavior changed.
+
 ### Phase 2 - API Contract Constants and Response Normalizers
 
 Scope:

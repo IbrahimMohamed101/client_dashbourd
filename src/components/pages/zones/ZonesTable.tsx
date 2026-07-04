@@ -29,6 +29,7 @@ import {
   useToggleDeliveryZoneMutation,
 } from "@/hooks/useDeliveryZonesQuery";
 import { useDebounce } from "@/hooks/useDebounce";
+import { displayLocalizedText } from "@/utils/displayText";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -47,7 +48,7 @@ function getZoneId(zone: DeliveryZone): string {
 }
 
 function getZoneDisplayName(zone: DeliveryZone): string {
-  return zone.name.ar || zone.name.en || "منطقة بدون اسم";
+  return displayLocalizedText(zone.name, "منطقة بدون اسم");
 }
 
 function formatSARFromHalala(value: number | null | undefined): string {

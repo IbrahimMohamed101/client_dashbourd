@@ -15,6 +15,10 @@ import type {
   OneTimeOrderAction,
   OneTimeOrderListItem,
 } from "@/types/oneTimeOrderTypes";
+import {
+  displayLocalizedText,
+  getStableEntityKey,
+} from "@/utils/displayText";
 import { OneTimeOrderPaymentBadge } from "./OneTimeOrderPaymentBadge";
 import { OneTimeOrderStatusBadge } from "./OneTimeOrderStatusBadge";
 
@@ -65,9 +69,7 @@ function getActionConfig(action: OneTimeOrderAction) {
 }
 
 function getItemName(item: OneTimeOrderListItem["items"][number]) {
-  if (typeof item.name === "string") return item.name;
-  const localizedName = item.name as unknown as Record<string, string>;
-  return localizedName?.ar || localizedName?.en || "وجبة";
+  return displayLocalizedText(item.name, "وجبة");
 }
 
 function getItemQuantity(item: OneTimeOrderListItem["items"][number]) {
@@ -146,7 +148,7 @@ export function getOneTimeOrdersColumns({
           <div className="flex max-w-72 flex-wrap gap-1">
             {items.slice(0, 3).map((item, index) => (
               <span
-                key={item.id ?? `${getItemName(item)}-${index}`}
+                key={getStableEntityKey(item, "one-time-order-list-item", index)}
                 className="inline-flex items-center gap-1 rounded-md border border-secondary bg-secondary/50 px-2 py-0.5 text-[11px] font-medium text-secondary-foreground"
               >
                 {getItemName(item)} x{getItemQuantity(item)}

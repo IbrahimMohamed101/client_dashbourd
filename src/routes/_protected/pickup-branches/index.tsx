@@ -40,6 +40,7 @@ import {
   useUpdateSettingsMutation,
 } from "@/hooks/useSettingsQuery";
 import type { PickupLocationSetting } from "@/types/settingsTypes";
+import { displayLocalizedText } from "@/utils/displayText";
 
 type PickupBranch = PickupLocationSetting;
 
@@ -321,16 +322,16 @@ function PickupBranchesPage() {
                         </span>
                         <div>
                           <p className="font-medium">
-                            {branch.name.en || branch.name.ar || branch.id}
+                            {displayLocalizedText(branch.name, branch.id, "en")}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {branch.name.ar || "-"}
+                            {displayLocalizedText(branch.name, "-")}
                           </p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{branch.address.ar || "-"}</TableCell>
-                    <TableCell>{branch.address.en || "-"}</TableCell>
+                    <TableCell>{displayLocalizedText(branch.address, "-")}</TableCell>
+                    <TableCell>{displayLocalizedText(branch.address, "-", "en")}</TableCell>
                     <TableCell>
                       {branch.latitude !== undefined &&
                       branch.longitude !== undefined
