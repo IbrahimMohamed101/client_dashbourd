@@ -316,7 +316,6 @@ export function getPromoCodesColumns({
       cell: ({ row }) => {
         const promo = row.original;
         const isArchived = getPromoCodeStatus(promo.state) === "archived";
-        const hasUsage = (promo.currentUsageCount ?? promo.usedCount ?? 0) > 0;
         const ToggleIcon = promo.isActive ? PowerOff : Power;
 
         return (
@@ -373,7 +372,7 @@ export function getPromoCodesColumns({
               <DropdownMenuSeparator className="my-1 bg-muted-foreground/10" />
               <DropdownMenuItem
                 onClick={() => onArchive(promo)}
-                disabled={isArchived || hasUsage || isActionPending}
+                disabled={isArchived || isActionPending}
                 className="cursor-pointer gap-2.5 rounded-xl px-3 py-2 text-rose-500 transition-colors focus:bg-rose-500/10 focus:text-rose-600"
               >
                 <Archive className="size-4" />
