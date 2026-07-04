@@ -12,11 +12,36 @@ import type {
   MealBuilderValidation,
 } from "@/types/mealBuilderTypes";
 import {
+  FULL_MEAL_PRODUCT_SELECTION_TYPES,
   PREMIUM_REQUIRED_KEYS,
   REQUIRED_SECTION_ORDER,
   SELECTION_TYPES,
   VISUAL_SECTION_LABELS,
 } from "./mealBuilderConstants";
+
+const FULL_MEAL_METADATA_KEYS = [
+  "treatAsFullMeal",
+  "countsAsFullMeal",
+  "mealReplacement",
+];
+
+export function isFullMealSelectionType(value?: string | null) {
+  return FULL_MEAL_PRODUCT_SELECTION_TYPES.includes(String(value || ""));
+}
+
+export function hasFullMealMetadata(
+  value?: Record<string, unknown> | null
+) {
+  return FULL_MEAL_METADATA_KEYS.some((key) => value?.[key] === true);
+}
+
+export function sectionTreatsAsFullMeal(section: Pick<MealBuilderSection, "selectionType" | "metadata" | "rules">) {
+  return (
+    isFullMealSelectionType(section.selectionType) ||
+    hasFullMealMetadata(section.metadata) ||
+    hasFullMealMetadata(section.rules)
+  );
+}
 
 export function emptySection(type: MealBuilderSectionType): MealBuilderSection {
   return {
@@ -244,6 +269,9 @@ export function sectionTitle(
 }
 
 export function selectionLabel(value: string) {
+  if (value === "full_meal_product") return "Full meal product";
+  if (value === "meal_replacement") return "Meal replacement";
+  if (value === "standalone_meal") return "Standalone meal";
   return SELECTION_TYPES.find((item) => item.value === value)?.label ?? value;
 }
 

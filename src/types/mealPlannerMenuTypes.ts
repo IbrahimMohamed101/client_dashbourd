@@ -21,6 +21,7 @@ export interface MealPlannerAction {
   type: string;
   requiresBuilder: boolean;
   canAddDirectly: boolean;
+  treatAsFullMeal?: boolean;
 }
 
 export interface MealPlannerOptionSection {

@@ -71,6 +71,10 @@ function normalizeAction(raw: unknown): MealPlannerAction {
         ? type !== "direct_add"
         : Boolean(action.requiresBuilder),
     canAddDirectly: Boolean(action.canAddDirectly || type === "direct_add"),
+    treatAsFullMeal:
+      action.treatAsFullMeal === undefined
+        ? undefined
+        : Boolean(action.treatAsFullMeal),
   };
 }
 

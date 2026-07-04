@@ -31,6 +31,8 @@ import {
   emptySection,
   matches,
   nameOf,
+  sectionTreatsAsFullMeal,
+  selectionLabel,
   toOption,
   toggle,
 } from "./mealBuilderUtils";
@@ -83,6 +85,19 @@ export function MealBuilderSectionEditor({
         : true
     )
     .filter((product) => matches(product, query));
+  const selectionOptions = [
+    ...SELECTION_TYPES,
+    { value: "full_meal_product", label: "Full meal product" },
+  ];
+  if (
+    section.selectionType &&
+    !selectionOptions.some((item) => item.value === section.selectionType)
+  ) {
+    selectionOptions.push({
+      value: section.selectionType,
+      label: selectionLabel(section.selectionType),
+    });
+  }
 
   function patch(change: Partial<MealBuilderSection>) {
     setSection((current) => ({ ...current, ...change }));
@@ -179,7 +194,7 @@ export function MealBuilderSectionEditor({
               label="نوع الاختيار"
               value={section.selectionType}
               onChange={(value) => patch({ selectionType: value })}
-              options={SELECTION_TYPES}
+              options={selectionOptions}
             />
             <NumberField
               label="الترتيب"
@@ -220,6 +235,28 @@ export function MealBuilderSectionEditor({
               checked={section.visible}
               onChange={(visible) => patch({ visible })}
             />
+            {type !== "option_group" ? (
+              <SwitchLine
+                label="Full meal"
+                checked={sectionTreatsAsFullMeal(section)}
+                onChange={(treatAsFullMeal) =>
+                  patch({
+                    selectionType: treatAsFullMeal
+                      ? section.selectionType || "full_meal_product"
+                      : section.selectionType,
+                    metadata: {
+                      ...(section.metadata ?? {}),
+                      requiresBuilder: treatAsFullMeal ? false : undefined,
+                      treatAsFullMeal: treatAsFullMeal || undefined,
+                    },
+                    rules: {
+                      ...(section.rules ?? {}),
+                      carbsRequired: treatAsFullMeal ? false : undefined,
+                    },
+                  })
+                }
+              />
+            ) : null}
           </div>
 
           <Input

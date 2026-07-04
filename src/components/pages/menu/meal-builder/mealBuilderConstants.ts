@@ -13,6 +13,13 @@ export const SELECTION_TYPES = [
   { value: "sandwich", label: "ساندويتش" },
 ];
 
+export const FULL_MEAL_PRODUCT_SELECTION_TYPES = [
+  "sandwich",
+  "full_meal_product",
+  "meal_replacement",
+  "standalone_meal",
+];
+
 export const ERROR_COPY: Record<string, string> = {
   PLANNER_BUILDER_PRODUCT_NOT_INCLUDED:
     "المنتج غير موجود في منشئ الوجبات المنشور.",

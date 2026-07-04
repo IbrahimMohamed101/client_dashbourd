@@ -15,7 +15,11 @@ import {
   SECTION_RULE_BADGES,
   VISUAL_SECTION_LABELS,
 } from "./mealBuilderConstants";
-import { nameOf } from "./mealBuilderUtils";
+import {
+  isFullMealSelectionType,
+  nameOf,
+  sectionTreatsAsFullMeal,
+} from "./mealBuilderUtils";
 
 export type MealBuilderVisualItem =
   | {
@@ -126,8 +130,17 @@ export function buildMealBuilderVisualCards({
   const productsById = new Map(products.map((product) => [product.id, product]));
 
   sections.forEach((section, index) => {
-    if (section.key && REQUIRED_SECTION_ORDER.includes(section.key) && Array.isArray(section.items)) {
-      hydrateVisualCardFromBackend(cards[section.key], section, index);
+    if (
+      section.key &&
+      Array.isArray(section.items) &&
+      (REQUIRED_SECTION_ORDER.includes(section.key) ||
+        (section.sectionType !== "option_group" && sectionTreatsAsFullMeal(section)))
+    ) {
+      hydrateVisualCardFromBackend(
+        ensureCard(cards, section.key, section, index),
+        section,
+        index
+      );
       return;
     }
 
@@ -154,27 +167,23 @@ export function buildMealBuilderVisualCards({
         section.includeMode === "all"
           ? products.filter((product) => product.categoryId === section.sourceCategoryId)
           : selectedProducts;
-      const isSandwich =
-        section.selectionType === "sandwich" ||
-        category?.key === "cold_sandwiches" ||
-        productsInCategory.some((product) => product.key.includes("sandwich"));
+      const target = productSectionTarget(section, productsInCategory, category);
+      const treatsAsFullMeal = sectionTreatsAsFullMeal(section);
       productsInCategory.forEach((product) => {
-        addProduct(cards[isSandwich ? "sandwich" : "premium"], product, section, index, {
-          requiresBuilder: false,
-          treatAsFullMeal: isSandwich,
+        addProduct(ensureCard(cards, target, section, index), product, section, index, {
+          requiresBuilder: !treatsAsFullMeal,
+          treatAsFullMeal: treatsAsFullMeal,
         });
       });
     }
 
     if (section.sectionType === "product_list") {
       selectedProducts.forEach((product) => {
-        const target = product.key === "premium_large_salad" ||
-          section.selectionType === "premium_large_salad"
-          ? "premium"
-          : "sandwich";
-        addProduct(cards[target], product, section, index, {
-          requiresBuilder: section.selectionType === "premium_large_salad",
-          treatAsFullMeal: target === "sandwich",
+        const target = productSectionTarget(section, [product], null);
+        const treatsAsFullMeal = sectionTreatsAsFullMeal(section);
+        addProduct(ensureCard(cards, target, section, index), product, section, index, {
+          requiresBuilder: !treatsAsFullMeal,
+          treatAsFullMeal: treatsAsFullMeal,
         });
       });
     }
@@ -199,12 +208,16 @@ export function buildMealBuilderVisualCards({
     cards.carbs.warnings.push("قسم النشويات لا يحتوي خيارات ظاهرة حاليا.");
   }
 
-  return REQUIRED_SECTION_ORDER.map((key, index) => ({
-    ...cards[key],
-    sortOrder: index + 1,
-    sourceKinds: [...new Set(cards[key].sourceKinds)],
-    items: uniqueItems(cards[key].items),
-  }));
+  const requiredCards = REQUIRED_SECTION_ORDER.map((key, index) =>
+    finalizeCard(cards[key], index + 1)
+  );
+  const extraCards = Object.values(cards)
+    .filter((card) => !REQUIRED_SECTION_ORDER.includes(card.key))
+    .filter((card) => card.items.length || card.warnings.length || card.errors.length || card.backendIssues.length)
+    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
+    .map((card) => finalizeCard(card));
+
+  return [...requiredCards, ...extraCards];
 }
 
 function createEmptyCards(): Record<string, MealBuilderVisualCard> {
@@ -228,6 +241,70 @@ function createEmptyCards(): Record<string, MealBuilderVisualCard> {
       ];
     })
   ) as Record<string, MealBuilderVisualCard>;
+}
+
+function ensureCard(
+  cards: Record<string, MealBuilderVisualCard>,
+  key: string,
+  section?: MealBuilderSection,
+  sourceSectionIndex = 0
+) {
+  if (cards[key]) return cards[key];
+  const label = sectionLabelForCard(key, section);
+  cards[key] = {
+    key,
+    labelAr: label.ar,
+    labelEn: label.en,
+    sortOrder: Number(section?.sortOrder || sourceSectionIndex + 1),
+    sourceKinds: [],
+    rules: SECTION_RULE_BADGES[key] ?? SECTION_RULE_BADGES.full_meal_product ?? [],
+    items: [],
+    warnings: [],
+    errors: [],
+    backendIssues: [],
+  };
+  return cards[key];
+}
+
+function sectionLabelForCard(key: string, section?: MealBuilderSection) {
+  const fallback = VISUAL_SECTION_LABELS[key] ?? VISUAL_SECTION_LABELS.full_meal_product;
+  return {
+    ar: section?.titleOverride?.ar || fallback?.ar || key,
+    en: section?.titleOverride?.en || fallback?.en || key,
+  };
+}
+
+function finalizeCard(card: MealBuilderVisualCard, sortOrder = card.sortOrder) {
+  return {
+    ...card,
+    sortOrder,
+    sourceKinds: [...new Set(card.sourceKinds)],
+    items: uniqueItems(card.items),
+  };
+}
+
+function productSectionTarget(
+  section: MealBuilderSection,
+  products: MenuProduct[],
+  category: MenuCategory | null | undefined
+) {
+  if (
+    section.selectionType === "premium_large_salad" ||
+    products.some((product) => product.key === "premium_large_salad")
+  ) {
+    return "premium";
+  }
+  if (
+    section.selectionType === "sandwich" ||
+    category?.key === "cold_sandwiches" ||
+    products.some((product) => product.itemType?.includes("sandwich") || product.key.includes("sandwich"))
+  ) {
+    return "sandwich";
+  }
+  if (sectionTreatsAsFullMeal(section)) {
+    return section.key || section.selectionType || "full_meal_product";
+  }
+  return "premium";
 }
 
 function addOption(
@@ -328,8 +405,8 @@ function hydrateVisualCardFromBackend(
         ...base,
         kind: "product",
         selectionType: item.selectionType || section.selectionType,
-        requiresBuilder: item.configurable === true && section.key !== "sandwich",
-        treatAsFullMeal: section.key === "sandwich" || item.selectionType === "sandwich",
+        requiresBuilder: hydratedRequiresBuilder(item, section),
+        treatAsFullMeal: hydratedTreatsAsFullMeal(item, section),
       });
       return;
     }
@@ -343,6 +420,36 @@ function hydrateVisualCardFromBackend(
     ...(item.errors ?? []),
     ...(item.warnings ?? []),
   ]));
+}
+
+function hydratedRequiresBuilder(
+  item: MealBuilderHydratedItem,
+  section: MealBuilderSection
+) {
+  const action = (item as MealBuilderHydratedItem & {
+    action?: { requiresBuilder?: boolean };
+    requiresBuilder?: boolean;
+  }).action;
+  if (typeof action?.requiresBuilder === "boolean") return action.requiresBuilder;
+  if (typeof (item as { requiresBuilder?: boolean }).requiresBuilder === "boolean") {
+    return Boolean((item as { requiresBuilder?: boolean }).requiresBuilder);
+  }
+  return item.configurable === true && !hydratedTreatsAsFullMeal(item, section);
+}
+
+function hydratedTreatsAsFullMeal(
+  item: MealBuilderHydratedItem,
+  section: MealBuilderSection
+) {
+  const action = (item as MealBuilderHydratedItem & {
+    action?: { treatAsFullMeal?: boolean };
+    treatAsFullMeal?: boolean;
+  }).action;
+  if (typeof action?.treatAsFullMeal === "boolean") return action.treatAsFullMeal;
+  if (typeof (item as { treatAsFullMeal?: boolean }).treatAsFullMeal === "boolean") {
+    return Boolean((item as { treatAsFullMeal?: boolean }).treatAsFullMeal);
+  }
+  return sectionTreatsAsFullMeal(section) || isFullMealSelectionType(item.selectionType);
 }
 
 function hydratedName(item: MealBuilderHydratedItem) {
@@ -384,6 +491,11 @@ export function productMatchesVisualCard(
       category?.key === "cold_sandwiches"
     );
   }
+  if (isFullMealSelectionType(cardKey)) {
+    const productSelectionType = (product as MenuProduct & { selectionType?: string })
+      .selectionType;
+    return productSelectionType === cardKey || product.itemType === cardKey;
+  }
   return false;
 }
 
@@ -401,6 +513,7 @@ function sectionTarget(
 ) {
   if (section.selectionType === "premium_meal" || section.selectionType === "premium_large_salad") return "premium";
   if (section.selectionType === "sandwich") return "sandwich";
+  if (sectionTreatsAsFullMeal(section)) return section.key || section.selectionType || "full_meal_product";
   if (selectedProducts.some((product) => product.key === "premium_large_salad")) return "premium";
   if (selectedOptions.some((option) => optionFamily(option, section) === "carbs")) return "carbs";
   return "chicken";

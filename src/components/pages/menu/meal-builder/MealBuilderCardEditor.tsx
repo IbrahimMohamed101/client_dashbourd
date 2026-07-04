@@ -24,7 +24,12 @@ import type {
 import type { MealBuilderSection } from "@/types/mealBuilderTypes";
 import { MenuKeyBadge } from "@/components/pages/menu/MenuTabScaffold";
 import { VISUAL_SECTION_LABELS } from "./mealBuilderConstants";
-import { emptySection, orderSections, toggle } from "./mealBuilderUtils";
+import {
+  emptySection,
+  orderSections,
+  sectionTreatsAsFullMeal,
+  toggle,
+} from "./mealBuilderUtils";
 import type {
   MealBuilderVisualCard,
   MealBuilderVisualItem,
@@ -618,7 +623,11 @@ function ensureProductSectionIndex(
   if (byKeyIndex >= 0) return { sections, index: byKeyIndex };
 
   const selectionType =
-    cardKey === "premium" ? "premium_large_salad" : "sandwich";
+    cardKey === "premium"
+      ? "premium_large_salad"
+      : cardKey === "sandwich"
+        ? "sandwich"
+        : cardKey;
   const existingIndex = sections.findIndex(
     (section) =>
       (section.sectionType === "product_category" ||
@@ -628,16 +637,17 @@ function ensureProductSectionIndex(
   if (existingIndex >= 0) return { sections, index: existingIndex };
 
   const label = VISUAL_SECTION_LABELS[cardKey];
-  const sandwichCategory = catalog.categories.find(
-    (item) => item.key === "cold_sandwiches"
+  const category = catalog.categories.find(
+    (item) =>
+      item.key === cardKey ||
+      (cardKey === "sandwich" && item.key === "cold_sandwiches")
   );
-  const type = cardKey === "sandwich" ? "product_category" : "product_list";
+  const type = category ? "product_category" : "product_list";
   const nextSection: MealBuilderSection = {
     ...emptySection(type),
     key: cardKey,
-    sourceKind: cardKey === "sandwich" ? "product_list" : "premium_visual",
-    sourceCategoryId:
-      cardKey === "sandwich" ? (sandwichCategory?.id ?? null) : null,
+    sourceKind: cardKey === "premium" ? "premium_visual" : "product_list",
+    sourceCategoryId: type === "product_category" ? (category?.id ?? null) : null,
     includeMode: "selected",
     selectionType,
     titleOverride: { ar: label?.ar ?? "", en: label?.en ?? "" },
@@ -647,10 +657,10 @@ function ensureProductSectionIndex(
     maxSelections: 1,
     multiSelect: false,
     metadata:
-      cardKey === "sandwich"
-        ? { requiresBuilder: false, treatAsFullMeal: true }
-        : { visualRole: "premium" },
-    rules: cardKey === "sandwich" ? { carbsRequired: false } : {},
+      cardKey === "premium"
+        ? { visualRole: "premium" }
+        : { requiresBuilder: false, treatAsFullMeal: true },
+    rules: cardKey === "premium" ? {} : { carbsRequired: false },
   };
   return { sections: [...sections, nextSection], index: sections.length };
 }
@@ -663,7 +673,15 @@ function findPrimarySectionIndex(
   if (["chicken", "beef", "fish", "eggs", "carbs"].includes(cardKey)) {
     return ensureOptionSectionIndex(sections, cardKey, catalog).index;
   }
-  if (["premium", "sandwich"].includes(cardKey)) {
+  if (
+    ["premium", "sandwich"].includes(cardKey) ||
+    sections.some(
+      (section) =>
+        section.key === cardKey &&
+        section.sectionType !== "option_group" &&
+        sectionTreatsAsFullMeal(section)
+    )
+  ) {
     return ensureProductSectionIndex(sections, cardKey, catalog).index;
   }
   return null;
