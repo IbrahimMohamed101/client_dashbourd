@@ -51,7 +51,7 @@ const ADMIN_ROUTES = [
 
 const KITCHEN_ROUTES = ["/operations", "/one-time-orders", "/profile"];
 
-const COURIER_ROUTES = ["/operations", "/delivery", "/profile"];
+const COURIER_ROUTES = ["/delivery", "/profile"];
 
 const CASHIER_ROUTES = [
   "/dashboard",
@@ -68,7 +68,7 @@ const ROLE_DEFAULTS: Record<UserRole, string> = {
   [UserRoles.SUPERADMIN]: "/dashboard",
   [UserRoles.ADMIN]: "/dashboard",
   [UserRoles.KITCHEN]: "/operations",
-  [UserRoles.COURIER]: "/operations",
+  [UserRoles.COURIER]: "/delivery",
   [UserRoles.CASHIER]: "/dashboard",
 };
 
