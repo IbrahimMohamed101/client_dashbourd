@@ -24,12 +24,14 @@ import {
 import { PlusIcon, SearchIcon } from "lucide-react";
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { subscriptionsColumns } from "./subscriptions-columns";
+import { getSubscriptionsColumns } from "./subscriptions-columns";
 import { useSubscriptionsListQuery } from "@/hooks/useSubscriptionsQuery";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/custom/button-variants";
 import { cn } from "@/lib/utils";
+import type { Subscription } from "@/types/subscriptionTypes";
+import { SubscriptionQuickViewDialog } from "./SubscriptionQuickViewDialog";
 
 export function SubscriptionsTable() {
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
@@ -39,6 +41,8 @@ export function SubscriptionsTable() {
     pageIndex: 0,
     pageSize: 10,
   });
+  const [selectedSubscription, setSelectedSubscription] =
+    React.useState<Subscription | null>(null);
 
   const { data: response, isLoading } = useSubscriptionsListQuery(
     statusFilter === "all" ? null : statusFilter,
@@ -49,10 +53,17 @@ export function SubscriptionsTable() {
 
   const data = response?.data || [];
   const meta = response?.meta || { total: 0, totalPages: 1 };
+  const columns = React.useMemo(
+    () =>
+      getSubscriptionsColumns({
+        onView: setSelectedSubscription,
+      }),
+    []
+  );
 
   const table = useReactTable({
     data,
-    columns: subscriptionsColumns,
+    columns,
     state: {
       pagination,
     },
@@ -148,7 +159,7 @@ export function SubscriptionsTable() {
               {isLoading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={subscriptionsColumns.length}
+                    colSpan={columns.length}
                     className="h-24 text-center"
                   >
                     جاري التحميل...
@@ -170,7 +181,7 @@ export function SubscriptionsTable() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={subscriptionsColumns.length}
+                    colSpan={columns.length}
                     className="h-24 text-center"
                   >
                     لا توجد اشتراكات.
@@ -188,6 +199,14 @@ export function SubscriptionsTable() {
           itemsLabel="الاشتراكات"
         />
       </div>
+
+      <SubscriptionQuickViewDialog
+        open={!!selectedSubscription}
+        subscription={selectedSubscription}
+        onOpenChange={(open) => {
+          if (!open) setSelectedSubscription(null);
+        }}
+      />
     </div>
   );
 }

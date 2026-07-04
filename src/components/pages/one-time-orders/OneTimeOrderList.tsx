@@ -4,7 +4,6 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useNavigate } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -33,6 +32,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 import { OneTimeOrderConfirmDialog } from "./OneTimeOrderConfirmDialog";
+import { OneTimeOrderDetailDialog } from "./OneTimeOrderDetailDialog";
 import { getOneTimeOrdersColumns } from "./one-time-orders-columns";
 
 const statusFilters: { value: OneTimeOrderStatus | "all"; label: string }[] = [
@@ -47,7 +47,6 @@ const statusFilters: { value: OneTimeOrderStatus | "all"; label: string }[] = [
 ];
 
 export const OneTimeOrderList: React.FC = () => {
-  const navigate = useNavigate();
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [statusFilter, setStatusFilter] = useState<OneTimeOrderStatus | "all">(
     "all"
@@ -64,6 +63,7 @@ export const OneTimeOrderList: React.FC = () => {
     action: OneTimeOrderAction;
     requiresPickupCode: boolean;
   } | null>(null);
+  const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
 
   const { data: listRes, isLoading } = useOneTimeOrdersListQuery({
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -116,12 +116,9 @@ export const OneTimeOrderList: React.FC = () => {
 
   const handleView = React.useCallback(
     (order: OneTimeOrderListItem) => {
-      navigate({
-        to: "/one-time-orders/$orderId",
-        params: { orderId: order.entityId },
-      });
+      setDetailOrderId(order.entityId);
     },
-    [navigate]
+    []
   );
 
   const columns = React.useMemo(
@@ -313,6 +310,14 @@ export const OneTimeOrderList: React.FC = () => {
         onClose={() => setConfirmDialog(null)}
         onConfirm={handleConfirmAction}
         isPending={actionMutation.isPending}
+      />
+
+      <OneTimeOrderDetailDialog
+        open={!!detailOrderId}
+        orderId={detailOrderId}
+        onOpenChange={(open) => {
+          if (!open) setDetailOrderId(null);
+        }}
       />
     </div>
   );

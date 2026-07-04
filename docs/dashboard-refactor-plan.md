@@ -226,6 +226,12 @@ Scope:
 - Prefer extracting small presentational components from large files.
 - Preserve UI text, validation messages, button behavior, and route ownership.
 
+Implementation note for Issue #24:
+- `/one-time-orders` and `/subscriptions` table detail actions now open same-page quick-view dialogs instead of navigating away.
+- Existing full detail routes remain available for direct URLs: `/one-time-orders/$orderId` and `/subscriptions/$subscriptionId`.
+- `/operations` already used `OperationsOrderDetailsDialog`; it was audited and left on the existing backend-driven action flow.
+- No endpoint, payload, role-routing, generated route, or query invalidation behavior changed.
+
 Recommended order:
 1. `/dashboard-users` because recent fix is small and verified.
 2. `/pickup-branches` because contract is now clear and single-route scoped.
