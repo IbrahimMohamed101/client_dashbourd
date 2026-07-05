@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  AlertTriangle,
   CheckCircle2,
   Plus,
   RefreshCw,
@@ -29,10 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  MenuEmptyState,
-  MenuKeyBadge,
-} from "@/components/pages/menu/MenuTabScaffold";
+import { MenuEmptyState } from "@/components/pages/menu/MenuTabScaffold";
 import {
   MEAL_BUILDER_KEY,
   MEAL_BUILDER_HYDRATED_KEY,
@@ -41,7 +39,6 @@ import {
   useMealBuilderHydratedQuery,
   useMealBuilderQuery,
   useMealBuilderReadinessQuery,
-  useMealPlannerMenuPreviewQuery,
   useMenuCategoriesQuery,
   useMenuOptionGroupsQuery,
   useMenuOptionsQuery,
@@ -56,7 +53,6 @@ import type {
   MenuOptionGroup,
   MenuProduct,
 } from "@/types/menuTypes";
-import type { MealPlannerMenuContract } from "@/types/mealPlannerMenuTypes";
 import type {
   MealBuilderConfig,
   MealBuilderSection,
@@ -67,7 +63,7 @@ import { MealBuilderCardEditor } from "./MealBuilderCardEditor";
 import { MealBuilderStatusCards } from "./MealBuilderStatusCards";
 import { MealBuilderSectionEditor } from "./MealBuilderSectionEditor";
 import { MealBuilderVisualCard } from "./MealBuilderVisualCard";
-import { PreviewPanel, ValidationPanel } from "./MealBuilderPanels";
+import { mealBuilderIssueText } from "./mealBuilderIssueText";
 import { orderSections, toBackendSections } from "./mealBuilderUtils";
 import { buildMealBuilderVisualCards } from "./mealBuilderVisualModel";
 
@@ -81,7 +77,6 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
   const builderQuery = useMealBuilderQuery();
   const hydratedQuery = useMealBuilderHydratedQuery();
   const readinessQuery = useMealBuilderReadinessQuery();
-  const plannerPreviewQuery = useMealPlannerMenuPreviewQuery();
   const productsQuery = useMenuProductsQuery({
     limit: 500,
     includeInactive: true,
@@ -124,7 +119,6 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
     queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_KEY] });
     queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_HYDRATED_KEY] });
     queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_READINESS_KEY] });
-    queryClient.invalidateQueries({ queryKey: ["menu.mealPlannerPreview"] });
   }
 
   return (
@@ -139,22 +133,13 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
         published={published}
         readiness={readiness}
       />
-      <BootstrapMeta draft={draft} />
 
       {draft ? (
         <MealBuilderWorkspace
           key={`${draft.id}:${draft.updatedAt ?? ""}`}
           draft={draft}
           readiness={readiness}
-          initialValidation={
-            hydrated?.validation ?? state?.validation.draft ?? null
-          }
-          plannerPreview={
-            plannerPreviewQuery.data?.data ?? state?.plannerCatalog ?? null
-          }
-          plannerLoading={
-            plannerPreviewQuery.isLoading && !state?.plannerCatalog
-          }
+          initialValidation={hydrated?.validation ?? state?.validation.draft ?? null}
           catalog={catalog}
           loading={loading}
         />
@@ -163,7 +148,7 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
           <CardContent className="space-y-4 pt-6">
             <MenuEmptyState
               title="لا توجد مسودة"
-              description="ابدأ من النسخة المنشورة الحالية أو من الإعداد الافتراضي."
+              description="ابدأ من النسخة المنشورة الحالية ثم عدّل البطاقات المطلوبة فقط."
             />
             <div className="flex justify-center">
               <Button
@@ -194,26 +179,17 @@ function HeaderCard({
   return (
     <Card className="border-border/80 shadow-none">
       <CardHeader className="gap-4">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Sparkles className="size-5 text-primary" />
               منشئ الوجبات
             </CardTitle>
             <CardDescription>
-              رتّب شاشة تخصيص وجبات الاشتراك التي تظهر في تطبيق العميل.
+              عدّل ترتيب وخيارات وجبات الاشتراك من شاشة واحدة بسيطة.
             </CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              onClick={onCreateDraft}
-            >
-              <Plus data-icon="inline-start" />
-              إنشاء مسودة
-            </Button>
             <Button
               type="button"
               variant="outline"
@@ -223,9 +199,12 @@ function HeaderCard({
               <RefreshCw data-icon="inline-start" />
               تحديث
             </Button>
+            <Button type="button" disabled={pending} onClick={onCreateDraft}>
+              <Plus data-icon="inline-start" />
+              إنشاء مسودة
+            </Button>
           </div>
         </div>
-        <PremiumNotice />
       </CardHeader>
     </Card>
   );
@@ -235,16 +214,12 @@ function MealBuilderWorkspace({
   draft,
   readiness,
   initialValidation,
-  plannerPreview,
-  plannerLoading,
   catalog,
   loading,
 }: {
   draft: MealBuilderConfig;
   readiness: MealBuilderValidation | null;
   initialValidation: MealBuilderValidation | null;
-  plannerPreview: MealPlannerMenuContract | null;
-  plannerLoading: boolean;
   catalog: {
     products: MenuProduct[];
     categories: MenuCategory[];
@@ -277,6 +252,7 @@ function MealBuilderWorkspace({
       ...(currentValidation?.warnings ?? []),
     ],
   });
+  const reviewValidation = currentValidation ?? readiness;
   const hasErrors =
     Boolean(currentValidation?.errors.length) ||
     Boolean(readiness?.errors.length);
@@ -294,21 +270,6 @@ function MealBuilderWorkspace({
     return () => window.removeEventListener("beforeunload", onLeave);
   }, [dirty]);
 
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    console.debug(
-      "[meal-builder] visual editor cards",
-      visualCards.map((card) => ({
-        key: card.key,
-        titleOverride: card.labelAr,
-        sourceKind: card.sourceKinds,
-        sortOrder: card.sortOrder,
-        metadata: { itemKeys: card.items.map((item) => item.key) },
-        rules: card.rules,
-      }))
-    );
-  }, [visualCards]);
-
   function replaceSections(next: MealBuilderSection[]) {
     setSections(
       orderSections(next).map((item, index) => ({
@@ -321,49 +282,18 @@ function MealBuilderWorkspace({
 
   return (
     <>
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
-        <Card className="border-border/80 shadow-none">
-          <CardHeader className="gap-3 border-b">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <CardTitle>بطاقات منشئ الوجبات</CardTitle>
-                <CardDescription>
-                  العرض التحريري يستخدم قالب العائلات السبعة من بيانات المسودة
-                  والكتالوج فقط.
-                </CardDescription>
+      <div className="space-y-4">
+        <Card className="sticky top-2 z-20 border-border/80 bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <CardContent className="flex flex-col gap-3 p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="text-base">بطاقات منشئ الوجبات</CardTitle>
+                {dirty ? <Badge variant="secondary">تغييرات غير محفوظة</Badge> : null}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {dirty ? (
-                  <Badge variant="secondary">تغييرات غير محفوظة</Badge>
-                ) : null}
-                <ToolbarButton
-                  icon={Plus}
-                  label="مجموعة خيارات"
-                  onClick={() =>
-                    setEditor({ type: "option_group", index: null })
-                  }
-                  variant="secondary"
-                />
-                <ToolbarButton
-                  icon={Plus}
-                  label="تصنيف منتجات"
-                  onClick={() =>
-                    setEditor({ type: "product_category", index: null })
-                  }
-                  variant="secondary"
-                />
-                <ToolbarButton
-                  icon={Plus}
-                  label="قائمة منتجات"
-                  onClick={() =>
-                    setEditor({ type: "product_list", index: null })
-                  }
-                  variant="secondary"
-                />
-              </div>
+              <p className="text-sm text-muted-foreground">
+                راجع العناصر الظاهرة للعميل وعدّل البطاقة عند الحاجة.
+              </p>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-5">
             <DraftActions
               dirty={dirty}
               hasErrors={hasErrors}
@@ -378,53 +308,47 @@ function MealBuilderWorkspace({
               }
               onPublish={() => setPublishOpen(true)}
             />
-
-            {loading ? (
-              <div className="rounded-lg border bg-muted/20 p-5 text-sm text-muted-foreground">
-                جار تحميل بيانات منشئ الوجبات والكتالوج...
-              </div>
-            ) : null}
-
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-950">
-              مصدر التحرير هو مسودة Dashboard Meal Builder. معاينة
-              plannerCatalog في اللوحة الجانبية فقط ولا تستبدل هذه البطاقات.
-            </div>
-
-            {visualCards.map((card) => (
-              <MealBuilderVisualCard
-                key={card.key}
-                card={card}
-                onEdit={() => setCardEditorKey(card.key)}
-              />
-            ))}
-
-            <div className="space-y-2">
-              <Label>ملاحظات النشر</Label>
-              <Textarea
-                value={notes}
-                onChange={(event) => {
-                  setNotes(event.target.value);
-                  setDirty(true);
-                }}
-                placeholder="ملاحظة اختيارية تظهر في سجل الإدارة"
-              />
-            </div>
           </CardContent>
         </Card>
 
-        <aside className="space-y-5">
-          <ValidationPanel title="التحقق" validation={currentValidation} />
-          <ValidationPanel title="الجاهزية" validation={readiness} />
-          <PreviewPanel
-            sections={sections}
-            plannerPreview={plannerPreview}
-            plannerLoading={plannerLoading}
-            products={catalog.products}
-            categories={catalog.categories}
-            groups={catalog.groups}
-            options={catalog.options}
-          />
-        </aside>
+        <AdvancedBuilderTools
+          onAddOptionGroup={() =>
+            setEditor({ type: "option_group", index: null })
+          }
+          onAddProductCategory={() =>
+            setEditor({ type: "product_category", index: null })
+          }
+          onAddProductList={() =>
+            setEditor({ type: "product_list", index: null })
+          }
+          notes={notes}
+          onNotesChange={(nextNotes) => {
+            setNotes(nextNotes);
+            setDirty(true);
+          }}
+        />
+
+        <ValidationSummary validation={reviewValidation} dirty={dirty} />
+
+        <Card className="border-border/80 shadow-none">
+          <CardContent className="space-y-4 pt-5">
+            {loading ? (
+              <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
+                جار تحميل بيانات منشئ الوجبات...
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 xl:grid-cols-2">
+              {visualCards.map((card) => (
+                <MealBuilderVisualCard
+                  key={card.key}
+                  card={card}
+                  onEdit={() => setCardEditorKey(card.key)}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {editor ? (
@@ -432,9 +356,7 @@ function MealBuilderWorkspace({
           key={`${editor.type}:${editor.index ?? "new"}:${sections[editor.index ?? -1]?.id ?? ""}`}
           open
           type={editor.type}
-          initial={
-            editor.index == null ? null : (sections[editor.index] ?? null)
-          }
+          initial={editor.index == null ? null : (sections[editor.index] ?? null)}
           products={catalog.products}
           categories={catalog.categories}
           groups={catalog.groups}
@@ -511,27 +433,151 @@ function DraftActions({
   onPublish: () => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      <ToolbarButton
-        icon={Save}
-        label="حفظ"
-        onClick={onSave}
-        disabled={pending}
-      />
-      <ToolbarButton
-        icon={CheckCircle2}
-        label="تحقق"
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <Button type="button" onClick={onSave} disabled={pending || !dirty}>
+        <Save data-icon="inline-start" />
+        حفظ التغييرات
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
         onClick={onValidate}
         disabled={pending}
-        variant="secondary"
-      />
-      <ToolbarButton
-        icon={Send}
-        label="نشر"
+      >
+        <CheckCircle2 data-icon="inline-start" />
+        مراجعة
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
         onClick={onPublish}
         disabled={pending || dirty || hasErrors}
-      />
+      >
+        <Send data-icon="inline-start" />
+        نشر
+      </Button>
+      {dirty ? (
+        <p className="text-xs text-muted-foreground">احفظ التغييرات قبل النشر.</p>
+      ) : null}
     </div>
+  );
+}
+
+function ValidationSummary({
+  validation,
+  dirty,
+}: {
+  validation: MealBuilderValidation | null;
+  dirty: boolean;
+}) {
+  const errors = validation?.errors ?? [];
+  const warnings = validation?.warnings ?? [];
+  const issueCount = errors.length + warnings.length;
+  const previewMessages = [...errors, ...warnings]
+    .map(mealBuilderIssueText)
+    .slice(0, 2);
+
+  if (!validation && !dirty) {
+    return null;
+  }
+
+  return (
+    <Card className="border-border/80 shadow-none">
+      <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          {errors.length ? (
+            <Badge variant="destructive">
+              <ShieldAlert data-icon="inline-start" />
+              {errors.length} أخطاء
+            </Badge>
+          ) : null}
+          {warnings.length ? (
+            <Badge variant="secondary">
+              <AlertTriangle data-icon="inline-start" />
+              تنبيهات للمراجعة
+            </Badge>
+          ) : null}
+          {!issueCount && validation ? (
+            <Badge variant="default">
+              <CheckCircle2 data-icon="inline-start" />
+              جاهز
+            </Badge>
+          ) : null}
+          {dirty ? <Badge variant="outline">يحتاج حفظ</Badge> : null}
+        </div>
+        <div className="min-w-0 flex-1 text-sm text-muted-foreground lg:text-end">
+          {errors.length ? (
+            <p className="truncate">{previewMessages.join(" • ")}</p>
+          ) : warnings.length ? (
+            <p className="truncate">
+              لا توجد أخطاء مانعة. راجع التنبيهات الاختيارية قبل النشر.
+            </p>
+          ) : validation ? (
+            <p>لا توجد مشاكل في آخر مراجعة.</p>
+          ) : (
+            <p>راجع البطاقات قبل النشر.</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AdvancedBuilderTools({
+  onAddOptionGroup,
+  onAddProductCategory,
+  onAddProductList,
+  notes,
+  onNotesChange,
+}: {
+  onAddOptionGroup: () => void;
+  onAddProductCategory: () => void;
+  onAddProductList: () => void;
+  notes: string;
+  onNotesChange: (notes: string) => void;
+}) {
+  return (
+    <details className="rounded-lg border bg-background p-3 shadow-none">
+      <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+        أدوات متقدمة وملاحظات النشر
+      </summary>
+      <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            استخدم هذه الأدوات فقط عند إضافة نوع جديد من الأقسام.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <ToolbarButton
+              icon={Plus}
+              label="مجموعة خيارات"
+              onClick={onAddOptionGroup}
+              variant="secondary"
+            />
+            <ToolbarButton
+              icon={Plus}
+              label="تصنيف منتجات"
+              onClick={onAddProductCategory}
+              variant="secondary"
+            />
+            <ToolbarButton
+              icon={Plus}
+              label="قائمة منتجات"
+              onClick={onAddProductList}
+              variant="secondary"
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>ملاحظات النشر</Label>
+          <Textarea
+            className="min-h-20"
+            value={notes}
+            onChange={(event) => onNotesChange(event.target.value)}
+            placeholder="ملاحظة داخلية اختيارية"
+          />
+        </div>
+      </div>
+    </details>
   );
 }
 
@@ -558,38 +604,6 @@ function ToolbarButton({
       <Icon data-icon="inline-start" />
       {label}
     </Button>
-  );
-}
-
-function PremiumNotice() {
-  return (
-    <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-      <ShieldAlert className="mt-0.5 size-4 shrink-0" />
-      <p>
-        أسعار البريميوم هنا للعرض فقط. حساب الرصيد والدفع يتم في الباكند عند حفظ
-        يوم الاشتراك، ولا توجد هنا أي أداة تجعل الترقية مجانية.
-      </p>
-    </div>
-  );
-}
-
-function BootstrapMeta({ draft }: { draft: MealBuilderConfig | null }) {
-  if (!draft?.bootstrapKey && !draft?.source) return null;
-  return (
-    <Card className="border-border/80 shadow-none">
-      <CardContent className="flex flex-wrap gap-2 pt-6 text-sm">
-        <Badge variant="outline">
-          المصدر:{" "}
-          {draft.source === "bootstrap" ? "بيانات أولية" : "لوحة التحكم"}
-        </Badge>
-        {draft.createdBySystem ? (
-          <Badge variant="secondary">تم إنشاؤه تلقائيا</Badge>
-        ) : null}
-        {draft.bootstrapKey ? (
-          <MenuKeyBadge value={draft.bootstrapKey} />
-        ) : null}
-      </CardContent>
-    </Card>
   );
 }
 
@@ -620,7 +634,7 @@ function PublishDialog({
         </DialogHeader>
         {warnings ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            توجد تحذيرات. يمكن المتابعة فقط إذا كان الباكند يسمح بالنشر.
+            توجد تحذيرات. راجعها قبل النشر.
           </div>
         ) : null}
         <DialogFooter className="gap-2 sm:justify-start">
