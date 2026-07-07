@@ -45,8 +45,7 @@ const PREPARATION_ACTIONS = new Set([
   "ready_for_delivery",
 ]);
 
-const PREPARATION_STATUSES = new Set([
-  "open",
+const ACTIVE_PREPARATION_STATUSES = new Set([
   "preparing",
   "in_preparation",
 ]);
@@ -76,10 +75,9 @@ function hasKitchenWorkload(item: UnifiedQueueItem): boolean {
 
 function isPreparationQueueItem(item: UnifiedQueueItem): boolean {
   if (hasPreparationAction(item)) return true;
-  if (item.actions?.canPrepare || item.actions?.canReadyForPickup) return true;
   if (!hasKitchenWorkload(item)) return false;
 
-  return PREPARATION_STATUSES.has(item.status);
+  return ACTIVE_PREPARATION_STATUSES.has(item.status);
 }
 
 function getPreparationItems(items: UnifiedQueueItem[] = []): UnifiedQueueItem[] {
