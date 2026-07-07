@@ -27,6 +27,7 @@ import {
   restrictToVerticalAxis,
   restrictToParentElement,
 } from "@dnd-kit/modifiers";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,6 +61,7 @@ import {
   SearchIcon,
   ChevronsRightIcon,
   ChevronsLeftIcon,
+  PlusIcon,
 } from "lucide-react";
 import type { Package } from "@/types/packageTypes";
 import { filterCanonicalSubscriptionPlans } from "@/constants/menuCatalog";
@@ -136,7 +138,7 @@ export function PackagesTable({ data: initialData }: { data: Package[] }) {
     <div className="w-full flex-col justify-start gap-6" dir="rtl">
       {/* Toolbar */}
       <div className="flex flex-col gap-4 px-4 lg:px-6">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           {/* Status filter */}
           <Select
             value={
@@ -148,7 +150,7 @@ export function PackagesTable({ data: initialData }: { data: Package[] }) {
                 ?.setFilterValue(value === "all" ? undefined : value);
             }}
           >
-            <SelectTrigger className="w-30" size="sm">
+            <SelectTrigger className="w-full lg:w-30" size="sm">
               <SelectValue placeholder="الحالة" />
             </SelectTrigger>
             <SelectContent dir="rtl">
@@ -167,50 +169,59 @@ export function PackagesTable({ data: initialData }: { data: Package[] }) {
               placeholder="البحث باسم الباقة"
               value={globalFilter ?? ""}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="max-w-lg pr-9"
+              className="pr-9 lg:max-w-lg"
             />
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Columns3Icon
-                  data-icon="inline-start"
-                  className="ml-2 size-4"
-                />
-                الأعمدة
-                <ChevronDownIcon
-                  data-icon="inline-end"
-                  className="mr-2 size-4"
-                />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide()
-                )
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="text-right capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {typeof column.columnDef.header === "string"
-                        ? column.columnDef.header
-                        : column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" className="gap-2">
+              <Link to="/packages/create">
+                <PlusIcon className="size-4" />
+                إضافة باقة
+              </Link>
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Columns3Icon
+                    data-icon="inline-start"
+                    className="ml-2 size-4"
+                  />
+                  الأعمدة
+                  <ChevronDownIcon
+                    data-icon="inline-end"
+                    className="mr-2 size-4"
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {table
+                  .getAllColumns()
+                  .filter(
+                    (column) =>
+                      typeof column.accessorFn !== "undefined" &&
+                      column.getCanHide()
+                  )
+                  .map((column) => {
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="text-right capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) =>
+                          column.toggleVisibility(!!value)
+                        }
+                      >
+                        {typeof column.columnDef.header === "string"
+                          ? column.columnDef.header
+                          : column.id}
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -319,53 +330,44 @@ export function PackagesTable({ data: initialData }: { data: Package[] }) {
               {table.getPageCount() || 1}
             </div>
 
-            <div className="mr-auto flex items-center gap-1 lg:mr-0">
-              {/* First page */}
+            <div className="mr-auto flex items-center gap-2 lg:mr-0">
               <Button
                 variant="outline"
-                size="icon"
-                className="hidden size-8 lg:flex"
+                className="hidden size-8 p-0 lg:flex"
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
                 <span className="sr-only">الصفحة الأولى</span>
-                <ChevronsRightIcon className="size-4" />
+                <ChevronsRightIcon />
               </Button>
-
-              {/* Previous page */}
               <Button
                 variant="outline"
-                size="icon"
                 className="size-8"
+                size="icon"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
                 <span className="sr-only">الصفحة السابقة</span>
-                <ChevronRightIcon className="size-4" />
+                <ChevronRightIcon />
               </Button>
-
-              {/* Next page */}
               <Button
                 variant="outline"
-                size="icon"
                 className="size-8"
+                size="icon"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
                 <span className="sr-only">الصفحة التالية</span>
-                <ChevronLeftIcon className="size-4" />
+                <ChevronLeftIcon />
               </Button>
-
-              {/* Last page */}
               <Button
                 variant="outline"
-                size="icon"
-                className="hidden size-8 lg:flex"
+                className="hidden size-8 p-0 lg:flex"
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
                 <span className="sr-only">الصفحة الأخيرة</span>
-                <ChevronsLeftIcon className="size-4" />
+                <ChevronsLeftIcon />
               </Button>
             </div>
           </div>
