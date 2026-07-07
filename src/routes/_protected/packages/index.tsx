@@ -30,7 +30,7 @@ function RouteComponent() {
     <div className="space-y-4" dir="rtl">
       <SectionCards cardsData={cardsData} />
 
-      <div className="flex items-center justify-end px-4 lg:px-6">
+      <div className="sr-only">
         <Button asChild className="gap-2">
           <Link to="/packages/create">
             <PlusIcon className="size-4" />
