@@ -106,7 +106,7 @@ export const NavLinksData = {
       url: "/dashboard-users",
       icon: <ShieldUser />,
     },
-  ],
+  ].filter((item) => item.url !== "/one-time-orders"),
   navSecondary: [
     {
       title: "الإعدادات",
