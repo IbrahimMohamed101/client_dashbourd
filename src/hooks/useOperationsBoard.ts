@@ -42,23 +42,40 @@ const PREPARATION_ACTIONS = new Set([
   "prepare",
   "start_preparation",
   "ready_for_pickup",
+  "ready_for_delivery",
+]);
+
+const PREPARATION_STATUSES = new Set([
+  "open",
+  "preparing",
+  "in_preparation",
 ]);
 
 function hasPreparationAction(item: UnifiedQueueItem): boolean {
   const actionIds = [
-    ...(item.allowedActions || []),
+    ...(item.allowedActions || []).map((action) => action.id),
     ...(item.actions?.allowed || []),
-  ].map((action) => action.id);
+  ];
 
   return actionIds.some((id) => PREPARATION_ACTIONS.has(id));
 }
 
-function isPreparationQueueItem(item: UnifiedQueueItem): boolean {
+function hasKitchenWorkload(item: UnifiedQueueItem): boolean {
   return Boolean(
-    hasPreparationAction(item) ||
-      item.actions?.canPrepare ||
-      item.actions?.canReadyForPickup
+    item.kitchenDetails?.mealSlots?.length ||
+      item.kitchen?.meals?.length ||
+      item.mealSlots?.length ||
+      item.context.requiredMealCount ||
+      item.context.mealCount
   );
+}
+
+function isPreparationQueueItem(item: UnifiedQueueItem): boolean {
+  if (hasPreparationAction(item)) return true;
+  if (item.actions?.canPrepare || item.actions?.canReadyForPickup) return true;
+  if (!hasKitchenWorkload(item)) return false;
+
+  return PREPARATION_STATUSES.has(item.status);
 }
 
 function getPreparationItems(items: UnifiedQueueItem[] = []): UnifiedQueueItem[] {
