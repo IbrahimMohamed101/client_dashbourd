@@ -51,13 +51,17 @@ const PREPARATION_STATUSES = new Set([
   "in_preparation",
 ]);
 
+function getActionId(action: string | { id?: string }): string | undefined {
+  return typeof action === "string" ? action : action.id;
+}
+
 function hasPreparationAction(item: UnifiedQueueItem): boolean {
   const actionIds = [
     ...(item.allowedActions || []).map((action) => action.id),
-    ...(item.actions?.allowed || []),
+    ...(item.actions?.allowed || []).map(getActionId),
   ];
 
-  return actionIds.some((id) => PREPARATION_ACTIONS.has(id));
+  return actionIds.some((id) => Boolean(id && PREPARATION_ACTIONS.has(id)));
 }
 
 function hasKitchenWorkload(item: UnifiedQueueItem): boolean {
