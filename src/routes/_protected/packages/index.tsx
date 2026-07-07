@@ -1,13 +1,11 @@
 import { SectionCards } from "@/components/custom/section-cards";
 import { getPackagesSectionCards } from "@/constants/SectionCardsData";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { packagesQueryOptions } from "@/hooks/usePackagesQuery";
 import { Loader } from "@/components/global/loader";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { PackagesTable } from "@/components/pages/packages/packages-table";
 import type { PackagesResponse } from "@/types/packageTypes";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
 
 export const Route = createFileRoute("/_protected/packages/")({
   component: RouteComponent,
@@ -29,16 +27,6 @@ function RouteComponent() {
   return (
     <div className="space-y-4" dir="rtl">
       <SectionCards cardsData={cardsData} />
-
-      <div className="sr-only">
-        <Button asChild className="gap-2">
-          <Link to="/packages/create">
-            <PlusIcon className="size-4" />
-            إضافة باقة جديدة
-          </Link>
-        </Button>
-      </div>
-
       <PackagesTable data={packages} />
     </div>
   );
