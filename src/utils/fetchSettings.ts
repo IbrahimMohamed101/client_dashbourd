@@ -2,7 +2,7 @@ import api from "@/lib/apis";
 import type {
   DashboardSettings,
   DashboardSettingsResponse,
-  RestaurantHours,
+  RestaurantHoursPayload,
   RestaurantHoursResponse,
 } from "@/types/settingsTypes";
 import {
@@ -42,7 +42,7 @@ export const fetchRestaurantHours =
 // PUT /api/dashboard/settings/restaurant-hours
 
 export const fetchUpdateRestaurantHours = async (
-  data: RestaurantHours
+  data: RestaurantHoursPayload
 ): Promise<void> => {
   await api.put("/api/dashboard/settings/restaurant-hours", data);
 };

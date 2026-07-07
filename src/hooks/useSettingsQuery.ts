@@ -15,7 +15,7 @@ import {
 
 import type {
   DashboardSettings,
-  RestaurantHours,
+  RestaurantHoursPayload,
 } from "@/types/settingsTypes";
 
 // ── Query Keys ──
@@ -70,7 +70,7 @@ export const useRestaurantHoursQuery = () =>
 export const useUpdateRestaurantHoursMutation = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: RestaurantHours) => fetchUpdateRestaurantHours(data),
+    mutationFn: (data: RestaurantHoursPayload) => fetchUpdateRestaurantHours(data),
     onSuccess: () => {
       toast.success("تم تحديث ساعات العمل بنجاح");
       qc.invalidateQueries({ queryKey: SETTINGS_KEYS.restaurantHours });
