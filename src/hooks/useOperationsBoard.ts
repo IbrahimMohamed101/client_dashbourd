@@ -38,6 +38,41 @@ const itemTimestamp = (item: UnifiedQueueItem) => {
 const newestFirst = (items: UnifiedQueueItem[]) =>
   [...items].sort((a, b) => itemTimestamp(b) - itemTimestamp(a));
 
+const PREPARATION_ACTIONS = new Set([
+  "prepare",
+  "start_preparation",
+  "ready_for_pickup",
+]);
+
+function hasPreparationAction(item: UnifiedQueueItem): boolean {
+  const actionIds = [
+    ...(item.allowedActions || []),
+    ...(item.actions?.allowed || []),
+  ].map((action) => action.id);
+
+  return actionIds.some((id) => PREPARATION_ACTIONS.has(id));
+}
+
+function isPreparationQueueItem(item: UnifiedQueueItem): boolean {
+  return Boolean(
+    hasPreparationAction(item) ||
+      item.actions?.canPrepare ||
+      item.actions?.canReadyForPickup
+  );
+}
+
+function getPreparationItems(items: UnifiedQueueItem[] = []): UnifiedQueueItem[] {
+  return items.filter(isPreparationQueueItem);
+}
+
+function excludeItems(
+  items: UnifiedQueueItem[],
+  excludedItems: UnifiedQueueItem[]
+): UnifiedQueueItem[] {
+  const excludedIds = new Set(excludedItems.map((item) => item.id));
+  return items.filter((item) => !excludedIds.has(item.id));
+}
+
 export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -60,13 +95,9 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
           ? await fetchDashboardOpsSearch(search)
           : await fetchDashboardOpsList(params.date || "");
       const items = response.data?.items ?? [];
-      const pickupItems = getPickupItems(items);
-      const courierItems = getCourierItems(items);
-      const pickupIds = new Set(pickupItems.map((item) => item.id));
-      const courierIds = new Set(courierItems.map((item) => item.id));
-      const kitchenItems = items.filter(
-        (item) => !pickupIds.has(item.id) && !courierIds.has(item.id)
-      );
+      const kitchenItems = getPreparationItems(items);
+      const pickupItems = excludeItems(getPickupItems(items), kitchenItems);
+      const courierItems = excludeItems(getCourierItems(items), kitchenItems);
 
       return [
         { screen: "kitchen" as const, items: newestFirst(kitchenItems) },
@@ -140,36 +171,20 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
         message?: string;
       };
       toast.error(
-        err?.response?.data?.message ||
-          err?.message ||
-          "حدث خطأ غير متوقع"
+        err?.response?.data?.message || err?.message || "تعذر تنفيذ الإجراء"
       );
       queryClient.invalidateQueries({ queryKey: ["operations-board", "queue"] });
     },
   });
 
-  const requestAction = (
-    item: UnifiedQueueItem,
-    action: string,
-    _actionLabel: string,
-    _isDangerous?: boolean,
-    reason?: string,
-    notes?: string,
-    pickupCode?: string
-  ) => {
-    actionMutation.mutate({ item, action, reason, notes, pickupCode });
-  };
-
   return {
+    role,
     screenLabel,
     visibleScreens,
-    itemsByScreen,
     allItems,
-    isLoading: visibleScreens.length > 0 && queueQuery.isLoading,
-    isPending: actionMutation.isPending,
-    requestAction,
+    itemsByScreen,
+    queueQuery,
+    actionMutation,
+    screens: OPERATIONS_SCREENS,
   };
 }
-
-export type { OperationsScreen as Screen } from "@/lib/operationsBoard";
-export { OPERATIONS_SCREENS as SCREENS, getScreensForRole };
