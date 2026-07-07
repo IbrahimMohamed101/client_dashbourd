@@ -177,12 +177,27 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     },
   });
 
+  const requestAction = (
+    item: UnifiedQueueItem,
+    action: string,
+    _actionLabel?: string,
+    _isDangerous?: boolean,
+    reason?: string,
+    notes?: string,
+    pickupCode?: string
+  ) => {
+    actionMutation.mutate({ item, action, reason, notes, pickupCode });
+  };
+
   return {
     role,
     screenLabel,
     visibleScreens,
     allItems,
     itemsByScreen,
+    isLoading: queueQuery.isLoading,
+    isPending: actionMutation.isPending,
+    requestAction,
     queueQuery,
     actionMutation,
     screens: OPERATIONS_SCREENS,
