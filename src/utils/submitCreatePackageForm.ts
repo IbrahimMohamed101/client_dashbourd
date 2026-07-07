@@ -38,7 +38,7 @@ export const submitCreatePackageForm = async (
 ) => {
   setIsSubmitting(true);
   try {
-    await fetchCreatePackage(buildPackagePayload(data) as CreatePackageSchemaType);
+    await fetchCreatePackage(buildPackagePayload(data));
     ToastMessage("تم إنشاء الباقة بنجاح! 🎉", "success");
     await queryClient.invalidateQueries(packagesQueryOptions());
     routerNavigate({ to: "/packages" });
