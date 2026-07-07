@@ -38,15 +38,6 @@ const itemTimestamp = (item: UnifiedQueueItem) => {
 const newestFirst = (items: UnifiedQueueItem[]) =>
   [...items].sort((a, b) => itemTimestamp(b) - itemTimestamp(a));
 
-const PREPARATION_STATUSES = new Set([
-  "open",
-  "locked",
-  "confirmed",
-  "pending_payment",
-  "preparing",
-  "in_preparation",
-]);
-
 const PREPARATION_ACTIONS = new Set([
   "prepare",
   "start_preparation",
@@ -63,12 +54,11 @@ function hasPreparationAction(item: UnifiedQueueItem): boolean {
 }
 
 function isPreparationQueueItem(item: UnifiedQueueItem): boolean {
-  if (hasPreparationAction(item)) return true;
-  if (item.actions?.canPrepare || item.actions?.canReadyForPickup) return true;
-  if (item.paymentValidity?.canPrepare && PREPARATION_STATUSES.has(item.status)) {
-    return true;
-  }
-  return PREPARATION_STATUSES.has(item.status) && item.source !== "subscription_pickup_request";
+  return Boolean(
+    hasPreparationAction(item) ||
+      item.actions?.canPrepare ||
+      item.actions?.canReadyForPickup
+  );
 }
 
 function getPreparationItems(items: UnifiedQueueItem[] = []): UnifiedQueueItem[] {
