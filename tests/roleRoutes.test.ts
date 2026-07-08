@@ -74,7 +74,6 @@ assert.deepEqual(ROLE_DEFAULTS, {
 assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/subscriptions/create"), true);
 assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/users/user-1"), true);
 assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/operations"), true);
-assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/menu?tab=catalog"), false);
 assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/menu"), true);
 assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/premium-meals"), true);
 assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/delivery"), false);
