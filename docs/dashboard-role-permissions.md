@@ -18,24 +18,26 @@ Unknown roles fail closed. Logged-out users are redirected to login. Direct navi
 
 | Role | Default Route | Allowed Protected Routes |
 |---|---|---|
-| `superadmin` | `/dashboard` | `/dashboard`, `/one-time-orders`, `/operations`, `/subscriptions`, `/packages`, `/users`, `/addons`, `/delivery`, `/payments`, `/accounting`, `/promo-codes`, `/zones`, `/manual-deduction`, `/menu`, `/premium-meals`, `/dashboard-users`, `/settings`, `/restaurant-hours`, `/pickup-branches`, `/notifications`, `/profile` |
-| `admin` | `/dashboard` | `/dashboard`, `/one-time-orders`, `/operations`, `/subscriptions`, `/packages`, `/users`, `/addons`, `/delivery`, `/payments`, `/accounting`, `/promo-codes`, `/zones`, `/manual-deduction`, `/menu`, `/premium-meals`, `/dashboard-users`, `/settings`, `/restaurant-hours`, `/pickup-branches`, `/notifications`, `/profile` |
-| `kitchen` | `/operations` | `/operations`, `/one-time-orders`, `/profile` |
+| `superadmin` | `/dashboard` | `/dashboard`, `/operations`, `/subscriptions`, `/packages`, `/users`, `/addons`, `/delivery`, `/payments`, `/accounting`, `/promo-codes`, `/zones`, `/manual-deduction`, `/menu`, `/premium-meals`, `/dashboard-users`, `/settings`, `/restaurant-hours`, `/pickup-branches`, `/notifications`, `/profile` |
+| `admin` | `/dashboard` | `/dashboard`, `/operations`, `/subscriptions`, `/packages`, `/users`, `/addons`, `/delivery`, `/payments`, `/accounting`, `/promo-codes`, `/zones`, `/manual-deduction`, `/menu`, `/premium-meals`, `/dashboard-users`, `/settings`, `/restaurant-hours`, `/pickup-branches`, `/notifications`, `/profile` |
+| `kitchen` | `/operations` | `/addons`, `/operations`, `/menu`, `/premium-meals`, `/profile` |
 | `courier` | `/delivery` | `/delivery`, `/profile` |
-| `cashier` | `/dashboard` | `/dashboard`, `/one-time-orders`, `/subscriptions`, `/payments`, `/users`, `/profile` |
+| `cashier` | `/operations` | `/manual-deduction`, `/operations`, `/users`, `/profile` |
 
-Nested routes inherit access from their parent route. For example, `/subscriptions/create` is allowed when `/subscriptions` is allowed.
+Nested routes inherit access from their parent route. For example, `/menu/categories/:id/update` is allowed when `/menu` is allowed.
 
 ## Sidebar Navigation
 
 The sidebar is filtered from the same route matrix used by the route guard. A role should not see a sidebar link that it cannot open directly.
 
-- `admin` and `superadmin`: main dashboard navigation plus settings, restaurant hours, pickup branches, notifications, and dashboard users.
-- `kitchen`: one-time orders and operations.
+- `admin` and `superadmin`: full dashboard navigation plus settings, restaurant hours, pickup branches, notifications, and dashboard users.
+- `kitchen`: add-ons, operations, menu catalog, and premium meals.
 - `courier`: delivery only.
-- `cashier`: dashboard, one-time orders, subscriptions, payments, and users.
+- `cashier`: operations, manual deduction, and users.
 
 `/profile` is available through user/account UI, not the main sidebar.
+
+`/one-time-orders` is retired from the visible dashboard UX. Backend one-time order APIs may still be used by Operations, but the standalone frontend route should not be part of role navigation.
 
 ## Backend API Matrix
 
@@ -44,16 +46,17 @@ All protected dashboard API families must require dashboard authentication. `sup
 | API Family | Allowed Dashboard Roles | Notes |
 |---|---|---|
 | `/api/courier/*` | `superadmin`, `admin`, `courier` | Canonical courier delivery/order action surface. `/delivery` must continue using this family. |
-| `/api/dashboard/ops/list`, `/api/dashboard/ops/search`, `/api/dashboard/ops/actions/*`, `/api/dashboard/ops/subscription-days/*` | `superadmin`, `admin`, `kitchen` | Unified operations surface. Courier role must not use these endpoints directly. |
+| `/api/dashboard/ops/list`, `/api/dashboard/ops/search`, `/api/dashboard/ops/actions/*`, `/api/dashboard/ops/subscription-days/*` | `superadmin`, `admin`, `kitchen`, `cashier` | Unified operations surface. Courier role must not use these endpoints directly. |
 | `/api/dashboard/ops/cashier/*` | `superadmin`, `admin`, `cashier` | Cashier operational lookup/consumption helpers. |
-| `/api/dashboard/orders/*` | `superadmin`, `admin`, `kitchen`, `cashier` | One-time order dashboard list/detail/actions. Courier uses `/api/courier/orders/*` instead. |
+| `/api/dashboard/orders/*` | `superadmin`, `admin`, `kitchen`, `cashier` | One-time order dashboard APIs remain backend-owned for Operations/detail/action support. Courier uses `/api/courier/orders/*` instead. |
 | `/api/dashboard/kitchen/*`, `/api/dashboard/pickup/*` | `superadmin`, `admin`, `kitchen` | Kitchen and pickup operations lanes. |
-| `/api/dashboard/courier/*`, `/api/dashboard/delivery-schedule` | `superadmin`, `admin` | Admin operations delivery lane only; courier dashboard role uses `/api/courier/*`. |
+| `/api/dashboard/courier/*`, `/api/dashboard/delivery-schedule` | `superadmin`, `admin`, `cashier` | Operations delivery lane after backend role alignment. Courier dashboard role uses `/api/courier/*`. |
 | `/api/dashboard/subscriptions/search`, `/api/dashboard/subscriptions/*/balances`, `/api/dashboard/subscriptions/*/manual-deduction`, `/api/dashboard/subscriptions/*/manual-deductions` | `superadmin`, `admin`, `cashier` | Cashier-safe subscription search, balances, and manual deduction surfaces. |
 | `/api/dashboard/subscriptions/*/audit`, subscription lifecycle admin actions | `superadmin`, `admin` | Admin-only subscription management. |
-| `/api/dashboard/overview`, `/api/dashboard/search`, `/api/dashboard/users`, `/api/dashboard/orders`, `/api/dashboard/payments`, subscription read/create/quote routes in `admin.js` | `superadmin`, `admin`, `cashier` | Cashier dashboard, customer, order, subscription, and payment read/workflow routes. |
+| `/api/dashboard/overview`, `/api/dashboard/search`, `/api/dashboard/users`, `/api/dashboard/orders`, `/api/dashboard/payments`, subscription read/create/quote routes in `admin.js` | `superadmin`, `admin`, `cashier` | Cashier dashboard, customer, order, subscription, and payment read/workflow routes where backend permits. |
+| `/api/dashboard/addons*`, `/api/dashboard/addon-plans*`, `/api/dashboard/addon-items*`, `/api/dashboard/addon-prices*`, `/api/dashboard/menu*`, `/api/dashboard/catalog-items*`, `/api/dashboard/premium-upgrades*` | `superadmin`, `admin`, `kitchen` | Kitchen owns menu/add-ons/catalog/premium meals according to the latest backend role contract. |
+| `/api/dashboard/settings*`, `/api/dashboard/restaurant-hours*`, `/api/dashboard/zones*`, `/api/dashboard/promo-codes*`, `/api/dashboard/dashboard-users*`, `/api/dashboard/notifications*`, `/api/dashboard/logs*` | `superadmin`, `admin` | Admin configuration and management APIs. Dashboard user management remains admin/superadmin unless product later decides superadmin-only. |
 | `/api/dashboard/accounting/*` | `superadmin`, `admin` | Accounting screen is not cashier-accessible unless explicitly approved later. |
-| `/api/dashboard/menu*`, `/api/dashboard/meal-builder*`, `/api/dashboard/catalog-items*`, `/api/dashboard/premium-upgrades*`, `/api/dashboard/settings*`, `/api/dashboard/restaurant-hours*`, `/api/dashboard/zones*`, `/api/dashboard/promo-codes*`, `/api/dashboard/dashboard-users*`, `/api/dashboard/notifications*`, `/api/dashboard/logs*` | `superadmin`, `admin` | Admin configuration and management APIs. Dashboard user management remains admin/superadmin unless product later decides superadmin-only. |
 
 ## Response Rules
 
