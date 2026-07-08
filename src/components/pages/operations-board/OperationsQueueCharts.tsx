@@ -1,18 +1,11 @@
 import { AlertCircle, CheckCircle2, Clock3, Layers3 } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrder, isPickupRequest } from "@/types/dashboardOpsTypes";
 
-function formatNumber(value: number) {
-  return value.toLocaleString("ar-EG");
+function formatCount(value: number) {
+  return value.toLocaleString("en-US");
 }
 
 function getStatusLabel(item: UnifiedQueueItem) {
@@ -57,45 +50,51 @@ function getPrimaryActionLabel(items: UnifiedQueueItem[]) {
   return getTopLabel(actionRows);
 }
 
-function SummaryCard({
+function SummaryTile({
   title,
   value,
-  description,
+  helper,
   icon: Icon,
+  emphasis = "default",
 }: {
   title: string;
   value: string | number;
-  description: string;
+  helper: string;
   icon: typeof Layers3;
+  emphasis?: "default" | "action" | "calm";
 }) {
+  const valueText = typeof value === "number" ? formatCount(value) : value;
+  const accentClass =
+    emphasis === "action"
+      ? "bg-primary/10 text-primary ring-primary/15"
+      : emphasis === "calm"
+        ? "bg-emerald-500/10 text-emerald-500 ring-emerald-500/15"
+        : "bg-muted text-muted-foreground ring-border";
+
   return (
-    <Card className="rounded-2xl border-border/70 bg-card/95 shadow-sm transition-colors hover:border-primary/30">
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
-        <div className="space-y-1">
-          <CardDescription className="text-xs font-medium">
-            {title}
-          </CardDescription>
-          <CardTitle className="text-2xl font-bold tabular-nums">
-            {typeof value === "number" ? formatNumber(value) : value}
-          </CardTitle>
+    <div className="group rounded-2xl border border-border/70 bg-background/45 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-background/70">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="text-xs font-semibold text-muted-foreground">{title}</p>
+          <p className="truncate text-3xl font-black leading-none tracking-tight text-foreground tabular-nums">
+            {valueText}
+          </p>
         </div>
-        <span className="rounded-xl bg-muted p-2 text-muted-foreground">
+        <span className={`rounded-xl p-2 ring-1 ${accentClass}`}>
           <Icon className="size-4" />
         </span>
-      </CardHeader>
-      <CardContent>
-        <p className="line-clamp-2 text-xs text-muted-foreground">
-          {description}
-        </p>
-      </CardContent>
-    </Card>
+      </div>
+      <p className="mt-3 line-clamp-2 min-h-8 text-xs leading-5 text-muted-foreground">
+        {helper}
+      </p>
+    </div>
   );
 }
 
 export function OperationsQueueCharts({
   items,
   title = "قراءة سريعة للطابور",
-  description = "ملخص بسيط يساعد الفريق يركز على دورة الطلبات بدون رسوم مزدحمة.",
+  description = "ملخص تشغيلي بسيط يوضح المرحلة بدون تشتيت عن جدول الطلبات.",
 }: {
   items: UnifiedQueueItem[];
   title?: string;
@@ -106,55 +105,65 @@ export function OperationsQueueCharts({
   const statusRows = countByLabel(items, getStatusLabel);
   const { needsAction, stable } = getActionCounts(items);
   const primaryAction = getPrimaryActionLabel(items);
+  const topStatus = getTopLabel(statusRows);
+  const topSource = getTopLabel(sourceRows);
 
   return (
-    <section className="rounded-2xl border bg-card/60 p-4 shadow-sm">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold">{title}</h2>
-          <p className="text-sm text-muted-foreground">{description}</p>
+    <section className="rounded-3xl border border-border/70 bg-card/55 p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-base font-bold tracking-tight text-foreground">
+            {title}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         </div>
-        <Badge variant="secondary" className="w-fit rounded-full px-3 py-1">
-          إجمالي {formatNumber(total)}
+        <Badge variant="secondary" className="w-fit rounded-full px-3 py-1.5 text-xs font-semibold">
+          {formatCount(total)} طلب في هذه المرحلة
         </Badge>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
+        <SummaryTile
           title="إجمالي الطابور"
           value={total}
-          description="عدد الطلبات الظاهرة داخل هذه المرحلة بعد تطبيق صلاحيات الدور والفلاتر."
+          helper={
+            total > 0
+              ? "عدد الطلبات الظاهرة بعد صلاحيات الدور والفلاتر."
+              : "لا توجد طلبات مطابقة في هذه المرحلة حالياً."
+          }
           icon={Layers3}
         />
-        <SummaryCard
+        <SummaryTile
           title="يحتاج إجراء"
           value={needsAction}
-          description={
+          helper={
             needsAction > 0
               ? `أقرب إجراء متكرر: ${primaryAction}`
-              : "لا توجد إجراءات مطلوبة الآن."
+              : "لا توجد أزرار إجراءات مطلوبة الآن."
           }
           icon={AlertCircle}
+          emphasis="action"
         />
-        <SummaryCard
+        <SummaryTile
           title="بدون تدخل عاجل"
           value={stable}
-          description="طلبات موجودة للمتابعة فقط أو لا تحتوي على إجراء مباشر من الباك إند."
+          helper="طلبات للمتابعة فقط أو لا تحتوي على إجراء مباشر من الباك إند."
           icon={CheckCircle2}
+          emphasis="calm"
         />
-        <SummaryCard
-          title="أكثر حالة حالية"
-          value={getTopLabel(statusRows)}
-          description={`أكثر مصدر ظاهر الآن: ${getTopLabel(sourceRows)}.`}
+        <SummaryTile
+          title="الحالة الأبرز"
+          value={topStatus}
+          helper={`أكثر مصدر ظاهر الآن: ${topSource}.`}
           icon={Clock3}
         />
       </div>
 
       {sourceRows.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-border/60 pt-3">
           {sourceRows.map((row) => (
-            <Badge key={row.label} variant="outline" className="rounded-full">
-              {row.label}: {formatNumber(row.count)}
+            <Badge key={row.label} variant="outline" className="rounded-full bg-background/40 px-3 py-1">
+              {row.label}: {formatCount(row.count)}
             </Badge>
           ))}
         </div>
