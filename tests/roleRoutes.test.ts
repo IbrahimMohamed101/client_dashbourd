@@ -12,7 +12,6 @@ import { UserRoles, type UserRole } from "../src/types/auth";
 
 const adminProtectedRoutes = [
   "/dashboard",
-  "/one-time-orders",
   "/operations",
   "/subscriptions",
   "/packages",
@@ -38,22 +37,27 @@ assert.deepEqual(SUPERADMIN_ROUTES, adminProtectedRoutes);
 assert.deepEqual(ADMIN_ROUTES, adminProtectedRoutes);
 
 assert.deepEqual(CASHIER_ROUTES, [
-  "/dashboard",
-  "/one-time-orders",
-  "/subscriptions",
-  "/payments",
+  "/manual-deduction",
+  "/operations",
   "/users",
   "/profile",
 ]);
 
-assert.equal(CASHIER_ROUTES.includes("/manual-deduction"), false);
-assert.equal(CASHIER_ROUTES.includes("/pickup-board"), false);
+assert.equal(CASHIER_ROUTES.includes("/payments"), false);
+assert.equal(CASHIER_ROUTES.includes("/subscriptions"), false);
 assert.equal(CASHIER_ROUTES.includes("/menu"), false);
 assert.equal(CASHIER_ROUTES.includes("/packages"), false);
 
-assert.deepEqual(KITCHEN_ROUTES, ["/operations", "/one-time-orders", "/profile"]);
-assert.equal(KITCHEN_ROUTES.includes("/menu"), false);
+assert.deepEqual(KITCHEN_ROUTES, [
+  "/addons",
+  "/operations",
+  "/menu",
+  "/premium-meals",
+  "/profile",
+]);
 assert.equal(KITCHEN_ROUTES.includes("/manual-deduction"), false);
+assert.equal(KITCHEN_ROUTES.includes("/users"), false);
+assert.equal(KITCHEN_ROUTES.includes("/delivery"), false);
 
 assert.deepEqual(COURIER_ROUTES, ["/delivery", "/profile"]);
 assert.equal(COURIER_ROUTES.includes("/operations"), false);
@@ -64,17 +68,22 @@ assert.deepEqual(ROLE_DEFAULTS, {
   [UserRoles.ADMIN]: "/dashboard",
   [UserRoles.KITCHEN]: "/operations",
   [UserRoles.COURIER]: "/delivery",
-  [UserRoles.CASHIER]: "/dashboard",
+  [UserRoles.CASHIER]: "/operations",
 });
 
 assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/subscriptions/create"), true);
 assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/users/user-1"), true);
 assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/operations"), true);
-assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/one-time-orders/order-1"), true);
+assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/menu?tab=catalog"), false);
+assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/menu"), true);
+assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/premium-meals"), true);
 assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/delivery"), false);
 assert.equal(canRoleAccessRoute(UserRoles.COURIER, "/delivery"), true);
 assert.equal(canRoleAccessRoute(UserRoles.COURIER, "/operations"), false);
-assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/payments"), true);
+assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/manual-deduction"), true);
+assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/operations"), true);
+assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/users"), true);
+assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/payments"), false);
 assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/accounting"), false);
 assert.equal(canRoleAccessRoute("unknown" as UserRole, "/dashboard"), false);
 assert.equal(canRoleAccessRoute(undefined, "/dashboard"), false);
