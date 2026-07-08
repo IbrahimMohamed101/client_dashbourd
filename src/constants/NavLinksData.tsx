@@ -9,7 +9,6 @@ import {
   ChartNoAxesCombined,
   ChefHat,
   CircleHelpIcon,
-  ClipboardList,
   Clock,
   CreditCard,
   LayoutDashboardIcon,
@@ -62,11 +61,6 @@ export const NavLinksData = {
       icon: <CalendarPlus />,
     },
     {
-      title: "طلبات لمره واحده",
-      url: "/one-time-orders",
-      icon: <ClipboardList />,
-    },
-    {
       title: "لوحة العمليات",
       url: "/operations",
       icon: <ChefHat />,
@@ -106,7 +100,7 @@ export const NavLinksData = {
       url: "/dashboard-users",
       icon: <ShieldUser />,
     },
-  ].filter((item) => item.url !== "/one-time-orders"),
+  ],
   navSecondary: [
     {
       title: "الإعدادات",
