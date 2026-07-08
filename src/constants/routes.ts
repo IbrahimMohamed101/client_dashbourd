@@ -3,7 +3,6 @@ import type { UserRole } from "@/types/auth";
 
 const SUPERADMIN_ROUTES = [
   "/dashboard",
-  "/one-time-orders",
   "/operations",
   "/subscriptions",
   "/packages",
@@ -27,7 +26,6 @@ const SUPERADMIN_ROUTES = [
 
 const ADMIN_ROUTES = [
   "/dashboard",
-  "/one-time-orders",
   "/operations",
   "/subscriptions",
   "/packages",
@@ -49,15 +47,19 @@ const ADMIN_ROUTES = [
   "/profile",
 ];
 
-const KITCHEN_ROUTES = ["/operations", "/one-time-orders", "/profile"];
+const KITCHEN_ROUTES = [
+  "/addons",
+  "/operations",
+  "/menu",
+  "/premium-meals",
+  "/profile",
+];
 
 const COURIER_ROUTES = ["/delivery", "/profile"];
 
 const CASHIER_ROUTES = [
-  "/dashboard",
-  "/one-time-orders",
-  "/subscriptions",
-  "/payments",
+  "/manual-deduction",
+  "/operations",
   "/users",
   "/profile",
 ];
@@ -69,7 +71,7 @@ const ROLE_DEFAULTS: Record<UserRole, string> = {
   [UserRoles.ADMIN]: "/dashboard",
   [UserRoles.KITCHEN]: "/operations",
   [UserRoles.COURIER]: "/delivery",
-  [UserRoles.CASHIER]: "/dashboard",
+  [UserRoles.CASHIER]: "/operations",
 };
 
 const ROLE_ROUTES: Record<UserRole, string[]> = {
