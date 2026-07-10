@@ -169,11 +169,13 @@ function AddonCard({
           {isSelected && <Check className="size-3" />}
         </div>
       </div>
-      <img
-        src={addon.imageUrl}
-        alt={addon.name.ar}
-        className="size-12 shrink-0 rounded-lg object-cover"
-      />
+      {addon.imageUrl?.trim() ? (
+        <img
+          src={addon.imageUrl}
+          alt={addon.name.ar}
+          className="size-12 shrink-0 rounded-lg object-cover"
+        />
+      ) : null}
       <div className="flex-1">
         <p className="text-sm font-semibold">{addon.name.ar}</p>
         <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
