@@ -29,12 +29,21 @@ const addonDeductionSchema = z.object({
   addonId: z.string(),
   name: z.string(),
   remainingQty: z.number(),
-  qty: z.coerce.number().min(0, "الرقم غير صحيح"),
+  qty: z.coerce
+    .number()
+    .int("الرقم يجب أن يكون صحيحًا")
+    .min(0, "الرقم غير صحيح"),
 });
 
 const deductionSchema = z.object({
-  regularMeals: z.coerce.number().min(0, "الرقم غير صحيح"),
-  premiumMeals: z.coerce.number().min(0, "الرقم غير صحيح"),
+  regularMeals: z.coerce
+    .number()
+    .int("الرقم يجب أن يكون صحيحًا")
+    .min(0, "الرقم غير صحيح"),
+  premiumMeals: z.coerce
+    .number()
+    .int("الرقم يجب أن يكون صحيحًا")
+    .min(0, "الرقم غير صحيح"),
   addons: z.array(addonDeductionSchema),
   reason: z.string().min(1, "الرجاء إدخال سبب الخصم"),
   notes: z.string().optional(),
@@ -221,7 +230,7 @@ export function DeductionForm({
                         <Input
                           type="number"
                           min={0}
-                          max={regularRemaining}
+                          step={1}
                           inputMode="numeric"
                           name={field.name}
                           ref={field.ref}
@@ -248,7 +257,7 @@ export function DeductionForm({
                         <Input
                           type="number"
                           min={0}
-                          max={premiumRemaining}
+                          step={1}
                           inputMode="numeric"
                           name={field.name}
                           ref={field.ref}
@@ -294,7 +303,7 @@ export function DeductionForm({
                               <Input
                                 type="number"
                                 min={0}
-                                max={addon.remainingQty}
+                                step={1}
                                 inputMode="numeric"
                                 className="w-24 text-center"
                                 name={field.name}
