@@ -48,6 +48,7 @@ type MenuCreatePath =
 interface QueryResult<T> {
   data?: PaginatedResponse<T>;
   isLoading: boolean;
+  isError?: boolean;
 }
 
 interface DeleteMutation {
@@ -112,7 +113,7 @@ export function MenuEntityTableTab<
   const queryParams = buildQueryParams
     ? buildQueryParams(baseParams)
     : (baseParams as TParams);
-  const { data: response, isLoading } = useQuery(queryParams);
+  const { data: response, isLoading, isError } = useQuery(queryParams);
   const deleteMutation = useDeleteMutation();
 
   const items = response?.data.items ?? [];
@@ -209,7 +210,16 @@ export function MenuEntityTableTab<
                   ))}
                 </TableHeader>
                 <TableBody>
-                  {table.getRowModel().rows?.length ? (
+                  {isError ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center text-destructive"
+                      >
+                        تعذر تحميل البيانات. حاول تحديث الصفحة أو تحقق من الاتصال.
+                      </TableCell>
+                    </TableRow>
+                  ) : table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow key={row.id}>
                         {row.getVisibleCells().map((cell) => (
