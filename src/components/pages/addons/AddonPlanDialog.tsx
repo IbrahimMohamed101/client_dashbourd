@@ -282,7 +282,7 @@ export function AddonPlanDialog({
               </div>
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_9rem] md:items-end">
                 <div className="space-y-2">
-                  <Label>التصنيف</Label>
+                  <Label>الباقة</Label>
                   <Select
                     value={form.category}
                     onValueChange={(value) => updateTextField("category", value)}
