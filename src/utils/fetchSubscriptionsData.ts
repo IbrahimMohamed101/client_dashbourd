@@ -2,6 +2,7 @@ import api from "@/lib/apis";
 import type {
   ManualDeductionPayload,
   ManualDeductionResponse,
+  SubscriptionAddonEntitlementsResponse,
   SubscriptionAddonEntitlementPayload,
   SubscriptionBalancesPayload,
   SubscriptionBalancesResponse,
@@ -118,18 +119,30 @@ export const fetchSubscriptionQuote = async (data: Record<string, unknown>) => {
   return response.data;
 };
 
-export const skipSubscriptionDay = async (subscriptionId: string, date: string) => {
-  const response = await api.post(`/api/dashboard/subscriptions/${subscriptionId}/days/${date}/skip`);
+export const skipSubscriptionDay = async (
+  subscriptionId: string,
+  date: string
+) => {
+  const response = await api.post(
+    `/api/dashboard/subscriptions/${subscriptionId}/days/${date}/skip`
+  );
   return response.data;
 };
 
-export const unskipSubscriptionDay = async (subscriptionId: string, date: string) => {
-  const response = await api.post(`/api/dashboard/subscriptions/${subscriptionId}/days/${date}/unskip`);
+export const unskipSubscriptionDay = async (
+  subscriptionId: string,
+  date: string
+) => {
+  const response = await api.post(
+    `/api/dashboard/subscriptions/${subscriptionId}/days/${date}/unskip`
+  );
   return response.data;
 };
 
 export const fetchSubscriptionAuditLog = async (subscriptionId: string) => {
-  const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}/audit-log`);
+  const response = await api.get(
+    `/api/dashboard/subscriptions/${subscriptionId}/audit-log`
+  );
   return response.data;
 };
 
@@ -153,7 +166,9 @@ export const fetchSubscriptionDays = async (
 };
 
 export const fetchSubscriptionDelivery = async (subscriptionId: string) => {
-  const response = await api.get(`/api/dashboard/subscriptions/${subscriptionId}`);
+  const response = await api.get(
+    `/api/dashboard/subscriptions/${subscriptionId}`
+  );
   return response.data;
 };
 
@@ -185,8 +200,12 @@ export const updateSubscriptionBalances = async (
   return response.data;
 };
 
-export const fetchSubscriptionAddonEntitlements = async (subscriptionId: string) => {
-  const response = await api.get(subscriptionAddonEntitlementsUrl(subscriptionId));
+export const fetchSubscriptionAddonEntitlements = async (
+  subscriptionId: string
+): Promise<SubscriptionAddonEntitlementsResponse> => {
+  const response = await api.get<SubscriptionAddonEntitlementsResponse>(
+    subscriptionAddonEntitlementsUrl(subscriptionId)
+  );
   return response.data;
 };
 
@@ -195,12 +214,15 @@ export const replaceSubscriptionAddonEntitlements = async (
   addonEntitlements: SubscriptionAddonEntitlementPayload[],
   reason: string
 ) => {
-  const response = await api.patch(subscriptionAddonEntitlementsUrl(subscriptionId), {
-    addonSubscriptions: addonEntitlements,
-    entitlements: addonEntitlements,
-    addonEntitlements,
-    reason,
-  });
+  const response = await api.patch(
+    subscriptionAddonEntitlementsUrl(subscriptionId),
+    {
+      addonSubscriptions: addonEntitlements,
+      entitlements: addonEntitlements,
+      addonEntitlements,
+      reason,
+    }
+  );
   return response.data;
 };
 
@@ -210,7 +232,9 @@ export const createSubscriptionAddonEntitlement = async (
 ) => {
   const current = await fetchSubscriptionAddonEntitlements(subscriptionId);
   const addonEntitlements = [
-    ...(current.data?.addonEntitlements ?? []),
+    ...(current.data?.addonSubscriptions ??
+      current.data?.addonEntitlements ??
+      []),
     data,
   ].map((row) => ({
     addonId: row.addonId,
@@ -230,7 +254,11 @@ export const deleteSubscriptionAddonEntitlement = async (
   reason = "Dashboard addon entitlement removed"
 ) => {
   const current = await fetchSubscriptionAddonEntitlements(subscriptionId);
-  const addonEntitlements = (current.data?.addonEntitlements ?? [])
+  const addonEntitlements = (
+    current.data?.addonSubscriptions ??
+    current.data?.addonEntitlements ??
+    []
+  )
     .filter((row: { _id?: string; id?: string; addonId?: string }) => {
       const rowId = row._id ?? row.id ?? row.addonId;
       return rowId !== entitlementId;
@@ -261,7 +289,9 @@ export const searchSubscriptionsByPhone = async (phone: string) => {
   }
 };
 
-export const fetchSubscriptionManualDeductions = async (subscriptionId: string) => {
+export const fetchSubscriptionManualDeductions = async (
+  subscriptionId: string
+) => {
   const response = await api.get(
     `/api/dashboard/subscriptions/${subscriptionId}/manual-deductions`
   );

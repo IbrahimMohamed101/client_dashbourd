@@ -1,15 +1,19 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { userDetailsQueryOptions } from "@/hooks/useUsersQuery";
 import { Loader } from "@/components/global/loader";
+import { ToastMessage } from "@/components/global/ToastMessage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { getApiErrorMessage } from "@/lib/apiErrors";
+import { resetUserPassword } from "@/utils/fetchUsersData";
 import {
   ArrowRightIcon,
   MailIcon,
@@ -22,9 +26,7 @@ import {
 
 export const Route = createFileRoute("/_protected/users/$userId/")({
   loader: ({ context, params }) => {
-    context.queryClient.ensureQueryData(
-      userDetailsQueryOptions(params.userId)
-    );
+    context.queryClient.ensureQueryData(userDetailsQueryOptions(params.userId));
   },
   pendingComponent: Loader,
   component: UserDetailsPage,
@@ -32,9 +34,7 @@ export const Route = createFileRoute("/_protected/users/$userId/")({
 
 function UserDetailsPage() {
   const { userId } = Route.useParams();
-  const { data: response } = useSuspenseQuery(
-    userDetailsQueryOptions(userId)
-  );
+  const { data: response } = useSuspenseQuery(userDetailsQueryOptions(userId));
 
   const user = response.data;
 
@@ -70,10 +70,7 @@ function UserDetailsPage() {
 
         <div className="flex items-center gap-2">
           <Button asChild>
-            <Link
-              to="/users/$userId/create-subscription"
-              params={{ userId }}
-            >
+            <Link to="/users/$userId/create-subscription" params={{ userId }}>
               <PlusCircleIcon className="ml-1 size-4" />
               إنشاء اشتراك
             </Link>
@@ -104,9 +101,7 @@ function UserDetailsPage() {
             </div>
             <div className="flex items-center gap-2 text-sm">
               <MailIcon className="size-4 text-muted-foreground" />
-              <span className="font-medium">
-                {user.email || "غير متوفر"}
-              </span>
+              <span className="font-medium">{user.email || "غير متوفر"}</span>
             </div>
           </CardContent>
         </Card>
@@ -130,6 +125,21 @@ function UserDetailsPage() {
                 {user.isActive ? "نشط" : "غير نشط"}
               </Badge>
             </div>
+            {user.forcePasswordChange && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">كلمة المرور</span>
+                <Badge
+                  variant="outline"
+                  className="border-amber-400 text-amber-600"
+                >
+                  مؤقتة - بانتظار التغيير
+                </Badge>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">حالة الحساب</span>
+              <Badge variant="outline">{user.accountStatus || "active"}</Badge>
+            </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">معرف المستخدم</span>
               <span className="font-mono text-xs">{user.id?.slice(-8)}</span>
@@ -148,13 +158,13 @@ function UserDetailsPage() {
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">إجمالي الاشتراكات</span>
-              <span className="font-bold text-lg">
+              <span className="text-lg font-bold">
                 {user.subscriptionsCount}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">الاشتراكات النشطة</span>
-              <span className="font-bold text-lg text-emerald-600">
+              <span className="text-lg font-bold text-emerald-600">
                 {user.activeSubscriptionsCount}
               </span>
             </div>
@@ -167,7 +177,79 @@ function UserDetailsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <ResetPasswordCard userId={userId} />
       </div>
     </div>
+  );
+}
+
+function ResetPasswordCard({ userId }: { userId: string }) {
+  const [password, setPassword] = useState("");
+  const [reason, setReason] = useState("");
+  const queryClient = useQueryClient();
+
+  const resetPassword = useMutation({
+    mutationFn: () => resetUserPassword({ userId, password, reason }),
+    onSuccess: () => {
+      setPassword("");
+      setReason("");
+      queryClient.invalidateQueries({ queryKey: ["user-details", userId] });
+      ToastMessage("تم إعادة تعيين كلمة المرور بنجاح", "success");
+    },
+    onError: (error: unknown) => {
+      ToastMessage(
+        getApiErrorMessage(error) || "حدث خطأ أثناء إعادة تعيين كلمة المرور",
+        "error"
+      );
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ShieldCheckIcon className="size-4" />
+          إعادة تعيين كلمة المرور
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          أدخل كلمة مرور مؤقتة للمستخدم. سيُطلب منه تغييرها عند أول تسجيل دخول.
+        </p>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">كلمة المرور المؤقتة</label>
+          <Input
+            type="password"
+            dir="ltr"
+            placeholder="أدخل كلمة مرور مؤقتة (6 أحرف على الأقل)"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            minLength={6}
+            className="text-left"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">سبب الإعادة (اختياري)</label>
+          <Input
+            type="text"
+            placeholder="سبب إعادة التعيين"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </div>
+        <Button
+          type="button"
+          variant="destructive"
+          disabled={password.length < 6 || resetPassword.isPending}
+          onClick={() => resetPassword.mutate()}
+          className="w-full"
+        >
+          {resetPassword.isPending
+            ? "جاري الإعادة..."
+            : "إعادة تعيين كلمة المرور"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

@@ -39,7 +39,30 @@ export const fetchUserSubscriptions = async (userId: string) => {
 };
 
 export const createUser = async (data: CreateUserSchemaType) => {
-  const response = await api.post("/api/dashboard/users", data);
+  const { phoneE164, ...rest } = data;
+  const response = await api.post("/api/dashboard/users", {
+    ...rest,
+    phone: phoneE164,
+  });
+  return response.data;
+};
+
+export const resetUserPassword = async ({
+  userId,
+  password,
+  reason,
+}: {
+  userId: string;
+  password: string;
+  reason?: string;
+}) => {
+  const response = await api.post(
+    `/api/dashboard/users/${userId}/reset-password`,
+    {
+      password,
+      ...(reason?.trim() ? { reason: reason.trim() } : {}),
+    }
+  );
   return response.data;
 };
 

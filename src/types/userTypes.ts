@@ -7,6 +7,8 @@ export interface User {
   email: string | null;
   role: string;
   isActive: boolean;
+  accountStatus?: string;
+  forcePasswordChange?: boolean;
   fcmTokens: string[];
   subscriptionsCount: number;
   activeSubscriptionsCount: number;

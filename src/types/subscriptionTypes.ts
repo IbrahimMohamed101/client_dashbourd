@@ -231,6 +231,26 @@ export interface SubscriptionAddonEntitlementPayload {
   maxPerDay?: number;
 }
 
+export interface SubscriptionAddonEntitlement {
+  id?: string;
+  _id?: string;
+  addonId: string;
+  category?: string;
+  name: string;
+  purchasedDailyQty?: number;
+  includedTotalQty?: number;
+  totalHalala?: number;
+  maxPerDay?: number;
+}
+
+export interface SubscriptionAddonEntitlementsResponse {
+  status: boolean;
+  data: {
+    addonSubscriptions: SubscriptionAddonEntitlement[];
+    addonEntitlements?: SubscriptionAddonEntitlement[];
+  };
+}
+
 export interface SubscriptionDayRecord {
   [key: string]: unknown;
 }

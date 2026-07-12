@@ -78,7 +78,10 @@ export function CreateUserForm() {
       navigate({ to: "/users" });
     },
     onError: (error: unknown) => {
-      ToastMessage(getApiErrorMessage(error) || "حدث خطأ أثناء إنشاء المستخدم", "error");
+      ToastMessage(
+        getApiErrorMessage(error) || "حدث خطأ أثناء إنشاء المستخدم",
+        "error"
+      );
     },
   });
 
@@ -94,7 +97,8 @@ export function CreateUserForm() {
         <CardHeader>
           <CardTitle>إنشاء مستخدم جديد</CardTitle>
           <CardDescription>
-            أدخل بيانات المستخدم الجديد لإنشاء حسابه في التطبيق ثم إنشاء اشتراك له
+            أدخل بيانات المستخدم الجديد لإنشاء حسابه في التطبيق ثم إنشاء اشتراك
+            له
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -132,6 +136,27 @@ export function CreateUserForm() {
                     {errors.phoneE164.message}
                   </p>
                 )}
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="password">كلمة المرور المؤقتة</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  dir="ltr"
+                  placeholder="أدخل كلمة مرور مؤقتة"
+                  {...register("password")}
+                  aria-invalid={errors.password ? "true" : "false"}
+                  className="text-left"
+                />
+                {errors.password && (
+                  <p className="mt-1 text-sm text-destructive">
+                    {errors.password.message}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  سيُطلب من المستخدم تغيير هذه الكلمة عند أول تسجيل دخول.
+                </p>
               </Field>
 
               <Field>

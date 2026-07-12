@@ -1,5 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Subscription } from "@/types/subscriptionTypes";
+import { useSubscriptionAddonEntitlementsQuery } from "@/hooks/useSubscriptionsQuery";
+import type {
+  Subscription,
+  SubscriptionAddonEntitlement,
+} from "@/types/subscriptionTypes";
 import { format } from "date-fns";
 import {
   Accordion,
@@ -261,5 +265,91 @@ export function AddonsCard({ subscription }: CardProps) {
         ))}
       </CardContent>
     </Card>
+  );
+}
+
+export function AddonEntitlementsCard({
+  subscriptionId,
+}: {
+  subscriptionId: string;
+}) {
+  const { data, isLoading, isError } =
+    useSubscriptionAddonEntitlementsQuery(subscriptionId);
+  const entitlements =
+    data?.data?.addonSubscriptions ?? data?.data?.addonEntitlements ?? [];
+
+  return (
+    <Card className="border shadow-none">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold">
+          استحقاقات الإضافات
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">
+            جاري تحميل استحقاقات الإضافات...
+          </p>
+        ) : isError ? (
+          <p className="text-sm text-destructive">
+            تعذر تحميل استحقاقات الإضافات
+          </p>
+        ) : entitlements.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            لا توجد استحقاقات إضافات لهذا الاشتراك
+          </p>
+        ) : (
+          entitlements.map((entitlement) => (
+            <AddonEntitlementRow
+              key={
+                entitlement.id ||
+                entitlement._id ||
+                entitlement.addonId ||
+                entitlement.name
+              }
+              entitlement={entitlement}
+            />
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AddonEntitlementRow({
+  entitlement,
+}: {
+  entitlement: SubscriptionAddonEntitlement;
+}) {
+  const priceSar = ((entitlement.totalHalala ?? 0) / 100).toFixed(2);
+
+  return (
+    <div className="grid gap-3 border-t pt-3 first:border-t-0 first:pt-0 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="min-w-0">
+        <span className="block truncate text-sm font-medium">
+          {entitlement.name}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {entitlement.category || entitlement.addonId}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-3 text-left text-xs sm:min-w-64">
+        <Metric
+          label="يومي"
+          value={entitlement.purchasedDailyQty ?? entitlement.maxPerDay ?? 0}
+        />
+        <Metric label="الإجمالي" value={entitlement.includedTotalQty ?? 0} />
+        <Metric label="السعر" value={`${priceSar} SAR`} />
+      </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-md bg-muted/50 px-2 py-1">
+      <span className="block text-muted-foreground">{label}</span>
+      <span className="font-semibold">{value}</span>
+    </div>
   );
 }

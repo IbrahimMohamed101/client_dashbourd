@@ -12,9 +12,15 @@ import {
   manualDeductSubscription,
   fetchSubscriptionManualDeductions,
   fetchSubscriptionLifecycle,
+  fetchSubscriptionAddonEntitlements,
 } from "@/utils/fetchSubscriptionsData";
-import { queryOptions, useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-
+import {
+  queryOptions,
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
 
 export const subscriptionsSummaryQueryOptions = () =>
   queryOptions({
@@ -82,6 +88,17 @@ export const subscriptionLifecycleQueryOptions = (id: string) =>
 export const useSubscriptionLifecycleQuery = (id: string) =>
   useQuery(subscriptionLifecycleQueryOptions(id));
 
+export const subscriptionAddonEntitlementsQueryOptions = (id: string) =>
+  queryOptions({
+    queryKey: ["subscription-addon-entitlements", id],
+    queryFn: () => fetchSubscriptionAddonEntitlements(id),
+    enabled: Boolean(id),
+    staleTime: 1000 * 60,
+  });
+
+export const useSubscriptionAddonEntitlementsQuery = (id: string) =>
+  useQuery(subscriptionAddonEntitlementsQueryOptions(id));
+
 export const manualDeductionsQueryOptions = (id: string | null) =>
   queryOptions({
     queryKey: ["subscription-manual-deductions", id],
@@ -98,7 +115,9 @@ export const useFreezeSubscriptionMutation = () => {
   return useMutation({
     mutationFn: freezeSubscription,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["subscription-details", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["subscription-details", variables.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] });
     },
   });
@@ -120,7 +139,9 @@ export const useExtendSubscriptionMutation = () => {
   return useMutation({
     mutationFn: extendSubscription,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["subscription-details", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["subscription-details", variables.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] });
     },
   });
@@ -152,7 +173,9 @@ export const useCreateSubscriptionMutation = () => {
           : null;
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ["user-details", userId] });
-        queryClient.invalidateQueries({ queryKey: ["user-subscriptions", userId] });
+        queryClient.invalidateQueries({
+          queryKey: ["user-subscriptions", userId],
+        });
       }
     },
   });
@@ -173,10 +196,14 @@ export const useManualDeductSubscriptionMutation = () => {
   return useMutation({
     mutationFn: manualDeductSubscription,
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["subscription-details", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["subscription-details", variables.id],
+      });
       queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] });
       queryClient.invalidateQueries({ queryKey: ["subscriptions-search"] });
-      queryClient.invalidateQueries({ queryKey: ["subscription-manual-deductions", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["subscription-manual-deductions", variables.id],
+      });
     },
   });
 };

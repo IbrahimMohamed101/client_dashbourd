@@ -29,7 +29,9 @@ interface CreateSubscriptionFormProps {
   userId: string;
 }
 
-export function CreateSubscriptionForm({ userId }: CreateSubscriptionFormProps) {
+export function CreateSubscriptionForm({
+  userId,
+}: CreateSubscriptionFormProps) {
   const {
     register,
     handleSubmit,
@@ -57,7 +59,8 @@ export function CreateSubscriptionForm({ userId }: CreateSubscriptionFormProps) 
     (g: GramsOption) => g.grams === selectedGrams
   );
   const mealsOptions =
-    selectedGramsOption?.mealsOptions?.filter((m: MealOption) => m.isActive) || [];
+    selectedGramsOption?.mealsOptions?.filter((m: MealOption) => m.isActive) ||
+    [];
 
   const {
     fields: premiumFields,
@@ -72,21 +75,25 @@ export function CreateSubscriptionForm({ userId }: CreateSubscriptionFormProps) 
   } = useFieldArray({ control, name: "addons" });
 
   const onSubmit = (data: CreateSubscriptionSchemaType) => {
+    const { addons, ...rest } = data;
     const payload = {
-      ...data,
-      addons: data.addons.map((a) => a.value),
+      ...rest,
+      addonSubscriptions: addons.map((addon) => ({
+        addonPlanId: addon.value,
+      })),
     };
-    
+
     mutate(payload as unknown as Record<string, unknown>, {
       onSuccess: () => {
         ToastMessage("تم إنشاء الاشتراك بنجاح", "success");
         navigate({ to: "/users/$userId", params: { userId } });
       },
       onError: (error: unknown) => {
-        const err = error as { response?: { data?: { error?: { message?: string } } } };
+        const err = error as {
+          response?: { data?: { error?: { message?: string } } };
+        };
         const message =
-          err?.response?.data?.error?.message ||
-          "حدث خطأ أثناء إنشاء الاشتراك";
+          err?.response?.data?.error?.message || "حدث خطأ أثناء إنشاء الاشتراك";
         ToastMessage(message, "error");
       },
     });
@@ -164,7 +171,9 @@ export function CreateSubscriptionForm({ userId }: CreateSubscriptionFormProps) 
                 <Field>
                   <FieldLabel>عدد الوجبات في اليوم</FieldLabel>
                   <Select
-                    value={watch("mealsPerDay") ? String(watch("mealsPerDay")) : ""}
+                    value={
+                      watch("mealsPerDay") ? String(watch("mealsPerDay")) : ""
+                    }
                     onValueChange={(value) =>
                       setValue("mealsPerDay", Number(value))
                     }
@@ -217,15 +226,15 @@ export function CreateSubscriptionForm({ userId }: CreateSubscriptionFormProps) 
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>الوجبات المميزة</CardTitle>
-                <CardDescription>أضف وجبات مميزة إلى الاشتراك (اختياري)</CardDescription>
+                <CardDescription>
+                  أضف وجبات مميزة إلى الاشتراك (اختياري)
+                </CardDescription>
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  appendPremium({ premiumMealId: "", qty: 1 })
-                }
+                onClick={() => appendPremium({ premiumMealId: "", qty: 1 })}
               >
                 إضافة وجبة
               </Button>
@@ -286,7 +295,9 @@ export function CreateSubscriptionForm({ userId }: CreateSubscriptionFormProps) 
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>الإضافات</CardTitle>
-                <CardDescription>أضف إضافات إلى الاشتراك (اختياري)</CardDescription>
+                <CardDescription>
+                  أضف إضافات إلى الاشتراك (اختياري)
+                </CardDescription>
               </div>
               <Button
                 type="button"
@@ -300,9 +311,7 @@ export function CreateSubscriptionForm({ userId }: CreateSubscriptionFormProps) 
           </CardHeader>
           <CardContent>
             {addonFields.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                لا توجد إضافات
-              </p>
+              <p className="text-sm text-muted-foreground">لا توجد إضافات</p>
             ) : (
               <div className="space-y-3">
                 {addonFields.map((field, index) => (

@@ -1,16 +1,16 @@
-# Graph Report - client_dashbourd  (2026-07-04)
+# Graph Report - client_dashbourd  (2026-07-12)
 
 ## Corpus Check
-- 421 files · ~155,974 words
+- 425 files · ~162,138 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2962 nodes · 8315 edges · 122 communities (114 shown, 8 thin omitted)
+- 3126 nodes · 8930 edges · 125 communities (119 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c7a057bb`
+- Built from commit: `c1ed0210`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -131,295 +131,298 @@
 - [[_COMMUNITY_Community 115|Community 115]]
 - [[_COMMUNITY_Community 116|Community 116]]
 - [[_COMMUNITY_Community 117|Community 117]]
+- [[_COMMUNITY_Community 118|Community 118]]
+- [[_COMMUNITY_Community 119|Community 119]]
 - [[_COMMUNITY_Community 120|Community 120]]
+- [[_COMMUNITY_Community 123|Community 123]]
 - [[_COMMUNITY_Community 124|Community 124]]
+- [[_COMMUNITY_Community 127|Community 127]]
 - [[_COMMUNITY_Community 129|Community 129]]
-- [[_COMMUNITY_Community 134|Community 134]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `cn()` - 204 edges
-2. `Button()` - 99 edges
-3. `Card()` - 74 edges
-4. `CardContent()` - 74 edges
-5. `Input()` - 66 edges
-6. `Badge()` - 58 edges
+1. `cn()` - 211 edges
+2. `Button()` - 101 edges
+3. `Card()` - 75 edges
+4. `CardContent()` - 75 edges
+5. `Input()` - 67 edges
+6. `Badge()` - 62 edges
 7. `CardHeader()` - 58 edges
 8. `CardTitle()` - 58 edges
 9. `useMutationWithToast()` - 46 edges
-10. `FileRoutesByPath` - 43 edges
+10. `api` - 45 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `mealTitle()` --calls--> `safeText()`  [EXTRACTED]
-  src/components/pages/delivery/DeliveryCard.tsx → src/lib/operationsBoard.ts
-- `getActionLabel()` --calls--> `safeText()`  [EXTRACTED]
-  src/components/pages/delivery/DeliveryCard.tsx → src/lib/operationsBoard.ts
-- `OperationsDialogState` --references--> `UnifiedQueueItem`  [EXTRACTED]
-  src/hooks/useOperationsBoardDialog.ts → src/types/dashboardOpsTypes.ts
-- `MenuProductFormFields()` --calls--> `NumberInput()`  [INFERRED]
-  src/components/pages/menu/products/MenuProductFormFields.tsx → src/components/pages/menu/products/ProductCustomizationPanel.tsx
+- `navMainUrlsForRole()` --calls--> `filterNavItemsForRole()`  [EXTRACTED]
+  tests/navPermissions.test.tsx → src/lib/navPermissions.ts
+- `secondaryUrlsForRole()` --calls--> `filterNavItemsForRole()`  [EXTRACTED]
+  tests/navPermissions.test.tsx → src/lib/navPermissions.ts
+- `LoginForm()` --calls--> `Register`  [INFERRED]
+  src/components/auth/LoginForm.tsx → src/router.tsx
 - `SectionCard()` --calls--> `cn()`  [EXTRACTED]
   src/components/custom/section-cards.tsx → src/lib/utils.ts
+- `getActionLabel()` --calls--> `safeText()`  [EXTRACTED]
+  src/components/pages/delivery/DeliveryCard.tsx → src/lib/operationsBoard.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (122 total, 8 thin omitted)
+## Communities (125 total, 6 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.17
-Nodes (28): ButtonVariants, DeleteMutation, MenuCreatePath, MenuEmptyState(), MenuLoadingTable(), MenuSearchInput(), MenuSearchInputProps, MenuSectionCard() (+20 more)
+Cohesion: 0.12
+Nodes (35): ButtonVariants, useDebounce(), usePaymentsListQuery(), DeleteMutation, MenuCreatePath, MenuEntityTableTab(), MenuEmptyState(), MenuLoadingTable() (+27 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.04
-Nodes (74): Route, Route, Route, Route, Route, Route, Route, Route (+66 more)
+Nodes (72): Route, Route, Route, Route, Route, Route, Route, Route (+64 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.12
-Nodes (20): AddonFormFields(), Loader(), LoaderProps, sizeClasses, useCreateAddonForm(), useResetDashboardStaffUserPasswordMutation(), SectionDef, CustomerSearchProps (+12 more)
+Cohesion: 0.13
+Nodes (25): PlanSelectionSection(), usePackagesQuery(), useCreateSubscriptionMutation(), KitchenStatusFilter, statusOptions, DISPLAY_STYLES, FormType, FormType (+17 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.05
-Nodes (72): useArchivePremiumUpgradeMutation(), useCreatePremiumUpgradeMutation(), usePremiumUpgradeCandidatesQuery(), usePremiumUpgradeInvalidation(), usePremiumUpgradeReadinessQuery(), usePremiumUpgradesQuery(), useUpdatePremiumUpgradeMutation(), useUpdatePremiumUpgradeStateMutation() (+64 more)
+Cohesion: 0.09
+Nodes (11): isPremiumVisualItem(), isReadyItem(), MealBuilderItemRow(), MealBuilderVisualCard(), VisualItem, MenuKeyBadge(), groupRelationId(), normalizeGroupRule() (+3 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.06
-Nodes (23): CategoryProductsPanelProps, IssueRow(), SECTION_LABELS, EditorState, PreviewPanel(), ValidationPanel(), MealBuilderSectionEditor(), MealBuilderVisualCard() (+15 more)
+Cohesion: 0.38
+Nodes (5): MealBuilderStatusCards(), formatDate(), readinessLabel(), MealBuilderConfig, MealBuilderValidation
 
 ### Community 5 - "Community 5"
-Cohesion: 0.08
-Nodes (27): DeliveryDashboardCardsProps, KitchenQueueCardProps, ReasonDialogState, getCourierItems(), getEndpointForAction(), getItemsByStatuses(), getPickupItems(), OperationsCourierBoard() (+19 more)
+Cohesion: 0.16
+Nodes (19): getSourceLabel(), sourceLabel(), ACTION_LABELS, countByLabel(), formatCount(), getActionCounts(), getPrimaryActionLabel(), getSourceLabel() (+11 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.10
-Nodes (24): KitchenDashboardCardsProps, KitchenDataTableProps, KitchenFiltersProps, statusOptions, KitchenTabsProps, BulkLockResponse, KitchenOperationsRow, KitchenOperationsSummaryResponse (+16 more)
+Cohesion: 0.06
+Nodes (33): KitchenDashboardCardsProps, KitchenDataTableProps, KitchenFiltersProps, statusOptions, KitchenTabsProps, BulkLockResponse, KitchenOperationsListResponse, KitchenOperationsMode (+25 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.10
-Nodes (25): CancelModalProps, ExtendFormValues, ExtendModalProps, extendSchema, FreezeFormValues, FreezeModalProps, freezeSchema, formatDateTime() (+17 more)
+Cohesion: 0.08
+Nodes (27): AddonPlanDialogProps, DialogFormAction, DialogFormState, TextFieldName, EditorState, CancelModalProps, ExtendFormValues, ExtendModalProps (+19 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.10
-Nodes (39): CARD_VARIANT_LABELS, DISPLAY_STYLE_LABELS, formatSar(), MealPlannerMenuPreviewTab(), PlannerProductCard(), PRICING_MODEL_LABELS, SECTION_TYPE_LABELS, SELECTION_TYPE_LABELS (+31 more)
+Nodes (40): CARD_VARIANT_LABELS, DISPLAY_STYLE_LABELS, formatSar(), MealPlannerMenuPreviewTab(), PlannerProductCard(), PRICING_MODEL_LABELS, SECTION_TYPE_LABELS, SELECTION_TYPE_LABELS (+32 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.08
 Nodes (22): MealBuilderPage(), getOptionColumns(), useCreateMealBuilderDraftMutation(), menuOptionGroupsQueryOptions(), useMenuOptionGroupsQuery(), menuOptionsQueryOptions(), useDeleteMenuOptionMutation(), useMenuOptionsQuery() (+14 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.06
-Nodes (38): restaurantHoursQueryOptions, SETTINGS_KEYS, settingsQueryOptions, useRestaurantHoursQuery(), useUpdateRestaurantHoursMutation(), useUpdateSettingsMutation(), RestaurantHoursForm, RestaurantHoursFormContent() (+30 more)
+Cohesion: 0.09
+Nodes (18): useRestaurantHoursQuery(), useUpdateRestaurantHoursMutation(), buildInitialForm(), buildSchedule(), dayLabels, DeliveryWindowRow, isSameForm(), PageHeader() (+10 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.08
-Nodes (36): allIdentityLinksQueryOptions(), IDENTITY_KEYS, menuIdentitiesQueryOptions(), menuIdentityDetailQueryOptions(), menuIdentityLinksQueryOptions(), menuIdentitySuggestionDetailQueryOptions(), menuIdentitySuggestionsQueryOptions(), useAllIdentityLinksQuery() (+28 more)
+Nodes (39): allIdentityLinksQueryOptions(), IDENTITY_KEYS, menuIdentitiesQueryOptions(), menuIdentityDetailQueryOptions(), menuIdentityLinksQueryOptions(), menuIdentitySuggestionDetailQueryOptions(), menuIdentitySuggestionsQueryOptions(), useAllIdentityLinksQuery() (+31 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.10
-Nodes (31): useAuth(), AppSidebar(), NavMain(), NavSecondary(), NavUser(), filterNavItemsForRole(), Sheet(), SheetContent() (+23 more)
+Cohesion: 0.11
+Nodes (24): LoginForm(), NavLinksData, useAuth(), useLoginForm(), AppSidebar(), NavMain(), NavSecondary(), NavUser() (+16 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.08
-Nodes (34): ChartAreaInteractive(), ADMIN_ROUTES, AUTH_ROUTES, canRoleAccessRoute(), CASHIER_ROUTES, COURIER_ROUTES, isRouteMatch(), KITCHEN_ROUTES (+26 more)
+Cohesion: 0.11
+Nodes (28): ADMIN_ROUTES, AUTH_ROUTES, canRoleAccessRoute(), CASHIER_ROUTES, COURIER_ROUTES, isRouteMatch(), KITCHEN_ROUTES, ROLE_DEFAULTS (+20 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.06
-Nodes (31): SectionCardsData, SubscriptionSummary, BoxIcon, BoxIconHandle, BoxIconProps, PATH_VARIANTS, BoxesIcon, BoxesIconHandle (+23 more)
+Cohesion: 0.09
+Nodes (20): SubscriptionSummary, BoxesIcon, BoxesIconHandle, BoxesIconProps, CalendarCheckIcon, CalendarCheckIconHandle, CalendarCheckIconProps, CHECK_VARIANTS (+12 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.06
-Nodes (39): PRODUCTS_QUERIES_KEY, useUpdateOptionAvailabilityInProductMutation(), BulkUpdateProductsResponse, BulkUpdateProductsResult, CategoryProductAssignmentResult, ItemType, LinkGroupsPayload, LinkOptionsPayload (+31 more)
+Cohesion: 0.07
+Nodes (30): ChartAreaInteractive(), useIsMobile(), Sheet(), SheetContent(), SheetDescription(), SheetFooter(), SheetHeader(), SheetOverlay() (+22 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.16
-Nodes (19): resolved, withDate, DashboardTodayReportResponse, SubscriptionTermsResponse, accountingDailyReportExportUrl(), accountingDailyReportUrl(), dashboardHealthUrl(), dashboardLogsUrl() (+11 more)
+Cohesion: 0.13
+Nodes (29): resolved, withDate, DashboardNotificationSummaryResponse, accountingDailyReportExportUrl(), accountingDailyReportUrl(), DashboardHealthKey, dashboardHealthUrl(), dashboardLogsUrl() (+21 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.10
-Nodes (16): KitchenQueueCard(), FulfillDialog(), PickupQueueCard(), isOneTimeOrder(), KitchenOperationsListResponse, KitchenOperationsMode, isUnsupportedOneTimeOrderAction(), executePickupAction() (+8 more)
+Cohesion: 0.14
+Nodes (15): addonsColumns, AddonStatusBadge(), DeleteAddonDialog(), Addon, AddonCategory, AddonDetailResponse, AddonPlanPrice, AddonPlanPricesResponse (+7 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.09
-Nodes (20): nameOf(), toOption(), addOption(), addProduct(), BEEF_KEYS, BEEF_MATCHERS, buildMealBuilderVisualCards(), CARB_KEYS (+12 more)
+Cohesion: 0.11
+Nodes (27): FULL_MEAL_PRODUCT_SELECTION_TYPES, PREMIUM_REQUIRED_KEYS, REQUIRED_SECTION_ORDER, SECTION_LABELS, SECTION_RULE_BADGES, SELECTION_TYPES, VISUAL_SECTION_LABELS, PreviewPanel() (+19 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.13
-Nodes (11): useSettingsQuery(), createId(), formToBranch(), normalizeBranches(), PickupBranch, PickupBranchesPage(), PickupBranchForm, PickupBranchFormErrors (+3 more)
+Cohesion: 0.05
+Nodes (77): useArchivePremiumUpgradeMutation(), useCreatePremiumUpgradeMutation(), usePremiumUpgradeCandidatesQuery(), usePremiumUpgradeInvalidation(), usePremiumUpgradeReadinessQuery(), usePremiumUpgradesQuery(), useUpdatePremiumUpgradeMutation(), useUpdatePremiumUpgradeStateMutation() (+69 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.13
-Nodes (17): CardProps, SubscriptionHeader(), SubscriptionHeaderProps, useManualDeductSubscriptionMutation(), useSearchSubscriptionsByPhoneQuery(), addonDeductionSchema, DeductionForm(), DeductionFormInputValues (+9 more)
+Cohesion: 0.14
+Nodes (14): CategoryProductsPanelProps, cards, mapped, pastaCard, pastaCategory, pastaProduct, sections, MealBuilderCatalogData (+6 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.06
 Nodes (33): dependencies, axios, class-variance-authority, clsx, date-fns, @dnd-kit/core, @dnd-kit/modifiers, @dnd-kit/sortable (+25 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.14
-Nodes (18): addonId(), ensurePriceRows(), PlanFormState, PlanFormValidationResult, planToForm(), PriceRowState, uniqueIds(), upsertPriceRow() (+10 more)
+Cohesion: 0.23
+Nodes (11): ensurePriceRows(), PlanFormState, PlanFormValidationResult, planToForm(), PriceRowState, uniqueIds(), upsertPriceRow(), validateAndBuildPayload() (+3 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.19
-Nodes (24): ALL_OPERATIONS_SCREENS, asArray(), asBoolean(), asNumber(), asRecord(), asString(), buildAddressSummary(), extractAddressNotes() (+16 more)
+Cohesion: 0.14
+Nodes (27): ALL_OPERATIONS_SCREENS, asArray(), asBoolean(), asNumber(), asRecord(), asString(), buildAddressSummary(), extractAddressNotes() (+19 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.08
-Nodes (38): DeleteAddonDialogProps, useDeleteDeliveryZoneMutation(), ReasonActionDialogProps, ReasonFormValues, reasonSchema, isVerificationAction(), KitchenDataTable(), FormFieldContext (+30 more)
+Cohesion: 0.10
+Nodes (31): DeleteAddonDialogProps, ReasonActionDialogProps, ReasonFormValues, reasonSchema, isVerificationAction(), KitchenDataTable(), FormFieldContext, FormFieldContextValue (+23 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.09
-Nodes (35): MealBuilderWorkspace(), mealBuilderHydratedQueryOptions(), mealBuilderInvalidateKeys, mealBuilderPickerQueryOptions(), mealBuilderQueryOptions(), mealBuilderReadinessQueryOptions(), useMealBuilderHydratedQuery(), useMealBuilderPickerQuery() (+27 more)
+Cohesion: 0.10
+Nodes (34): MealBuilderWorkspace(), mealBuilderHydratedQueryOptions(), mealBuilderInvalidateKeys, mealBuilderPickerQueryOptions(), mealBuilderQueryOptions(), mealBuilderReadinessQueryOptions(), useMealBuilderHydratedQuery(), useMealBuilderPickerQuery() (+26 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.15
-Nodes (14): ActionButtons(), actionIcons, columnHelper, compactParts(), getItemNames(), getMealDetail(), getModeLabel(), getPreparationSummary() (+6 more)
+Cohesion: 0.08
+Nodes (46): mealTitle(), safeText(), ActionButtons(), actionIcons, actionLabelKey(), appendUniqueAction(), asArray(), asNumber() (+38 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.16
-Nodes (14): AddonFormFieldsProps, addonByIdQueryOptions(), addonsQueryOptions(), useAddonByIdQuery(), Addon, fetchCreateAddon(), fetchUpdateAddon(), toggleAddonItem() (+6 more)
+Cohesion: 0.17
+Nodes (16): Route, AddonFormFields(), AddonFormFieldsProps, addonByIdQueryOptions(), addonsQueryOptions(), useAddonByIdQuery(), useCreateAddonForm(), fetchCreateAddon() (+8 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.10
-Nodes (32): MenuAuditLogTab(), menuAuditLogsQueryOptions(), menuVersionsQueryOptions(), useMenuAuditLogsQuery(), useMenuVersionsQuery(), useRollbackMenuVersionMutation(), MenuAuditLogParams, MenuAuditLogsResponse (+24 more)
+Cohesion: 0.11
+Nodes (28): MenuAuditLogTab(), menuAuditLogsQueryOptions(), menuVersionsQueryOptions(), useMenuAuditLogsQuery(), useMenuVersionsQuery(), useRollbackMenuVersionMutation(), MenuAuditLogParams, MenuAuditLogsResponse (+20 more)
 
 ### Community 29 - "Community 29"
-Cohesion: 0.08
-Nodes (35): KEYS, query, isOneTimeOrderActionAllowed(), KitchenQueueOneTimeOrder, ONE_TIME_ORDER_FINAL_STATES, OneTimeOrderActionResponse, OneTimeOrderActivityEntry, OneTimeOrderCustomer (+27 more)
+Cohesion: 0.06
+Nodes (42): KEYS, OneTimeOrderConfirmDialogProps, OneTimeOrderPaymentBadge(), OneTimeOrderPaymentBadgeProps, PAYMENT_CONFIG, query, isOneTimeOrderActionAllowed(), KitchenQueueOneTimeOrder (+34 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.07
-Nodes (43): categoryPayload, localized, optionGroupPayload, optionPayload, optionUpdatePayload, productDefaults, productPayload, CreateMenuMealCategoryPayload (+35 more)
+Cohesion: 0.12
+Nodes (27): categoryPayload, localized, optionGroupPayload, optionPayload, optionUpdatePayload, productDefaults, productPayload, CreateMenuPremiumProteinPayload (+19 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.14
-Nodes (10): getPromoCodeStatus(), aggregateByLabel(), buildActiveRows(), CountRow, formatNumber(), formatPercent(), getStatusLabel(), PIE_COLORS (+2 more)
+Cohesion: 0.12
+Nodes (13): getPromoCodeName(), getPromoCodeStatus(), aggregateByLabel(), buildActiveRows(), buildUsageRows(), CountRow, formatNumber(), formatPercent() (+5 more)
 
 ### Community 32 - "Community 32"
-Cohesion: 0.13
-Nodes (17): getPackagesSectionCards(), getPromoCodesSectionCards(), getSubscriptionsSectionCards(), SectionCard(), SectionCardProps, SectionCards(), SectionCardsProps, promoCodesListQueryOptions() (+9 more)
+Cohesion: 0.38
+Nodes (6): getSubscriptionsSectionCards(), subscriptionsSummaryQueryOptions(), useSubscriptionsSummaryQuery(), Route, RouteComponent(), SubscriptionSummaryResponse
 
 ### Community 33 - "Community 33"
-Cohesion: 0.11
-Nodes (17): isCanonicalSubscriptionPlanKey(), useCreatePackageForm(), BasicInfoSection(), FreezePolicySection(), FormType, FormType, MealCard(), planQueryOptions() (+9 more)
+Cohesion: 0.10
+Nodes (25): CreateMenuCategoryPage(), MenuCategoryFormFields(), Props, UpdateMenuCategoryForm(), UpdateMenuCategoryPage(), Loader(), LoaderProps, sizeClasses (+17 more)
 
 ### Community 34 - "Community 34"
-Cohesion: 0.27
-Nodes (9): ActiveRateDonut(), buildFeeRangeRows(), buildSortRows(), buildStatusRows(), buildTopFeeRows(), DeliveryZonesDashboardCharts(), formatNumber(), formatSAR() (+1 more)
+Cohesion: 0.13
+Nodes (17): getPromoCodesColumns(), PromoCodesColumnsOptions, statusConfig, PromoCodeDialogProps, PromoCodesToolbarProps, LocalizedTextDTO, PaymentDTO, PromoCodeAppliesTo (+9 more)
 
 ### Community 35 - "Community 35"
-Cohesion: 0.12
-Nodes (21): UpdateOptionGroupPage(), QueryResult, menuOptionGroupDetailQueryOptions(), useMenuOptionGroupDetailQuery(), useToggleMenuOptionGroupActiveMutation(), useToggleMenuOptionGroupAvailabilityMutation(), CreateMenuOptionGroupPayload, MenuOptionGroupDetailResponse (+13 more)
+Cohesion: 0.21
+Nodes (15): MenuEntityTableTabProps, CreateMenuOptionGroupPayload, MenuListParams, MenuOptionGroupsResponse, UpdateMenuOptionGroupPayload, fetchCreateMenuOptionGroup(), fetchDeleteMenuOptionGroup(), fetchMenuOptionGroupById() (+7 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.10
-Nodes (10): addOptionToCard(), addProductToCard(), Catalog, ensureOptionSectionIndex(), ensureProductSectionIndex(), findPrimarySectionIndex(), MealBuilderCardEditor(), rebuildCard() (+2 more)
+Cohesion: 0.12
+Nodes (9): addOptionToCard(), addProductToCard(), Catalog, ensureOptionSectionIndex(), ensureProductSectionIndex(), findPrimarySectionIndex(), MealBuilderCardEditor(), rebuildCard() (+1 more)
 
 ### Community 37 - "Community 37"
-Cohesion: 0.16
-Nodes (23): menuProductComposerQueryOptions(), BulkUpdateProductsPayload, CreateMenuProductPayload, MenuProductComposerResponse, MenuProductListParams, MenuProductsResponse, UpdateMenuProductPayload, fetchBulkUpdateMenuProducts() (+15 more)
+Cohesion: 0.15
+Nodes (25): menuProductComposerQueryOptions(), useMenuProductComposerQuery(), BulkUpdateProductsPayload, CreateMenuProductPayload, MenuProductComposerResponse, MenuProductListParams, MenuProductsResponse, UpdateMenuProductPayload (+17 more)
 
 ### Community 38 - "Community 38"
-Cohesion: 0.17
-Nodes (21): AddonCard(), asArray(), asRecord(), DetailRow, formatDateTime(), formatHalala(), getRawRecord(), getText() (+13 more)
+Cohesion: 0.20
+Nodes (17): asArray(), asRecord(), DetailRow, getFulfillment(), getKitchen(), getMealTitle(), getOrderSummary(), getPayment() (+9 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.10
-Nodes (25): getUserDisplayName(), getUserInitial(), UserSelectionSection(), allUsersQueryOptions(), useAllUsersQuery(), userDetailsQueryOptions(), userSubscriptionsQueryOptions(), useUpdateUserMutation() (+17 more)
+Cohesion: 0.14
+Nodes (19): userDetailsQueryOptions(), userSubscriptionsQueryOptions(), useUpdateUserMutation(), useUserDetailsQuery(), useUserSubscriptionsQuery(), PaginatedUsersResponse, User, CreateSubscriptionPage() (+11 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.14
-Nodes (17): AddonsCard(), CustomerInfoCard(), DeliveryInfoCard(), PremiumMealsCard(), SubscriptionContractCard(), TechnicalDetailsAccordion(), subscriptionDetailsQueryOptions(), useCancelSubscriptionMutation() (+9 more)
+Cohesion: 0.11
+Nodes (21): AddonEntitlementsCard(), AddonsCard(), CustomerInfoCard(), DeliveryInfoCard(), PremiumMealsCard(), SubscriptionContractCard(), TechnicalDetailsAccordion(), SubscriptionHeader() (+13 more)
 
 ### Community 41 - "Community 41"
 Cohesion: 0.08
 Nodes (24): compilerOptions, allowImportingTsExtensions, baseUrl, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+16 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.08
-Nodes (37): chartData, AddonsSection(), AddonsSectionProps, CreateSubscriptionFormContent(), CreateSubscriptionFormContentProps, DeliverySection(), DeliverySectionProps, PlanSelectionSection() (+29 more)
+Cohesion: 0.10
+Nodes (23): AddonsSectionProps, ApiRecord, asRecord(), CreateSubscriptionFormContent(), CreateSubscriptionFormContentProps, readString(), readSubscriptionId(), readSubscriptionLabel() (+15 more)
 
 ### Community 43 - "Community 43"
-Cohesion: 0.17
-Nodes (18): ApiStatusError, createSubscriptionAddonEntitlement(), deleteSubscriptionAddonEntitlement(), fetchSubscriptionAddonEntitlements(), fetchSubscriptionBalances(), fetchSubscriptionDays(), replaceSubscriptionAddonEntitlements(), updateSubscriptionBalances() (+10 more)
+Cohesion: 0.15
+Nodes (21): ApiStatusError, createSubscriptionAddonEntitlement(), deleteSubscriptionAddonEntitlement(), fetchSubscriptionAddonEntitlements(), fetchSubscriptionBalances(), fetchSubscriptionDays(), fetchSubscriptionLifecycle(), fetchSubscriptionQuote() (+13 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.28
-Nodes (13): useTogglePromoCodeMutation(), createPromoCode(), deletePromoCode(), fetchPromoCodeById(), fetchPromoCodesList(), FetchPromoCodesListParams, isRecord(), normalizePromoCodeDetailResponse() (+5 more)
+Cohesion: 0.24
+Nodes (16): createPromoCode(), deletePromoCode(), fetchPromoCodeById(), fetchPromoCodesList(), FetchPromoCodesListParams, isRecord(), normalizePromoCodeDetailResponse(), normalizePromoCodesListResponse() (+8 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.16
-Nodes (13): ACTION_CONFIG, getItemName(), getOneTimeOrdersColumns(), OneTimeOrderPaymentBadge(), OneTimeOrderPaymentBadgeProps, PAYMENT_CONFIG, OneTimeOrderPaymentStatus, asDisplayString() (+5 more)
+Cohesion: 0.10
+Nodes (30): useOneTimeOrderDetailQuery(), KitchenQueueCard(), FALLBACK_PICKUP_ACTIONS_BY_STATUS, getOneTimeOrderRowActions(), sanitizeActions(), ACTION_CONFIG, getItemName(), getOneTimeOrdersColumns() (+22 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.11
-Nodes (11): localizedName(), AddonsTable(), AddonPlanCard(), categoryLabel(), ChartRow, ComparisonBar(), FiltersPanel(), formatNumber() (+3 more)
+Cohesion: 0.10
+Nodes (14): addonId(), localizedName(), AddonPlanDialog(), AddonsTable(), AddonPlanCard(), categoryLabel(), ChartRow, ComparisonBar() (+6 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.11
-Nodes (23): UserRole, AccountingDailyReportResponse, DashboardHealthReportResponse, DashboardLogsResponse, DashboardNotificationLogsResponse, DashboardNotificationSummaryData, DashboardNotificationSummaryItem, DashboardNotificationSummaryResponse (+15 more)
+Nodes (20): AccountingDailyReportResponse, DashboardHealthReportResponse, DashboardLogsResponse, DashboardNotificationLogsResponse, DashboardNotificationSummaryData, DashboardNotificationSummaryItem, DashboardPaginationMeta, DashboardRecentActivityItem (+12 more)
 
 ### Community 48 - "Community 48"
 Cohesion: 0.09
 Nodes (21): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+13 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.13
-Nodes (23): PremiumBadge(), StatusBadge(), ERROR_COPY, PREMIUM_REQUIRED_KEYS, REQUIRED_SECTION_ORDER, SECTION_RULE_BADGES, SELECTION_TYPES, VISUAL_SECTION_LABELS (+15 more)
+Cohesion: 0.21
+Nodes (13): IssueRow(), PremiumBadge(), StatusBadge(), ERROR_COPY, ISSUE_COPY, mealBuilderIssueCode(), mealBuilderIssueText(), readableCode() (+5 more)
 
 ### Community 50 - "Community 50"
-Cohesion: 0.16
-Nodes (16): DeliveryActionFilter, DeliveryDashboard(), DeliverySourceFilter, EMPTY_REASON_DIALOG, hasAction(), matchesActionFilter(), Route, courierDeliveryKeys (+8 more)
+Cohesion: 0.09
+Nodes (25): DeliveryActionFilter, DeliveryFilters(), DeliveryFiltersProps, DeliverySourceFilter, FILTER_TABS, uniqueValues(), DeliveryList(), DeliveryActionFilter (+17 more)
 
 ### Community 51 - "Community 51"
-Cohesion: 0.18
-Nodes (11): DashboardHealthKey, dashboardNotificationsSummaryUrl(), dashboardReportsTodayUrl(), dashboardSearchUrl(), QueryParams, fetchDashboardNotificationsSummary(), fetchDashboardReportsToday(), fetchDashboardSearch() (+3 more)
+Cohesion: 0.24
+Nodes (9): useValidatePromoCodeMutation(), formatHalala(), formatPromoCodeDiscount(), breakdownLabels, formatBreakdownValue(), PromoCodeValidationContent(), PromoCodeValidationDialog(), PromoCodeValidationDialogProps (+1 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.16
-Nodes (18): UpdateOptionGroupForm(), useCreateMenuOptionGroupMutation(), useUpdateMenuOptionGroupMutation(), CreateOptionGroupPage(), DISPLAY_STYLES, MenuOptionGroupFormFields(), Props, OptionGroupOptionsPanel() (+10 more)
+Cohesion: 0.15
+Nodes (21): UpdateOptionGroupForm(), UpdateOptionGroupPage(), menuOptionGroupDetailQueryOptions(), useCreateMenuOptionGroupMutation(), useMenuOptionGroupDetailQuery(), useUpdateMenuOptionGroupMutation(), CreateOptionGroupPage(), MenuOptionGroupFormFields() (+13 more)
 
 ### Community 53 - "Community 53"
-Cohesion: 0.10
-Nodes (19): AddonSubscription, ContractMeta, DeliveryAddress, DeliverySlot, ExtendSubscriptionPayload, FreezeSubscriptionPayload, SubscriptionAddonEntitlementPayload, SubscriptionBalanceAddonRow (+11 more)
+Cohesion: 0.08
+Nodes (23): AddonSubscription, ContractMeta, DeliveryAddress, DeliverySlot, ExtendSubscriptionPayload, FreezeSubscriptionPayload, ManualDeductionAddonBalance, ManualDeductionAddonPayload (+15 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.13
-Nodes (20): deliveryZonesListQueryOptions(), useCreateDeliveryZoneMutation(), useDeliveryZonesListQuery(), useToggleDeliveryZoneMutation(), useUpdateDeliveryZoneMutation(), CreateDeliveryZoneDTO, DeliveryZone, DeliveryZonesResponse (+12 more)
+Cohesion: 0.08
+Nodes (39): deliveryZoneDetailQueryOptions(), deliveryZonesListQueryOptions(), useCreateDeliveryZoneMutation(), useDeleteDeliveryZoneMutation(), useDeliveryZoneDetailQuery(), useDeliveryZonesListQuery(), useToggleDeliveryZoneMutation(), useUpdateDeliveryZoneMutation() (+31 more)
 
 ### Community 55 - "Community 55"
 Cohesion: 0.10
 Nodes (19): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, lib, module, moduleDetection, moduleResolution, noEmit (+11 more)
 
 ### Community 56 - "Community 56"
-Cohesion: 0.12
-Nodes (17): DeliveryFilters(), DeliveryFiltersProps, FILTER_TABS, BADGE_CLASSES, BadgeColorKey, CANCELED_STATUSES, countByFilter(), DashboardOpsStatusFilter (+9 more)
+Cohesion: 0.27
+Nodes (5): RouteError(), RouteErrorProps, SiteHeader(), Separator(), SidebarInset()
 
 ### Community 57 - "Community 57"
-Cohesion: 0.23
-Nodes (21): asArray(), asLocalized(), asNumber(), asRecord(), createAddonPlan(), extractCollection(), FALLBACK_CATEGORIES, fetchAddonBasePlanPicker() (+13 more)
+Cohesion: 0.17
+Nodes (26): AddonCategoryOption, AddonMenuProduct, AddonsResponse, MenuProductPickerItem, MenuProductPickerResponse, asArray(), asLocalized(), asNumber() (+18 more)
 
 ### Community 58 - "Community 58"
-Cohesion: 0.17
-Nodes (18): menuOptionDetailQueryOptions(), useMenuOptionDetailQuery(), UpdateOptionPage(), CreateMenuOptionPayload, MenuOptionDetailResponse, MenuOptionListParams, MenuOptionsResponse, ReorderItem (+10 more)
+Cohesion: 0.15
+Nodes (19): QueryResult, CreateMenuOptionPayload, MenuOptionListParams, MenuOptionsResponse, PaginatedResponse, UpdateMenuOptionPayload, fetchMenuOptionGroupOptions(), fetchCreateMenuOption() (+11 more)
 
 ### Community 59 - "Community 59"
-Cohesion: 0.11
-Nodes (11): RouteComponent(), accountingDailyReportQueryOptions(), dashboardStaffUsersQueryOptions(), useAccountingDailyReportQuery(), useDashboardStaffUsersQuery(), AccountingDailyReportParams, DashboardLogFilters, DashboardNotificationLogFilters (+3 more)
+Cohesion: 0.09
+Nodes (20): RouteComponent(), dashboardStaffUsersQueryOptions(), useDashboardStaffUsersQuery(), AccountingDailyReportParams, DashboardLogFilters, DashboardNotificationLogFilters, DashboardStaffResetPasswordResponse, DashboardStaffUserCreatePayload (+12 more)
 
 ### Community 60 - "Community 60"
-Cohesion: 0.15
-Nodes (21): MenuEntityTableTabProps, BulkAssignProductsToCategoryPayload, CategoryProductAssignmentResponse, CreateMenuCategoryPayload, MenuCategoriesResponse, MenuCategoryDetailResponse, MenuListParams, UpdateMenuCategoryPayload (+13 more)
+Cohesion: 0.18
+Nodes (19): BulkAssignProductsToCategoryPayload, CreateMenuCategoryPayload, MenuCategoriesResponse, ReorderItem, UpdateMenuCategoryPayload, fetchBulkAssignProductsToCategory(), fetchCreateMenuCategory(), fetchDeleteMenuCategory() (+11 more)
 
 ### Community 61 - "Community 61"
 Cohesion: 0.11
 Nodes (19): devDependencies, eslint, @eslint/js, eslint-plugin-react-hooks, eslint-plugin-react-refresh, globals, prettier, prettier-plugin-tailwindcss (+11 more)
 
 ### Community 62 - "Community 62"
-Cohesion: 0.22
-Nodes (12): addressSummary(), deliveryModeLabel(), DetailRow(), formatDate(), hasValue(), QuantityBadge(), statusClass(), statusLabel() (+4 more)
+Cohesion: 0.15
+Nodes (18): CardProps, SubscriptionHeaderProps, useSubscriptionDetailsQuery(), DeductionFormProps, addressSummary(), deliveryModeLabel(), DetailRow(), formatDate() (+10 more)
 
 ### Community 63 - "Community 63"
-Cohesion: 0.18
-Nodes (11): deliveryOptionsQueryOptions(), useDeliveryOptionsQuery(), DeliveryArea, DeliveryDefaults, DeliveryMethod, DeliveryOptionsData, DeliveryOptionsResponse, DeliverySlotOption (+3 more)
+Cohesion: 0.11
+Nodes (21): deliveryOptionsQueryOptions(), useDeliveryOptionsQuery(), DeliveryArea, DeliveryDefaults, DeliveryMethod, DeliveryOptionsData, DeliveryOptionsResponse, DeliverySlotOption (+13 more)
 
 ### Community 64 - "Community 64"
 Cohesion: 0.13
@@ -427,103 +430,103 @@ Nodes (11): queryClient, ResolvedTheme, Theme, THEME_VALUES, ThemeProvider(), Th
 
 ### Community 65 - "Community 65"
 Cohesion: 0.12
-Nodes (10): DashboardMetricKey, DashboardMetricRow, DashboardStatusRow, DashboardTrendRow, metricMeta, statusFills, toMetricBarData(), toRecentActivityTrend() (+2 more)
+Nodes (9): DashboardMetricKey, DashboardMetricRow, DashboardStatusRow, DashboardTrendRow, metricMeta, statusFills, toMetricBarData(), toRecentActivityTrend() (+1 more)
 
 ### Community 66 - "Community 66"
-Cohesion: 0.22
-Nodes (9): AccountingPage(), AccountingReport(), asArray(), asRecord(), formatValue(), initialParams, MetricGrid(), previewEntries() (+1 more)
+Cohesion: 0.20
+Nodes (11): AccountingPage(), AccountingReport(), asArray(), asRecord(), formatValue(), initialParams, MetricGrid(), previewEntries() (+3 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.27
-Nodes (10): ApiErrorData, ApiErrorLike, getApiErrorMessage(), isApiErrorLike(), isRecord(), parseApiError(), ParsedApiError, readDetailsMessage() (+2 more)
+Cohesion: 0.08
+Nodes (31): MealBuilderSectionEditor(), hasFullMealMetadata(), isFullMealSelectionType(), sectionTreatsAsFullMeal(), BEEF_KEYS, BEEF_MATCHERS, buildMealBuilderVisualCards(), CARB_KEYS (+23 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.29
 Nodes (6): ARROW_VARIANTS, PATH_VARIANTS, SVG_VARIANTS, TrendingDownIcon, TrendingDownIconHandle, TrendingDownIconProps
 
 ### Community 69 - "Community 69"
-Cohesion: 0.10
-Nodes (24): filterCanonicalSubscriptionPlans(), DEFAULT_GRAM, DEFAULT_MEAL, EMPTY_DEFAULTS, packagesQueryOptions(), BasicInfoSectionProps, FreezePolicySectionProps, GramCard() (+16 more)
+Cohesion: 0.05
+Nodes (52): filterCanonicalSubscriptionPlans(), isCanonicalSubscriptionPlanKey(), getPackagesSectionCards(), DEFAULT_GRAM, DEFAULT_MEAL, EMPTY_DEFAULTS, useCreatePackageForm(), packagesQueryOptions() (+44 more)
 
 ### Community 70 - "Community 70"
-Cohesion: 0.10
-Nodes (39): publicMenuPreviewQueryOptions(), usePublicMenuPreviewQuery(), formatSar(), getSelectionRange(), isCustomizable(), isEnabled(), OptionBadge(), OptionGroupPreview() (+31 more)
+Cohesion: 0.11
+Nodes (36): formatSar(), getSelectionRange(), isCustomizable(), isEnabled(), OptionBadge(), OptionGroupPreview(), PreviewWarning, ProductCard() (+28 more)
 
 ### Community 71 - "Community 71"
-Cohesion: 0.14
-Nodes (7): aggregateByLabel(), buildActionRows(), CountRow, DeliveryDashboardCards(), formatNumber(), PIE_COLORS, SummaryPill()
+Cohesion: 0.07
+Nodes (25): aggregateByLabel(), buildActionRows(), CountRow, DeliveryDashboardCards(), DeliveryDashboardCardsProps, formatNumber(), PIE_COLORS, SummaryPill() (+17 more)
 
 ### Community 72 - "Community 72"
-Cohesion: 0.11
-Nodes (16): UseOperationsBoardParams, extractOperationsQueueItems(), OPERATIONS_SCREENS, OperationsScreen, executeDashboardOpsAction(), fetchDashboardOpsList(), fetchDashboardOpsSearch(), getCourierQueue() (+8 more)
+Cohesion: 0.08
+Nodes (22): KEYS, useDashboardOpsListQuery(), ACTIVE_PREPARATION_STATUSES, hasKitchenWorkload(), hasPreparationAction(), isPreparationQueueItem(), PREPARATION_ACTIONS, UseOperationsBoardParams (+14 more)
 
 ### Community 73 - "Community 73"
-Cohesion: 0.13
-Nodes (13): aggregateByLabel(), buildActionRows(), formatNumber(), OperationsQueueCharts(), PIE_COLORS, ChartConfig, ChartContainer(), ChartContext (+5 more)
+Cohesion: 0.09
+Nodes (26): useOperationsBoard(), initialDialogState, OperationsDialogAction, OperationsDialogState, useOperationsBoardDialog(), KitchenQueueCardProps, ReasonDialogState, getCourierItems() (+18 more)
 
 ### Community 74 - "Community 74"
-Cohesion: 0.13
-Nodes (17): formatAppliesTo(), getPromoCodesColumns(), PromoCodesColumnsOptions, promoCodeText, statusConfig, PromoCodeDialogProps, PromoCodesToolbarProps, LocalizedTextDTO (+9 more)
+Cohesion: 0.10
+Nodes (19): PRODUCTS_QUERIES_KEY, useUpdateOptionAvailabilityInProductMutation(), publicMenuPreviewQueryOptions(), usePublicMenuPreviewQuery(), LinkGroupsPayload, LinkOptionsPayload, MenuProductLinkedGroup, MenuProductLinkedOption (+11 more)
 
 ### Community 75 - "Community 75"
 Cohesion: 0.22
 Nodes (5): dashboardNotificationLogsQueryOptions(), dashboardNotificationSummaryQueryOptions(), NotificationsPage(), Route, JsonObject
 
 ### Community 76 - "Community 76"
-Cohesion: 0.19
-Nodes (10): SiteHeader(), Field(), FieldContent(), FieldDescription(), FieldLegend(), FieldSeparator(), FieldSet(), FieldTitle() (+2 more)
+Cohesion: 0.12
+Nodes (22): DEFAULT_MENU_AVAILABLE_FOR, ToastMessage(), ToastType, menuOptionDetailQueryOptions(), useCreateMenuOptionMutation(), useMenuOptionDetailQuery(), useUpdateMenuOptionMutation(), UpdateOptionForm() (+14 more)
 
 ### Community 77 - "Community 77"
 Cohesion: 0.22
-Nodes (11): useOneTimeOrderDetailQuery(), FALLBACK_PICKUP_ACTIONS_BY_STATUS, getOneTimeOrderRowActions(), sanitizeActions(), OneTimeOrderDetail(), OneTimeOrderStatusBadge(), OneTimeOrderStatusBadgeProps, getOneTimeOrderStatusColor() (+3 more)
+Nodes (6): DASHBOARD_STAT_KEYS, cards, empty, mapped, DashboardOverviewStats, SectionCardsData
 
 ### Community 78 - "Community 78"
-Cohesion: 0.17
-Nodes (12): AddonCategory, AddonMenuProduct, AddonPlanPrice, AddonPlanPricesResponse, AddonPlansResponse, AddonPlanWritePayload, AddonsMeta, AddonsResponse (+4 more)
+Cohesion: 0.24
+Nodes (10): normalizeAvailableForFromApi(), emptyLocalizedText, firstIdFromRefs(), firstNonEmptyString(), getMenuOptionFormValues(), getMenuProductFormValues(), getProductPriceSar(), idFromRef() (+2 more)
 
 ### Community 79 - "Community 79"
-Cohesion: 0.04
-Nodes (51): cn(), Accordion(), AccordionContent(), AccordionItem(), AccordionTrigger(), AlertAction(), AlertDialogMedia(), AlertDialogOverlay() (+43 more)
+Cohesion: 0.05
+Nodes (45): cn(), AlertAction(), AlertDialogMedia(), AlertDialogOverlay(), Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup() (+37 more)
 
 ### Community 80 - "Community 80"
-Cohesion: 0.23
-Nodes (12): DashboardStaffResetPasswordResponse, DashboardStaffUserCreateResponse, DashboardStaffUserResponse, dashboardStaffResetPasswordUrl(), dashboardStaffUsersUrl(), dashboardStaffUserUrl(), createDashboardStaffUser(), deleteDashboardStaffUser() (+4 more)
+Cohesion: 0.31
+Nodes (8): getPromoCodesSectionCards(), promoCodesListQueryOptions(), useDeletePromoCodeMutation(), usePromoCodesListQuery(), useTogglePromoCodeMutation(), Route, RouteComponent(), PromoCodesTable()
 
 ### Community 81 - "Community 81"
-Cohesion: 0.05
-Nodes (67): MenuCategoryFormFields(), Props, UpdateMenuCategoryForm(), UpdateMenuCategoryPage(), CANONICAL_SUBSCRIPTION_PLAN_KEYS, CanonicalSubscriptionPlanKey, DEFAULT_MENU_AVAILABLE_FOR, MENU_AVAILABLE_CHANNELS (+59 more)
+Cohesion: 0.12
+Nodes (22): CANONICAL_SUBSCRIPTION_PLAN_KEYS, CanonicalSubscriptionPlanKey, MENU_AVAILABLE_CHANNELS, MENU_PRODUCT_CARD_SIZE_OPTIONS, MENU_PRODUCT_CARD_SIZES, MenuAvailableChannel, MenuProductCardSize, normalizeAvailableForToApi() (+14 more)
 
 ### Community 82 - "Community 82"
-Cohesion: 0.05
-Nodes (41): CategoryProductsPanel(), CreateMenuCategoryPage(), MenuCategoriesTab(), ApiError, useMutationWithToast(), UseMutationWithToastOptions, ACTION_LABELS, CategoryActions (+33 more)
+Cohesion: 0.07
+Nodes (30): MenuCategoriesTab(), legacyMenuTabMap, workflowSteps, menuTabValues, Route, ACTION_LABELS, CategoryActions, ENTITY_LABELS (+22 more)
 
 ### Community 83 - "Community 83"
 Cohesion: 0.11
-Nodes (19): legacyMenuTabMap, workflowSteps, useOperationsBoard(), initialDialogState, OperationsDialogAction, OperationsDialogState, useOperationsBoardDialog(), getSafeOperationsTab() (+11 more)
+Nodes (22): CategoryProductsPanel(), ApiError, useMutationWithToast(), UseMutationWithToastOptions, getProductColumns(), menuCategoriesQueryOptions(), useBulkAssignProductsToCategoryMutation(), useMenuCategoriesQuery() (+14 more)
 
 ### Community 84 - "Community 84"
-Cohesion: 0.13
-Nodes (22): ACTION_CONFIG, ActionConfig, asRecord(), ButtonVariant, DeliveryCard(), DeliveryCardProps, getActionLabel(), getMapUrl() (+14 more)
+Cohesion: 0.08
+Nodes (32): ACTION_CONFIG, ActionConfig, asRecord(), ButtonVariant, DeliveryCard(), DeliveryCardProps, getActionLabel(), getMapUrl() (+24 more)
 
 ### Community 85 - "Community 85"
 Cohesion: 0.43
 Nodes (5): ToggleGroup(), ToggleGroupContext, ToggleGroupItem(), Toggle(), toggleVariants
 
 ### Community 86 - "Community 86"
-Cohesion: 0.09
-Nodes (23): Order, recentOrders, recentSubscriptions, Subscription, dashboardSectionCards, orderColumns, subscriptionColumns, DashboardOverviewCharts() (+15 more)
+Cohesion: 0.17
+Nodes (11): Order, recentOrders, recentSubscriptions, Subscription, orderColumns, subscriptionColumns, DashboardOverviewData, DashboardOverviewResponse (+3 more)
 
 ### Community 87 - "Community 87"
 Cohesion: 0.15
 Nodes (22): RouteComponent(), addonBasePlanPickerQueryOptions(), addonPlanPricesQueryOptions(), addonPlansQueryOptions(), addonProductPickerQueryOptions(), useAddonPlanPricesQuery(), useAddonPlansQuery(), useCreateAddonPlanPriceMutation() (+14 more)
 
 ### Community 88 - "Community 88"
-Cohesion: 0.31
-Nodes (9): NewOrderInfo, UseNewOrderDetectionOptions, OneTimeOrdersColumnsOptions, OneTimeOrderListItem, getAudioContext(), playNewOrderSound(), playUrgentNewOrderSound(), requestNotificationPermission() (+1 more)
+Cohesion: 0.16
+Nodes (15): NewOrderInfo, useNewOrderDetection(), UseNewOrderDetectionOptions, useOneTimeOrderActionMutation(), useOneTimeOrdersListQuery(), OneTimeOrderConfirmDialog(), OneTimeOrderList(), statusFilters (+7 more)
 
 ### Community 89 - "Community 89"
-Cohesion: 0.11
-Nodes (20): subscriptionAuditQueryOptions(), subscriptionLifecycleQueryOptions(), subscriptionsListQueryOptions(), subscriptionsSummaryQueryOptions(), useSubscriptionAuditQuery(), useSubscriptionLifecycleQuery(), useSubscriptionsListQuery(), useSubscriptionsSummaryQuery() (+12 more)
+Cohesion: 0.09
+Nodes (26): manualDeductionsQueryOptions(), subscriptionAuditQueryOptions(), subscriptionLifecycleQueryOptions(), subscriptionsListQueryOptions(), useCancelSubscriptionMutation(), useExtendSubscriptionMutation(), useManualDeductSubscriptionMutation(), useSearchSubscriptionsByPhoneQuery() (+18 more)
 
 ### Community 90 - "Community 90"
 Cohesion: 0.29
@@ -534,24 +537,24 @@ Cohesion: 0.29
 Nodes (6): compilerOptions, baseUrl, paths, files, @/*, references
 
 ### Community 92 - "Community 92"
-Cohesion: 0.23
-Nodes (10): routeTranslations, AppBreadcrumb(), buildCrumbs(), Breadcrumb(), BreadcrumbEllipsis(), BreadcrumbItem(), BreadcrumbLink(), BreadcrumbList() (+2 more)
+Cohesion: 0.21
+Nodes (11): routeTranslations, AppBreadcrumb(), buildCrumbs(), UserNameCrumb(), Breadcrumb(), BreadcrumbEllipsis(), BreadcrumbItem(), BreadcrumbLink() (+3 more)
 
 ### Community 93 - "Community 93"
-Cohesion: 0.12
-Nodes (18): addonsColumns, AddonStatusBadge(), DeleteAddonDialog(), DraggableRow(), packagesColumns, StatusBadge(), methodLabels, paymentsColumns (+10 more)
+Cohesion: 0.13
+Nodes (12): useSettingsQuery(), useUpdateSettingsMutation(), createId(), formToBranch(), normalizeBranches(), PickupBranch, PickupBranchesPage(), PickupBranchForm (+4 more)
 
 ### Community 94 - "Community 94"
 Cohesion: 0.29
 Nodes (6): ARROW_VARIANTS, PATH_VARIANTS, SVG_VARIANTS, TrendingUpIcon, TrendingUpIconHandle, TrendingUpIconProps
 
 ### Community 95 - "Community 95"
-Cohesion: 0.47
-Nodes (5): usersQueryOptions(), useUsersListQuery(), Route, RouteComponent(), UsersTable()
+Cohesion: 0.13
+Nodes (16): restaurantHoursQueryOptions, SETTINGS_KEYS, settingsQueryOptions, DashboardSettings, PickupLocationSetting, RestaurantHours, RestaurantHoursPayload, RestaurantHoursResponse (+8 more)
 
 ### Community 96 - "Community 96"
-Cohesion: 0.50
-Nodes (3): NavLinksData, cashierUrls, kitchenUrls
+Cohesion: 0.53
+Nodes (4): useResetDashboardStaffUserPasswordMutation(), formatDate(), ProfilePage(), translateRole()
 
 ### Community 97 - "Community 97"
 Cohesion: 0.40
@@ -559,79 +562,99 @@ Nodes (4): name, private, type, version
 
 ### Community 98 - "Community 98"
 Cohesion: 0.12
-Nodes (26): customizationLibraryQueryOptions(), productCustomizationQueryOptions(), useCustomizationLibraryQuery(), useProductCustomizationQuery(), useSaveProductCustomizationMutation(), ProductCustomizationPanel(), MealBuilderContractItem, MealBuilderContractSection (+18 more)
+Nodes (25): customizationLibraryQueryOptions(), productCustomizationQueryOptions(), useCustomizationLibraryQuery(), useProductCustomizationQuery(), useSaveProductCustomizationMutation(), ProductCustomizationPanel(), MealBuilderContractItem, MealBuilderContractSection (+17 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.40
 Nodes (4): buildCommand, installCommand, outputDirectory, rewrites
 
 ### Community 100 - "Community 100"
-Cohesion: 0.40
-Nodes (5): promoCodeDetailQueryOptions(), usePromoCodeDetailQuery(), formatPromoCodeDate(), formatBoolean(), PromoCodeDetailDialog()
+Cohesion: 0.29
+Nodes (11): fetchUpdateCustomMealBasePrice(), fetchUpdateCustomSaladBasePrice(), fetchUpdateCutoff(), fetchUpdateDeliveryWindows(), fetchUpdatePremiumPrice(), fetchUpdateSettingEndpoint(), fetchUpdateSkipAllowance(), fetchUpdateSubscriptionDeliveryFee() (+3 more)
 
 ### Community 101 - "Community 101"
-Cohesion: 0.40
-Nodes (5): useCreatePromoCodeMutation(), useUpdatePromoCodeMutation(), formatDateInputValue(), getDefaultValues(), PromoCodeDialog()
+Cohesion: 0.24
+Nodes (11): useCreatePromoCodeMutation(), useUpdatePromoCodeMutation(), formatDateTimeInputValue(), formatFixedDiscountInput(), getDefaultValues(), optionalInteger(), PromoCodeDialog(), PromoCodeFormValues (+3 more)
 
 ### Community 104 - "Community 104"
-Cohesion: 0.22
-Nodes (6): useTheme(), MyRouterContext, Route, FileRoutesById, Toaster(), TooltipProvider()
+Cohesion: 0.25
+Nodes (5): useTheme(), MyRouterContext, Route, FileRoutesById, Toaster()
 
 ### Community 111 - "Community 111"
+Cohesion: 0.33
+Nodes (6): promoCodeDetailQueryOptions(), usePromoCodeDetailQuery(), formatAppliesTo(), formatPromoCodeDate(), formatBoolean(), PromoCodeDetailDialog()
+
+### Community 112 - "Community 112"
 Cohesion: 0.40
 Nodes (4): legacyBlankFieldsProduct, legacySarPriceProduct, nestedAlternateProduct, response
 
-### Community 112 - "Community 112"
-Cohesion: 0.15
-Nodes (14): useDebounce(), useNewOrderDetection(), useOneTimeOrderActionMutation(), useOneTimeOrdersListQuery(), usePaymentsListQuery(), useDeletePromoCodeMutation(), usePromoCodesListQuery(), MenuEntityTableTab() (+6 more)
-
 ### Community 113 - "Community 113"
-Cohesion: 0.27
-Nodes (6): api, AxiosRequestConfig, AddonDetailResponse, fetchAddonById(), fetchDeleteAddon(), fetchTogglePlanStatus()
+Cohesion: 0.29
+Nodes (4): api, AxiosRequestConfig, PackageGramPayload, PackageMealOptionPayload
+
+### Community 114 - "Community 114"
+Cohesion: 0.40
+Nodes (4): BoxIcon, BoxIconHandle, BoxIconProps, PATH_VARIANTS
 
 ### Community 115 - "Community 115"
-Cohesion: 0.22
-Nodes (14): DashboardOpsActionResponse, DashboardOpsListResponse, adaptCourierDto(), asRecord(), courierActionsFor(), CourierDeliveryResponse, CourierDto, executeCourierDeliveryAction() (+6 more)
+Cohesion: 0.24
+Nodes (13): DashboardOpsActionResponse, DashboardOpsListResponse, adaptCourierDto(), asRecord(), courierActionsFor(), CourierDeliveryResponse, CourierDto, fallbackCourierActionsFor() (+5 more)
 
 ### Community 116 - "Community 116"
-Cohesion: 0.20
-Nodes (11): useValidatePromoCodeMutation(), formatHalala(), formatPromoCodeDiscount(), getPromoCodeName(), buildUsageRows(), buildPromoSearchText(), breakdownLabels, formatBreakdownValue() (+3 more)
+Cohesion: 0.40
+Nodes (4): PATH_VARIANTS, UsersIcon, UsersIconHandle, UsersIconProps
 
 ### Community 117 - "Community 117"
-Cohesion: 0.60
-Nodes (4): MealBuilderStatusCards(), formatDate(), readinessLabel(), MealBuilderConfig
+Cohesion: 0.09
+Nodes (30): chartData, AddonCard(), AddonsSection(), getAddonPlanId(), getUserDisplayName(), getUserInitial(), UserSelectionSection(), useAddonsQuery() (+22 more)
+
+### Community 118 - "Community 118"
+Cohesion: 0.14
+Nodes (20): ApiErrorData, ApiErrorLike, getApiErrorMessage(), isApiErrorLike(), isRecord(), parseApiError(), ParsedApiError, readDetailsMessage() (+12 more)
+
+### Community 119 - "Community 119"
+Cohesion: 0.18
+Nodes (12): dashboardSectionCards, SectionCard(), SectionCardProps, SectionCards(), SectionCardsProps, DashboardOverviewCharts(), DataTable(), dashboardQueryOptions() (+4 more)
+
+### Community 120 - "Community 120"
+Cohesion: 0.22
+Nodes (8): menuPremiumProteinSchema, MenuPremiumProteinSchemaInput, MenuPremiumProteinSchemaType, localizedTextSchema, menuProteinSchema, MenuProteinSchemaInput, MenuProteinSchemaType, optionalLocalizedTextSchema
+
+### Community 123 - "Community 123"
+Cohesion: 0.24
+Nodes (6): useCreateUserForm(), Register, Route, CreateUserForm(), createUserSchema, CreateUserSchemaType
 
 ### Community 124 - "Community 124"
-Cohesion: 0.12
-Nodes (31): MenuMealCategoriesResponse, MenuPremiumProtein, MenuPremiumProteinsResponse, MenuProtein, MenuProteinsResponse, PaginationMeta, extractItems(), extractPagination() (+23 more)
+Cohesion: 0.06
+Nodes (53): BulkUpdateProductsResponse, BulkUpdateProductsResult, CategoryProductAssignmentResponse, CategoryProductAssignmentResult, CreateMenuMealCategoryPayload, ItemType, MenuCategoryCardVariant, MenuCategoryDetailResponse (+45 more)
+
+### Community 127 - "Community 127"
+Cohesion: 0.47
+Nodes (5): usersQueryOptions(), useUsersListQuery(), Route, RouteComponent(), UsersTable()
 
 ### Community 129 - "Community 129"
-Cohesion: 0.18
-Nodes (11): getFinanceSectionCards(), paymentDetailsQueryOptions(), paymentsListQueryOptions(), usePaymentDetailsQuery(), Route, RouteComponent(), Payment, PaymentDetails (+3 more)
-
-### Community 134 - "Community 134"
-Cohesion: 0.25
-Nodes (6): LoginForm(), useCreateUserForm(), useLoginForm(), Register, Route, CreateUserForm()
+Cohesion: 0.13
+Nodes (15): getFinanceSectionCards(), paymentDetailsQueryOptions(), paymentsListQueryOptions(), usePaymentDetailsQuery(), Route, RouteComponent(), methodLabels, paymentsColumns (+7 more)
 
 ## Knowledge Gaps
-- **594 isolated node(s):** `OneTimeOrderDetailDialogProps`, `statusFilters`, `SubscriptionQuickViewDialogProps`, `SubscriptionsColumnsOptions`, `OneTimeOrderDetailProps` (+589 more)
+- **619 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+614 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `Community 79` to `Community 0`, `Community 2`, `Community 3`, `Community 7`, `Community 12`, `Community 13`, `Community 14`, `Community 19`, `Community 24`, `Community 32`, `Community 33`, `Community 42`, `Community 46`, `Community 52`, `Community 68`, `Community 70`, `Community 73`, `Community 76`, `Community 83`, `Community 85`, `Community 92`, `Community 93`, `Community 94`, `Community 95`, `Community 112`?**
-  _High betweenness centrality (0.100) - this node is a cross-community bridge._
-- **Why does `Button()` connect `Community 7` to `Community 0`, `Community 2`, `Community 3`, `Community 4`, `Community 8`, `Community 9`, `Community 10`, `Community 12`, `Community 13`, `Community 14`, `Community 19`, `Community 20`, `Community 22`, `Community 24`, `Community 26`, `Community 33`, `Community 36`, `Community 39`, `Community 42`, `Community 45`, `Community 46`, `Community 49`, `Community 52`, `Community 66`, `Community 69`, `Community 70`, `Community 74`, `Community 75`, `Community 79`, `Community 81`, `Community 82`, `Community 84`, `Community 93`, `Community 112`, `Community 116`?**
-  _High betweenness centrality (0.080) - this node is a cross-community bridge._
-- **Why does `api` connect `Community 113` to `Community 129`, `Community 8`, `Community 10`, `Community 11`, `Community 13`, `Community 15`, `Community 16`, `Community 17`, `Community 25`, `Community 27`, `Community 28`, `Community 29`, `Community 33`, `Community 35`, `Community 37`, `Community 39`, `Community 42`, `Community 43`, `Community 44`, `Community 54`, `Community 57`, `Community 58`, `Community 60`, `Community 63`, `Community 69`, `Community 70`, `Community 72`, `Community 80`, `Community 81`, `Community 86`, `Community 98`?**
-  _High betweenness centrality (0.062) - this node is a cross-community bridge._
-- **What connects `OneTimeOrderDetailDialogProps`, `statusFilters`, `SubscriptionQuickViewDialogProps` to the rest of the system?**
-  _594 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `Button()` connect `Community 7` to `Community 0`, `Community 129`, `Community 2`, `Community 3`, `Community 8`, `Community 9`, `Community 10`, `Community 15`, `Community 17`, `Community 18`, `Community 19`, `Community 24`, `Community 26`, `Community 27`, `Community 33`, `Community 34`, `Community 36`, `Community 39`, `Community 42`, `Community 45`, `Community 46`, `Community 50`, `Community 51`, `Community 52`, `Community 54`, `Community 56`, `Community 66`, `Community 69`, `Community 70`, `Community 75`, `Community 76`, `Community 79`, `Community 81`, `Community 82`, `Community 84`, `Community 93`, `Community 96`, `Community 101`, `Community 117`, `Community 118`?**
+  _High betweenness centrality (0.075) - this node is a cross-community bridge._
+- **Why does `api` connect `Community 113` to `Community 129`, `Community 6`, `Community 8`, `Community 11`, `Community 13`, `Community 16`, `Community 17`, `Community 19`, `Community 25`, `Community 27`, `Community 28`, `Community 29`, `Community 35`, `Community 37`, `Community 39`, `Community 42`, `Community 43`, `Community 44`, `Community 46`, `Community 54`, `Community 57`, `Community 58`, `Community 59`, `Community 60`, `Community 63`, `Community 69`, `Community 70`, `Community 72`, `Community 74`, `Community 76`, `Community 86`, `Community 87`, `Community 98`, `Community 100`, `Community 115`?**
+  _High betweenness centrality (0.072) - this node is a cross-community bridge._
+- **Why does `cn()` connect `Community 79` to `Community 0`, `Community 2`, `Community 7`, `Community 10`, `Community 12`, `Community 14`, `Community 15`, `Community 17`, `Community 19`, `Community 24`, `Community 33`, `Community 40`, `Community 46`, `Community 52`, `Community 56`, `Community 68`, `Community 69`, `Community 70`, `Community 71`, `Community 82`, `Community 85`, `Community 92`, `Community 93`, `Community 94`, `Community 114`, `Community 116`, `Community 117`, `Community 118`, `Community 119`, `Community 127`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **What connects `$schema`, `style`, `rsc` to the rest of the system?**
+  _619 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Community 0` be split into smaller, more focused modules?**
+  _Cohesion score 0.12012987012987013 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.035298035298035296 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03520164046479836 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.12317073170731707 - nodes in this community are weakly interconnected._
-- **Should `Community 3` be split into smaller, more focused modules?**
-  _Cohesion score 0.05352743561030235 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1297134238310709 - nodes in this community are weakly interconnected._

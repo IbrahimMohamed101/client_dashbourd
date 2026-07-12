@@ -15,6 +15,7 @@ import {
   TechnicalDetailsAccordion,
   PremiumMealsCard,
   AddonsCard,
+  AddonEntitlementsCard,
 } from "@/components/pages/subscriptions/details/subscription-details-cards";
 
 import { FreezeModal } from "@/components/pages/subscriptions/details/modals/freeze-modal";
@@ -79,6 +80,7 @@ function SubscriptionDetailsPage() {
           <SubscriptionContractCard subscription={subscription} />
           <PremiumMealsCard subscription={subscription} />
           <AddonsCard subscription={subscription} />
+          <AddonEntitlementsCard subscriptionId={subscription._id} />
         </div>
       </div>
 

@@ -17,6 +17,10 @@ const createUserSchema = z.object({
     .email("عنوان البريد الإلكتروني غير صالح")
     .optional()
     .or(z.literal("")),
+  password: z
+    .string()
+    .min(1, "كلمة المرور المؤقتة مطلوبة")
+    .min(6, "كلمة المرور المؤقتة يجب أن تكون 6 أحرف على الأقل"),
   isActive: z.boolean(),
 });
 

@@ -39,10 +39,17 @@ function readSubscriptionId(response: unknown) {
 
 function readSubscriptionLabel(response: unknown) {
   const data = asRecord(asRecord(response)?.data);
-  return readString(data?.displayId) || readSubscriptionId(response)?.slice(-8) || null;
+  return (
+    readString(data?.displayId) ||
+    readSubscriptionId(response)?.slice(-8) ||
+    null
+  );
 }
 
-function buildSubscriptionPayload(data: CreateSubscriptionSchemaType): Record<string, unknown> {
+function buildSubscriptionPayload(
+  data: CreateSubscriptionSchemaType
+): Record<string, unknown> {
+  const { addons, ...rest } = data;
   const isDelivery = data.delivery.type === "delivery";
   const deliveryWindow = data.delivery.slot?.window?.trim();
   const delivery = {
@@ -60,10 +67,9 @@ function buildSubscriptionPayload(data: CreateSubscriptionSchemaType): Record<st
   };
 
   return {
-    ...data,
-    addons: data.addons.map((addon) => ({
-      addonId: addon.value,
-      qty: 1,
+    ...rest,
+    addonSubscriptions: addons.map((addon) => ({
+      addonPlanId: addon.value,
     })),
     delivery,
   };
@@ -112,7 +118,10 @@ export function CreateSubscriptionFormContent({
       }
     } catch (error: unknown) {
       setIsQuoting(false);
-      ToastMessage(getApiErrorMessage(error) || "حدث خطأ أثناء إنشاء الاشتراك", "error");
+      ToastMessage(
+        getApiErrorMessage(error) || "حدث خطأ أثناء إنشاء الاشتراك",
+        "error"
+      );
     }
   };
 

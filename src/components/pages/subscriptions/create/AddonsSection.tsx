@@ -20,10 +20,8 @@ export function AddonsSection({ form }: AddonsSectionProps) {
   const { data: addonsResponse, isLoading } = useAddonsQuery();
   const allAddons = addonsResponse?.data?.filter((a) => a.isActive) || [];
 
-  const getSubscriptionAddons = () =>
-    allAddons.filter((a: Addon) => a.type === "subscription");
-  const getOneTimeAddons = () =>
-    allAddons.filter((a: Addon) => a.type === "one_time");
+  const getSubscriptionAddons = () => allAddons;
+  const getOneTimeAddons = () => [];
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -80,14 +78,18 @@ export function AddonsSection({ form }: AddonsSectionProps) {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  {getSubscriptionAddons().map((addon: Addon) => (
-                    <AddonCard
-                      key={addon._id}
-                      addon={addon}
-                      isSelected={getSelectedSet().has(addon._id)}
-                      onToggle={toggleAddon}
-                    />
-                  ))}
+                  {getSubscriptionAddons().map((addon: Addon) => {
+                    const id = getAddonPlanId(addon);
+
+                    return (
+                      <AddonCard
+                        key={id}
+                        addon={addon}
+                        isSelected={getSelectedSet().has(id)}
+                        onToggle={toggleAddon}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -130,6 +132,10 @@ export function AddonsSection({ form }: AddonsSectionProps) {
   );
 }
 
+function getAddonPlanId(addon: Addon) {
+  return addon.id || addon._id;
+}
+
 /** Isolated card component to prevent parent re-renders from propagating */
 function AddonCard({
   addon,
@@ -140,15 +146,20 @@ function AddonCard({
   isSelected: boolean;
   onToggle: (id: string) => void;
 }) {
+  const planId = getAddonPlanId(addon);
+  const priceSar =
+    addon.planPrices?.[0]?.priceSar ?? addon.priceSar ?? addon.price ?? 0;
+  const description = addon.description?.ar || addon.category;
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onToggle(addon._id)}
+      onClick={() => onToggle(planId)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onToggle(addon._id);
+          onToggle(planId);
         }
       }}
       className={`group relative flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-right transition-all ${
@@ -179,12 +190,12 @@ function AddonCard({
       <div className="flex-1">
         <p className="text-sm font-semibold">{addon.name.ar}</p>
         <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-          {addon.description.ar}
+          {description}
         </p>
       </div>
       <div className="shrink-0 text-left">
         <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-600">
-          {addon.price} ريال
+          {priceSar} ريال
         </span>
       </div>
     </div>
