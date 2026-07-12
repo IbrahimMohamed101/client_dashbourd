@@ -20,13 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type {
   Addon,
@@ -141,7 +134,6 @@ export function AddonPlanDialog({
   plan,
   products,
   basePlans,
-  categories,
   isSaving,
   serverError,
   onSubmit,
@@ -280,29 +272,7 @@ export function AddonPlanDialog({
                   dir="ltr"
                 />
               </div>
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_9rem] md:items-end">
-                <div className="space-y-2">
-                  <Label>تصنيف الإضافة</Label>
-                  <Select
-                    value={form.category}
-                    onValueChange={(value) => updateTextField("category", value)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="اختر تصنيف الإضافة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.key} value={category.key}>
-                          {localizedName(category.label)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    هذا تصنيف باقة الإضافة، أما باقات الاشتراك الأساسية فتظهر في
-                    مصفوفة الأسعار بالأسفل.
-                  </p>
-                </div>
+              <div className="grid gap-3 md:grid-cols-[9rem_9rem] md:items-end">
                 <Field
                   label="الحد اليومي"
                   type="number"
