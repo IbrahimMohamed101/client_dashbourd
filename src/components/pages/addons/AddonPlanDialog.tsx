@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type {
   Addon,
+  AddonCategoryOption,
   AddonPlanWritePayload,
   BasePlanPickerItem,
   MenuProductPickerItem,
@@ -45,6 +46,7 @@ type AddonPlanDialogProps = {
   plan: Addon | null;
   products: MenuProductPickerItem[];
   basePlans: BasePlanPickerItem[];
+  categories: AddonCategoryOption[];
   isSaving: boolean;
   serverError?: string | null;
   onSubmit: (payload: AddonPlanWritePayload) => void;
