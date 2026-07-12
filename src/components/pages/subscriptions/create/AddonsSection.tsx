@@ -19,6 +19,7 @@ interface AddonsSectionProps {
 export function AddonsSection({ form }: AddonsSectionProps) {
   const { data: addonsResponse, isLoading } = useAddonsQuery();
   const allAddons = addonsResponse?.data?.filter((a) => a.isActive) || [];
+  const selectedPlanId = form.watch("planId");
 
   const getSubscriptionAddons = () => allAddons;
   const getOneTimeAddons = () => [];
@@ -85,6 +86,7 @@ export function AddonsSection({ form }: AddonsSectionProps) {
                       <AddonCard
                         key={id}
                         addon={addon}
+                        selectedPlanId={selectedPlanId}
                         isSelected={getSelectedSet().has(id)}
                         onToggle={toggleAddon}
                       />
@@ -109,6 +111,7 @@ export function AddonsSection({ form }: AddonsSectionProps) {
                     <AddonCard
                       key={addon._id}
                       addon={addon}
+                      selectedPlanId={selectedPlanId}
                       isSelected={getSelectedSet().has(addon._id)}
                       onToggle={toggleAddon}
                     />
@@ -139,16 +142,25 @@ function getAddonPlanId(addon: Addon) {
 /** Isolated card component to prevent parent re-renders from propagating */
 function AddonCard({
   addon,
+  selectedPlanId,
   isSelected,
   onToggle,
 }: {
   addon: Addon;
+  selectedPlanId: string;
   isSelected: boolean;
   onToggle: (id: string) => void;
 }) {
   const planId = getAddonPlanId(addon);
+  const matchingPrice = addon.planPrices?.find(
+    (price) => price.basePlanId === selectedPlanId
+  );
   const priceSar =
-    addon.planPrices?.[0]?.priceSar ?? addon.priceSar ?? addon.price ?? 0;
+    matchingPrice?.priceSar ??
+    addon.planPrices?.[0]?.priceSar ??
+    addon.priceSar ??
+    addon.price ??
+    0;
   const description = addon.description?.ar || addon.category;
 
   return (
