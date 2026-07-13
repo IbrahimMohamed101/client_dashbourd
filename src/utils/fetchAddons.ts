@@ -1,4 +1,8 @@
 import api from "@/lib/apis";
+import {
+  addonCategoryPickerUrl,
+  addonProductPickerUrl,
+} from "@/utils/addonPickerContract";
 import type {
   Addon,
   AddonCategoryOption,
@@ -32,7 +36,8 @@ const asRecord = (value: unknown): Record<string, unknown> =>
     ? (value as Record<string, unknown>)
     : {};
 
-const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+const asArray = (value: unknown): unknown[] =>
+  Array.isArray(value) ? value : [];
 
 const asNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
@@ -54,7 +59,10 @@ const asLocalized = (value: unknown): LocalizedName => {
   };
 };
 
-const extractCollection = (payload: unknown, preferredKey: string): unknown[] => {
+const extractCollection = (
+  payload: unknown,
+  preferredKey: string
+): unknown[] => {
   if (Array.isArray(payload)) return payload;
 
   const record = asRecord(payload);
@@ -120,7 +128,8 @@ const normalizeMenuProduct = (value: unknown): AddonMenuProduct => {
     id,
     key: product.key === undefined ? undefined : String(product.key),
     name: asLocalized(product.name),
-    category: product.category === undefined ? undefined : String(product.category),
+    category:
+      product.category === undefined ? undefined : String(product.category),
     image:
       product.image === undefined
         ? product.imageUrl === undefined
@@ -148,9 +157,13 @@ const normalizeMenuCategory = (value: unknown): AddonMenuCategory => {
     name: asLocalized(category.name),
     isActive: category.isActive !== false,
     isVisible:
-      category.isVisible === undefined ? undefined : category.isVisible !== false,
+      category.isVisible === undefined
+        ? undefined
+        : category.isVisible !== false,
     isAvailable:
-      category.isAvailable === undefined ? undefined : category.isAvailable !== false,
+      category.isAvailable === undefined
+        ? undefined
+        : category.isAvailable !== false,
     productsCount:
       category.productsCount === undefined
         ? undefined
@@ -204,7 +217,9 @@ const normalizeAddon = (value: unknown): Addon => {
     priceLabel:
       addon.priceLabel === undefined ? undefined : String(addon.priceLabel),
     priceSar:
-      addon.priceSar === undefined ? priceHalala / 100 : asNumber(addon.priceSar),
+      addon.priceSar === undefined
+        ? priceHalala / 100
+        : asNumber(addon.priceSar),
     category: String(addon.category ?? "snack"),
     currency: String(addon.currency ?? legacy.currency ?? "SAR"),
     type: "subscription",
@@ -280,18 +295,20 @@ const normalizeProductPickerResponse = (
   payload: unknown
 ): MenuProductPickerResponse => ({
   status: asRecord(payload).status !== false,
-  data: extractCollection(payload, "items").map((item): MenuProductPickerItem => {
-    const product = normalizeMenuProduct(item);
-    return {
-      id: product.id,
-      key: product.key,
-      name: product.name,
-      category: product.category,
-      image: product.image,
-      imageUrl: product.imageUrl,
-      isActive: product.isActive,
-    };
-  }),
+  data: extractCollection(payload, "items").map(
+    (item): MenuProductPickerItem => {
+      const product = normalizeMenuProduct(item);
+      return {
+        id: product.id,
+        key: product.key,
+        name: product.name,
+        category: product.category,
+        image: product.image,
+        imageUrl: product.imageUrl,
+        isActive: product.isActive,
+      };
+    }
+  ),
 });
 
 const normalizeCategoryPickerResponse = (
@@ -318,27 +335,30 @@ const normalizeBasePlanPickerResponse = (
   payload: unknown
 ): BasePlanPickerResponse => ({
   status: asRecord(payload).status !== false,
-  data: extractCollection(payload, "items").map((item): BasePlanPickerItem => {
-    const plan = asRecord(item);
-    const name = plan.name;
-    const id = String(plan.id ?? plan._id ?? "");
+  data: extractCollection(payload, "items")
+    .map((item): BasePlanPickerItem => {
+      const plan = asRecord(item);
+      const name = plan.name;
+      const id = String(plan.id ?? plan._id ?? "");
 
-    return {
-      id,
-      name:
-        typeof name === "string"
-          ? name
-          : asLocalized(name).ar || asLocalized(name).en || id,
-      daysCount: plan.daysCount === undefined ? undefined : asNumber(plan.daysCount),
-      mealsCount:
-        plan.mealsCount === undefined
-          ? plan.mealsPerDay === undefined
-            ? undefined
-            : asNumber(plan.mealsPerDay)
-          : asNumber(plan.mealsCount),
-      isActive: plan.isActive !== false && plan.active !== false,
-    };
-  }).filter((plan) => plan.id),
+      return {
+        id,
+        name:
+          typeof name === "string"
+            ? name
+            : asLocalized(name).ar || asLocalized(name).en || id,
+        daysCount:
+          plan.daysCount === undefined ? undefined : asNumber(plan.daysCount),
+        mealsCount:
+          plan.mealsCount === undefined
+            ? plan.mealsPerDay === undefined
+              ? undefined
+              : asNumber(plan.mealsPerDay)
+            : asNumber(plan.mealsCount),
+        isActive: plan.isActive !== false && plan.active !== false,
+      };
+    })
+    .filter((plan) => plan.id),
 });
 
 export const fetchAddons = async (): Promise<AddonsResponse> => {
@@ -350,21 +370,20 @@ export const fetchAddonPlans = async (): Promise<AddonPlansResponse> => {
   return fetchAddons();
 };
 
-export const fetchAddonPrices =
-  async (): Promise<AddonPlanPricesResponse> => {
-    const response = await fetchAddons();
-    return {
-      status: response.status,
-      data: response.data.flatMap((plan) =>
-        plan.planPrices.map((price) => ({
-          ...price,
-          addonPlanId: plan.id || plan._id,
-          addonPlanName: plan.name,
-          category: plan.category,
-        }))
-      ),
-    };
+export const fetchAddonPrices = async (): Promise<AddonPlanPricesResponse> => {
+  const response = await fetchAddons();
+  return {
+    status: response.status,
+    data: response.data.flatMap((plan) =>
+      plan.planPrices.map((price) => ({
+        ...price,
+        addonPlanId: plan.id || plan._id,
+        addonPlanName: plan.name,
+        category: plan.category,
+      }))
+    ),
   };
+};
 
 export const fetchAddonItems = async (): Promise<AddonsResponse> => {
   return fetchAddons();
@@ -372,17 +391,13 @@ export const fetchAddonItems = async (): Promise<AddonsResponse> => {
 
 export const fetchAddonProductPicker =
   async (): Promise<MenuProductPickerResponse> => {
-    const response = await api.get(
-      "/api/dashboard/menu/products?view=picker&availableFor=subscription&isVisible=true&isAvailable=true&limit=100"
-    );
+    const response = await api.get(addonProductPickerUrl(100));
     return normalizeProductPickerResponse(response.data);
   };
 
 export const fetchAddonCategoryPicker =
   async (): Promise<MenuCategoryPickerResponse> => {
-    const response = await api.get(
-      "/api/dashboard/menu/categories?view=picker&availableFor=subscription&isVisible=true&isAvailable=true&limit=100"
-    );
+    const response = await api.get(addonCategoryPickerUrl(100));
     return normalizeCategoryPickerResponse(response.data);
   };
 

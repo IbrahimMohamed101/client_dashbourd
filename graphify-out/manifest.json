@@ -525,8 +525,8 @@
     "semantic_hash": ""
   },
   "src/components/pages/subscriptions/create/AddonsSection.tsx": {
-    "mtime": 1783868672.5491738,
-    "ast_hash": "aa3bba483e7b9adc899347f36e6466d2",
+    "mtime": 1783870040.9834092,
+    "ast_hash": "4a5945629a7ea41ae4e93ceed35a7f4d",
     "semantic_hash": ""
   },
   "src/components/pages/subscriptions/create/CreateSubscriptionFormContent.tsx": {
@@ -915,8 +915,8 @@
     "semantic_hash": "8d1c8fc64123187923d8db4d5ae1bda2"
   },
   "src/hooks/menu/useMenuCategories.ts": {
-    "mtime": 1781232113.2876275,
-    "ast_hash": "1d47ccd948870371cf5bb67f961f0cc4",
+    "mtime": 1783948842.9729154,
+    "ast_hash": "96e43f970f088e625ff97962279d9e42",
     "semantic_hash": ""
   },
   "src/hooks/menu/useMenuCustomization.ts": {
@@ -940,8 +940,8 @@
     "semantic_hash": "65ef7fd5a2b3cccbc5e074269517680c"
   },
   "src/hooks/menu/useMenuProducts.ts": {
-    "mtime": 1781232121.7960544,
-    "ast_hash": "244f49749bd37b4711721c22ce6b8194",
+    "mtime": 1783948842.9580336,
+    "ast_hash": "1055c5eca16f178467fbc8fe002ab9fd",
     "semantic_hash": ""
   },
   "src/hooks/menu/usePublicMenuPreview.ts": {
@@ -955,8 +955,8 @@
     "semantic_hash": "654e2ca2e9fddc27eb7e3954900dc48e"
   },
   "src/hooks/useAddonsQuery.ts": {
-    "mtime": 1781958851.7834332,
-    "ast_hash": "1ce3bb4d6be5c861492ef1bd1c44bc3c",
+    "mtime": 1783948842.9440358,
+    "ast_hash": "c123ce8c97eb97d6c303db54f5912ffa",
     "semantic_hash": ""
   },
   "src/hooks/useAuth.ts": {
@@ -1445,8 +1445,8 @@
     "semantic_hash": "e255c2cb650e86f7302bf3504c3be31c"
   },
   "src/types/addonTypes.ts": {
-    "mtime": 1781959139.6222544,
-    "ast_hash": "a94f5759e099e9a6592a51e059f7b526",
+    "mtime": 1783877480.239194,
+    "ast_hash": "9a20adc86659c1055235c27365504518",
     "semantic_hash": ""
   },
   "src/types/auth.ts": {
@@ -1580,8 +1580,8 @@
     "semantic_hash": ""
   },
   "src/utils/fetchAddons.ts": {
-    "mtime": 1781958842.7362187,
-    "ast_hash": "c3944bf4d24b0233b716d6dee8ea1bbb",
+    "mtime": 1783948842.916319,
+    "ast_hash": "39afb671fc6f18821e4a7723fe55a384",
     "semantic_hash": ""
   },
   "src/utils/fetchCreateAddon.ts": {
@@ -1995,13 +1995,13 @@
     "semantic_hash": ""
   },
   "src/components/pages/addons/AddonPlanDialog.tsx": {
-    "mtime": 1783691622.1355684,
-    "ast_hash": "71da258d26e356eaac5fef42748550bb",
+    "mtime": 1783877480.239194,
+    "ast_hash": "bc6cf70b6d2f0a182bc2d08f9f0149e9",
     "semantic_hash": ""
   },
   "src/components/pages/addons/addon-plan-form-utils.ts": {
-    "mtime": 1781968306.9329274,
-    "ast_hash": "52fd287ad394f35d619b6ea3feb31e10",
+    "mtime": 1783877480.239194,
+    "ast_hash": "28f50f60fc327f822ba4798be7b3df75",
     "semantic_hash": ""
   },
   "src/routes/_protected/premium-meals/index.tsx": {
@@ -2122,6 +2122,26 @@
   "tests/mealBuilderFullMealProducts.test.ts": {
     "mtime": 1783205770.727296,
     "ast_hash": "692561b9c7645ca89b96fde3a663d20b",
+    "semantic_hash": ""
+  },
+  "src/hooks/menu/menuProductInvalidation.ts": {
+    "mtime": 1783948854.170609,
+    "ast_hash": "2e12c419402600ccdbf219fab924a995",
+    "semantic_hash": ""
+  },
+  "src/utils/addonPickerContract.ts": {
+    "mtime": 1783948672.009779,
+    "ast_hash": "15ef8bcec479b2327336503a9b1341ee",
+    "semantic_hash": ""
+  },
+  "src/utils/fetchAddonProductPicker.ts": {
+    "mtime": 1783948842.8764584,
+    "ast_hash": "826e9d38fe4c9420c6fa8440f5ce5272",
+    "semantic_hash": ""
+  },
+  "tests/addonPickerContract.test.ts": {
+    "mtime": 1783948861.4308374,
+    "ast_hash": "045f1a0982f27a4b42b4ea9da6eac88a",
     "semantic_hash": ""
   }
 }

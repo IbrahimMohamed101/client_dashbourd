@@ -1,4 +1,9 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   fetchAddonBasePlanPicker,
   fetchAddonCategoryPicker,
@@ -6,6 +11,7 @@ import {
   fetchAddons,
 } from "@/utils/fetchAddons";
 import { fetchAddonById } from "@/utils/fetchAddonById";
+import { addonPickerQueryKey } from "@/utils/addonPickerContract";
 import { fetchAllAddonProductPicker } from "@/utils/fetchAddonProductPicker";
 import {
   createAddonPlanPrice,
@@ -48,7 +54,7 @@ export const useAddonPlanPricesQuery = () =>
 
 export const addonProductPickerQueryOptions = () =>
   queryOptions({
-    queryKey: ["addons", "product-picker"],
+    queryKey: addonPickerQueryKey.productPicker(),
     queryFn: fetchAllAddonProductPicker,
     staleTime: 1000 * 60 * 5,
   });
@@ -57,7 +63,7 @@ export const addonProductPickerQueryOptions = () =>
 // explicit products and only uses category as a local UI filter.
 export const addonCategoryPickerQueryOptions = () =>
   queryOptions({
-    queryKey: ["addons", "category-picker"],
+    queryKey: addonPickerQueryKey.categoryPicker(),
     queryFn: fetchAddonCategoryPicker,
     staleTime: 1000 * 60 * 5,
   });
@@ -98,13 +104,8 @@ export const useUpdateAddonPlanPriceMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: AddonPlanPricePayload;
-    }) => updateAddonPlanPrice(id, data),
+    mutationFn: ({ id, data }: { id: string; data: AddonPlanPricePayload }) =>
+      updateAddonPlanPrice(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["addons", "plan-prices"],

@@ -1,6 +1,10 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import {
+  MENU_PRODUCT_AND_CATEGORY_INVALIDATION_KEYS,
+  MENU_PRODUCT_INVALIDATION_KEYS,
+} from "@/hooks/menu/menuProductInvalidation";
+import {
   fetchMenuProducts,
   fetchMenuProductById,
   fetchMenuProductComposer,
@@ -65,17 +69,23 @@ export const useMenuProductComposerQuery = (id: string) =>
 
 export const useCreateMenuProductMutation = () =>
   useMutationWithToast({
-    mutationFn: (data: CreateMenuProductPayload) => fetchCreateMenuProduct(data),
+    mutationFn: (data: CreateMenuProductPayload) =>
+      fetchCreateMenuProduct(data),
     successMessage: "تم إنشاء المنتج بنجاح",
-    invalidateKeys: [[PRODUCTS_KEY]],
+    invalidateKeys: MENU_PRODUCT_INVALIDATION_KEYS,
   });
 
 export const useUpdateMenuProductMutation = () =>
   useMutationWithToast({
-    mutationFn: ({ id, data }: { id: string; data: UpdateMenuProductPayload }) =>
-      fetchUpdateMenuProduct(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateMenuProductPayload;
+    }) => fetchUpdateMenuProduct(id, data),
     successMessage: "تم تحديث المنتج بنجاح",
-    invalidateKeys: [[PRODUCTS_KEY]],
+    invalidateKeys: MENU_PRODUCT_INVALIDATION_KEYS,
   });
 
 export const useBulkUpdateMenuProductsMutation = () =>
@@ -83,7 +93,7 @@ export const useBulkUpdateMenuProductsMutation = () =>
     mutationFn: (data: BulkUpdateProductsPayload) =>
       fetchBulkUpdateMenuProducts(data),
     successMessage: "تم تحديث المنتجات المحددة بنجاح",
-    invalidateKeys: [[PRODUCTS_KEY], ["menu.categories"]],
+    invalidateKeys: MENU_PRODUCT_AND_CATEGORY_INVALIDATION_KEYS,
   });
 
 export const useToggleMenuProductAvailabilityMutation = () =>
@@ -91,14 +101,14 @@ export const useToggleMenuProductAvailabilityMutation = () =>
     mutationFn: ({ id, isAvailable }: { id: string; isAvailable: boolean }) =>
       fetchUpdateMenuProductAvailability(id, isAvailable),
     successMessage: "تم تحديث حالة التوفر",
-    invalidateKeys: [[PRODUCTS_KEY]],
+    invalidateKeys: MENU_PRODUCT_INVALIDATION_KEYS,
   });
 
 export const useDuplicateMenuProductMutation = () =>
   useMutationWithToast({
     mutationFn: (id: string) => fetchDuplicateMenuProduct(id),
     successMessage: "تم نسخ المنتج بنجاح",
-    invalidateKeys: [[PRODUCTS_KEY]],
+    invalidateKeys: MENU_PRODUCT_INVALIDATION_KEYS,
   });
 
 export const useDeleteMenuProductMutation = () => {
@@ -107,7 +117,7 @@ export const useDeleteMenuProductMutation = () => {
   return useMutationWithToast({
     mutationFn: (id: string) => fetchDeleteMenuProduct(id),
     successMessage: "تم حذف المنتج بنجاح",
-    invalidateKeys: [[PRODUCTS_KEY]],
+    invalidateKeys: MENU_PRODUCT_INVALIDATION_KEYS,
     onSuccess: (_, id) => {
       queryClient.setQueriesData<MenuProductsResponse>(
         { queryKey: [PRODUCTS_KEY] },
@@ -121,5 +131,5 @@ export const useReorderMenuProductsMutation = () =>
   useMutationWithToast({
     mutationFn: (items: ReorderItem[]) => fetchReorderMenuProducts(items),
     successMessage: "تم إعادة ترتيب المنتجات",
-    invalidateKeys: [[PRODUCTS_KEY]],
+    invalidateKeys: MENU_PRODUCT_INVALIDATION_KEYS,
   });

@@ -1,4 +1,5 @@
 import api from "@/lib/apis";
+import { addonProductPickerUrl } from "@/utils/addonPickerContract";
 import type {
   LocalizedName,
   MenuProductPickerItem,
@@ -64,9 +65,7 @@ const normalizeProduct = (value: unknown): MenuProductPickerItem => {
 
 export const fetchAllAddonProductPicker =
   async (): Promise<MenuProductPickerResponse> => {
-    const response = await api.get(
-      "/api/dashboard/menu/products?view=picker&availableFor=subscription&isVisible=true&isAvailable=true"
-    );
+    const response = await api.get(addonProductPickerUrl());
 
     return {
       status: asRecord(response.data).status !== false,

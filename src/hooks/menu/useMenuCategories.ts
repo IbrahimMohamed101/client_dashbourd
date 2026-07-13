@@ -1,6 +1,10 @@
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import {
+  MENU_CATEGORY_AND_PRODUCT_INVALIDATION_KEYS,
+  MENU_CATEGORY_INVALIDATION_KEYS,
+} from "@/hooks/menu/menuProductInvalidation";
+import {
   fetchMenuCategories,
   fetchMenuCategoryById,
   fetchCreateMenuCategory,
@@ -46,17 +50,23 @@ export const useMenuCategoryDetailQuery = (id: string) =>
 
 export const useCreateMenuCategoryMutation = () =>
   useMutationWithToast({
-    mutationFn: (data: CreateMenuCategoryPayload) => fetchCreateMenuCategory(data),
+    mutationFn: (data: CreateMenuCategoryPayload) =>
+      fetchCreateMenuCategory(data),
     successMessage: "تم إنشاء التصنيف بنجاح",
-    invalidateKeys: [[CATEGORIES_KEY]],
+    invalidateKeys: MENU_CATEGORY_INVALIDATION_KEYS,
   });
 
 export const useUpdateMenuCategoryMutation = () =>
   useMutationWithToast({
-    mutationFn: ({ id, data }: { id: string; data: UpdateMenuCategoryPayload }) =>
-      fetchUpdateMenuCategory(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateMenuCategoryPayload;
+    }) => fetchUpdateMenuCategory(id, data),
     successMessage: "تم تحديث التصنيف بنجاح",
-    invalidateKeys: [[CATEGORIES_KEY]],
+    invalidateKeys: MENU_CATEGORY_INVALIDATION_KEYS,
   });
 
 export const useBulkAssignProductsToCategoryMutation = () =>
@@ -69,7 +79,7 @@ export const useBulkAssignProductsToCategoryMutation = () =>
       data: BulkAssignProductsToCategoryPayload;
     }) => fetchBulkAssignProductsToCategory(categoryId, data),
     successMessage: "تم تحديث منتجات التصنيف بنجاح",
-    invalidateKeys: [[CATEGORIES_KEY], ["menu.products"]],
+    invalidateKeys: MENU_CATEGORY_AND_PRODUCT_INVALIDATION_KEYS,
   });
 
 export const useDeleteMenuCategoryMutation = () => {
@@ -78,7 +88,7 @@ export const useDeleteMenuCategoryMutation = () => {
   return useMutationWithToast({
     mutationFn: (id: string) => fetchDeleteMenuCategory(id),
     successMessage: "تم حذف التصنيف بنجاح",
-    invalidateKeys: [[CATEGORIES_KEY]],
+    invalidateKeys: MENU_CATEGORY_INVALIDATION_KEYS,
     onSuccess: (_, id) => {
       queryClient.setQueriesData<MenuCategoriesResponse>(
         { queryKey: [CATEGORIES_KEY] },
@@ -92,5 +102,5 @@ export const useReorderMenuCategoriesMutation = () =>
   useMutationWithToast({
     mutationFn: (items: ReorderItem[]) => fetchReorderMenuCategories(items),
     successMessage: "تم إعادة ترتيب التصنيفات",
-    invalidateKeys: [[CATEGORIES_KEY]],
+    invalidateKeys: MENU_CATEGORY_INVALIDATION_KEYS,
   });
