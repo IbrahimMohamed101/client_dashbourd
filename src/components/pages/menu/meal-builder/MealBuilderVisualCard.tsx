@@ -26,9 +26,11 @@ const VISIBLE_ITEM_LIMIT = 5;
 export function MealBuilderVisualCard({
   card,
   onEdit,
+  readOnly,
 }: {
   card: VisualCard;
   onEdit: () => void;
+  readOnly?: boolean;
 }) {
   const [showAllItems, setShowAllItems] = useState(false);
   const blockingIssues = [
@@ -61,6 +63,11 @@ export function MealBuilderVisualCard({
                 <CardDescription>{card.labelEn}</CardDescription>
               ) : null}
               <CardState card={card} />
+              {card.key === "premium" ? (
+                <Badge variant="secondary" className="font-normal">
+                  يتم تحديث هذا القسم تلقائيا من إعدادات الوجبات المميزة
+                </Badge>
+              ) : null}
               {reviewIssues.length ? (
                 <Badge variant="secondary" className="font-normal">
                   مراجعة اختيارية
@@ -76,6 +83,7 @@ export function MealBuilderVisualCard({
             type="button"
             variant="outline"
             className="w-full shrink-0 justify-center sm:w-auto"
+            disabled={readOnly}
             onClick={onEdit}
           >
             <Pencil data-icon="inline-start" />
@@ -289,11 +297,6 @@ function CardState({ card }: { card: VisualCard }) {
 }
 
 function isPremiumVisualItem(cardKey: string, itemKey: string) {
-  return (
-    cardKey === "premium" ||
-    itemKey === "beef_steak" ||
-    itemKey === "shrimp" ||
-    itemKey === "salmon" ||
-    itemKey === "premium_large_salad"
-  );
+  void itemKey;
+  return cardKey === "premium";
 }

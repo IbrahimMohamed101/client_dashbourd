@@ -54,7 +54,7 @@ export function emptySection(type: MealBuilderSectionType): MealBuilderSection {
     includeMode: type === "product_category" ? "all" : "selected",
     selectionType:
       type === "product_list"
-        ? "premium_large_salad"
+        ? "full_meal_product"
         : type === "product_category"
           ? "sandwich"
           : "standard_meal",

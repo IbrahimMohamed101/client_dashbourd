@@ -114,6 +114,15 @@ export interface MealBuilderHydratedItem {
   state?: "selected" | "eligible" | "not_linked" | "unavailable" | "invalid" | string;
   pricing?: Record<string, unknown>;
   relation?: Record<string, unknown> | null;
+  imageUrl?: string | null;
+  kind?: string | null;
+  currency?: string | null;
+  priceHalala?: number | null;
+  premiumPriceHalala?: number | null;
+  upgradePriceHalala?: number | null;
+  sortOrder?: number | null;
+  health?: string | null;
+  status?: string | null;
 }
 
 export interface MealBuilderValidation {
@@ -177,10 +186,37 @@ export interface MealBuilderContract {
   sections: MealBuilderContractSection[];
 }
 
+export interface MealBuilderPremiumSection {
+  automatic?: boolean;
+  source?: string;
+  title?: string;
+  items?: MealBuilderHydratedItem[];
+  diagnostics?: MealBuilderCheck[];
+  excluded?: MealBuilderHydratedItem[];
+  broken?: MealBuilderHydratedItem[];
+  [key: string]: unknown;
+}
+
+export interface MealBuilderVersionMetadata {
+  mode?: "published" | "draft" | string;
+  versionId?: string | null;
+  draftVersionId?: string | null;
+  versionNumber?: number | string | null;
+  basedOnPublishedVersionId?: string | null;
+  hasDraft?: boolean;
+  hasUnpublishedChanges?: boolean;
+  publishedAt?: string | null;
+  updatedAt?: string | null;
+  status?: string | null;
+}
+
 export interface MealBuilderState {
   draft: MealBuilderConfig | null;
   published: MealBuilderConfig | null;
   preview: MealBuilderContract | null;
+  contract?: MealBuilderContract | null;
+  premiumSection?: MealBuilderPremiumSection | null;
+  metadata?: MealBuilderVersionMetadata;
   plannerCatalog?: MealPlannerMenuContract | null;
   validation: {
     draft: MealBuilderValidation | null;
@@ -196,6 +232,33 @@ export interface MealBuilderStateResponse {
 export interface MealBuilderConfigResponse {
   status: boolean;
   data: MealBuilderConfig;
+}
+
+export interface MealBuilderLifecycleResponseData {
+  config?: MealBuilderConfig | null;
+  draft?: MealBuilderConfig | null;
+  published?: MealBuilderConfig | null;
+  contract?: MealBuilderContract | null;
+  sections?: MealBuilderSection[];
+  premiumSection?: MealBuilderPremiumSection | null;
+  validation?: MealBuilderValidation | null;
+  mode?: "published" | "draft" | string;
+  versionId?: string | null;
+  draftVersionId?: string | null;
+  versionNumber?: number | string | null;
+  basedOnPublishedVersionId?: string | null;
+  hasDraft?: boolean;
+  hasUnpublishedChanges?: boolean;
+  publishedAt?: string | null;
+  updatedAt?: string | null;
+  status?: string | null;
+  reset?: boolean;
+  [key: string]: unknown;
+}
+
+export interface MealBuilderLifecycleResponse {
+  status: boolean;
+  data: MealBuilderLifecycleResponseData;
 }
 
 export interface MealBuilderValidationResponse {
@@ -220,6 +283,13 @@ export interface MealBuilderReadinessResponse {
 export interface MealBuilderHydratedDraft {
   contractVersion: string;
   draft: MealBuilderConfig | null;
+  mode?: "draft" | string;
+  versionId?: string | null;
+  versionNumber?: number | string | null;
+  basedOnPublishedVersionId?: string | null;
+  hasUnpublishedChanges?: boolean;
+  updatedAt?: string | null;
+  premiumSection?: MealBuilderPremiumSection | null;
   ready: boolean;
   errors: MealBuilderCheck[];
   warnings: MealBuilderCheck[];

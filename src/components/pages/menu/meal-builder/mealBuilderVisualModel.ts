@@ -6,11 +6,11 @@ import type {
 import type {
   MealBuilderCheck,
   MealBuilderHydratedItem,
+  MealBuilderPremiumSection,
   MealBuilderSection,
   MealBuilderSectionType,
 } from "@/types/mealBuilderTypes";
 import {
-  PREMIUM_REQUIRED_KEYS,
   REQUIRED_SECTION_ORDER,
   SECTION_RULE_BADGES,
   VISUAL_SECTION_LABELS,
@@ -42,6 +42,14 @@ export type MealBuilderVisualItem =
       errors: MealBuilderCheck[];
       sourceSectionIndex: number;
       sourceSectionType: MealBuilderSectionType;
+      premiumKey?: string | null;
+      imageUrl?: string | null;
+      currency?: string | null;
+      upgradePriceHalala?: number | null;
+      sortOrder?: number | null;
+      health?: string | null;
+      status?: string | null;
+      automatic?: boolean;
     }
   | {
       id: string;
@@ -66,6 +74,14 @@ export type MealBuilderVisualItem =
       selectionType: string;
       requiresBuilder: boolean;
       treatAsFullMeal: boolean;
+      premiumKey?: string | null;
+      imageUrl?: string | null;
+      currency?: string | null;
+      upgradePriceHalala?: number | null;
+      sortOrder?: number | null;
+      health?: string | null;
+      status?: string | null;
+      automatic?: boolean;
     };
 
 export interface MealBuilderVisualCard {
@@ -118,12 +134,14 @@ export function buildMealBuilderVisualCards({
   categories,
   options,
   issues,
+  premiumSection,
 }: {
   sections: MealBuilderSection[];
   products: MenuProduct[];
   categories: MenuCategory[];
   options: MenuOption[];
   issues: MealBuilderCheck[];
+  premiumSection?: MealBuilderPremiumSection | null;
 }) {
   const cards = createEmptyCards();
   const optionsById = new Map(options.map((option) => [option.id, option]));
@@ -194,14 +212,24 @@ export function buildMealBuilderVisualCards({
     });
   });
 
-  const premiumKeys = new Set(cards.premium.items.map((item) => item.key));
-  PREMIUM_REQUIRED_KEYS.forEach((key) => {
+  if (premiumSection?.automatic && Array.isArray(premiumSection.items)) {
+    cards.premium.items = premiumSection.items.map((item, index) =>
+      premiumItemToVisualItem(item, index)
+    );
+    cards.premium.backendIssues.push(...(premiumSection.diagnostics ?? []));
+  }
+
+  if ((premiumSection as { legacyRequiredKeyChecks?: boolean } | null)?.legacyRequiredKeyChecks) {
+    const premiumKeys = new Set(cards.premium.items.map((item) => item.key));
+  ([] as string[]).forEach((key) => {
     if (!premiumKeys.has(key)) {
       cards.premium.errors.push(`خيار بريميوم مطلوب غير موجود: ${key}`);
     }
   });
   if (!premiumKeys.has("premium_large_salad")) {
     cards.premium.errors.push("السلطة الكبيرة البريميوم غير موجودة داخل قسم مميز.");
+  }
+
   }
 
   if (!cards.carbs.items.length) {
@@ -398,6 +426,18 @@ function hydrateVisualCardFromBackend(
       errors: item.errors ?? [],
       sourceSectionIndex,
       sourceSectionType: section.sectionType,
+      premiumKey: item.premiumKey ?? null,
+      imageUrl: item.imageUrl ?? null,
+      currency: item.currency ?? null,
+      upgradePriceHalala:
+        item.upgradePriceHalala ??
+        item.premiumPriceHalala ??
+        item.priceHalala ??
+        null,
+      sortOrder: item.sortOrder ?? null,
+      health: item.health ?? null,
+      status: item.status ?? null,
+      automatic: section.key === "premium",
     };
 
     if (kind === "product") {
@@ -456,6 +496,63 @@ function hydratedName(item: MealBuilderHydratedItem) {
   return item.label || item.name?.ar || item.name?.en || item.key || "عنصر غير معروف";
 }
 
+function premiumItemToVisualItem(
+  item: MealBuilderHydratedItem,
+  index: number
+): MealBuilderVisualItem {
+  const kind =
+    item.type?.includes("product") || item.kind === "product"
+      ? "product"
+      : "option";
+  const base = {
+    id: item.id || item.optionId || item.productId || item.key || `premium-${index}`,
+    key: item.key || item.premiumKey || `premium-${index}`,
+    name: hydratedName(item),
+    active: item.active !== false && item.visible !== false,
+    selected: true,
+    eligible: item.eligible !== false,
+    linked: item.linked !== false,
+    available: item.available !== false,
+    published: item.published !== false,
+    subscriptionEnabled: item.subscriptionEnabled !== false,
+    relationExists: item.relationExists !== false,
+    catalogItemAvailable: item.catalogItemAvailable !== false,
+    state: item.state || "selected",
+    reasonCodes: item.reasonCodes ?? [],
+    warnings: item.warnings ?? [],
+    errors: item.errors ?? [],
+    sourceSectionIndex: -1,
+    sourceSectionType: "product_list" as MealBuilderSectionType,
+    premiumKey: item.premiumKey ?? item.key ?? null,
+    imageUrl: item.imageUrl ?? null,
+    currency: item.currency ?? null,
+    upgradePriceHalala:
+      item.upgradePriceHalala ??
+      item.premiumPriceHalala ??
+      item.priceHalala ??
+      null,
+    sortOrder: item.sortOrder ?? index + 1,
+    health: item.health ?? null,
+    status: item.status ?? null,
+    automatic: true,
+  };
+
+  if (kind === "product") {
+    return {
+      ...base,
+      kind: "product",
+      selectionType: item.selectionType || "premium",
+      requiresBuilder: false,
+      treatAsFullMeal: true,
+    };
+  }
+
+  return {
+    ...base,
+    kind: "option",
+  };
+}
+
 export function optionFamily(option: MenuOption, section?: Pick<MealBuilderSection, "selectionType">) {
   if (section?.selectionType === "premium_meal" || option.premiumKey) return "premium";
   if (matchesOption(option, CARB_KEYS, CARB_MATCHERS)) return "carbs";
@@ -468,9 +565,7 @@ export function optionFamily(option: MenuOption, section?: Pick<MealBuilderSecti
 
 export function optionMatchesVisualCard(option: MenuOption, cardKey: string) {
   if (cardKey === "premium") {
-    return Boolean(option.premiumKey) ||
-      Number(option.extraFeeHalala ?? option.extraPriceHalala ?? 0) > 0 ||
-      PREMIUM_REQUIRED_KEYS.includes(option.key);
+    return false;
   }
   return optionFamily(option, { selectionType: "standard_meal" }) === cardKey;
 }
@@ -482,7 +577,7 @@ export function productMatchesVisualCard(
 ) {
   const category = categories.find((item) => item.id === product.categoryId);
   if (cardKey === "premium") {
-    return product.key === "premium_large_salad" || product.itemType === "premium_large_salad";
+    return false;
   }
   if (cardKey === "sandwich") {
     return (
