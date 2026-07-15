@@ -1,3 +1,8 @@
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
+
 import { ToastMessage } from "@/components/global/ToastMessage";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,36 +16,16 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import useCreateUserForm from "@/hooks/useCreateUserForm";
-import { getApiErrorMessage } from "@/lib/apiErrors";
+import { useCreateAdminCustomerMutation } from "@/hooks/useUsersQuery";
 import type { CreateUserSchemaType } from "@/lib/validations/createUserSchema";
-import { createUser } from "@/utils/fetchUsersData";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
-
-type ApiRecord = Record<string, unknown>;
-
-function asRecord(value: unknown): ApiRecord | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as ApiRecord)
-    : null;
-}
-
-function readString(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function readCreatedUserId(response: unknown) {
-  const data = asRecord(asRecord(response)?.data);
-  return readString(data?.id) || readString(data?.coreUserId);
-}
-
-function readCreatedUserName(response: unknown) {
-  const data = asRecord(asRecord(response)?.data);
-  return readString(data?.fullName) || readString(data?.phone);
-}
+import { getAdminCustomerErrorMessage } from "@/utils/fetchUsersData";
+import type { CredentialsDialogData } from "./temporary-credentials-dialog";
+import { TemporaryCredentialsDialog } from "./temporary-credentials-dialog";
 
 export function CreateUserForm() {
+  const [credentials, setCredentials] = useState<CredentialsDialogData | null>(
+    null
+  );
   const {
     register,
     handleSubmit,
@@ -51,54 +36,49 @@ export function CreateUserForm() {
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
-  const { mutate, isPending } = useMutation({
-    mutationFn: (data: CreateUserSchemaType) => createUser(data),
-    onSuccess: (response) => {
-      const createdUserId = readCreatedUserId(response);
-      const createdUserName = readCreatedUserName(response);
-
-      ToastMessage(
-        createdUserName
-          ? `تم إنشاء المستخدم ${createdUserName} بنجاح. يمكنك الآن إنشاء الاشتراك.`
-          : "تم إنشاء المستخدم بنجاح. يمكنك الآن إنشاء الاشتراك.",
-        "success"
-      );
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-
-      if (createdUserId) {
-        queryClient.setQueryData(["user-details", createdUserId], response);
-        navigate({
-          to: "/users/$userId/create-subscription",
-          params: { userId: createdUserId },
-        });
-        return;
-      }
-
-      navigate({ to: "/users" });
-    },
-    onError: (error: unknown) => {
-      ToastMessage(
-        getApiErrorMessage(error) || "حدث خطأ أثناء إنشاء المستخدم",
-        "error"
-      );
-    },
-  });
-
+  const createCustomer = useCreateAdminCustomerMutation();
   const isActive = watch("isActive");
 
-  const onSubmit = (data: CreateUserSchemaType) => {
-    mutate(data);
-  };
+  function closeCredentials() {
+    setCredentials(null);
+    queryClient.invalidateQueries({ queryKey: ["users"] });
+    navigate({ to: "/users" });
+  }
+
+  function onSubmit(data: CreateUserSchemaType) {
+    createCustomer.mutate(
+      {
+        fullName: data.fullName.trim(),
+        phoneE164: data.phoneE164,
+        email: data.email?.trim() || undefined,
+        isActive: data.isActive,
+      },
+      {
+        onSuccess: (result) => {
+          const temp = result.temporaryCredentials;
+          setCredentials({
+            title: "تم إنشاء المستخدم",
+            customerName: result.user.fullName,
+            phoneE164: result.user.phoneE164 || result.user.phone,
+            temporaryPassword: temp.temporaryPassword,
+            expiresAt: temp.expiresAt,
+          });
+        },
+        onError: (error) => {
+          ToastMessage(getAdminCustomerErrorMessage(error), "error");
+        },
+      }
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-2xl" dir="rtl">
       <Card>
         <CardHeader>
-          <CardTitle>إنشاء مستخدم جديد</CardTitle>
+          <CardTitle>إضافة مستخدم جديد</CardTitle>
           <CardDescription>
-            أدخل بيانات المستخدم الجديد لإنشاء حسابه في التطبيق ثم إنشاء اشتراك
-            له
+            أدخل بيانات العميل. سيُنشئ الخادم كلمة مرور مؤقتة آمنة تظهر مرة
+            واحدة بعد الحفظ.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,56 +93,38 @@ export function CreateUserForm() {
                   {...register("fullName")}
                   aria-invalid={errors.fullName ? "true" : "false"}
                 />
-                {errors.fullName && (
+                {errors.fullName ? (
                   <p className="mt-1 text-sm text-destructive">
                     {errors.fullName.message}
                   </p>
-                )}
+                ) : null}
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="phoneE164">رقم الهاتف</FieldLabel>
+                <FieldLabel htmlFor="phoneE164">رقم الجوال</FieldLabel>
                 <Input
                   id="phoneE164"
                   type="tel"
                   dir="ltr"
-                  placeholder="+966500000000"
+                  inputMode="tel"
+                  placeholder="+9665XXXXXXXX"
                   {...register("phoneE164")}
                   aria-invalid={errors.phoneE164 ? "true" : "false"}
                   className="text-left"
                 />
-                {errors.phoneE164 && (
+                {errors.phoneE164 ? (
                   <p className="mt-1 text-sm text-destructive">
                     {errors.phoneE164.message}
                   </p>
-                )}
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="password">كلمة المرور المؤقتة</FieldLabel>
-                <Input
-                  id="password"
-                  type="password"
-                  dir="ltr"
-                  placeholder="أدخل كلمة مرور مؤقتة"
-                  {...register("password")}
-                  aria-invalid={errors.password ? "true" : "false"}
-                  className="text-left"
-                />
-                {errors.password && (
-                  <p className="mt-1 text-sm text-destructive">
-                    {errors.password.message}
+                ) : (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    استخدم الصيغة الدولية مثل +9665XXXXXXXX.
                   </p>
                 )}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  سيُطلب من المستخدم تغيير هذه الكلمة عند أول تسجيل دخول.
-                </p>
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="email">
-                  البريد الإلكتروني (اختياري)
-                </FieldLabel>
+                <FieldLabel htmlFor="email">البريد الإلكتروني (اختياري)</FieldLabel>
                 <Input
                   id="email"
                   type="email"
@@ -172,11 +134,11 @@ export function CreateUserForm() {
                   aria-invalid={errors.email ? "true" : "false"}
                   className="text-left"
                 />
-                {errors.email && (
+                {errors.email ? (
                   <p className="mt-1 text-sm text-destructive">
                     {errors.email.message}
                   </p>
-                )}
+                ) : null}
               </Field>
 
               <Field>
@@ -190,7 +152,7 @@ export function CreateUserForm() {
                       id="isActive"
                       checked={isActive}
                       onCheckedChange={(checked) =>
-                        setValue("isActive", checked)
+                        setValue("isActive", checked, { shouldDirty: true })
                       }
                     />
                   </div>
@@ -198,14 +160,18 @@ export function CreateUserForm() {
               </Field>
 
               <Field>
-                <Button type="submit" disabled={isPending} className="w-full">
-                  {isPending ? (
+                <Button
+                  type="submit"
+                  disabled={createCustomer.isPending}
+                  className="w-full"
+                >
+                  {createCustomer.isPending ? (
                     <>
                       <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                       جاري إنشاء المستخدم...
                     </>
                   ) : (
-                    "إنشاء المستخدم والمتابعة للاشتراك"
+                    "إنشاء المستخدم"
                   )}
                 </Button>
               </Field>
@@ -213,6 +179,11 @@ export function CreateUserForm() {
           </form>
         </CardContent>
       </Card>
+
+      <TemporaryCredentialsDialog
+        credentials={credentials}
+        onClose={closeCredentials}
+      />
     </div>
   );
 }

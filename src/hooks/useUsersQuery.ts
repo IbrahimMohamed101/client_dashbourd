@@ -1,10 +1,16 @@
 import { queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  createAdminCustomer,
   fetchUserDetails,
   fetchUserSubscriptions,
   fetchUsersList,
+  resetAdminCustomerPassword,
   updateUser,
 } from "@/utils/fetchUsersData";
+import type {
+  CreateAdminCustomerPayload,
+  ResetAdminCustomerPasswordPayload,
+} from "@/types/userTypes";
 
 export const usersQueryOptions = (page: number, limit: number, search = "") =>
   queryOptions({
@@ -58,5 +64,26 @@ export const useUpdateUserMutation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
+  });
+};
+
+export const useCreateAdminCustomerMutation = () => {
+  return useMutation({
+    mutationFn: (payload: CreateAdminCustomerPayload) =>
+      createAdminCustomer(payload),
+    retry: false,
+  });
+};
+
+export const useResetAdminCustomerPasswordMutation = () => {
+  return useMutation({
+    mutationFn: ({
+      userId,
+      payload,
+    }: {
+      userId: string;
+      payload: ResetAdminCustomerPasswordPayload;
+    }) => resetAdminCustomerPassword({ userId, payload }),
+    retry: false,
   });
 };

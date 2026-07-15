@@ -1,7 +1,10 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import type { User } from "@/types/userTypes";
+
 import { Badge } from "@/components/ui/badge";
+import type { User } from "@/types/userTypes";
 import { UserActionsCell } from "./user-actions-cell";
+import { CustomerAuthStateBadge } from "./user-auth-state";
+import { formatCustomerDateTime } from "./user-auth-utils";
 
 export const usersColumns: ColumnDef<User>[] = [
   {
@@ -15,53 +18,61 @@ export const usersColumns: ColumnDef<User>[] = [
   },
   {
     accessorKey: "fullName",
-    header: "اسم المستخدم",
+    header: "الاسم",
     cell: ({ row }) => (
-      <span className="font-semibold">{row.original.fullName}</span>
+      <span className="font-semibold">{row.original.fullName || "—"}</span>
     ),
   },
   {
     accessorKey: "phone",
-    header: "رقم الهاتف",
+    header: "الجوال",
     cell: ({ row }) => (
-      <span className="font-medium">{row.original.phone}</span>
+      <span dir="ltr" className="font-medium">
+        {row.original.phoneE164 || row.original.phone || "—"}
+      </span>
     ),
   },
   {
     accessorKey: "email",
-    header: "البريد الإلكتروني",
+    header: "البريد",
     cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.email || "غير متوفر"}</span>
+      <span className="text-muted-foreground">
+        {row.original.email || "غير متوفر"}
+      </span>
     ),
   },
   {
     accessorKey: "isActive",
     header: "حالة الحساب",
-    cell: ({ row }) => {
-      const isActive = row.original.isActive;
-      return (
-        <Badge variant={isActive ? "default" : "destructive"}>
-          {isActive ? "نشط" : "غير نشط"}
-        </Badge>
-      );
-    },
+    cell: ({ row }) => (
+      <Badge variant={row.original.isActive ? "default" : "secondary"}>
+        {row.original.isActive ? "نشط" : "غير نشط"}
+      </Badge>
+    ),
+  },
+  {
+    id: "authState",
+    header: "حالة الدخول",
+    cell: ({ row }) => <CustomerAuthStateBadge user={row.original} />,
   },
   {
     accessorKey: "activeSubscriptionsCount",
-    header: "اشتراكات (نشطة / إجمالي)",
+    header: "الاشتراكات النشطة",
     cell: ({ row }) => (
       <span className="font-medium text-muted-foreground">
-        {row.original.activeSubscriptionsCount} / {row.original.subscriptionsCount}
+        {row.original.activeSubscriptionsCount} /{" "}
+        {row.original.subscriptionsCount}
       </span>
     ),
   },
   {
     accessorKey: "createdAt",
-    header: "تاريخ الانضمام",
-    cell: ({ row }) => {
-      const date = new Date(row.original.createdAt);
-      return <span className="text-muted-foreground">{date.toLocaleDateString('ar-EG')}</span>;
-    },
+    header: "تاريخ الإنشاء",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {formatCustomerDateTime(row.original.createdAt)}
+      </span>
+    ),
   },
   {
     id: "actions",

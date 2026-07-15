@@ -8,16 +8,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import {
+  EyeIcon,
+  KeyRoundIcon,
   MoreHorizontalIcon,
+  PlusCircleIcon,
   UserCheckIcon,
   UserXIcon,
-  EyeIcon,
-  PlusCircleIcon,
 } from "lucide-react";
 import type { User } from "@/types/userTypes";
 import { useUpdateUserMutation } from "@/hooks/useUsersQuery";
 import { ToastMessage } from "@/components/global/ToastMessage";
 import { Link } from "@tanstack/react-router";
+import { useAuth } from "@/hooks/useAuth";
+import { UserRoles } from "@/types/auth";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 
 interface UserActionsCellProps {
   user: User;
@@ -25,7 +29,14 @@ interface UserActionsCellProps {
 
 export function UserActionsCell({ user }: UserActionsCellProps) {
   const [open, setOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const { mutate: updateUser, isPending } = useUpdateUserMutation();
+  const { user: sessionUser } = useAuth();
+  const canManagePasswords =
+    sessionUser?.role === UserRoles.ADMIN ||
+    sessionUser?.role === UserRoles.SUPERADMIN;
+  const canResetPassword =
+    canManagePasswords && user.isActive && user.canResetPassword !== false;
 
   const handleToggleActive = () => {
     updateUser(
@@ -43,72 +54,89 @@ export function UserActionsCell({ user }: UserActionsCellProps) {
           );
           setOpen(false);
         },
-        onError: (error: unknown) => {
-          const err = error as { response?: { data?: { error?: { message?: string } } } };
-          const message =
-            err?.response?.data?.error?.message ||
-            "حدث خطأ أثناء تحديث حالة المستخدم";
-          ToastMessage(message, "error");
+        onError: () => {
+          ToastMessage("حدث خطأ أثناء تحديث حالة المستخدم", "error");
         },
       }
     );
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-8">
-          <MoreHorizontalIcon className="size-4" />
-          <span className="sr-only">إجراءات</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuItem asChild>
-          <Link
-            to="/users/$userId"
-            params={{ userId: user.id }}
-            className="flex items-center gap-2"
+    <>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="size-8">
+            <MoreHorizontalIcon className="size-4" />
+            <span className="sr-only">إجراءات</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem asChild>
+            <Link
+              to="/users/$userId"
+              params={{ userId: user.id }}
+              className="flex items-center gap-2"
+            >
+              <EyeIcon className="size-4" />
+              عرض
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link
+              to="/users/$userId/create-subscription"
+              params={{ userId: user.id }}
+              className="flex items-center gap-2"
+            >
+              <PlusCircleIcon className="size-4" />
+              إنشاء اشتراك
+            </Link>
+          </DropdownMenuItem>
+
+          {canResetPassword ? (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                setOpen(false);
+                setResetOpen(true);
+              }}
+            >
+              <KeyRoundIcon className="size-4" />
+              إعادة تعيين كلمة المرور
+            </DropdownMenuItem>
+          ) : null}
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            onClick={handleToggleActive}
+            disabled={isPending}
+            className={
+              user.isActive
+                ? "text-destructive focus:text-destructive"
+                : "text-emerald-600 focus:text-emerald-600"
+            }
           >
-            <EyeIcon className="size-4" />
-            عرض التفاصيل
-          </Link>
-        </DropdownMenuItem>
+            {user.isActive ? (
+              <>
+                <UserXIcon className="size-4" />
+                تعطيل الحساب
+              </>
+            ) : (
+              <>
+                <UserCheckIcon className="size-4" />
+                تفعيل الحساب
+              </>
+            )}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-        <DropdownMenuItem asChild>
-          <Link
-            to="/users/$userId/create-subscription"
-            params={{ userId: user.id }}
-            className="flex items-center gap-2"
-          >
-            <PlusCircleIcon className="size-4" />
-            إنشاء اشتراك
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem
-          onClick={handleToggleActive}
-          disabled={isPending}
-          className={
-            user.isActive
-              ? "text-destructive focus:text-destructive"
-              : "text-emerald-600 focus:text-emerald-600"
-          }
-        >
-          {user.isActive ? (
-            <>
-              <UserXIcon className="size-4" />
-              تعطيل الحساب
-            </>
-          ) : (
-            <>
-              <UserCheckIcon className="size-4" />
-              تفعيل الحساب
-            </>
-          )}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      <ResetPasswordDialog
+        user={user}
+        open={resetOpen}
+        onOpenChange={setResetOpen}
+      />
+    </>
   );
 }

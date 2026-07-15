@@ -10,7 +10,6 @@ const useCreateUserForm = () => {
       fullName: "",
       phoneE164: "+966",
       email: "",
-      password: "",
       isActive: true,
     },
   });
