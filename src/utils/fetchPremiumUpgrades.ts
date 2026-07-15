@@ -1,62 +1,57 @@
 import { toast } from "sonner";
 
 import api from "@/lib/apis";
-import { riyalToHalala } from "@/utils/price";
+import { halalaToRiyal, riyalToHalala } from "@/utils/price";
 import type {
   PremiumUpgradeArchivePayload,
-  PremiumUpgradeCandidateDto,
-  PremiumUpgradeCandidateFilters,
   PremiumUpgradeConfigDto,
   PremiumUpgradeCreatePayload,
+  PremiumUpgradeHealth,
+  PremiumUpgradeKind,
   PremiumUpgradeListFilters,
   PremiumUpgradeListResponse,
   PremiumUpgradeReadinessResponse,
-  PremiumUpgradeSelectionType,
   PremiumUpgradeSingleResponse,
-  PremiumUpgradeSourceType,
-  PremiumUpgradeStatePayload,
+  PremiumUpgradeSourceDto,
+  PremiumUpgradeSourceFilters,
+  PremiumUpgradeStatus,
   PremiumUpgradeUpdatePayload,
-  PremiumUpgradeLocalizedName,
 } from "@/types/premiumUpgradeTypes";
 
 export const PREMIUM_UPGRADES_LIST_QUERY_KEY = "premium-upgrades.list";
 export const PREMIUM_UPGRADES_READINESS_QUERY_KEY =
   "premium-upgrades.readiness";
-export const PREMIUM_UPGRADES_CANDIDATES_QUERY_KEY =
-  "premium-upgrades.candidates";
+export const PREMIUM_UPGRADES_SOURCES_QUERY_KEY = "premium-upgrades.sources";
+export const PREMIUM_UPGRADES_DETAIL_QUERY_KEY = "premium-upgrades.detail";
 
 export const defaultPremiumUpgradeListFilters: PremiumUpgradeListFilters = {
   q: "",
+  kind: "all",
   status: "all",
-  isEnabled: "all",
-  isVisible: "all",
-  sourceType: "all",
-  selectionType: "all",
+  health: "all",
   page: 1,
   limit: 20,
 };
 
-export const defaultPremiumUpgradeCandidateFilters: PremiumUpgradeCandidateFilters =
-  {
-    q: "",
-    sourceType: "all",
-    selectionType: "all",
-    includeLinked: false,
-    page: 1,
-    limit: 100,
-  };
+export const defaultPremiumUpgradeSourceFilters: PremiumUpgradeSourceFilters = {
+  q: "",
+  kind: "product",
+  status: "active",
+  page: 1,
+  limit: 50,
+};
 
 const premiumErrorMessages: Record<string, string> = {
   PREMIUM_UPGRADE_INVALID_SOURCE_ID:
-    "معرف المصدر غير صحيح. حدّث قائمة العناصر وحاول مرة أخرى.",
-  PREMIUM_UPGRADE_SOURCE_NOT_FOUND: "عنصر المنيو المحدد لم يعد موجودا.",
+    "معرف المصدر غير صحيح. حدّث قائمة المصادر وحاول مرة أخرى.",
+  PREMIUM_UPGRADE_SOURCE_NOT_FOUND: "المصدر المحدد لم يعد موجودا.",
   PREMIUM_UPGRADE_SOURCE_NOT_ELIGIBLE:
-    "هذا العنصر غير مؤهل ليكون ترقية مميزة.",
+    "هذا المصدر غير مؤهل ليكون ترقية مميزة.",
   PREMIUM_UPGRADE_RELATION_INVALID: "ربط المصدر غير صحيح أو غير مكتمل.",
   PREMIUM_UPGRADE_DUPLICATE: "هذا المصدر مربوط مسبقا كترقية مميزة.",
   PREMIUM_UPGRADE_KEY_CONFLICT: "مفتاح الترقية المميزة مستخدم مسبقا.",
   PREMIUM_UPGRADE_INVALID_DELTA:
-    "فرق سعر الترقية يجب أن يكون رقما صحيحا وغير سالب.",
+    "سعر الترقية يجب أن يكون رقما صحيحا وغير سالب.",
   PREMIUM_UPGRADE_REVISION_CONFLICT:
     "تم تعديل هذا العنصر بواسطة مدير آخر. حدّث البيانات وحاول مرة أخرى.",
   PREMIUM_UPGRADE_ARCHIVED: "هذه الترقية مؤرشفة ولا تقبل هذا الإجراء.",
@@ -76,12 +71,19 @@ export async function fetchPremiumUpgrades(
   return response.data;
 }
 
-export async function fetchPremiumUpgradeCandidates(
-  filters: PremiumUpgradeCandidateFilters
-): Promise<PremiumUpgradeListResponse<PremiumUpgradeCandidateDto>> {
-  const response = await api.get("/api/dashboard/premium-upgrades/candidates", {
-    params: buildCandidateParams(filters),
+export async function fetchPremiumUpgradeSources(
+  filters: PremiumUpgradeSourceFilters
+): Promise<PremiumUpgradeListResponse<PremiumUpgradeSourceDto>> {
+  const response = await api.get("/api/dashboard/premium-upgrades/sources", {
+    params: buildSourceParams(filters),
   });
+  return response.data;
+}
+
+export async function fetchPremiumUpgradeDetail(
+  id: string
+): Promise<PremiumUpgradeSingleResponse<PremiumUpgradeConfigDto>> {
+  const response = await api.get(`/api/dashboard/premium-upgrades/${id}`);
   return response.data;
 }
 
@@ -106,20 +108,6 @@ export async function updatePremiumUpgrade({
   return response.data;
 }
 
-export async function updatePremiumUpgradeState({
-  id,
-  payload,
-}: {
-  id: string;
-  payload: PremiumUpgradeStatePayload;
-}): Promise<PremiumUpgradeSingleResponse<PremiumUpgradeConfigDto>> {
-  const response = await api.patch(
-    `/api/dashboard/premium-upgrades/${id}/state`,
-    payload
-  );
-  return response.data;
-}
-
 export async function archivePremiumUpgrade({
   id,
   payload,
@@ -134,25 +122,21 @@ export async function archivePremiumUpgrade({
   return response.data;
 }
 
-export function buildCreatePremiumUpgradePayload(
-  candidate: PremiumUpgradeCandidateDto,
-  form: {
-    displayGroupKey: string;
-    upgradeDeltaSarInput: string;
-    isEnabled: boolean;
-    isVisible: boolean;
-    sortOrder: string;
-  }
-): PremiumUpgradeCreatePayload {
+export function buildCreatePremiumUpgradePayload(form: {
+  kind: PremiumUpgradeKind;
+  sourceId: string;
+  upgradePriceSarInput: string;
+  currency: "SAR";
+  isActive: boolean;
+  isVisible: boolean;
+  sortOrder: string;
+}): PremiumUpgradeCreatePayload {
   return {
-    sourceType: candidate.sourceType,
-    sourceId: candidate.sourceId,
-    sourceProductId: candidate.sourceProductId,
-    sourceGroupId: candidate.sourceGroupId,
-    selectionType: candidate.selectionType,
-    displayGroupKey: form.displayGroupKey,
-    upgradeDeltaHalala: riyalToHalala(form.upgradeDeltaSarInput),
-    isEnabled: Boolean(form.isEnabled),
+    kind: form.kind,
+    sourceId: form.sourceId,
+    upgradeDeltaHalala: riyalToHalala(form.upgradePriceSarInput),
+    currency: form.currency,
+    isActive: Boolean(form.isActive),
     isVisible: Boolean(form.isVisible),
     sortOrder: Number(form.sortOrder),
   };
@@ -184,25 +168,89 @@ export function getPremiumUpgradeErrorCode(error: unknown): string | null {
   );
 }
 
-export function premiumNameAr(name: PremiumUpgradeLocalizedName) {
-  return name.ar || name.en || "بدون اسم";
-}
-
-export function premiumSelectionTypeLabel(
-  value: PremiumUpgradeSelectionType | string
+export function premiumDisplayName(
+  value?: string | { ar?: string | null; en?: string | null } | null
 ) {
-  return value === "premium_large_salad"
-    ? "سلطة كبيرة مميزة"
-    : "بروتين مميز";
+  if (typeof value === "string") return value || "بدون اسم";
+  return value?.ar || value?.en || "بدون اسم";
 }
 
-export function premiumSourceTypeLabel(value: PremiumUpgradeSourceType | string) {
-  return value === "menu_product" ? "منتج منيو" : "خيار منيو";
+export function premiumRowName(row: PremiumUpgradeConfigDto) {
+  return premiumDisplayName(row.name ?? row.sourceName ?? null);
 }
 
-export function premiumDisplayGroupLabel(value: string | null | undefined) {
-  if (value === "premium_salads") return "سلطات مميزة";
-  return "بروتينات مميزة";
+export function premiumRowKey(row: PremiumUpgradeConfigDto) {
+  return row.key || row.premiumKey || row.sourceKey || "-";
+}
+
+export function premiumRowKind(row: PremiumUpgradeConfigDto): PremiumUpgradeKind {
+  if (row.kind === "product" || row.sourceType === "menu_product") {
+    return "product";
+  }
+  return "option";
+}
+
+export function premiumKindLabel(value: PremiumUpgradeKind | string) {
+  return value === "product" ? "منتج كامل" : "خيار داخل وجبة";
+}
+
+export function premiumStatusLabel(value?: PremiumUpgradeStatus | string | null) {
+  switch (value) {
+    case "hidden":
+      return "مخفي";
+    case "disabled":
+      return "متوقف";
+    case "archived":
+      return "مؤرشف";
+    default:
+      return "نشط";
+  }
+}
+
+export function premiumHealthLabel(value?: PremiumUpgradeHealth | string | null) {
+  return value === "broken" ? "يحتاج إصلاح" : "جاهز";
+}
+
+export function premiumIssueMessage(issueCode?: string | null) {
+  switch (issueCode) {
+    case "SOURCE_NOT_FOUND":
+      return "المصدر المرتبط غير موجود";
+    case "SOURCE_RELATION_INVALID":
+      return "ربط المصدر غير صحيح";
+    case "SOURCE_NOT_SELECTABLE":
+      return "المصدر غير متاح للاشتراكات";
+    default:
+      return "يحتاج إلى إعادة ربط بمصدر صالح";
+  }
+}
+
+export function premiumRowHealth(row: PremiumUpgradeConfigDto): PremiumUpgradeHealth {
+  if (row.health === "ready" || row.health === "broken") return row.health;
+  if (row.validation && row.validation.valid === false) return "broken";
+  return "ready";
+}
+
+export function premiumRowStatus(row: PremiumUpgradeConfigDto): string {
+  if (row.status) return row.status;
+  if (row.isEnabled === false) return "disabled";
+  if (row.isVisible === false) return "hidden";
+  return "active";
+}
+
+export function premiumPriceHalala(row: PremiumUpgradeConfigDto) {
+  return Number(
+    row.priceHalala ?? row.upgradeDeltaHalala ?? halalaFromSar(row.priceSar)
+  );
+}
+
+export function premiumPriceSar(row: PremiumUpgradeConfigDto) {
+  if (row.priceSar !== null && row.priceSar !== undefined) {
+    return Number(row.priceSar);
+  }
+  if (row.upgradeDeltaSar !== null && row.upgradeDeltaSar !== undefined) {
+    return Number(row.upgradeDeltaSar);
+  }
+  return halalaToRiyal(row.priceHalala ?? row.upgradeDeltaHalala ?? 0);
 }
 
 export function formatPremiumSar(value: number) {
@@ -210,66 +258,48 @@ export function formatPremiumSar(value: number) {
     style: "currency",
     currency: "SAR",
     maximumFractionDigits: 2,
-  }).format(value || 0);
+  }).format(Number.isFinite(value) ? value : 0);
 }
 
 export function formatPremiumList(values?: string[]) {
   return values?.length ? values.join("، ") : "-";
 }
 
-export function getSourceContext(row: {
-  sourceProductId?: string | null;
-  sourceGroupId?: string | null;
-  sourceGroupKey?: string | null;
-  sourceProductKey?: string | null;
-  sourceId?: string | null;
-}) {
-  return (
-    row.sourceGroupKey ||
-    row.sourceProductKey ||
-    row.sourceGroupId ||
-    row.sourceProductId ||
-    row.sourceId ||
-    "-"
-  );
-}
-
-export function defaultDisplayGroupForSelection(
-  selectionType: PremiumUpgradeSelectionType
-) {
-  return selectionType === "premium_large_salad"
-    ? "premium_salads"
-    : "premium_proteins";
+export function formatJsonValue(value: unknown) {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "string") return value || "-";
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value, null, 2);
 }
 
 function buildListParams(filters: PremiumUpgradeListFilters) {
-  const params: Record<string, string | number | boolean> = {
+  const params: Record<string, string | number> = {
     page: filters.page,
     limit: filters.limit,
   };
   if (filters.q.trim()) params.q = filters.q.trim();
+  if (filters.kind !== "all") params.kind = filters.kind;
   if (filters.status !== "all") params.status = filters.status;
-  if (filters.isEnabled !== "all")
-    params.isEnabled = filters.isEnabled === "true";
-  if (filters.isVisible !== "all")
-    params.isVisible = filters.isVisible === "true";
-  if (filters.sourceType !== "all") params.sourceType = filters.sourceType;
-  if (filters.selectionType !== "all")
-    params.selectionType = filters.selectionType;
+  if (filters.health !== "all") params.health = filters.health;
   return params;
 }
 
-function buildCandidateParams(filters: PremiumUpgradeCandidateFilters) {
-  const params: Record<string, string | number | boolean> = {
+function buildSourceParams(filters: PremiumUpgradeSourceFilters) {
+  const params: Record<string, string | number> = {
     page: filters.page,
     limit: filters.limit,
-    includeLinked: filters.includeLinked,
+    status: filters.status,
   };
   if (filters.q.trim()) params.q = filters.q.trim();
-  if (filters.sourceType !== "all") params.sourceType = filters.sourceType;
-  if (filters.selectionType !== "all")
-    params.selectionType = filters.selectionType;
+  if (filters.kind !== "all") params.kind = filters.kind;
   return params;
+}
+
+function halalaFromSar(value: unknown) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
 }
 
 function getApiErrorMessage(error: unknown): string | null {

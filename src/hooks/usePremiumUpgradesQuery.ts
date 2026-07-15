@@ -8,29 +8,30 @@ import {
 import { toast } from "sonner";
 
 import type {
-  PremiumUpgradeCandidateFilters,
   PremiumUpgradeConfigDto,
   PremiumUpgradeListFilters,
+  PremiumUpgradeSourceFilters,
 } from "@/types/premiumUpgradeTypes";
 import {
-  PREMIUM_UPGRADES_CANDIDATES_QUERY_KEY,
+  PREMIUM_UPGRADES_DETAIL_QUERY_KEY,
   PREMIUM_UPGRADES_LIST_QUERY_KEY,
   PREMIUM_UPGRADES_READINESS_QUERY_KEY,
+  PREMIUM_UPGRADES_SOURCES_QUERY_KEY,
   archivePremiumUpgrade,
   createPremiumUpgrade,
-  fetchPremiumUpgradeCandidates,
+  fetchPremiumUpgradeDetail,
   fetchPremiumUpgradeReadiness,
+  fetchPremiumUpgradeSources,
   fetchPremiumUpgrades,
   showPremiumUpgradeError,
   updatePremiumUpgrade,
-  updatePremiumUpgradeState,
 } from "@/utils/fetchPremiumUpgrades";
 
 const PREMIUM_LIST_STALE_TIME = 2 * 60 * 1000;
 const PREMIUM_READINESS_STALE_TIME = 2 * 60 * 1000;
-const PREMIUM_CANDIDATES_STALE_TIME = 5 * 60 * 1000;
+const PREMIUM_SOURCES_STALE_TIME = 5 * 60 * 1000;
 const PREMIUM_CACHE_GC_TIME = 15 * 60 * 1000;
-const PREMIUM_UPGRADES_CANDIDATES_QUERY_VERSION = "v2";
+const PREMIUM_UPGRADES_SOURCES_QUERY_VERSION = "v3";
 
 export function usePremiumUpgradesQuery(filters: PremiumUpgradeListFilters) {
   return useQuery({
@@ -55,23 +56,34 @@ export function usePremiumUpgradeReadinessQuery() {
   });
 }
 
-export function usePremiumUpgradeCandidatesQuery(
-  filters: PremiumUpgradeCandidateFilters,
+export function usePremiumUpgradeSourcesQuery(
+  filters: PremiumUpgradeSourceFilters,
   enabled: boolean
 ) {
   return useQuery({
     queryKey: [
-      PREMIUM_UPGRADES_CANDIDATES_QUERY_KEY,
-      PREMIUM_UPGRADES_CANDIDATES_QUERY_VERSION,
+      PREMIUM_UPGRADES_SOURCES_QUERY_KEY,
+      PREMIUM_UPGRADES_SOURCES_QUERY_VERSION,
       filters,
     ],
-    queryFn: () => fetchPremiumUpgradeCandidates(filters),
+    queryFn: () => fetchPremiumUpgradeSources(filters),
     enabled,
-    staleTime: PREMIUM_CANDIDATES_STALE_TIME,
+    staleTime: PREMIUM_SOURCES_STALE_TIME,
     gcTime: PREMIUM_CACHE_GC_TIME,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     placeholderData: keepPreviousData,
+  });
+}
+
+export function usePremiumUpgradeDetailQuery(id: string | null) {
+  return useQuery({
+    queryKey: [PREMIUM_UPGRADES_DETAIL_QUERY_KEY, id],
+    queryFn: () => fetchPremiumUpgradeDetail(id as string),
+    enabled: Boolean(id),
+    staleTime: PREMIUM_LIST_STALE_TIME,
+    gcTime: PREMIUM_CACHE_GC_TIME,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -87,7 +99,10 @@ export function usePremiumUpgradeInvalidation() {
         queryKey: [PREMIUM_UPGRADES_READINESS_QUERY_KEY],
       });
       queryClient.invalidateQueries({
-        queryKey: [PREMIUM_UPGRADES_CANDIDATES_QUERY_KEY],
+        queryKey: [PREMIUM_UPGRADES_SOURCES_QUERY_KEY],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [PREMIUM_UPGRADES_DETAIL_QUERY_KEY],
       });
     },
   };
@@ -103,7 +118,11 @@ function invalidatePremiumQueries(queryClient: QueryClient) {
     refetchType: "active",
   });
   queryClient.invalidateQueries({
-    queryKey: [PREMIUM_UPGRADES_CANDIDATES_QUERY_KEY],
+    queryKey: [PREMIUM_UPGRADES_SOURCES_QUERY_KEY],
+    refetchType: "active",
+  });
+  queryClient.invalidateQueries({
+    queryKey: [PREMIUM_UPGRADES_DETAIL_QUERY_KEY],
     refetchType: "active",
   });
 }
@@ -141,7 +160,7 @@ export function useCreatePremiumUpgradeMutation(onSuccess?: () => void) {
   return useMutation({
     mutationFn: createPremiumUpgrade,
     onSuccess: () => {
-      toast.success("تم ربط العنصر كترقية مميزة.");
+      toast.success("تم ربط المصدر كترقية مميزة.");
       invalidatePremiumQueries(queryClient);
       onSuccess?.();
     },
@@ -156,21 +175,6 @@ export function useUpdatePremiumUpgradeMutation(onSuccess?: () => void) {
     mutationFn: updatePremiumUpgrade,
     onSuccess: (response) => {
       toast.success("تم حفظ إعداد الترقية.");
-      patchPremiumUpgradeInListCaches(queryClient, response.data);
-      invalidatePremiumQueries(queryClient);
-      onSuccess?.();
-    },
-    onError: showPremiumUpgradeError,
-  });
-}
-
-export function useUpdatePremiumUpgradeStateMutation(onSuccess?: () => void) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: updatePremiumUpgradeState,
-    onSuccess: (response) => {
-      toast.success("تم تحديث حالة الترقية.");
       patchPremiumUpgradeInListCaches(queryClient, response.data);
       invalidatePremiumQueries(queryClient);
       onSuccess?.();

@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { PremiumUpgradeConfigDto } from "@/types/premiumUpgradeTypes";
 import { useArchivePremiumUpgradeMutation } from "@/hooks/usePremiumUpgradesQuery";
-import { premiumNameAr } from "@/utils/fetchPremiumUpgrades";
+import { premiumRowName } from "@/utils/fetchPremiumUpgrades";
 
 export function ArchivePremiumUpgradeDialog({
   row,
@@ -32,8 +32,7 @@ export function ArchivePremiumUpgradeDialog({
         <DialogHeader>
           <DialogTitle>أرشفة ترقية مميزة</DialogTitle>
           <DialogDescription>
-            سيتم أرشفة إعداد الترقية فقط. لن يتم حذف منتج المنيو أو خيار المنيو،
-            ولن يتم تعديل سجلات العملاء التاريخية.
+            سيتم أرشفة إعداد الترقية فقط. لن يتم حذف مصدر المنتج أو الخيار.
           </DialogDescription>
         </DialogHeader>
         {row ? (
@@ -76,7 +75,7 @@ function ArchivePremiumUpgradeForm({
   return (
     <form className="space-y-4" onSubmit={submit}>
       <div className="rounded-lg border bg-muted/20 p-3 text-sm">
-        {premiumNameAr(row.sourceName)}
+        {premiumRowName(row)}
       </div>
       <div className="space-y-2">
         <Label htmlFor="archive-reason">سبب الأرشفة</Label>

@@ -1,4 +1,4 @@
-import { Archive, Pencil } from "lucide-react";
+import { Archive, Eye, Link2, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,17 +23,17 @@ import type {
 } from "@/types/premiumUpgradeTypes";
 import {
   formatPremiumSar,
-  premiumNameAr,
-  premiumSelectionTypeLabel,
-  premiumSourceTypeLabel,
+  premiumIssueMessage,
+  premiumKindLabel,
+  premiumPriceSar,
+  premiumRowHealth,
+  premiumRowKey,
+  premiumRowKind,
+  premiumRowName,
+  premiumRowStatus,
+  premiumStatusLabel,
 } from "@/utils/fetchPremiumUpgrades";
-import { useUpdatePremiumUpgradeStateMutation } from "@/hooks/usePremiumUpgradesQuery";
-import {
-  PremiumValidityBadge,
-  ReadOnlyItem,
-  SourceStatusGroup,
-  StateToggleLine,
-} from "./PremiumCandidateCard";
+import { HealthBadge, ReadOnlyItem } from "./PremiumCandidateCard";
 
 export function PremiumUpgradesTable({
   rows,
@@ -43,7 +43,9 @@ export function PremiumUpgradesTable({
   totalPages,
   onPageChange,
   onEdit,
+  onRelink,
   onArchive,
+  onDetails,
 }: {
   rows: PremiumUpgradeConfigDto[];
   loading: boolean;
@@ -52,31 +54,37 @@ export function PremiumUpgradesTable({
   totalPages: number;
   onPageChange: (page: number) => void;
   onEdit: (row: PremiumUpgradeConfigDto) => void;
+  onRelink: (row: PremiumUpgradeConfigDto) => void;
   onArchive: (row: PremiumUpgradeConfigDto) => void;
+  onDetails: (row: PremiumUpgradeConfigDto) => void;
 }) {
   return (
     <Card className="shadow-none">
       <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <CardTitle>قائمة الترقيات المميزة</CardTitle>
+          <CardTitle>قائمة الوجبات المميزة</CardTitle>
           <CardDescription>
-            الأسعار المعروضة بالريال، والحفظ يرسل فرق سعر الترقية بالهللة.
+            جدول مختصر يعتمد على عقد premium-upgrades الجديد.
           </CardDescription>
         </div>
-        <Badge variant="secondary">{total} إعداد</Badge>
+        <Badge variant="secondary">{total} عنصر</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
         <MobileRows
           rows={rows}
           loading={loading}
           onEdit={onEdit}
+          onRelink={onRelink}
           onArchive={onArchive}
+          onDetails={onDetails}
         />
         <DesktopRows
           rows={rows}
           loading={loading}
           onEdit={onEdit}
+          onRelink={onRelink}
           onArchive={onArchive}
+          onDetails={onDetails}
         />
 
         <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -111,17 +119,21 @@ function MobileRows({
   rows,
   loading,
   onEdit,
+  onRelink,
   onArchive,
+  onDetails,
 }: {
   rows: PremiumUpgradeConfigDto[];
   loading: boolean;
   onEdit: (row: PremiumUpgradeConfigDto) => void;
+  onRelink: (row: PremiumUpgradeConfigDto) => void;
   onArchive: (row: PremiumUpgradeConfigDto) => void;
+  onDetails: (row: PremiumUpgradeConfigDto) => void;
 }) {
   if (loading) {
     return (
       <div className="rounded-lg border bg-muted/20 p-5 text-center text-sm text-muted-foreground md:hidden">
-        جار تحميل الترقيات...
+        جاري تحميل الترقيات...
       </div>
     );
   }
@@ -129,7 +141,7 @@ function MobileRows({
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border bg-muted/20 p-5 text-center text-sm text-muted-foreground md:hidden">
-        لا توجد ترقيات مطابقة للتصفية الحالية.
+        لا توجد وجبات مميزة
       </div>
     );
   }
@@ -141,7 +153,9 @@ function MobileRows({
           key={row.id}
           row={row}
           onEdit={() => onEdit(row)}
+          onRelink={() => onRelink(row)}
           onArchive={() => onArchive(row)}
+          onDetails={() => onDetails(row)}
         />
       ))}
     </div>
@@ -152,41 +166,43 @@ function DesktopRows({
   rows,
   loading,
   onEdit,
+  onRelink,
   onArchive,
+  onDetails,
 }: {
   rows: PremiumUpgradeConfigDto[];
   loading: boolean;
   onEdit: (row: PremiumUpgradeConfigDto) => void;
+  onRelink: (row: PremiumUpgradeConfigDto) => void;
   onArchive: (row: PremiumUpgradeConfigDto) => void;
+  onDetails: (row: PremiumUpgradeConfigDto) => void;
 }) {
   return (
     <div className="hidden overflow-x-auto md:block">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-right">الاسم</TableHead>
-            <TableHead className="text-right">مفتاح الترقية</TableHead>
-            <TableHead className="text-right">نوع الترقية</TableHead>
-            <TableHead className="text-right">نوع المصدر</TableHead>
-            <TableHead className="text-right">فرق السعر</TableHead>
-            <TableHead className="text-right">حالة العرض</TableHead>
-            <TableHead className="text-right">الصلاحية</TableHead>
-            <TableHead className="text-right">حالة المصدر</TableHead>
-            <TableHead className="text-right">الترتيب</TableHead>
-            <TableHead className="text-right">إجراءات</TableHead>
+            <TableHead className="text-right">Name</TableHead>
+            <TableHead className="text-right">Key</TableHead>
+            <TableHead className="text-right">Kind</TableHead>
+            <TableHead className="text-right">Upgrade Price</TableHead>
+            <TableHead className="text-right">Status</TableHead>
+            <TableHead className="text-right">Health</TableHead>
+            <TableHead className="text-right">Sort Order</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={10} className="h-28 text-center text-muted-foreground">
-                جار تحميل الترقيات...
+              <TableCell colSpan={8} className="h-28 text-center text-muted-foreground">
+                جاري تحميل الترقيات...
               </TableCell>
             </TableRow>
           ) : rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="h-28 text-center text-muted-foreground">
-                لا توجد ترقيات مطابقة للتصفية الحالية.
+              <TableCell colSpan={8} className="h-28 text-center text-muted-foreground">
+                لا توجد وجبات مميزة
               </TableCell>
             </TableRow>
           ) : (
@@ -195,7 +211,9 @@ function DesktopRows({
                 key={row.id}
                 row={row}
                 onEdit={() => onEdit(row)}
+                onRelink={() => onRelink(row)}
                 onArchive={() => onArchive(row)}
+                onDetails={() => onDetails(row)}
               />
             ))
           )}
@@ -208,55 +226,47 @@ function DesktopRows({
 function PremiumUpgradeRow({
   row,
   onEdit,
+  onRelink,
   onArchive,
+  onDetails,
 }: {
   row: PremiumUpgradeConfigDto;
   onEdit: () => void;
+  onRelink: () => void;
   onArchive: () => void;
+  onDetails: () => void;
 }) {
-  const stateMutation = useUpdatePremiumUpgradeStateMutation();
-  const pending = stateMutation.isPending || row.status === "archived";
-
   return (
     <TableRow>
-      <TableCell>
-        <div className="min-w-[160px]">
-          <p className="font-medium">{premiumNameAr(row.sourceName)}</p>
-          <p className="text-xs text-muted-foreground">
-            {row.sourceName.en || row.sourceKey}
-          </p>
-        </div>
+      <TableCell className="min-w-[180px] font-medium">
+        {premiumRowName(row)}
       </TableCell>
       <TableCell>
         <code className="rounded bg-muted px-2 py-1 text-xs">
-          {row.premiumKey}
+          {premiumRowKey(row)}
         </code>
       </TableCell>
       <TableCell>
-        <Badge variant="outline">
-          {premiumSelectionTypeLabel(row.selectionType)}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant="secondary">
-          {premiumSourceTypeLabel(row.sourceType)}
-        </Badge>
+        <Badge variant="secondary">{premiumKindLabel(premiumRowKind(row))}</Badge>
       </TableCell>
       <TableCell className="font-medium">
-        {formatPremiumSar(row.upgradeDeltaSar)}
+        {formatPremiumSar(premiumPriceSar(row))}
       </TableCell>
       <TableCell>
-        <StateControls row={row} pending={pending} />
+        <StatusBadge row={row} />
       </TableCell>
       <TableCell>
-        <PremiumValidityBadge row={row} />
+        <HealthBadge row={row} />
       </TableCell>
+      <TableCell>{row.sortOrder ?? 0}</TableCell>
       <TableCell>
-        <SourceStatusGroup status={row.sourceStatus} />
-      </TableCell>
-      <TableCell>{row.sortOrder}</TableCell>
-      <TableCell>
-        <Actions row={row} onEdit={onEdit} onArchive={onArchive} />
+        <Actions
+          row={row}
+          onEdit={onEdit}
+          onRelink={onRelink}
+          onArchive={onArchive}
+          onDetails={onDetails}
+        />
       </TableCell>
     </TableRow>
   );
@@ -265,135 +275,113 @@ function PremiumUpgradeRow({
 function PremiumUpgradeMobileCard({
   row,
   onEdit,
+  onRelink,
   onArchive,
+  onDetails,
 }: {
   row: PremiumUpgradeConfigDto;
   onEdit: () => void;
+  onRelink: () => void;
   onArchive: () => void;
+  onDetails: () => void;
 }) {
-  const stateMutation = useUpdatePremiumUpgradeStateMutation();
-  const pending = stateMutation.isPending || row.status === "archived";
-
   return (
     <article className="space-y-4 rounded-lg border p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-semibold">{premiumNameAr(row.sourceName)}</h3>
-          <p className="text-sm text-muted-foreground">
-            {row.sourceName.en || row.sourceKey}
-          </p>
+          <h3 className="font-semibold">{premiumRowName(row)}</h3>
+          <p className="text-sm text-muted-foreground">{premiumRowKey(row)}</p>
         </div>
-        <CustomerStateBadge row={row} />
+        <StatusBadge row={row} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-sm">
-        <ReadOnlyItem label="مفتاح الترقية" value={row.premiumKey} />
-        <ReadOnlyItem label="فرق السعر" value={formatPremiumSar(row.upgradeDeltaSar)} />
-        <ReadOnlyItem label="نوع الترقية" value={premiumSelectionTypeLabel(row.selectionType)} />
-        <ReadOnlyItem label="نوع المصدر" value={premiumSourceTypeLabel(row.sourceType)} />
-        <ReadOnlyItem label="الترتيب" value={row.sortOrder} />
+        <ReadOnlyItem label="النوع" value={premiumKindLabel(premiumRowKind(row))} />
+        <ReadOnlyItem label="سعر الترقية" value={formatPremiumSar(premiumPriceSar(row))} />
+        <ReadOnlyItem label="الترتيب" value={row.sortOrder ?? 0} />
       </div>
 
-      <StateControls row={row} pending={pending} />
-      <div className="space-y-2">
-        <PremiumValidityBadge row={row} />
-        <SourceStatusGroup status={row.sourceStatus} />
-      </div>
-      <Actions row={row} onEdit={onEdit} onArchive={onArchive} mobile />
+      <HealthBadge row={row} />
+      {premiumRowHealth(row) === "broken" ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          {premiumIssueMessage(row.issueCode)}
+        </p>
+      ) : null}
+      <Actions
+        row={row}
+        onEdit={onEdit}
+        onRelink={onRelink}
+        onArchive={onArchive}
+        onDetails={onDetails}
+        mobile
+      />
     </article>
   );
 }
 
-function StateControls({
-  row,
-  pending,
-}: {
-  row: PremiumUpgradeConfigDto;
-  pending: boolean;
-}) {
-  const stateMutation = useUpdatePremiumUpgradeStateMutation();
+function StatusBadge({ row }: { row: PremiumUpgradeConfigDto }) {
+  const status = premiumRowStatus(row);
+  const variant = status === "active" ? "default" : "secondary";
 
-  return (
-    <div className="flex min-w-[15rem] flex-wrap items-center gap-3">
-      <CustomerStateBadge row={row} />
-      <StateToggleLine
-        label="مفعل"
-        checked={row.isEnabled}
-        disabled={pending}
-        onCheckedChange={(isEnabled) =>
-          stateMutation.mutate({
-            id: row.id,
-            payload: { expectedRevision: row.revision, isEnabled },
-          })
-        }
-      />
-      <StateToggleLine
-        label="ظاهر"
-        checked={row.isVisible}
-        disabled={pending}
-        onCheckedChange={(isVisible) =>
-          stateMutation.mutate({
-            id: row.id,
-            payload: { expectedRevision: row.revision, isVisible },
-          })
-        }
-      />
-    </div>
-  );
-}
-
-function CustomerStateBadge({ row }: { row: PremiumUpgradeConfigDto }) {
-  if (row.status === "archived") {
-    return <Badge variant="secondary">مؤرشف</Badge>;
-  }
-
-  if (!row.isEnabled && !row.isVisible) {
-    return <Badge variant="secondary">معطل ومخفي</Badge>;
-  }
-
-  if (!row.isEnabled) {
-    return <Badge variant="secondary">معطل</Badge>;
-  }
-
-  if (!row.isVisible) {
-    return <Badge variant="outline">مخفي عن العميل</Badge>;
-  }
-
-  return <Badge>نشط للعميل</Badge>;
+  return <Badge variant={variant}>{premiumStatusLabel(status)}</Badge>;
 }
 
 function Actions({
   row,
   onEdit,
+  onRelink,
   onArchive,
+  onDetails,
   mobile,
 }: {
   row: PremiumUpgradeConfigDto;
   onEdit: () => void;
+  onRelink: () => void;
   onArchive: () => void;
+  onDetails: () => void;
   mobile?: boolean;
 }) {
+  const archived = premiumRowStatus(row) === "archived";
+  const broken = premiumRowHealth(row) === "broken";
+
   return (
-    <div className={mobile ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2"}>
+    <div className={mobile ? "grid grid-cols-3 gap-2" : "flex flex-wrap gap-2"}>
+      {broken ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={archived}
+          onClick={onRelink}
+        >
+          <Link2 data-icon="inline-start" />
+          Relink
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={archived}
+          onClick={onEdit}
+        >
+          <Pencil data-icon="inline-start" />
+          Edit
+        </Button>
+      )}
       <Button
         type="button"
         size="sm"
         variant="outline"
-        disabled={row.status === "archived"}
-        onClick={onEdit}
-      >
-        <Pencil data-icon="inline-start" />
-        تعديل
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={row.status === "archived"}
+        disabled={archived}
         onClick={onArchive}
       >
         <Archive data-icon="inline-start" />
-        أرشفة
+        Archive
+      </Button>
+      <Button type="button" size="sm" variant="outline" onClick={onDetails}>
+        <Eye data-icon="inline-start" />
+        Details
       </Button>
     </div>
   );

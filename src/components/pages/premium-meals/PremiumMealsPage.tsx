@@ -9,15 +9,14 @@ import type {
 import { defaultPremiumUpgradeListFilters } from "@/utils/fetchPremiumUpgrades";
 import {
   usePremiumUpgradeInvalidation,
-  usePremiumUpgradeReadinessQuery,
   usePremiumUpgradesQuery,
 } from "@/hooks/usePremiumUpgradesQuery";
-import { ReadinessCard } from "./ReadinessCard";
 import { PremiumUpgradeFilters } from "./PremiumUpgradeFilters";
 import { PremiumUpgradesTable } from "./PremiumUpgradesTable";
 import { CandidateLinkDialog } from "./CandidateLinkDialog";
 import { EditPremiumUpgradeDialog } from "./EditPremiumUpgradeDialog";
 import { ArchivePremiumUpgradeDialog } from "./ArchivePremiumUpgradeDialog";
+import { PremiumUpgradeDetailDrawer } from "./PremiumUpgradeDetailDrawer";
 
 export function PremiumMealsPage() {
   const [filters, setFilters] = useState<PremiumUpgradeListFilters>(
@@ -26,17 +25,19 @@ export function PremiumMealsPage() {
   const [candidateOpen, setCandidateOpen] = useState(false);
   const [editingRow, setEditingRow] =
     useState<PremiumUpgradeConfigDto | null>(null);
+  const [relinkRow, setRelinkRow] =
+    useState<PremiumUpgradeConfigDto | null>(null);
   const [archiveRow, setArchiveRow] =
     useState<PremiumUpgradeConfigDto | null>(null);
+  const [detailRow, setDetailRow] =
+    useState<PremiumUpgradeConfigDto | null>(null);
 
-  const readinessQuery = usePremiumUpgradeReadinessQuery();
   const listQuery = usePremiumUpgradesQuery(filters);
   const { invalidatePremiumUpgrades } = usePremiumUpgradeInvalidation();
 
   const rows = listQuery.data?.data ?? [];
   const total = listQuery.data?.meta?.total ?? rows.length;
   const totalPages = Math.max(1, Math.ceil(total / filters.limit));
-  const loading = listQuery.isFetching || readinessQuery.isFetching;
 
   return (
     <div
@@ -54,8 +55,8 @@ export function PremiumMealsPage() {
                 الوجبات المميزة
               </h1>
               <p className="max-w-4xl text-sm leading-6 text-muted-foreground">
-                إدارة ترقيات وجبات الاشتراك فقط. الترقية تستهلك خانة وجبة موجودة
-                ولا تضيف وجبة جديدة أو إضافة مستقلة.
+                إدارة ترقيات الوجبات المميزة من مصادر المنتجات والخيارات. يتم
+                عرض البيانات الفنية داخل التفاصيل فقط.
               </p>
             </div>
           </div>
@@ -67,23 +68,17 @@ export function PremiumMealsPage() {
             >
               <RefreshCw
                 data-icon="inline-start"
-                className={loading ? "animate-spin" : undefined}
+                className={listQuery.isFetching ? "animate-spin" : undefined}
               />
               تحديث
             </Button>
             <Button type="button" onClick={() => setCandidateOpen(true)}>
               <Link2 data-icon="inline-start" />
-              ربط عنصر من المنيو كترقية مميزة
+              إضافة ترقية
             </Button>
           </div>
         </div>
       </header>
-
-      <ReadinessCard
-        readiness={readinessQuery.data ?? null}
-        loading={readinessQuery.isLoading}
-        error={readinessQuery.isError}
-      />
 
       <PremiumUpgradeFilters filters={filters} onChange={setFilters} />
 
@@ -95,7 +90,9 @@ export function PremiumMealsPage() {
         totalPages={totalPages}
         onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
         onEdit={setEditingRow}
+        onRelink={setRelinkRow}
         onArchive={setArchiveRow}
+        onDetails={setDetailRow}
       />
 
       <CandidateLinkDialog
@@ -106,14 +103,27 @@ export function PremiumMealsPage() {
 
       <EditPremiumUpgradeDialog
         row={editingRow}
+        mode="edit"
         onClose={() => setEditingRow(null)}
         onSaved={() => setEditingRow(null)}
+      />
+
+      <EditPremiumUpgradeDialog
+        row={relinkRow}
+        mode="relink"
+        onClose={() => setRelinkRow(null)}
+        onSaved={() => setRelinkRow(null)}
       />
 
       <ArchivePremiumUpgradeDialog
         row={archiveRow}
         onClose={() => setArchiveRow(null)}
         onArchived={() => setArchiveRow(null)}
+      />
+
+      <PremiumUpgradeDetailDrawer
+        row={detailRow}
+        onClose={() => setDetailRow(null)}
       />
     </div>
   );

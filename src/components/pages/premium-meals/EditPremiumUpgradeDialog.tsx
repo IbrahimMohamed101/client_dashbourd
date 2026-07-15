@@ -13,39 +13,67 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { PremiumUpgradeConfigDto } from "@/types/premiumUpgradeTypes";
-import { useUpdatePremiumUpgradeMutation } from "@/hooks/usePremiumUpgradesQuery";
+import type {
+  PremiumUpgradeConfigDto,
+  PremiumUpgradeKind,
+  PremiumUpgradeSourceFilters,
+} from "@/types/premiumUpgradeTypes";
+import { useUpdatePremiumUpgradeMutation, usePremiumUpgradeSourcesQuery } from "@/hooks/usePremiumUpgradesQuery";
 import {
-  premiumDisplayGroupLabel,
-  premiumNameAr,
-  premiumSelectionTypeLabel,
-  premiumSourceTypeLabel,
+  defaultPremiumUpgradeSourceFilters,
+  premiumDisplayName,
+  premiumPriceSar,
+  premiumRowHealth,
+  premiumRowKind,
+  premiumRowName,
 } from "@/utils/fetchPremiumUpgrades";
 import { isValidRiyalInput, riyalToHalala } from "@/utils/price";
 import { SelectField } from "./PremiumUpgradeFilters";
-import { ReadOnlyItem } from "./PremiumCandidateCard";
+import { ReadOnlyItem, StateToggleLine } from "./PremiumCandidateCard";
+import { MenuSourcePicker } from "./MenuSourcePicker";
+import { PriceInput } from "./CandidateLinkDialog";
 
 export function EditPremiumUpgradeDialog({
   row,
+  mode,
   onClose,
   onSaved,
 }: {
   row: PremiumUpgradeConfigDto | null;
+  mode: "edit" | "relink";
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const isRelink = mode === "relink";
+
   return (
     <Dialog open={Boolean(row)} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="w-[calc(100%-1.5rem)] max-w-2xl" dir="rtl">
+      <DialogContent className="w-[calc(100%-1.5rem)] max-w-3xl" dir="rtl">
         <DialogHeader>
-          <DialogTitle>تعديل إعداد الترقية</DialogTitle>
+          <DialogTitle>{isRelink ? "إعادة ربط الترقية" : "تعديل الترقية"}</DialogTitle>
           <DialogDescription>
-            عدّل مجموعة العرض، فرق سعر الترقية، والترتيب فقط.
+            {isRelink
+              ? "اختر نوعا ومصدرا صالحا للترقية المكسورة دون حذفها."
+              : "عدّل السعر والحالة والظهور والترتيب فقط."}
           </DialogDescription>
         </DialogHeader>
 
         {row ? (
-          <EditPremiumUpgradeForm key={row.id} row={row} onClose={onClose} onSaved={onSaved} />
+          isRelink ? (
+            <RelinkPremiumUpgradeForm
+              key={row.id}
+              row={row}
+              onClose={onClose}
+              onSaved={onSaved}
+            />
+          ) : (
+            <EditPremiumUpgradeForm
+              key={row.id}
+              row={row}
+              onClose={onClose}
+              onSaved={onSaved}
+            />
+          )
         ) : null}
       </DialogContent>
     </Dialog>
@@ -62,8 +90,10 @@ function EditPremiumUpgradeForm({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    displayGroupKey: row.displayGroup.key ?? "premium_proteins",
-    upgradeDeltaSarInput: String(row.upgradeDeltaSar ?? 0),
+    upgradePriceSarInput: String(premiumPriceSar(row)),
+    currency: "SAR" as const,
+    isActive: row.status ? row.status === "active" : row.isEnabled !== false,
+    isVisible: row.status ? row.status !== "hidden" : row.isVisible !== false,
     sortOrder: String(row.sortOrder ?? 0),
   });
   const updateMutation = useUpdatePremiumUpgradeMutation(onSaved);
@@ -71,8 +101,8 @@ function EditPremiumUpgradeForm({
   function submit(event: FormEvent) {
     event.preventDefault();
 
-    if (!isValidRiyalInput(form.upgradeDeltaSarInput)) {
-      toast.error("فرق سعر الترقية يجب أن يكون رقما غير سالب بالريال.");
+    if (!isValidRiyalInput(form.upgradePriceSarInput)) {
+      toast.error("سعر الترقية يجب أن يكون رقما غير سالب بالريال.");
       return;
     }
 
@@ -86,8 +116,10 @@ function EditPremiumUpgradeForm({
       id: row.id,
       payload: {
         expectedRevision: row.revision,
-        displayGroupKey: form.displayGroupKey,
-        upgradeDeltaHalala: riyalToHalala(form.upgradeDeltaSarInput),
+        upgradeDeltaHalala: riyalToHalala(form.upgradePriceSarInput),
+        currency: form.currency,
+        isActive: form.isActive,
+        isVisible: form.isVisible,
         sortOrder,
       },
     });
@@ -95,37 +127,25 @@ function EditPremiumUpgradeForm({
 
   return (
     <form className="space-y-5" onSubmit={submit}>
-      <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 md:grid-cols-2">
-        <ReadOnlyItem label="الاسم" value={premiumNameAr(row.sourceName)} />
-        <ReadOnlyItem label="مفتاح الترقية" value={row.premiumKey} />
-        <ReadOnlyItem label="نوع المصدر" value={premiumSourceTypeLabel(row.sourceType)} />
-        <ReadOnlyItem label="نوع الترقية" value={premiumSelectionTypeLabel(row.selectionType)} />
-        <ReadOnlyItem label="المراجعة الحالية" value={row.revision} />
-        <ReadOnlyItem label="الحالة" value={row.status === "active" ? "نشط" : "مؤرشف"} />
-        <ReadOnlyItem label="مجموعة العرض الحالية" value={premiumDisplayGroupLabel(row.displayGroup.key)} />
-      </div>
+      <Summary row={row} />
 
       <div className="grid gap-3 md:grid-cols-3">
+        <div className="space-y-2">
+          <Label>سعر الترقية</Label>
+          <PriceInput
+            value={form.upgradePriceSarInput}
+            onChange={(upgradePriceSarInput) =>
+              setForm((current) => ({ ...current, upgradePriceSarInput }))
+            }
+          />
+        </div>
         <SelectField
-          label="مجموعة العرض"
-          value={form.displayGroupKey}
-          onValueChange={(displayGroupKey) =>
-            setForm((current) => ({ ...current, displayGroupKey }))
+          label="العملة"
+          value={form.currency}
+          onValueChange={() =>
+            setForm((current) => ({ ...current, currency: "SAR" }))
           }
-          options={[
-            ["premium_proteins", "بروتينات مميزة"],
-            ["premium_salads", "سلطات مميزة"],
-          ]}
-        />
-        <NumberField
-          label="فرق سعر الترقية بالريال"
-          value={form.upgradeDeltaSarInput}
-          min="0"
-          step="0.01"
-          suffix="ر.س"
-          onChange={(upgradeDeltaSarInput) =>
-            setForm((current) => ({ ...current, upgradeDeltaSarInput }))
-          }
+          options={[["SAR", "SAR"]]}
         />
         <NumberField
           label="الترتيب"
@@ -137,9 +157,26 @@ function EditPremiumUpgradeForm({
         />
       </div>
 
+      <div className="flex flex-wrap gap-4 rounded-lg border bg-muted/20 p-3">
+        <StateToggleLine
+          label="نشط"
+          checked={form.isActive}
+          onCheckedChange={(isActive) =>
+            setForm((current) => ({ ...current, isActive }))
+          }
+        />
+        <StateToggleLine
+          label="ظاهر"
+          checked={form.isVisible}
+          onCheckedChange={(isVisible) =>
+            setForm((current) => ({ ...current, isVisible }))
+          }
+        />
+      </div>
+
       <DialogFooter className="gap-2 sm:justify-start">
         <Button type="submit" disabled={updateMutation.isPending}>
-          حفظ التعديل
+          حفظ
         </Button>
         <Button type="button" variant="outline" onClick={onClose}>
           إلغاء
@@ -149,41 +186,138 @@ function EditPremiumUpgradeForm({
   );
 }
 
+function RelinkPremiumUpgradeForm({
+  row,
+  onClose,
+  onSaved,
+}: {
+  row: PremiumUpgradeConfigDto;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [kind, setKind] = useState<PremiumUpgradeKind>(premiumRowKind(row));
+  const [sourceId, setSourceId] = useState(row.sourceId ?? "");
+  const [sourceFilters, setSourceFilters] = useState<PremiumUpgradeSourceFilters>({
+    ...defaultPremiumUpgradeSourceFilters,
+    kind,
+  });
+  const sourcesQuery = usePremiumUpgradeSourcesQuery(sourceFilters, true);
+  const updateMutation = useUpdatePremiumUpgradeMutation(onSaved);
+  const sources = sourcesQuery.data?.data ?? [];
+  const selected = sources.find((source) => source.id === sourceId);
+
+  function updateKind(value: string) {
+    const nextKind = value as PremiumUpgradeKind;
+    setKind(nextKind);
+    setSourceId("");
+    setSourceFilters((current) => ({
+      ...current,
+      kind: nextKind,
+      q: "",
+      page: 1,
+    }));
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!sourceId) {
+      toast.error("اختر مصدرا صالحا أولا.");
+      return;
+    }
+
+    updateMutation.mutate({
+      id: row.id,
+      payload: {
+        expectedRevision: row.revision,
+        kind,
+        sourceId,
+      },
+    });
+  }
+
+  return (
+    <form className="space-y-5" onSubmit={submit}>
+      <Summary row={row} />
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        يحتاج إلى إعادة ربط بمصدر صالح
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <SelectField
+          label="النوع"
+          value={kind}
+          onValueChange={updateKind}
+          options={[
+            ["product", "منتج كامل"],
+            ["option", "خيار داخل وجبة"],
+          ]}
+        />
+        <div className="space-y-2">
+          <Label>المصدر</Label>
+          <MenuSourcePicker
+            sources={sources}
+            selectedId={sourceId}
+            search={sourceFilters.q}
+            loading={sourcesQuery.isLoading || sourcesQuery.isFetching}
+            onSearchChange={(q) =>
+              setSourceFilters((current) => ({ ...current, q, page: 1 }))
+            }
+            onSelect={(source) => setSourceId(source.id)}
+          />
+        </div>
+      </div>
+
+      {selected ? (
+        <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+          <ReadOnlyItem label="المصدر الجديد" value={premiumDisplayName(selected.name)} />
+        </div>
+      ) : null}
+
+      <DialogFooter className="gap-2 sm:justify-start">
+        <Button type="submit" disabled={updateMutation.isPending || !sourceId}>
+          إعادة الربط
+        </Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          إلغاء
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function Summary({ row }: { row: PremiumUpgradeConfigDto }) {
+  return (
+    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 md:grid-cols-3">
+      <ReadOnlyItem label="الاسم" value={premiumRowName(row)} />
+      <ReadOnlyItem label="المفتاح" value={row.key || row.premiumKey || "-"} />
+      <ReadOnlyItem
+        label="الصحة"
+        value={premiumRowHealth(row) === "broken" ? "يحتاج إصلاح" : "جاهز"}
+      />
+    </div>
+  );
+}
+
 function NumberField({
   label,
   value,
   onChange,
-  min,
   step,
-  suffix,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  min?: string;
   step?: string;
-  suffix?: string;
 }) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="relative">
-        <Input
-          type="number"
-          inputMode="decimal"
-          value={value}
-          min={min}
-          step={step}
-          dir="ltr"
-          className={suffix ? "pl-12 text-left" : undefined}
-          onChange={(event) => onChange(event.target.value)}
-        />
-        {suffix ? (
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
-            {suffix}
-          </span>
-        ) : null}
-      </div>
+      <Input
+        type="number"
+        inputMode="numeric"
+        value={value}
+        step={step}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </div>
   );
 }

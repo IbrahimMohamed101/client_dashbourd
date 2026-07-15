@@ -15,378 +15,237 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type {
-  PremiumUpgradeCandidateDto,
-  PremiumUpgradeCandidateFilters,
-  PremiumUpgradeSelectionType,
+  PremiumUpgradeKind,
+  PremiumUpgradeSourceFilters,
 } from "@/types/premiumUpgradeTypes";
 import {
   buildCreatePremiumUpgradePayload,
-  defaultDisplayGroupForSelection,
-  defaultPremiumUpgradeCandidateFilters,
-  formatPremiumSar,
-  premiumSelectionTypeLabel,
-  premiumSourceTypeLabel,
+  defaultPremiumUpgradeSourceFilters,
+  premiumDisplayName,
 } from "@/utils/fetchPremiumUpgrades";
+import { isValidRiyalInput } from "@/utils/price";
 import {
   useCreatePremiumUpgradeMutation,
-  usePremiumUpgradeCandidatesQuery,
+  usePremiumUpgradeSourcesQuery,
 } from "@/hooks/usePremiumUpgradesQuery";
 import { SelectField } from "./PremiumUpgradeFilters";
 import { MenuSourcePicker } from "./MenuSourcePicker";
 import { ReadOnlyItem, StateToggleLine } from "./PremiumCandidateCard";
 
 type LinkFormState = {
-  displayGroupKey: string;
-  upgradeDeltaSarInput: string;
-  isEnabled: boolean;
+  kind: PremiumUpgradeKind;
+  sourceId: string;
+  upgradePriceSarInput: string;
+  currency: "SAR";
+  isActive: boolean;
   isVisible: boolean;
   sortOrder: string;
 };
 
 const defaultLinkForm: LinkFormState = {
-  displayGroupKey: "premium_proteins",
-  upgradeDeltaSarInput: "0",
-  isEnabled: true,
+  kind: "product",
+  sourceId: "",
+  upgradePriceSarInput: "0",
+  currency: "SAR",
+  isActive: true,
   isVisible: true,
   sortOrder: "10",
 };
 
 export function CandidateLinkDialog({
   open,
-  initialSelectionType,
   onClose,
   onCreated,
 }: {
   open: boolean;
-  initialSelectionType?: PremiumUpgradeSelectionType | "all";
   onClose: () => void;
   onCreated: () => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       {open ? (
-        <CandidateLinkDialogContent
-          key={initialSelectionType ?? "all"}
-          initialSelectionType={initialSelectionType}
-          onClose={onClose}
-          onCreated={onCreated}
-        />
+        <CandidateLinkDialogContent onClose={onClose} onCreated={onCreated} />
       ) : null}
     </Dialog>
   );
 }
 
 function CandidateLinkDialogContent({
-  initialSelectionType,
   onClose,
   onCreated,
 }: {
-  initialSelectionType?: PremiumUpgradeSelectionType | "all";
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const [filters, setFilters] = useState<PremiumUpgradeCandidateFilters>({
-    ...defaultPremiumUpgradeCandidateFilters,
-    selectionType: initialSelectionType ?? "all",
-  });
-  const [selectedId, setSelectedId] = useState("");
   const [form, setForm] = useState<LinkFormState>(defaultLinkForm);
+  const [sourceFilters, setSourceFilters] =
+    useState<PremiumUpgradeSourceFilters>(defaultPremiumUpgradeSourceFilters);
 
-  const candidatesQuery = usePremiumUpgradeCandidatesQuery(filters, true);
+  const sourcesQuery = usePremiumUpgradeSourcesQuery(sourceFilters, true);
   const createMutation = useCreatePremiumUpgradeMutation(onCreated);
-  const candidates = candidatesQuery.data?.data ?? [];
-  const selected = candidates.find((candidate) => candidate.id === selectedId);
+  const sources = sourcesQuery.data?.data ?? [];
+  const selected = sources.find((source) => source.id === form.sourceId);
 
-  function updateFilters(next: Partial<PremiumUpgradeCandidateFilters>) {
-    setFilters((current) => ({
-      ...current,
-      ...next,
-      q: next.q ?? current.q,
-      page: 1,
-    }));
+  function update(next: Partial<LinkFormState>) {
+    setForm((current) => ({ ...current, ...next }));
   }
 
-  function selectCandidate(candidate: PremiumUpgradeCandidateDto) {
-    if (candidate.isLinked) {
-      toast.error("هذا العنصر مربوط مسبقا ولا يمكن ربطه مرة أخرى.");
-      return;
-    }
-    if (!candidate.eligibilityDiagnostics.eligible) {
-      toast.error("هذا العنصر غير مؤهل للربط كترقية مميزة.");
-      return;
-    }
-
-    setSelectedId(candidate.id);
-    setForm((current) => ({
+  function updateKind(kind: string) {
+    const nextKind = kind as PremiumUpgradeKind;
+    setForm((current) => ({ ...current, kind: nextKind, sourceId: "" }));
+    setSourceFilters((current) => ({
       ...current,
-      displayGroupKey: defaultDisplayGroupForSelection(candidate.selectionType),
-      upgradeDeltaSarInput: String(candidate.upgradeDeltaHalala / 100),
-      isEnabled: true,
-      isVisible: true,
-      sortOrder: current.sortOrder || "10",
+      kind: nextKind,
+      q: "",
+      page: 1,
     }));
   }
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!selected) {
-      toast.error("اختر عنصرا من المنيو أولا.");
+
+    if (!form.sourceId) {
+      toast.error("اختر المصدر أولا.");
       return;
     }
-    if (selected.isLinked) {
-      toast.error("هذا العنصر مربوط مسبقا.");
-      return;
-    }
-    if (!selected.eligibilityDiagnostics.eligible) {
-      toast.error("هذا العنصر غير مؤهل للربط.");
-      return;
-    }
-    if (!form.displayGroupKey) {
-      toast.error("اختر مجموعة العرض.");
+    if (!isValidRiyalInput(form.upgradePriceSarInput)) {
+      toast.error("سعر الترقية يجب أن يكون رقما غير سالب بالريال.");
       return;
     }
 
-    const delta = Math.round(Number(form.upgradeDeltaSarInput) * 100);
     const sortOrder = Number(form.sortOrder);
-    if (!Number.isFinite(delta) || delta < 0) {
-      toast.error("فرق سعر الترقية يجب أن يكون رقما غير سالب.");
-      return;
-    }
     if (!Number.isFinite(sortOrder)) {
       toast.error("الترتيب يجب أن يكون رقما.");
       return;
     }
 
-    createMutation.mutate(buildCreatePremiumUpgradePayload(selected, form));
+    createMutation.mutate(buildCreatePremiumUpgradePayload(form));
   }
 
   return (
     <DialogContent
-      className="grid max-h-[92dvh] w-[calc(100%-1rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0"
+      className="grid max-h-[92dvh] w-[calc(100%-1rem)] max-w-4xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0"
       dir="rtl"
     >
       <DialogHeader className="border-b px-5 py-4 text-right">
-        <DialogTitle>ربط عنصر من المنيو كترقية مميزة</DialogTitle>
+        <DialogTitle>إضافة ترقية مميزة</DialogTitle>
         <DialogDescription>
-          اختر منتجا أو خيارا موجودا من المنيو ثم حدد إعدادات ظهوره كترقية مميزة.
+          اختر نوع المصدر والمصدر نفسه، ثم أدخل سعر الترقية وإعدادات الظهور.
         </DialogDescription>
       </DialogHeader>
 
       <form className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5" onSubmit={submit}>
-        <div className="space-y-5">
-          <section className="space-y-3 rounded-lg border bg-muted/10 p-4">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h3 className="font-semibold">اختيار عنصر المنيو</h3>
-                <p className="text-sm text-muted-foreground">
-                  القائمة تعرض عناصر المنيو المؤهلة وغير المربوطة. البحث داخل القائمة اختياري.
-                </p>
-              </div>
-              <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-                {candidates.length} عنصر
-              </span>
-            </div>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+          <section className="space-y-4 rounded-lg border p-4">
+            <SelectField
+              label="النوع"
+              value={form.kind}
+              onValueChange={updateKind}
+              options={[
+                ["product", "منتج كامل"],
+                ["option", "خيار داخل وجبة"],
+              ]}
+            />
 
             <div className="space-y-2">
-              <Label>العنصر من المنيو</Label>
+              <Label>المصدر</Label>
               <MenuSourcePicker
-                candidates={candidates}
-                selectedId={selectedId}
-                loading={candidatesQuery.isLoading}
-                onSelect={selectCandidate}
-                includeLinked={filters.includeLinked}
-                onIncludeLinkedChange={(includeLinked) =>
-                  updateFilters({ includeLinked })
+                sources={sources}
+                selectedId={form.sourceId}
+                search={sourceFilters.q}
+                loading={sourcesQuery.isLoading || sourcesQuery.isFetching}
+                onSearchChange={(q) =>
+                  setSourceFilters((current) => ({ ...current, q, page: 1 }))
                 }
-                sourceTypeFilter={filters.sourceType}
-                onSourceTypeFilterChange={(sourceType) =>
-                  updateFilters({ sourceType })
-                }
-                selectionTypeFilter={filters.selectionType}
-                onSelectionTypeFilterChange={(selectionType) =>
-                  updateFilters({ selectionType })
-                }
+                onSelect={(source) => update({ sourceId: source.id })}
               />
             </div>
 
-            <AdvancedCandidateFilters filters={filters} onChange={updateFilters} />
+            {selected ? (
+              <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 text-sm sm:grid-cols-2">
+                <ReadOnlyItem label="اسم المصدر" value={premiumDisplayName(selected.name)} />
+                <ReadOnlyItem label="مفتاح المصدر" value={selected.key || selected.id} />
+              </div>
+            ) : null}
           </section>
 
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-            <SelectedCandidateSummary candidate={selected ?? null} />
-
-            <LinkConfigPanel
-              candidate={selected ?? null}
-              form={form}
-              onChange={setForm}
+          <section className="space-y-4 rounded-lg border p-4">
+            <div className="space-y-2">
+              <Label>سعر الترقية</Label>
+              <PriceInput
+                value={form.upgradePriceSarInput}
+                onChange={(upgradePriceSarInput) =>
+                  update({ upgradePriceSarInput })
+                }
+              />
+            </div>
+            <SelectField
+              label="العملة"
+              value={form.currency}
+              onValueChange={() => update({ currency: "SAR" })}
+              options={[["SAR", "SAR"]]}
             />
-          </div>
-
-          <DialogFooter className="sticky bottom-0 -mx-4 border-t px-4 pt-4 sm:-mx-5 sm:px-5 sm:justify-start">
-            <Button
-              type="submit"
-              disabled={createMutation.isPending || !selected}
-            >
-              <Link2 data-icon="inline-start" />
-              ربط كترقية مميزة
-            </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
-              إلغاء
-            </Button>
-          </DialogFooter>
+            <NumberField
+              label="الترتيب"
+              value={form.sortOrder}
+              step="1"
+              onChange={(sortOrder) => update({ sortOrder })}
+            />
+            <div className="flex flex-wrap gap-4 rounded-lg border bg-muted/20 p-3">
+              <StateToggleLine
+                label="نشط"
+                checked={form.isActive}
+                onCheckedChange={(isActive) => update({ isActive })}
+              />
+              <StateToggleLine
+                label="ظاهر"
+                checked={form.isVisible}
+                onCheckedChange={(isVisible) => update({ isVisible })}
+              />
+            </div>
+          </section>
         </div>
+
+        <DialogFooter className="sticky bottom-0 -mx-4 mt-5 border-t bg-background px-4 pt-4 sm:-mx-5 sm:px-5 sm:justify-start">
+          <Button
+            type="submit"
+            disabled={createMutation.isPending || !form.sourceId}
+          >
+            <Link2 data-icon="inline-start" />
+            إضافة
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            إلغاء
+          </Button>
+        </DialogFooter>
       </form>
     </DialogContent>
   );
 }
 
-function AdvancedCandidateFilters({
-  filters,
+export function PriceInput({
+  value,
   onChange,
 }: {
-  filters: PremiumUpgradeCandidateFilters;
-  onChange: (filters: Partial<PremiumUpgradeCandidateFilters>) => void;
+  value: string;
+  onChange: (value: string) => void;
 }) {
   return (
-    <div className="grid gap-3 rounded-lg border bg-background p-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-      <SelectField
-        label="نوع المصدر"
-        value={filters.sourceType}
-        onValueChange={(sourceType) => onChange({ sourceType })}
-        options={[
-          ["all", "الكل"],
-          ["menu_option", "خيار منيو"],
-          ["menu_product", "منتج منيو"],
-        ]}
+    <div className="relative">
+      <Input
+        type="number"
+        inputMode="decimal"
+        value={value}
+        min="0"
+        step="0.01"
+        dir="ltr"
+        className="pl-12 text-left"
+        onChange={(event) => onChange(event.target.value)}
       />
-      <SelectField
-        label="نوع الترقية"
-        value={filters.selectionType}
-        onValueChange={(selectionType) => onChange({ selectionType })}
-        options={[
-          ["all", "الكل"],
-          ["premium_meal", "بروتين مميز"],
-          ["premium_large_salad", "سلطة كبيرة مميزة"],
-        ]}
-      />
-      <label className="flex min-h-10 items-center justify-between gap-3 rounded-md border bg-muted/20 px-3 py-2">
-        <span className="text-sm font-medium">إظهار المرتبط مسبقا</span>
-        <input
-          type="checkbox"
-          className="size-4 accent-primary"
-          checked={filters.includeLinked}
-          onChange={(event) => onChange({ includeLinked: event.target.checked })}
-        />
-      </label>
+      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+        SAR
+      </span>
     </div>
-  );
-}
-
-function SelectedCandidateSummary({
-  candidate,
-}: {
-  candidate: PremiumUpgradeCandidateDto | null;
-}) {
-  if (!candidate) {
-    return (
-      <section className="flex min-h-52 items-center justify-center rounded-lg border border-dashed bg-muted/20 p-5 text-center text-sm text-muted-foreground">
-        اختر عنصر من المنيو أولا لعرض مصدر العنصر ونوع الترقية.
-      </section>
-    );
-  }
-
-  return (
-    <section className="space-y-4 rounded-lg border p-4">
-      <div>
-        <h3 className="font-semibold">
-          {candidate.name.ar || candidate.name.en || candidate.key}
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          {candidate.name.en || candidate.key}
-        </p>
-      </div>
-      <div className="grid gap-3 text-sm sm:grid-cols-2">
-        <ReadOnlyItem
-          label="مصدر العنصر"
-          value={premiumSourceTypeLabel(candidate.sourceType)}
-        />
-        <ReadOnlyItem
-          label="نوع الترقية"
-          value={premiumSelectionTypeLabel(candidate.selectionType)}
-        />
-        <ReadOnlyItem label="مفتاح الترقية" value={candidate.premiumKey} />
-        <ReadOnlyItem
-          label="فرق السعر الحالي"
-          value={formatPremiumSar(candidate.upgradeDeltaHalala / 100)}
-        />
-      </div>
-    </section>
-  );
-}
-
-function LinkConfigPanel({
-  candidate,
-  form,
-  onChange,
-}: {
-  candidate: PremiumUpgradeCandidateDto | null;
-  form: LinkFormState;
-  onChange: (form: LinkFormState) => void;
-}) {
-  function update(next: Partial<LinkFormState>) {
-    onChange({ ...form, ...next });
-  }
-
-  return (
-    <aside className="space-y-4 rounded-lg border p-4">
-      <div>
-        <h3 className="font-semibold">إعدادات ظهور الترقية</h3>
-        <p className="text-sm text-muted-foreground">
-          بعد اختيار العنصر، عدل مجموعة العرض والسعر والترتيب.
-        </p>
-      </div>
-
-      <div
-        className={
-          candidate ? "space-y-3" : "pointer-events-none space-y-3 opacity-50"
-        }
-      >
-        <SelectField
-          label="مجموعة العرض"
-          value={form.displayGroupKey}
-          onValueChange={(displayGroupKey) => update({ displayGroupKey })}
-          options={[
-            ["premium_proteins", "بروتينات مميزة"],
-            ["premium_salads", "سلطات مميزة"],
-          ]}
-        />
-        <NumberField
-          label="فرق سعر الترقية بالريال"
-          value={form.upgradeDeltaSarInput}
-          min="0"
-          step="0.01"
-          onChange={(upgradeDeltaSarInput) => update({ upgradeDeltaSarInput })}
-        />
-        <NumberField
-          label="الترتيب"
-          value={form.sortOrder}
-          step="1"
-          onChange={(sortOrder) => update({ sortOrder })}
-        />
-        <div className="flex flex-wrap gap-4">
-          <StateToggleLine
-            label="مفعل"
-            checked={form.isEnabled}
-            onCheckedChange={(isEnabled) => update({ isEnabled })}
-          />
-          <StateToggleLine
-            label="ظاهر للعميل"
-            checked={form.isVisible}
-            onCheckedChange={(isVisible) => update({ isVisible })}
-          />
-        </div>
-      </div>
-    </aside>
   );
 }
 
@@ -394,13 +253,11 @@ function NumberField({
   label,
   value,
   onChange,
-  min,
   step,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  min?: string;
   step?: string;
 }) {
   return (
@@ -408,9 +265,8 @@ function NumberField({
       <Label>{label}</Label>
       <Input
         type="number"
-        inputMode="decimal"
+        inputMode="numeric"
         value={value}
-        min={min}
         step={step}
         onChange={(event) => onChange(event.target.value)}
       />

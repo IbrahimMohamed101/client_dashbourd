@@ -36,7 +36,7 @@ export function PremiumUpgradeFilters({
           التصفية والبحث
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+      <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <div className="space-y-2 xl:col-span-2">
           <Label htmlFor="premium-search">بحث</Label>
           <div className="relative">
@@ -46,10 +46,20 @@ export function PremiumUpgradeFilters({
               value={filters.q}
               onChange={(event) => update({ q: event.target.value })}
               className="pr-9"
-              placeholder="اسم، مفتاح، أو مصدر"
+              placeholder="اسم أو مفتاح"
             />
           </div>
         </div>
+        <SelectField
+          label="النوع"
+          value={filters.kind}
+          onValueChange={(kind) => update({ kind })}
+          options={[
+            ["all", "الكل"],
+            ["product", "منتج كامل"],
+            ["option", "خيار داخل وجبة"],
+          ]}
+        />
         <SelectField
           label="الحالة"
           value={filters.status}
@@ -57,47 +67,19 @@ export function PremiumUpgradeFilters({
           options={[
             ["all", "الكل"],
             ["active", "نشط"],
+            ["hidden", "مخفي"],
+            ["disabled", "متوقف"],
             ["archived", "مؤرشف"],
           ]}
         />
         <SelectField
-          label="مفعل"
-          value={filters.isEnabled}
-          onValueChange={(isEnabled) => update({ isEnabled })}
+          label="الصحة"
+          value={filters.health}
+          onValueChange={(health) => update({ health })}
           options={[
             ["all", "الكل"],
-            ["true", "مفعل"],
-            ["false", "معطل"],
-          ]}
-        />
-        <SelectField
-          label="ظاهر"
-          value={filters.isVisible}
-          onValueChange={(isVisible) => update({ isVisible })}
-          options={[
-            ["all", "الكل"],
-            ["true", "ظاهر"],
-            ["false", "مخفي"],
-          ]}
-        />
-        <SelectField
-          label="مصدر العنصر"
-          value={filters.sourceType}
-          onValueChange={(sourceType) => update({ sourceType })}
-          options={[
-            ["all", "الكل"],
-            ["menu_option", "خيار منيو"],
-            ["menu_product", "منتج منيو"],
-          ]}
-        />
-        <SelectField
-          label="نوع الترقية"
-          value={filters.selectionType}
-          onValueChange={(selectionType) => update({ selectionType })}
-          options={[
-            ["all", "الكل"],
-            ["premium_meal", "بروتين مميز"],
-            ["premium_large_salad", "سلطة كبيرة مميزة"],
+            ["ready", "جاهز"],
+            ["broken", "يحتاج إصلاح"],
           ]}
         />
       </CardContent>
