@@ -28,8 +28,14 @@ export const menuOptionGroupsQueryOptions = (params: MenuListParams = {}) =>
     staleTime: Infinity,
   });
 
-export const useMenuOptionGroupsQuery = (params: MenuListParams = {}) =>
-  useQuery(menuOptionGroupsQueryOptions(params));
+export const useMenuOptionGroupsQuery = (
+  params: MenuListParams = {},
+  enabled = true
+) =>
+  useQuery({
+    ...menuOptionGroupsQueryOptions(params),
+    enabled,
+  });
 
 export const menuOptionGroupDetailQueryOptions = (id: string) =>
   queryOptions({

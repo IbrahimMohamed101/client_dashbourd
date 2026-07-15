@@ -17,6 +17,7 @@ import {
 } from "./mealBuilderConstants";
 import {
   isFullMealSelectionType,
+  isPremiumManagedSection,
   nameOf,
   sectionTreatsAsFullMeal,
 } from "./mealBuilderUtils";
@@ -148,6 +149,8 @@ export function buildMealBuilderVisualCards({
   const productsById = new Map(products.map((product) => [product.id, product]));
 
   sections.forEach((section, index) => {
+    if (isPremiumManagedSection(section)) return;
+
     if (
       section.key &&
       Array.isArray(section.items) &&
@@ -217,19 +220,6 @@ export function buildMealBuilderVisualCards({
       premiumItemToVisualItem(item, index)
     );
     cards.premium.backendIssues.push(...(premiumSection.diagnostics ?? []));
-  }
-
-  if ((premiumSection as { legacyRequiredKeyChecks?: boolean } | null)?.legacyRequiredKeyChecks) {
-    const premiumKeys = new Set(cards.premium.items.map((item) => item.key));
-  ([] as string[]).forEach((key) => {
-    if (!premiumKeys.has(key)) {
-      cards.premium.errors.push(`خيار بريميوم مطلوب غير موجود: ${key}`);
-    }
-  });
-  if (!premiumKeys.has("premium_large_salad")) {
-    cards.premium.errors.push("السلطة الكبيرة البريميوم غير موجودة داخل قسم مميز.");
-  }
-
   }
 
   if (!cards.carbs.items.length) {
@@ -317,12 +307,6 @@ function productSectionTarget(
   category: MenuCategory | null | undefined
 ) {
   if (
-    section.selectionType === "premium_large_salad" ||
-    products.some((product) => product.key === "premium_large_salad")
-  ) {
-    return "premium";
-  }
-  if (
     section.selectionType === "sandwich" ||
     category?.key === "cold_sandwiches" ||
     products.some((product) => product.itemType?.includes("sandwich") || product.key.includes("sandwich"))
@@ -332,7 +316,7 @@ function productSectionTarget(
   if (sectionTreatsAsFullMeal(section)) {
     return section.key || section.selectionType || "full_meal_product";
   }
-  return "premium";
+  return section.key || section.selectionType || "full_meal_product";
 }
 
 function addOption(
@@ -554,7 +538,7 @@ function premiumItemToVisualItem(
 }
 
 export function optionFamily(option: MenuOption, section?: Pick<MealBuilderSection, "selectionType">) {
-  if (section?.selectionType === "premium_meal" || option.premiumKey) return "premium";
+  void section;
   if (matchesOption(option, CARB_KEYS, CARB_MATCHERS)) return "carbs";
   if (matchesOption(option, BEEF_KEYS, BEEF_MATCHERS)) return "beef";
   if (matchesOption(option, FISH_KEYS, FISH_MATCHERS)) return "fish";
@@ -606,10 +590,9 @@ function sectionTarget(
   selectedOptions: MenuOption[],
   selectedProducts: MenuProduct[]
 ) {
-  if (section.selectionType === "premium_meal" || section.selectionType === "premium_large_salad") return "premium";
   if (section.selectionType === "sandwich") return "sandwich";
   if (sectionTreatsAsFullMeal(section)) return section.key || section.selectionType || "full_meal_product";
-  if (selectedProducts.some((product) => product.key === "premium_large_salad")) return "premium";
+  void selectedProducts;
   if (selectedOptions.some((option) => optionFamily(option, section) === "carbs")) return "carbs";
   return "chicken";
 }

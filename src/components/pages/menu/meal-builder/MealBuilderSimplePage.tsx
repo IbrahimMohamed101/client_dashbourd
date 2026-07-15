@@ -64,7 +64,11 @@ import type {
 import type {
   MealBuilderConfig,
   MealBuilderContract,
+  MealBuilderContractItem,
+  MealBuilderContractSection,
+  MealBuilderCheck,
   MealBuilderHydratedDraft,
+  MealBuilderHydratedItem,
   MealBuilderLifecycleResponseData,
   MealBuilderPremiumSection,
   MealBuilderSection,
@@ -102,7 +106,9 @@ type NormalizedMealBuilderView = {
   premiumSection: MealBuilderPremiumSection | null;
   versionId: string | null;
   versionNumber: string | number | null;
+  basedOnPublishedVersionId: string | null;
   hasUnpublishedChanges: boolean;
+  publishedAt: string | null;
   updatedAt: string | null;
 };
 
@@ -110,28 +116,32 @@ export function MealBuilderSimplePage() {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<PageMode>("published");
   const [dirty, setDirty] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   const builderQuery = useMealBuilderQuery();
   const publishedQuery = useMealBuilderPublishedQuery();
   const draftQuery = useMealBuilderDraftQuery(mode === "draft");
-  const hydratedQuery = useMealBuilderHydratedQuery(mode === "draft");
+  const hydratedQuery = useMealBuilderHydratedQuery(
+    mode === "draft" && draftQuery.isSuccess
+  );
+  const loadEditableCatalog = mode === "draft";
 
   const productsQuery = useMenuProductsQuery({
     limit: 500,
     includeInactive: true,
-  });
+  }, loadEditableCatalog);
   const categoriesQuery = useMenuCategoriesQuery({
     limit: 500,
     includeInactive: true,
-  });
+  }, loadEditableCatalog);
   const groupsQuery = useMenuOptionGroupsQuery({
     limit: 500,
     includeInactive: true,
-  });
+  }, loadEditableCatalog);
   const optionsQuery = useMenuOptionsQuery({
     limit: 1000,
     includeInactive: true,
-  });
+  }, loadEditableCatalog);
 
   const state = builderQuery.data?.data ?? null;
   const publishedView = useMemo(
@@ -157,34 +167,34 @@ export function MealBuilderSimplePage() {
   };
 
   const loading =
-    builderQuery.isLoading ||
     publishedQuery.isLoading ||
-    productsQuery.isLoading ||
-    categoriesQuery.isLoading ||
-    groupsQuery.isLoading ||
-    optionsQuery.isLoading ||
-    (mode === "draft" && (draftQuery.isLoading || hydratedQuery.isLoading));
+    (mode === "draft" &&
+      (builderQuery.isLoading ||
+        productsQuery.isLoading ||
+        categoriesQuery.isLoading ||
+        groupsQuery.isLoading ||
+        optionsQuery.isLoading ||
+        draftQuery.isLoading ||
+        hydratedQuery.isLoading));
 
   const loadError = firstQueryError([
-    builderQuery,
     publishedQuery,
-    productsQuery,
-    categoriesQuery,
-    groupsQuery,
-    optionsQuery,
-    ...(mode === "draft" ? [draftQuery, hydratedQuery] : []),
+    ...(mode === "draft"
+      ? [
+          builderQuery,
+          productsQuery,
+          categoriesQuery,
+          groupsQuery,
+          optionsQuery,
+          draftQuery,
+          ...(draftQuery.isSuccess ? [hydratedQuery] : []),
+        ]
+      : []),
   ]);
 
   const hasDraft = Boolean(
     state?.metadata?.hasDraft || state?.draft || draftView.config
   );
-
-  useEffect(() => {
-    if (loading || mode !== "published") return;
-    if (!publishedView.config && (state?.draft || state?.metadata?.hasDraft)) {
-      setMode("draft");
-    }
-  }, [loading, mode, publishedView.config, state]);
 
   async function refresh() {
     await Promise.all([
@@ -206,13 +216,17 @@ export function MealBuilderSimplePage() {
   }
 
   function showPublished() {
-    if (
-      dirty &&
-      !window.confirm("لديك تغييرات غير محفوظة. هل تريد ترك المسودة؟")
-    ) {
+    if (dirty) {
+      setDiscardOpen(true);
       return;
     }
     setDirty(false);
+    setMode("published");
+  }
+
+  function confirmShowPublished() {
+    setDirty(false);
+    setDiscardOpen(false);
     setMode("published");
   }
 
@@ -241,9 +255,14 @@ export function MealBuilderSimplePage() {
         onOpenDraft={openDraft}
         onShowPublished={showPublished}
       />
+      <VersionStrip view={activeView} mode={mode} hasDraft={hasDraft} />
 
       {loadError ? (
         <LoadError error={loadError} onRetry={retry} />
+      ) : mode === "draft" &&
+        (draftQuery.isLoading ||
+          (draftQuery.isSuccess && hydratedQuery.isLoading)) ? (
+        <DraftLoadingState hydrated={draftQuery.isSuccess} />
       ) : activeView.config ? (
         mode === "draft" ? (
           <SimpleWorkspace
@@ -267,14 +286,18 @@ export function MealBuilderSimplePage() {
             config={activeView.config}
             validation={activeView.validation}
             premiumSection={activeView.premiumSection}
-            catalog={catalog}
-            loading={loading}
             onOpenDraft={openDraft}
           />
         )
       ) : (
         <EmptyState mode={mode} loading={loading} onOpenDraft={openDraft} />
       )}
+
+      <DiscardDraftDialog
+        open={discardOpen}
+        onClose={() => setDiscardOpen(false)}
+        onConfirm={confirmShowPublished}
+      />
     </div>
   );
 }
@@ -361,22 +384,83 @@ function SimpleHeader({
   );
 }
 
+function VersionStrip({
+  view,
+  mode,
+  hasDraft,
+}: {
+  view: NormalizedMealBuilderView;
+  mode: PageMode;
+  hasDraft: boolean;
+}) {
+  const isDraft = mode === "draft";
+  const items = isDraft
+    ? [
+        ["الحالة", "مسودة"],
+        ["رقم النسخة", view.versionNumber ?? "-"],
+        [
+          "مبنية على النسخة المنشورة",
+          view.basedOnPublishedVersionId ? "آخر نسخة منشورة" : "غير محدد",
+        ],
+        [
+          "تغييرات غير منشورة",
+          view.hasUnpublishedChanges ? "نعم" : "لا",
+        ],
+        ["آخر تحديث", formatSafeDate(view.updatedAt)],
+      ]
+    : [
+        ["الحالة", "منشور"],
+        ["رقم النسخة", view.versionNumber ?? "-"],
+        ["توجد مسودة", hasDraft ? "نعم" : "لا"],
+        [
+          "تغييرات غير منشورة",
+          view.hasUnpublishedChanges ? "نعم" : "لا",
+        ],
+        ["تاريخ النشر", formatSafeDate(view.publishedAt)],
+        ["آخر تحديث", formatSafeDate(view.updatedAt)],
+      ];
+
+  return (
+    <div className="grid gap-2 rounded-lg border bg-card p-3 text-sm shadow-none sm:grid-cols-2 xl:grid-cols-6">
+      {items.map(([label, value]) => (
+        <MetaPill key={String(label)} label={String(label)} value={value} />
+      ))}
+    </div>
+  );
+}
+
+function MetaPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="min-w-0 rounded-md bg-muted/30 px-3 py-2">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 break-words font-medium">{value}</p>
+    </div>
+  );
+}
+
 function PublishedView({
   config,
   validation,
   premiumSection,
-  catalog,
-  loading,
   onOpenDraft,
 }: {
   config: MealBuilderConfig;
   validation: MealBuilderValidation | null;
   premiumSection: MealBuilderPremiumSection | null;
-  catalog: Catalog;
-  loading: boolean;
   onOpenDraft: () => void;
 }) {
-  const cards = buildCards(config.sections, catalog, validation, premiumSection);
+  const cards = buildCards(
+    config.sections,
+    emptyCatalog(),
+    validation,
+    premiumSection
+  );
 
   return (
     <Card className="border-border/80 shadow-none">
@@ -387,7 +471,7 @@ function PublishedView({
             هذه النسخة للقراءة فقط. افتح المسودة لتعديلها.
           </CardDescription>
         </div>
-        <Button type="button" onClick={onOpenDraft} disabled={loading}>
+        <Button type="button" onClick={onOpenDraft}>
           <FileEdit data-icon="inline-start" /> تعديل القائمة
         </Button>
       </CardHeader>
@@ -395,6 +479,19 @@ function PublishedView({
         <ValidationNotice validation={validation} dirty={false} />
         <PremiumNotice premiumSection={premiumSection} />
         <CardsGrid cards={cards} readOnly />
+      </CardContent>
+    </Card>
+  );
+}
+
+function DraftLoadingState({ hydrated }: { hydrated: boolean }) {
+  return (
+    <Card className="border-border/80 shadow-none">
+      <CardContent className="flex items-center gap-3 p-5 text-sm text-muted-foreground">
+        <Loader2 className="size-4 shrink-0 animate-spin" />
+        {hydrated
+          ? "جاري تحميل بيانات المسودة التفصيلية..."
+          : "جاري فتح مسودة العمل..."}
       </CardContent>
     </Card>
   );
@@ -419,12 +516,15 @@ function SimpleWorkspace({
   onDirtyChange: (dirty: boolean) => void;
   onPublished: () => void;
 }) {
+  const queryClient = useQueryClient();
   const saveDraft = useSaveMealBuilderDraftMutation();
   const validateDraft = useValidateMealBuilderDraftMutation();
   const publishDraft = usePublishMealBuilderDraftMutation();
   const resetDraft = useResetMealBuilderDraftMutation();
 
-  const [sections, setSections] = useState(() => orderSections(draft.sections));
+  const [sections, setSections] = useState(() =>
+    toEditableMealBuilderSections(orderSections(draft.sections))
+  );
   const [notes, setNotes] = useState(draft.notes ?? "");
   const [editor, setEditor] = useState<EditorState>(null);
   const [cardEditorKey, setCardEditorKey] = useState<string | null>(null);
@@ -468,7 +568,7 @@ function SimpleWorkspace({
   }
 
   function syncSaved(saved: MealBuilderConfig) {
-    setSections(orderSections(saved.sections));
+    setSections(toEditableMealBuilderSections(orderSections(saved.sections)));
     setNotes(saved.notes ?? notes);
     setValidation(null);
     onDirtyChange(false);
@@ -714,18 +814,26 @@ function SimpleWorkspace({
       <ResetDialog
         open={resetOpen}
         pending={resetDraft.isPending}
+        dirty={dirty}
         onClose={() => setResetOpen(false)}
         onReset={() =>
           resetDraft.mutate(undefined, {
             onSuccess: (response) => {
               const resetView = normalizeDraft(response.data, null, null);
               if (resetView.config) {
-                setSections(orderSections(resetView.config.sections));
+                setSections(
+                  toEditableMealBuilderSections(
+                    orderSections(resetView.config.sections)
+                  )
+                );
                 setNotes(resetView.config.notes ?? "");
                 setValidation(resetView.validation);
               }
               onDirtyChange(false);
               setResetOpen(false);
+              queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_KEY] });
+              queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_DRAFT_KEY] });
+              queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_HYDRATED_KEY] });
             },
           })
         }
@@ -776,6 +884,7 @@ function ValidationNotice({
   }
 
   if (!validation) return null;
+  const grouped = groupValidationIssues(validation);
 
   if (validation.errors.length) {
     return (
@@ -784,18 +893,166 @@ function ValidationNotice({
           توجد {validation.errors.length} مشاكل تمنع النشر.
         </p>
         <p className="mt-1">{mealBuilderIssueText(validation.errors[0])}</p>
+        <details className="mt-3 rounded-md border border-destructive/20 bg-background/80 p-3 text-foreground">
+          <summary className="cursor-pointer font-medium text-destructive">
+            عرض الأخطاء
+          </summary>
+          <ValidationIssueGroups groups={grouped} />
+        </details>
       </div>
     );
   }
 
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+      <div className="flex items-start gap-2">
       <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
       {validation.warnings.length
         ? `جاهزة للنشر مع ${validation.warnings.length} ملاحظات غير مانعة.`
         : "المسودة جاهزة للنشر."}
+      </div>
+      {validation.warnings.length ? (
+        <details className="mt-3 rounded-md border border-emerald-200 bg-background/80 p-3 text-foreground">
+          <summary className="cursor-pointer font-medium text-amber-700">
+            عرض التنبيهات
+          </summary>
+          <ValidationIssueGroups groups={grouped} />
+        </details>
+      ) : null}
     </div>
   );
+}
+
+type ValidationIssueGroup = {
+  key: string;
+  label: string;
+  errors: MealBuilderCheck[];
+  warnings: MealBuilderCheck[];
+};
+
+function ValidationIssueGroups({ groups }: { groups: ValidationIssueGroup[] }) {
+  if (!groups.length) {
+    return (
+      <p className="mt-2 text-sm text-muted-foreground">
+        لا توجد تفاصيل إضافية.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-3">
+      {groups.map((group) => (
+        <div key={group.key} className="rounded-md border bg-background p-3">
+          <p className="font-medium">{group.label}</p>
+          {group.errors.length ? (
+            <IssueList title="أخطاء مانعة" issues={group.errors} />
+          ) : null}
+          {group.warnings.length ? (
+            <IssueList title="تنبيهات" issues={group.warnings} />
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function IssueList({
+  title,
+  issues,
+}: {
+  title: string;
+  issues: MealBuilderCheck[];
+}) {
+  return (
+    <div className="mt-2">
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <ul className="mt-1 space-y-1 text-sm text-muted-foreground">
+        {issues.map((issue, index) => (
+          <li key={`${issue.code ?? "issue"}-${index}`}>
+            {validationIssueItemLabel(issue) ? (
+              <span className="font-medium">
+                {validationIssueItemLabel(issue)}:{" "}
+              </span>
+            ) : null}
+            {mealBuilderIssueText(issue)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function groupValidationIssues(
+  validation: MealBuilderValidation
+): ValidationIssueGroup[] {
+  const groups = new Map<string, ValidationIssueGroup>();
+  const add = (issue: MealBuilderCheck, kind: "errors" | "warnings") => {
+    const key = validationGroupKey(issue);
+    const group =
+      groups.get(key) ??
+      ({
+        key,
+        label: validationGroupLabel(issue),
+        errors: [],
+        warnings: [],
+      } satisfies ValidationIssueGroup);
+    group[kind].push(issue);
+    groups.set(key, group);
+  };
+
+  validation.errors.forEach((issue) => add(issue, "errors"));
+  validation.warnings.forEach((issue) => add(issue, "warnings"));
+  return Array.from(groups.values());
+}
+
+function validationGroupKey(issue: MealBuilderCheck) {
+  if (typeof issue.sectionIndex === "number") return `section-${issue.sectionIndex}`;
+  if (issue.sectionType) return `section-type-${issue.sectionType}`;
+  return "general";
+}
+
+function validationGroupLabel(issue: MealBuilderCheck) {
+  const section = sectionKeyFromIssue(issue);
+  if (section) return sectionLabel(section);
+  if (typeof issue.sectionIndex === "number") {
+    return `قسم ${issue.sectionIndex + 1}`;
+  }
+  return "أخطاء عامة";
+}
+
+function validationIssueItemLabel(issue: MealBuilderCheck) {
+  const value =
+    issue.itemName ??
+    issue.productName ??
+    issue.optionName ??
+    issue.itemKey ??
+    issue.productKey ??
+    issue.optionKey ??
+    issue.groupKey;
+  if (typeof value !== "string" || !value.trim()) return null;
+  return value;
+}
+
+function sectionKeyFromIssue(issue: MealBuilderCheck) {
+  const raw = String(issue.cardKey ?? issue.sectionKey ?? issue.sectionType ?? "");
+  if (!raw) return null;
+  return raw.replace(/_/g, "-").toLowerCase();
+}
+
+function sectionLabel(key: string) {
+  const labels: Record<string, string> = {
+    premium: "مميز",
+    sandwich: "ساندويتشات",
+    chicken: "دجاج",
+    beef: "لحوم",
+    fish: "أسماك",
+    eggs: "بيض",
+    carbs: "نشويات",
+    option_group: "مجموعة خيارات",
+    product_category: "تصنيف منتجات",
+    product_list: "قائمة منتجات",
+  };
+  return labels[key] ?? "أخطاء عامة";
 }
 
 function PremiumNotice({
@@ -858,14 +1115,48 @@ function PublishDialog({
   );
 }
 
+function DiscardDraftDialog({
+  open,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md" dir="rtl">
+        <DialogHeader className="text-right">
+          <DialogTitle>عرض القائمة المنشورة؟</DialogTitle>
+          <DialogDescription>
+            توجد تغييرات محلية غير محفوظة في المسودة. سيبقى الخادم بدون تغيير،
+            وسيتم الرجوع إلى النسخة التي يراها العميل الآن.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:justify-start">
+          <Button type="button" variant="destructive" onClick={onConfirm}>
+            ترك التغييرات المحلية
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            إلغاء
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ResetDialog({
   open,
   pending,
+  dirty,
   onClose,
   onReset,
 }: {
   open: boolean;
   pending: boolean;
+  dirty: boolean;
   onClose: () => void;
   onReset: () => void;
 }) {
@@ -878,6 +1169,11 @@ function ResetDialog({
             سيتم الرجوع إلى آخر نسخة منشورة ولن تتأثر القائمة الحالية للعميل.
           </DialogDescription>
         </DialogHeader>
+        {dirty ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            توجد تغييرات محلية غير محفوظة، وسيتم تجاهلها عند تنفيذ الإلغاء.
+          </p>
+        ) : null}
         <DialogFooter className="gap-2 sm:justify-start">
           <Button
             type="button"
@@ -969,14 +1265,30 @@ function buildCards(
   });
 }
 
+function emptyCatalog(): Catalog {
+  return {
+    products: [],
+    categories: [],
+    groups: [],
+    options: [],
+  };
+}
+
 function normalizePublished(
   data: MealBuilderLifecycleResponseData | null,
   state: MealBuilderState | null
 ): NormalizedMealBuilderView {
   const config = data?.config ?? data?.published ?? state?.published ?? null;
   const contract = data?.contract ?? state?.contract ?? state?.preview ?? null;
+  const displayConfig =
+    config && contract?.sections?.length
+      ? {
+          ...config,
+          sections: contract.sections.map(contractSectionToMealBuilderSection),
+        }
+      : config;
   return {
-    config,
+    config: displayConfig,
     validation: data?.validation ?? state?.validation.published ?? null,
     premiumSection:
       data?.premiumSection ??
@@ -984,8 +1296,10 @@ function normalizePublished(
       state?.premiumSection ??
       findPremiumSection(config?.sections),
     versionId: nullableString(data?.versionId ?? config?.id),
-    versionNumber: data?.versionNumber ?? config?.revisionHash ?? null,
+    versionNumber: data?.versionNumber ?? null,
+    basedOnPublishedVersionId: data?.basedOnPublishedVersionId ?? null,
     hasUnpublishedChanges: Boolean(data?.hasUnpublishedChanges),
+    publishedAt: data?.publishedAt ?? config?.publishedAt ?? null,
     updatedAt: data?.updatedAt ?? config?.updatedAt ?? null,
   };
 }
@@ -1032,11 +1346,15 @@ function normalizeDraft(
     versionNumber:
       hydratedData?.versionNumber ??
       lifecycle?.versionNumber ??
-      config?.revisionHash ??
+      null,
+    basedOnPublishedVersionId:
+      hydratedData?.basedOnPublishedVersionId ??
+      lifecycle?.basedOnPublishedVersionId ??
       null,
     hasUnpublishedChanges: Boolean(
       hydratedData?.hasUnpublishedChanges ?? lifecycle?.hasUnpublishedChanges
     ),
+    publishedAt: lifecycle?.publishedAt ?? config?.publishedAt ?? null,
     updatedAt:
       hydratedData?.updatedAt ?? lifecycle?.updatedAt ?? config?.updatedAt ?? null,
   };
@@ -1054,6 +1372,73 @@ function validationFromHydrated(
     errors,
     warnings,
     checks: [...errors, ...warnings],
+  };
+}
+
+function contractSectionToMealBuilderSection(
+  section: MealBuilderContractSection,
+  index: number
+): MealBuilderSection {
+  return {
+    id: section.id,
+    key: section.key || section.selectionType || section.id,
+    sectionType: section.sectionType,
+    sourceKind: section.sourceKind,
+    productContextId: section.productContextId ?? null,
+    sourceGroupId: section.sourceGroupId ?? null,
+    sourceCategoryId: section.sourceCategoryId ?? null,
+    selectedOptionIds: [],
+    selectedProductIds: [],
+    includeMode: section.includeMode ?? "selected",
+    selectionType: section.selectionType || "",
+    titleOverride: section.titleI18n ?? {
+      ar: section.title ?? section.key ?? section.id,
+      en: section.title ?? section.key ?? section.id,
+    },
+    sortOrder: Number(section.sortOrder || index + 1),
+    required: Boolean(section.required),
+    minSelections: Number(section.minSelections || 0),
+    maxSelections: section.maxSelections ?? null,
+    multiSelect: Boolean(section.multiSelect),
+    visible: true,
+    availableFor: ["subscription"],
+    items: (section.items ?? []).map(contractItemToHydratedItem),
+  };
+}
+
+function contractItemToHydratedItem(
+  item: MealBuilderContractItem
+): MealBuilderHydratedItem {
+  const type = item.type || item.kind || "option";
+  return {
+    id: item.id,
+    optionId: type === "option" ? item.id : null,
+    productId: type === "product" ? item.id : null,
+    type,
+    key: item.key,
+    label: item.label || item.name || item.nameI18n?.ar || item.nameI18n?.en,
+    name: item.nameI18n,
+    selectionType: item.selectionType,
+    imageUrl: item.imageUrl,
+    kind: item.kind,
+    currency: item.currency,
+    priceHalala: item.priceHalala ?? null,
+    premiumPriceHalala: item.premiumPriceHalala ?? null,
+    upgradePriceHalala: item.upgradePriceHalala ?? null,
+    sortOrder: item.sortOrder ?? null,
+    health: item.health ?? null,
+    status: item.status ?? null,
+    selected: true,
+    eligible: item.eligible !== false,
+    linked: item.linked !== false,
+    available: item.available !== false,
+    active: item.active !== false,
+    visible: item.visible !== false,
+    published: item.published !== false,
+    subscriptionEnabled: item.subscriptionEnabled !== false,
+    relationExists: item.relationExists !== false,
+    catalogItemAvailable: item.catalogItemAvailable !== false,
+    state: "selected",
   };
 }
 
@@ -1094,6 +1479,16 @@ function isMealBuilderConfig(
 function nullableString(value: unknown): string | null {
   if (value === undefined || value === null || value === "") return null;
   return String(value);
+}
+
+function formatSafeDate(value?: string | null) {
+  if (!value) return "لا يوجد";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "غير متاح";
+  return new Intl.DateTimeFormat("ar-SA", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function firstQueryError(

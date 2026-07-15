@@ -36,8 +36,14 @@ export const menuProductsQueryOptions = (params: MenuProductListParams = {}) =>
     staleTime: Infinity,
   });
 
-export const useMenuProductsQuery = (params: MenuProductListParams = {}) =>
-  useQuery(menuProductsQueryOptions(params));
+export const useMenuProductsQuery = (
+  params: MenuProductListParams = {},
+  enabled = true
+) =>
+  useQuery({
+    ...menuProductsQueryOptions(params),
+    enabled,
+  });
 
 export const menuProductDetailQueryOptions = (id: string) =>
   queryOptions({

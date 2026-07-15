@@ -4,6 +4,8 @@ import type {
 } from "@/types/mealBuilderTypes";
 import type { MenuProduct } from "@/types/menuTypes";
 import type { MealBuilderVisualItem } from "./mealBuilderVisualModel";
+import { ERROR_COPY } from "./mealBuilderConstants";
+import { isPremiumManagedSection } from "./mealBuilderUtils";
 
 export function mealBuilderErrorMessage(
   error: unknown,
@@ -12,13 +14,21 @@ export function mealBuilderErrorMessage(
   const response = (error as {
     response?: {
       data?: {
+        code?: unknown;
         message?: unknown;
-        error?: { message?: unknown };
+        error?: { code?: unknown; message?: unknown };
         details?: { message?: unknown };
       };
     };
     message?: unknown;
   })?.response?.data;
+
+  const codeCandidates = [response?.code, response?.error?.code];
+  const resolvedCode = codeCandidates.find(
+    (value): value is string =>
+      typeof value === "string" && value.trim().length > 0
+  );
+  if (resolvedCode && ERROR_COPY[resolvedCode]) return ERROR_COPY[resolvedCode];
 
   const candidates = [
     response?.error?.message,
@@ -53,13 +63,11 @@ export function isMealBuilderCandidateSelectable(
 export function toEditableMealBuilderSection(
   section: MealBuilderSection
 ): MealBuilderSection {
-  const {
-    selectedOptions: _selectedOptions,
-    selectedProducts: _selectedProducts,
-    items: _items,
-    hydration: _hydration,
-    ...editable
-  } = section;
+  const editable: MealBuilderSection = { ...section };
+  delete editable.selectedOptions;
+  delete editable.selectedProducts;
+  delete editable.items;
+  delete editable.hydration;
 
   return {
     ...editable,
@@ -75,7 +83,9 @@ export function toEditableMealBuilderSection(
 export function toEditableMealBuilderSections(
   sections: MealBuilderSection[]
 ): MealBuilderSection[] {
-  return sections.map(toEditableMealBuilderSection);
+  return sections
+    .filter((section) => !isPremiumManagedSection(section))
+    .map(toEditableMealBuilderSection);
 }
 
 export function explicitProductIdsForSection(
@@ -110,6 +120,10 @@ export function explicitProductIdsForSection(
 export function validateMealBuilderSectionDraft(
   section: MealBuilderSection
 ): string | null {
+  if (isPremiumManagedSection(section)) {
+    return "قسم مميز يدار تلقائيا من إعدادات الترقيات المميزة ولا يمكن تعديله هنا.";
+  }
+
   if (!section.selectionType.trim()) return "اختر نوع الاختيار.";
 
   const numericValues = [

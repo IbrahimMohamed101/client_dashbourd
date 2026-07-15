@@ -8,8 +8,6 @@ export const SECTION_LABELS: Record<MealBuilderSectionType, string> = {
 
 export const SELECTION_TYPES = [
   { value: "standard_meal", label: "وجبة عادية" },
-  { value: "premium_meal", label: "ترقية بروتين بريميوم" },
-  { value: "premium_large_salad", label: "سلطة كبيرة بريميوم" },
   { value: "sandwich", label: "ساندويتش" },
 ];
 
@@ -68,12 +66,9 @@ export const VISUAL_SECTION_LABELS: Record<
   carbs: { ar: "نشويات", en: "Carbs" },
 };
 
-export const PREMIUM_REQUIRED_KEYS = ["beef_steak", "shrimp", "salmon"];
-
 export const SECTION_RULE_BADGES: Record<string, string[]> = {
   premium: [
-    "خيارات بريميوم مطلوبة",
-    "السلطة الكبيرة لها قواعد مستقلة",
+    "تلقائي من إعدادات الترقيات المميزة",
   ],
   sandwich: ["وجبة كاملة", "لا تحتاج نشويات", "requiresBuilder=false"],
   beef: ["وجبة لحم واحدة كحد أقصى في اليوم"],

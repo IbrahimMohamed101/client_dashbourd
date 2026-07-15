@@ -65,7 +65,10 @@ import type {
 import type {
   MealBuilderConfig,
   MealBuilderContract,
+  MealBuilderContractItem,
+  MealBuilderContractSection,
   MealBuilderHydratedDraft,
+  MealBuilderHydratedItem,
   MealBuilderLifecycleResponseData,
   MealBuilderPremiumSection,
   MealBuilderSection,
@@ -94,28 +97,32 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<PageMode>("published");
   const [dirty, setDirty] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   const builderQuery = useMealBuilderQuery();
   const publishedQuery = useMealBuilderPublishedQuery();
   const draftQuery = useMealBuilderDraftQuery(mode === "draft");
-  const hydratedQuery = useMealBuilderHydratedQuery(mode === "draft");
+  const hydratedQuery = useMealBuilderHydratedQuery(
+    mode === "draft" && draftQuery.isSuccess
+  );
+  const loadEditableCatalog = mode === "draft";
 
   const productsQuery = useMenuProductsQuery({
     limit: 500,
     includeInactive: true,
-  });
+  }, loadEditableCatalog);
   const categoriesQuery = useMenuCategoriesQuery({
     limit: 500,
     includeInactive: true,
-  });
+  }, loadEditableCatalog);
   const groupsQuery = useMenuOptionGroupsQuery({
     limit: 500,
     includeInactive: true,
-  });
+  }, loadEditableCatalog);
   const optionsQuery = useMenuOptionsQuery({
     limit: 1000,
     includeInactive: true,
-  });
+  }, loadEditableCatalog);
 
   const state = builderQuery.data?.data ?? null;
   const publishedView = useMemo(
@@ -141,34 +148,34 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
   };
 
   const loading =
-    builderQuery.isLoading ||
     publishedQuery.isLoading ||
-    productsQuery.isLoading ||
-    categoriesQuery.isLoading ||
-    groupsQuery.isLoading ||
-    optionsQuery.isLoading ||
-    (mode === "draft" && (draftQuery.isLoading || hydratedQuery.isLoading));
+    (mode === "draft" &&
+      (builderQuery.isLoading ||
+        draftQuery.isLoading ||
+        hydratedQuery.isLoading ||
+        productsQuery.isLoading ||
+        categoriesQuery.isLoading ||
+        groupsQuery.isLoading ||
+        optionsQuery.isLoading));
 
   const loadError = firstQueryError([
-    builderQuery,
     publishedQuery,
-    productsQuery,
-    categoriesQuery,
-    groupsQuery,
-    optionsQuery,
-    ...(mode === "draft" ? [draftQuery, hydratedQuery] : []),
+    ...(mode === "draft"
+      ? [
+          builderQuery,
+          draftQuery,
+          ...(draftQuery.isSuccess ? [hydratedQuery] : []),
+          productsQuery,
+          categoriesQuery,
+          groupsQuery,
+          optionsQuery,
+        ]
+      : []),
   ]);
 
   const hasDraft = Boolean(
     state?.metadata?.hasDraft || state?.draft || draftView.config
   );
-
-  useEffect(() => {
-    if (loading || mode !== "published") return;
-    if (!publishedView.config && (state?.draft || state?.metadata?.hasDraft)) {
-      setMode("draft");
-    }
-  }, [loading, mode, publishedView.config, state]);
 
   async function refresh() {
     await Promise.all([
@@ -190,15 +197,17 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
   }
 
   function showPublished() {
-    if (
-      dirty &&
-      !window.confirm(
-        "توجد تغييرات غير محفوظة. هل تريد ترك المسودة وعرض النسخة المنشورة؟"
-      )
-    ) {
+    if (dirty) {
+      setDiscardOpen(true);
       return;
     }
     setDirty(false);
+    setMode("published");
+  }
+
+  function confirmShowPublished() {
+    setDirty(false);
+    setDiscardOpen(false);
     setMode("published");
   }
 
@@ -237,7 +246,6 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
       ) : (
         <>
           <VersionMetadataCard view={activeView} mode={mode} />
-          <CatalogHealthCard catalog={catalog} loading={loading} />
 
           {activeView.config ? (
             mode === "draft" ? (
@@ -262,8 +270,6 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
                 config={activeView.config}
                 validation={activeView.validation}
                 premiumSection={activeView.premiumSection}
-                catalog={catalog}
-                loading={loading}
                 onOpenDraft={openDraft}
               />
             )
@@ -276,6 +282,12 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
           )}
         </>
       )}
+
+      <DiscardDraftDialog
+        open={discardOpen}
+        onClose={() => setDiscardOpen(false)}
+        onConfirm={confirmShowPublished}
+      />
     </div>
   );
 }
@@ -384,7 +396,7 @@ function VersionMetadataCard({
         <MetaItem label="رقم النسخة" value={view.versionNumber ?? "-"} />
         <MetaItem
           label="مبنية على النسخة"
-          value={shortVersion(view.basedOnPublishedVersionId)}
+          value={publishedBaseLabel(view.basedOnPublishedVersionId)}
         />
         <MetaItem label="آخر تحديث" value={formatSafeDate(view.updatedAt)} />
         <MetaItem label="تاريخ النشر" value={formatSafeDate(view.publishedAt)} />
@@ -397,61 +409,22 @@ function VersionMetadataCard({
   );
 }
 
-function CatalogHealthCard({
-  catalog,
-  loading,
-}: {
-  catalog: Catalog;
-  loading: boolean;
-}) {
-  return (
-    <Card className="border-border/80 shadow-none">
-      <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-medium">مصادر الكتالوج المستخدمة في المحرر</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            الاختيارات النهائية تخضع لعلاقات المنتج والتوفر والتحقق من الباكند.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {loading ? (
-            <Badge variant="outline">
-              <Loader2 className="size-3 animate-spin" /> جاري التحميل
-            </Badge>
-          ) : (
-            <>
-              <Badge variant="outline">{catalog.products.length} منتج</Badge>
-              <Badge variant="outline">{catalog.categories.length} تصنيف</Badge>
-              <Badge variant="outline">{catalog.groups.length} مجموعة</Badge>
-              <Badge variant="outline">{catalog.options.length} خيار</Badge>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function PublishedPreview({
   config,
   validation,
   premiumSection,
-  catalog,
-  loading,
   onOpenDraft,
 }: {
   config: MealBuilderConfig;
   validation: MealBuilderValidation | null;
   premiumSection: MealBuilderPremiumSection | null;
-  catalog: Catalog;
-  loading: boolean;
   onOpenDraft: () => void;
 }) {
   const visualCards = buildMealBuilderVisualCards({
     sections: orderSections(config.sections),
-    products: catalog.products,
-    categories: catalog.categories,
-    options: catalog.options,
+    products: [],
+    categories: [],
+    options: [],
     issues: [
       ...(validation?.errors ?? []),
       ...(validation?.warnings ?? []),
@@ -469,13 +442,12 @@ function PublishedPreview({
             فقط.
           </CardDescription>
         </div>
-        <Button type="button" onClick={onOpenDraft} disabled={loading}>
+        <Button type="button" onClick={onOpenDraft}>
           <FileEdit data-icon="inline-start" />
           فتح المسودة للتعديل
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        {loading ? <LoadingLine /> : null}
         <ValidationSummary validation={validation} dirty={false} />
         <PremiumWarning premiumSection={premiumSection} />
         <VisualCardsGrid cards={visualCards} readOnly />
@@ -503,12 +475,15 @@ function MealBuilderWorkspace({
   onDirtyChange: (dirty: boolean) => void;
   onPublished: () => void;
 }) {
+  const queryClient = useQueryClient();
   const saveDraft = useSaveMealBuilderDraftMutation();
   const validateDraft = useValidateMealBuilderDraftMutation();
   const publishDraft = usePublishMealBuilderDraftMutation();
   const resetDraft = useResetMealBuilderDraftMutation();
 
-  const [sections, setSections] = useState(() => orderSections(draft.sections));
+  const [sections, setSections] = useState(() =>
+    toEditableMealBuilderSections(orderSections(draft.sections))
+  );
   const [notes, setNotes] = useState(draft.notes ?? "");
   const [editor, setEditor] = useState<EditorState>(null);
   const [cardEditorKey, setCardEditorKey] = useState<string | null>(null);
@@ -562,7 +537,7 @@ function MealBuilderWorkspace({
   }
 
   function syncSavedDraft(saved: MealBuilderConfig) {
-    setSections(orderSections(saved.sections));
+    setSections(toEditableMealBuilderSections(orderSections(saved.sections)));
     setNotes(saved.notes ?? notes);
     setValidation(null);
     onDirtyChange(false);
@@ -670,17 +645,7 @@ function MealBuilderWorkspace({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  if (
-                    dirty &&
-                    !window.confirm(
-                      "توجد تغييرات غير محفوظة. هل تريد متابعة إعادة المسودة؟"
-                    )
-                  ) {
-                    return;
-                  }
-                  setResetOpen(true);
-                }}
+                onClick={() => setResetOpen(true)}
                 disabled={pending}
               >
                 <RotateCcw data-icon="inline-start" />
@@ -793,18 +758,26 @@ function MealBuilderWorkspace({
       <ResetDialog
         open={resetOpen}
         pending={resetDraft.isPending}
+        dirty={dirty}
         onClose={() => setResetOpen(false)}
         onReset={() =>
           resetDraft.mutate(undefined, {
             onSuccess: (response) => {
               const resetView = normalizeDraft(response.data, null, null);
               if (resetView.config) {
-                setSections(orderSections(resetView.config.sections));
+                setSections(
+                  toEditableMealBuilderSections(
+                    orderSections(resetView.config.sections)
+                  )
+                );
                 setNotes(resetView.config.notes ?? "");
                 setValidation(resetView.validation);
               }
               onDirtyChange(false);
               setResetOpen(false);
+              queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_KEY] });
+              queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_DRAFT_KEY] });
+              queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_HYDRATED_KEY] });
             },
           })
         }
@@ -950,6 +923,38 @@ function AdvancedBuilderTools({
   );
 }
 
+function DiscardDraftDialog({
+  open,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>عرض النسخة المنشورة؟</DialogTitle>
+          <DialogDescription>
+            توجد تغييرات غير محفوظة في المسودة الحالية. سيبقى الخادم بدون تغيير،
+            لكن سيتم ترك هذه التغييرات المحلية والعودة إلى وضع القراءة.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:justify-start">
+          <Button type="button" variant="destructive" onClick={onConfirm}>
+            ترك التغييرات المحلية
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            إلغاء
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PublishDialog({
   open,
   pending,
@@ -1002,11 +1007,13 @@ function PublishDialog({
 function ResetDialog({
   open,
   pending,
+  dirty,
   onClose,
   onReset,
 }: {
   open: boolean;
   pending: boolean;
+  dirty: boolean;
   onClose: () => void;
   onReset: () => void;
 }) {
@@ -1020,6 +1027,11 @@ function ResetDialog({
             تتأثر النسخة الموجودة في تطبيق العميل.
           </DialogDescription>
         </DialogHeader>
+        {dirty ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            توجد تغييرات محلية غير محفوظة، وسيتم تجاهلها عند تنفيذ الإعادة.
+          </div>
+        ) : null}
         <DialogFooter className="gap-2 sm:justify-start">
           <Button
             type="button"
@@ -1170,9 +1182,16 @@ function normalizePublished(
   const config = data?.config ?? data?.published ?? state?.published ?? null;
   const contract = data?.contract ?? state?.contract ?? state?.preview ?? null;
   const metadata = state?.metadata;
+  const displayConfig =
+    config && contract?.sections?.length
+      ? {
+          ...config,
+          sections: contract.sections.map(contractSectionToMealBuilderSection),
+        }
+      : config;
 
   return {
-    config,
+    config: displayConfig,
     validation: data?.validation ?? state?.validation.published ?? null,
     premiumSection:
       data?.premiumSection ??
@@ -1181,7 +1200,7 @@ function normalizePublished(
       findPremiumSection(config?.sections),
     versionId: nullableString(data?.versionId ?? config?.id),
     versionNumber:
-      data?.versionNumber ?? metadata?.versionNumber ?? config?.revisionHash ?? null,
+      data?.versionNumber ?? metadata?.versionNumber ?? null,
     basedOnPublishedVersionId:
       data?.basedOnPublishedVersionId ??
       metadata?.basedOnPublishedVersionId ??
@@ -1240,7 +1259,6 @@ function normalizeDraft(
       hydratedData?.versionNumber ??
       lifecycle?.versionNumber ??
       metadata?.versionNumber ??
-      config?.revisionHash ??
       null,
     basedOnPublishedVersionId:
       hydratedData?.basedOnPublishedVersionId ??
@@ -1275,6 +1293,73 @@ function validationFromHydrated(
     errors,
     warnings,
     checks: [...errors, ...warnings],
+  };
+}
+
+function contractSectionToMealBuilderSection(
+  section: MealBuilderContractSection,
+  index: number
+): MealBuilderSection {
+  return {
+    id: section.id,
+    key: section.key || section.selectionType || section.id,
+    sectionType: section.sectionType,
+    sourceKind: section.sourceKind,
+    productContextId: section.productContextId ?? null,
+    sourceGroupId: section.sourceGroupId ?? null,
+    sourceCategoryId: section.sourceCategoryId ?? null,
+    selectedOptionIds: [],
+    selectedProductIds: [],
+    includeMode: section.includeMode ?? "selected",
+    selectionType: section.selectionType || "",
+    titleOverride: section.titleI18n ?? {
+      ar: section.title ?? section.key ?? section.id,
+      en: section.title ?? section.key ?? section.id,
+    },
+    sortOrder: Number(section.sortOrder || index + 1),
+    required: Boolean(section.required),
+    minSelections: Number(section.minSelections || 0),
+    maxSelections: section.maxSelections ?? null,
+    multiSelect: Boolean(section.multiSelect),
+    visible: true,
+    availableFor: ["subscription"],
+    items: (section.items ?? []).map(contractItemToHydratedItem),
+  };
+}
+
+function contractItemToHydratedItem(
+  item: MealBuilderContractItem
+): MealBuilderHydratedItem {
+  const type = item.type || item.kind || "option";
+  return {
+    id: item.id,
+    optionId: type === "option" ? item.id : null,
+    productId: type === "product" ? item.id : null,
+    type,
+    key: item.key,
+    label: item.label || item.name || item.nameI18n?.ar || item.nameI18n?.en,
+    name: item.nameI18n,
+    selectionType: item.selectionType,
+    imageUrl: item.imageUrl,
+    kind: item.kind,
+    currency: item.currency,
+    priceHalala: item.priceHalala ?? null,
+    premiumPriceHalala: item.premiumPriceHalala ?? null,
+    upgradePriceHalala: item.upgradePriceHalala ?? null,
+    sortOrder: item.sortOrder ?? null,
+    health: item.health ?? null,
+    status: item.status ?? null,
+    selected: true,
+    eligible: item.eligible !== false,
+    linked: item.linked !== false,
+    available: item.available !== false,
+    active: item.active !== false,
+    visible: item.visible !== false,
+    published: item.published !== false,
+    subscriptionEnabled: item.subscriptionEnabled !== false,
+    relationExists: item.relationExists !== false,
+    catalogItemAvailable: item.catalogItemAvailable !== false,
+    state: "selected",
   };
 }
 
@@ -1317,9 +1402,8 @@ function nullableString(value: unknown): string | null {
   return String(value);
 }
 
-function shortVersion(value?: string | null) {
-  if (!value) return "-";
-  return value.length > 12 ? `${value.slice(0, 12)}…` : value;
+function publishedBaseLabel(value?: string | null) {
+  return value ? "مرتبطة بآخر نسخة منشورة" : "-";
 }
 
 function formatSafeDate(value?: string | null) {

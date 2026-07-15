@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Pencil } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Package, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { halalaToRiyal } from "@/utils/price";
 import {
   Card,
   CardContent,
@@ -63,7 +64,7 @@ export function MealBuilderSimpleCard({
 
         {isPremium ? (
           <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-            يتم تحديث الوجبات المميزة تلقائيًا من صفحة الوجبات المميزة.
+            يتم تحديث الوجبات المميزة تلقائيا من صفحة الوجبات المميزة.
           </p>
         ) : null}
       </CardHeader>
@@ -78,19 +79,23 @@ export function MealBuilderSimpleCard({
 
         {shownItems.length ? (
           <div className="grid gap-2 sm:grid-cols-2">
-            {shownItems.map((item) => (
-              <div
-                key={`${item.kind}:${item.id}`}
-                className="flex min-w-0 items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2.5"
-              >
-                <span className="truncate text-sm font-medium">{item.name}</span>
-                {!isReady(item) ? (
-                  <Badge variant="secondary" className="shrink-0 text-[11px]">
-                    مراجعة
-                  </Badge>
-                ) : null}
-              </div>
-            ))}
+            {shownItems.map((item) =>
+              isPremium ? (
+                <PremiumRow key={`${item.kind}:${item.id}`} item={item} />
+              ) : (
+                <div
+                  key={`${item.kind}:${item.id}`}
+                  className="flex min-w-0 items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2.5"
+                >
+                  <span className="truncate text-sm font-medium">{item.name}</span>
+                  {!isReady(item) ? (
+                    <Badge variant="secondary" className="shrink-0 text-[11px]">
+                      مراجعة
+                    </Badge>
+                  ) : null}
+                </div>
+              )
+            )}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
@@ -130,6 +135,44 @@ function CardStatus({ card }: { card: MealBuilderVisualCard }) {
   );
 }
 
+function PremiumRow({
+  item,
+}: {
+  item: MealBuilderVisualCard["items"][number];
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-3">
+        {item.imageUrl ? (
+          <img
+            src={item.imageUrl}
+            alt=""
+            className="size-11 shrink-0 rounded-md object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="grid size-11 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
+            <Package className="size-4" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{item.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {premiumKindLabel(item.kind)} · ترقية{" "}
+            {formatSar(item.upgradePriceHalala, item.currency)}
+          </p>
+        </div>
+      </div>
+      <Badge
+        variant={isReady(item) ? "default" : "secondary"}
+        className="shrink-0 text-[11px]"
+      >
+        {isReady(item) ? "جاهز" : "يحتاج مراجعة"}
+      </Badge>
+    </div>
+  );
+}
+
 function firstVisibleProblem(card: MealBuilderVisualCard) {
   const itemProblem = card.items.find((item) => !isReady(item));
   if (itemProblem) {
@@ -152,4 +195,12 @@ function isReady(item: MealBuilderVisualCard["items"][number]) {
     item.subscriptionEnabled &&
     item.catalogItemAvailable
   );
+}
+
+function formatSar(value: number | null | undefined, currency?: string | null) {
+  return `${halalaToRiyal(value ?? 0).toFixed(2)} ${currency || "SAR"}`;
+}
+
+function premiumKindLabel(kind: string) {
+  return kind === "product" ? "منتج كامل" : "خيار داخل وجبة";
 }

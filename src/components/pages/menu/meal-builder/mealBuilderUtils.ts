@@ -13,7 +13,6 @@ import type {
 } from "@/types/mealBuilderTypes";
 import {
   FULL_MEAL_PRODUCT_SELECTION_TYPES,
-  PREMIUM_REQUIRED_KEYS,
   REQUIRED_SECTION_ORDER,
   SELECTION_TYPES,
   VISUAL_SECTION_LABELS,
@@ -24,6 +23,10 @@ const FULL_MEAL_METADATA_KEYS = [
   "countsAsFullMeal",
   "mealReplacement",
 ];
+const PREMIUM_MANAGED_SELECTION_TYPES = new Set([
+  "premium_meal",
+  "premium_large_salad",
+]);
 
 export function isFullMealSelectionType(value?: string | null) {
   return FULL_MEAL_PRODUCT_SELECTION_TYPES.includes(String(value || ""));
@@ -40,6 +43,21 @@ export function sectionTreatsAsFullMeal(section: Pick<MealBuilderSection, "selec
     isFullMealSelectionType(section.selectionType) ||
     hasFullMealMetadata(section.metadata) ||
     hasFullMealMetadata(section.rules)
+  );
+}
+
+export function isPremiumManagedSection(
+  section: Pick<
+    MealBuilderSection,
+    "key" | "sourceKind" | "selectionType" | "metadata"
+  >
+) {
+  return (
+    section.key === "premium" ||
+    section.sourceKind === "premium_visual" ||
+    PREMIUM_MANAGED_SELECTION_TYPES.has(String(section.selectionType || "")) ||
+    section.metadata?.automatic === true ||
+    section.metadata?.source === "premium_upgrade_configs"
   );
 }
 
@@ -70,7 +88,7 @@ export function emptySection(type: MealBuilderSectionType): MealBuilderSection {
 }
 
 export function toBackendSections(sections: MealBuilderSection[]) {
-  return orderSections(sections).map((section, index) => ({
+  return orderSections(sections).filter((section) => !isPremiumManagedSection(section)).map((section, index) => ({
     key: section.key,
     sectionType: section.sectionType,
     sourceKind: section.sourceKind,
@@ -131,7 +149,6 @@ export function visualSectionKey(
 
   const text =
     `${section.titleOverride.en} ${section.titleOverride.ar} ${section.selectionType}`.toLowerCase();
-  if (text.includes("premium") || text.includes("مميز")) return "premium";
   if (text.includes("sandwich") || text.includes("ساند")) return "sandwich";
   if (text.includes("carb") || text.includes("نشو")) return "carbs";
   if (text.includes("beef") || text.includes("لحم")) return "beef";
@@ -155,13 +172,6 @@ export function visualSectionKey(
     .join(" ")
     .toLowerCase();
 
-  if (
-    keys.includes("beef_steak") ||
-    keys.includes("shrimp") ||
-    keys.includes("salmon") ||
-    keys.includes("premium_large_salad")
-  )
-    return "premium";
   if (keys.includes("sandwich")) return "sandwich";
   if (
     keys.includes("carb") ||
@@ -207,22 +217,6 @@ export function orderWarnings(
   }
 
   return [...new Set(warnings)];
-}
-
-export function premiumMissingKeys(
-  section: MealBuilderSection,
-  options: MenuOption[],
-  products: MenuProduct[]
-) {
-  const selectedKeys = [
-    ...options
-      .filter((option) => section.selectedOptionIds.includes(option.id))
-      .map((option) => option.key),
-    ...products
-      .filter((product) => section.selectedProductIds.includes(product.id))
-      .map((product) => product.key),
-  ];
-  return PREMIUM_REQUIRED_KEYS.filter((key) => !selectedKeys.includes(key));
 }
 
 export function orderSections(sections: MealBuilderSection[]) {

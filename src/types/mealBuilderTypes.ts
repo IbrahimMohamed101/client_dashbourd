@@ -145,6 +145,8 @@ export interface MealBuilderContractItem {
   id: string;
   key?: string;
   type?: "option" | "product" | string;
+  kind?: "option" | "product" | string;
+  label?: string;
   name?: string;
   nameI18n?: LocalizedText;
   imageUrl?: string;
@@ -154,8 +156,20 @@ export interface MealBuilderContractItem {
   premiumKey?: string | null;
   priceHalala?: number;
   premiumPriceHalala?: number;
-  requiresPremiumBalance?: boolean;
+  upgradePriceHalala?: number | null;
+  currency?: string | null;
+  health?: string | null;
+  status?: string | null;
+  active?: boolean;
+  visible?: boolean;
+  published?: boolean;
+  eligible?: boolean;
+  linked?: boolean;
   available?: boolean;
+  subscriptionEnabled?: boolean;
+  relationExists?: boolean;
+  catalogItemAvailable?: boolean;
+  requiresPremiumBalance?: boolean;
   sortOrder?: number;
   optionGroups?: Array<{
     id: string;
@@ -168,7 +182,11 @@ export interface MealBuilderContractItem {
 
 export interface MealBuilderContractSection {
   id: string;
+  key?: string;
   sectionType: MealBuilderSectionType;
+  sourceKind?: string;
+  type?: string;
+  source?: unknown;
   title?: string;
   titleI18n?: LocalizedText;
   sortOrder: number;
@@ -279,6 +297,7 @@ export interface MealBuilderPublishResponse {
   data: {
     config: MealBuilderConfig;
     validation: MealBuilderValidation;
+    premiumSection?: MealBuilderPremiumSection | null;
     contract: MealBuilderContract;
   };
 }

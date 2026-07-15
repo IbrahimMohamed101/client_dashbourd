@@ -96,6 +96,7 @@ export const mealBuilderPublishedQueryOptions = () =>
         data: {
           ...(rawData ?? {}),
           config: config ?? null,
+          premiumSection: rawData?.premiumSection ?? rawData?.contract?.premiumSection ?? null,
           versionId: config?.versionId ?? config?.id ?? null,
           versionNumber: config?.versionNumber ?? null,
           basedOnPublishedVersionId: config?.basedOnPublishedVersionId ?? null,
@@ -145,13 +146,7 @@ export const mealBuilderReadinessQueryOptions = () =>
 export const mealBuilderHydratedQueryOptions = (enabled = true) =>
   queryOptions({
     queryKey: [MEAL_BUILDER_HYDRATED_KEY],
-    queryFn: async () => {
-      const hydrated = await getMealBuilderHydratedDraft();
-      if (hydrated.data.draft) return hydrated;
-
-      await getMealBuilderDraft();
-      return getMealBuilderHydratedDraft();
-    },
+    queryFn: getMealBuilderHydratedDraft,
     enabled,
     staleTime: 1000 * 20,
   });
@@ -167,7 +162,11 @@ export const mealBuilderPickerQueryOptions = (
     staleTime: 1000 * 15,
   });
 
-export const useMealBuilderQuery = () => useQuery(mealBuilderQueryOptions());
+export const useMealBuilderQuery = (enabled = true) =>
+  useQuery({
+    ...mealBuilderQueryOptions(),
+    enabled,
+  });
 
 export const useMealBuilderPublishedQuery = () =>
   useQuery(mealBuilderPublishedQueryOptions());
