@@ -32,8 +32,11 @@ export const menuCategoriesQueryOptions = (params: MenuListParams = {}) =>
     staleTime: Infinity,
   });
 
-export const useMenuCategoriesQuery = (params: MenuListParams = {}) =>
-  useQuery(menuCategoriesQueryOptions(params));
+export const useMenuCategoriesQuery = (params: MenuListParams = {}, enabled = true) =>
+  useQuery({
+    ...menuCategoriesQueryOptions(params),
+    enabled,
+  });
 
 export const menuCategoryDetailQueryOptions = (id: string) =>
   queryOptions({

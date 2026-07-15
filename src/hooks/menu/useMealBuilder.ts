@@ -96,6 +96,7 @@ export const mealBuilderPublishedQueryOptions = () =>
         data: {
           ...(rawData ?? {}),
           config: config ?? null,
+          premiumSection: rawData?.premiumSection ?? rawData?.contract?.premiumSection ?? null,
           versionId: config?.versionId ?? config?.id ?? null,
           versionNumber: config?.versionNumber ?? null,
           basedOnPublishedVersionId: config?.basedOnPublishedVersionId ?? null,
@@ -167,7 +168,11 @@ export const mealBuilderPickerQueryOptions = (
     staleTime: 1000 * 15,
   });
 
-export const useMealBuilderQuery = () => useQuery(mealBuilderQueryOptions());
+export const useMealBuilderQuery = (enabled = true) =>
+  useQuery({
+    ...mealBuilderQueryOptions(),
+    enabled,
+  });
 
 export const useMealBuilderPublishedQuery = () =>
   useQuery(mealBuilderPublishedQueryOptions());

@@ -1,8 +1,9 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { halalaToRiyal } from "@/utils/price";
 import {
   Card,
   CardContent,
@@ -42,8 +43,8 @@ export function MealBuilderSimpleCard({
             </div>
             <p className="text-sm text-muted-foreground">
               {card.items.length
-                ? `${card.items.length} عناصر متاحة للعميل`
-                : "لا توجد عناصر في هذه البطاقة"}
+                ? `${card.items.length} Ø¹Ù†Ø§ØµØ± Ù…ØªØ§Ø­Ø© Ù„Ù„Ø¹Ù…ÙŠÙ„`
+                : "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ù†Ø§ØµØ± ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø©"}
             </p>
           </div>
 
@@ -56,14 +57,14 @@ export function MealBuilderSimpleCard({
               onClick={onEdit}
             >
               <Pencil data-icon="inline-start" />
-              تعديل
+              ØªØ¹Ø¯ÙŠÙ„
             </Button>
           ) : null}
         </div>
 
         {isPremium ? (
           <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-            يتم تحديث الوجبات المميزة تلقائيًا من صفحة الوجبات المميزة.
+            ÙŠØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„ÙˆØ¬Ø¨Ø§Øª Ø§Ù„Ù…Ù…ÙŠØ²Ø© ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ù…Ù† ØµÙØ­Ø© Ø§Ù„ÙˆØ¬Ø¨Ø§Øª Ø§Ù„Ù…Ù…ÙŠØ²Ø©.
           </p>
         ) : null}
       </CardHeader>
@@ -78,23 +79,27 @@ export function MealBuilderSimpleCard({
 
         {shownItems.length ? (
           <div className="grid gap-2 sm:grid-cols-2">
-            {shownItems.map((item) => (
-              <div
-                key={`${item.kind}:${item.id}`}
-                className="flex min-w-0 items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2.5"
-              >
-                <span className="truncate text-sm font-medium">{item.name}</span>
-                {!isReady(item) ? (
-                  <Badge variant="secondary" className="shrink-0 text-[11px]">
-                    مراجعة
-                  </Badge>
-                ) : null}
-              </div>
-            ))}
+            {shownItems.map((item) =>
+              isPremium ? (
+                <PremiumRow key={`${item.kind}:${item.id}`} item={item} />
+              ) : (
+                <div
+                  key={`${item.kind}:${item.id}`}
+                  className="flex min-w-0 items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2.5"
+                >
+                  <span className="truncate text-sm font-medium">{item.name}</span>
+                  {!isReady(item) ? (
+                    <Badge variant="secondary" className="shrink-0 text-[11px]">
+                      مراجعة
+                    </Badge>
+                  ) : null}
+                </div>
+              )
+            )}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            افتح البطاقة وأضف العناصر المناسبة.
+            Ø§ÙØªØ­ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© ÙˆØ£Ø¶Ù Ø§Ù„Ø¹Ù†Ø§ØµØ± Ø§Ù„Ù…Ù†Ø§Ø³Ø¨Ø©.
           </div>
         )}
 
@@ -106,7 +111,7 @@ export function MealBuilderSimpleCard({
             className="h-8 px-2 text-xs text-muted-foreground"
             onClick={() => setExpanded((current) => !current)}
           >
-            {expanded ? "عرض أقل" : `عرض ${remaining} عناصر أخرى`}
+            {expanded ? "Ø¹Ø±Ø¶ Ø£Ù‚Ù„" : `Ø¹Ø±Ø¶ ${remaining} Ø¹Ù†Ø§ØµØ± Ø£Ø®Ø±Ù‰`}
           </Button>
         ) : null}
       </CardContent>
@@ -120,20 +125,44 @@ function CardStatus({ card }: { card: MealBuilderVisualCard }) {
   return hasProblem ? (
     <Badge variant="secondary">
       <AlertTriangle data-icon="inline-start" />
-      يحتاج مراجعة
+      ÙŠØ­ØªØ§Ø¬ Ù…Ø±Ø§Ø¬Ø¹Ø©
     </Badge>
   ) : (
     <Badge>
       <CheckCircle2 data-icon="inline-start" />
-      جاهز
+      Ø¬Ø§Ù‡Ø²
     </Badge>
+  );
+}
+
+function PremiumRow({
+  item,
+}: {
+  item: MealBuilderVisualCard["items"][number];
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2.5">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{item.name}</p>
+        <p className="text-xs text-muted-foreground">
+          {item.kind === "product" ? "منتج" : "خيار"} · ترقية{" "}
+          {formatSar(item.upgradePriceHalala, item.currency)}
+        </p>
+      </div>
+      <Badge
+        variant={isReady(item) ? "default" : "secondary"}
+        className="shrink-0 text-[11px]"
+      >
+        {isReady(item) ? "جاهز" : "مراجعة"}
+      </Badge>
+    </div>
   );
 }
 
 function firstVisibleProblem(card: MealBuilderVisualCard) {
   const itemProblem = card.items.find((item) => !isReady(item));
   if (itemProblem) {
-    return `العنصر «${itemProblem.name}» غير جاهز للظهور للعميل.`;
+    return `Ø§Ù„Ø¹Ù†ØµØ± Â«${itemProblem.name}Â» ØºÙŠØ± Ø¬Ø§Ù‡Ø² Ù„Ù„Ø¸Ù‡ÙˆØ± Ù„Ù„Ø¹Ù…ÙŠÙ„.`;
   }
 
   const issue =
@@ -152,4 +181,8 @@ function isReady(item: MealBuilderVisualCard["items"][number]) {
     item.subscriptionEnabled &&
     item.catalogItemAvailable
   );
+}
+
+function formatSar(value: number | null | undefined, currency?: string | null) {
+  return `${halalaToRiyal(value ?? 0).toFixed(2)} ${currency || "SAR"}`;
 }

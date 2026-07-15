@@ -18,7 +18,6 @@ import { SECTION_RULE_BADGES } from "./mealBuilderConstants";
 import { IssueRow, PremiumBadge } from "./MealBuilderBadges";
 import {
   nameOf,
-  premiumMissingKeys,
   sectionTitle,
   selectionLabel,
   visualSectionKey,
@@ -55,9 +54,6 @@ export function MealBuilderSectionCard({
   const selectedOptions = options.filter((item) => section.selectedOptionIds.includes(item.id));
   const visualKey = visualSectionKey(section, options, products);
   const visualLabel = visualSectionLabel(visualKey);
-  const missingPremium = visualKey === "premium"
-    ? premiumMissingKeys(section, options, products)
-    : [];
 
   return (
     <div className="rounded-lg border bg-background p-4">
@@ -106,12 +102,6 @@ export function MealBuilderSectionCard({
           </Button>
         </div>
       </div>
-
-      {missingPremium.length ? (
-        <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-          لا يمكن النشر: خيارات بريميوم مطلوبة غير موجودة: {missingPremium.join("، ")}
-        </div>
-      ) : null}
 
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <MiniList title="الخيارات المحددة" items={selectedOptions} fallback={section.sectionType === "option_group" ? "كل خيارات العلاقة" : "لا يوجد"} />

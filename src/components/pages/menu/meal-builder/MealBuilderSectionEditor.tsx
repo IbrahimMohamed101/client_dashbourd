@@ -74,15 +74,24 @@ export function MealBuilderSectionEditor({
   const composerQuery = useMenuProductComposerQuery(
     type === "option_group" ? (section.productContextId ?? "") : ""
   );
-  const linkedGroups = composerQuery.data?.data.linkedOptionGroups ?? [];
-  const linkedGroupIds = new Set(
-    linkedGroups.map((item) => item.groupId).filter(Boolean)
+  const linkedGroups = useMemo(
+    () => composerQuery.data?.data.linkedOptionGroups ?? [],
+    [composerQuery.data?.data.linkedOptionGroups]
+  );
+  const linkedGroupIds = useMemo(
+    () => new Set(linkedGroups.map((item) => item.groupId).filter(Boolean)),
+    [linkedGroups]
   );
   const composerGroup = linkedGroups.find(
     (item) => item.groupId === section.sourceGroupId
   );
-  const relationOptionIds = new Set(
-    composerGroup?.options?.map((item) => item.optionId).filter(Boolean) ?? []
+  const relationOptionIds = useMemo(
+    () =>
+      new Set(
+        composerGroup?.options?.map((item) => item.optionId).filter(Boolean) ??
+          []
+      ),
+    [composerGroup?.options]
   );
 
   const readyProducts = useMemo(
@@ -418,14 +427,6 @@ export function MealBuilderSectionEditor({
                 empty="لا توجد منتجات مناسبة للبحث والمصدر المحددين."
               />
             )
-          ) : null}
-
-          {section.selectionType === "premium_large_salad" ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-950">
-              السلطة الكبيرة المميزة ترقية مدفوعة. السعر والبروتينات المسموحة
-              ومنع البروتين الإضافي كلها تُحسم من إعدادات Premium Upgrades
-              والباكند، وليست من هذا القسم.
-            </div>
           ) : null}
 
           {relationError || draftValidationError || submitError ? (

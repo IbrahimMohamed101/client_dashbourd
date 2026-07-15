@@ -9,6 +9,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { halalaToRiyal } from "@/utils/price";
 import {
   Card,
   CardContent,
@@ -82,8 +83,11 @@ export function MealBuilderVisualCard({
           <Button
             type="button"
             variant="outline"
-            className="w-full shrink-0 justify-center sm:w-auto"
-            disabled={readOnly}
+            className={
+              readOnly
+                ? "hidden"
+                : "w-full shrink-0 justify-center sm:w-auto"
+            }
             onClick={onEdit}
           >
             <Pencil data-icon="inline-start" />
@@ -178,6 +182,10 @@ function MealBuilderItemRow({
 }) {
   const itemIssues = [...item.errors, ...item.warnings];
 
+  if (cardKey === "premium") {
+    return <PremiumItemRow item={item} issues={itemIssues} />;
+  }
+
   return (
     <div className="rounded-lg border bg-background p-3">
       <div className="min-w-0 space-y-2">
@@ -234,6 +242,74 @@ function isReadyItem(item: VisualItem) {
     item.linked &&
     item.catalogItemAvailable
   );
+}
+
+function PremiumItemRow({
+  item,
+  issues,
+}: {
+  item: VisualItem;
+  issues: VisualItem["errors"];
+}) {
+  return (
+    <div className="rounded-lg border bg-background p-3">
+      <div className="flex gap-3">
+        {item.imageUrl ? (
+          <img
+            src={item.imageUrl}
+            alt=""
+            className="size-14 rounded-md object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="grid size-14 place-items-center rounded-md bg-muted text-muted-foreground">
+            <Package className="size-5" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium">{item.name}</span>
+            <Badge variant="outline">
+              {item.kind === "product" ? "منتج" : "خيار"}
+            </Badge>
+            <Badge variant={isReadyItem(item) ? "default" : "destructive"}>
+              {premiumItemStatusLabel(item)}
+            </Badge>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span>
+              ترقية {formatSar(item.upgradePriceHalala, item.currency)}
+            </span>
+            {item.health ? <span>{item.health}</span> : null}
+          </div>
+          {issues.length ? (
+            <div className="space-y-1 pt-1">
+              {issues.slice(0, 2).map((issue, index) => (
+                <p
+                  key={`${mealBuilderIssueCode(issue) || "premium-issue"}-${index}`}
+                  className="text-xs text-muted-foreground"
+                >
+                  {mealBuilderIssueText(issue)}
+                </p>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function premiumItemStatusLabel(item: VisualItem) {
+  if (!item.linked || !item.relationExists) return "يحتاج ربط";
+  if (!item.available || !item.catalogItemAvailable) return "غير متاح";
+  if (!item.published) return "غير منشور";
+  if (!item.subscriptionEnabled) return "ليس للاشتراك";
+  return "جاهز";
+}
+
+function formatSar(value: number | null | undefined, currency?: string | null) {
+  return `${halalaToRiyal(value ?? 0).toFixed(2)} ${currency || "SAR"}`;
 }
 
 function ProblemCount({ card }: { card: VisualCard }) {
