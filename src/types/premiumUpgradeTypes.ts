@@ -22,7 +22,15 @@ export type PremiumUpgradeConfigDto = {
   priceSar?: number | null;
   currency?: "SAR" | string | null;
   status?: PremiumUpgradeStatus | string | null;
-  health?: PremiumUpgradeHealth | string | null;
+  health?:
+    | PremiumUpgradeHealth
+    | string
+    | {
+        status?: PremiumUpgradeHealth | string | null;
+        code?: string | null;
+        message?: string | null;
+      }
+    | null;
   issueCode?: string | null;
   sortOrder?: number | null;
 
@@ -43,6 +51,9 @@ export type PremiumUpgradeConfigDto = {
   } | null;
 
   sourceType?: "menu_option" | "menu_product" | string;
+  sourceProductId?: string | null;
+  sourceGroupId?: string | null;
+  sourceGroupKey?: string | null;
   sourceName?: PremiumUpgradeLocalizedName | null;
   sourceKey?: string | null;
   premiumKey?: string | null;
@@ -65,6 +76,9 @@ export type PremiumUpgradeConfigDto = {
     subscriptionEnabled?: boolean;
     relationValid?: boolean;
   } | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  archivedAt?: string | null;
 };
 
 export type PremiumUpgradeSourceDto = {
@@ -164,8 +178,7 @@ export type PremiumUpgradeSourceFilters = {
 export type PremiumUpgradeCreatePayload = {
   kind: PremiumUpgradeKind;
   sourceId: string;
-  sourceProductId?: string | null;
-  sourceGroupId?: string | null;
+  relationId?: string;
   upgradeDeltaHalala: number;
   currency: "SAR";
   isActive: boolean;
@@ -174,11 +187,10 @@ export type PremiumUpgradeCreatePayload = {
 };
 
 export type PremiumUpgradeUpdatePayload = {
-  expectedRevision: number;
+  expectedRevision?: number;
   kind?: PremiumUpgradeKind;
   sourceId?: string;
-  sourceProductId?: string | null;
-  sourceGroupId?: string | null;
+  relationId?: string;
   upgradeDeltaHalala?: number;
   currency?: "SAR";
   isActive?: boolean;

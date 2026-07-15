@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 
 import api from "@/lib/apis";
+import { parseApiError } from "@/lib/apiErrors";
 import { halalaToRiyal, riyalToHalala } from "@/utils/price";
 import type {
   PremiumUpgradeArchivePayload,
@@ -38,12 +39,14 @@ export const defaultPremiumUpgradeSourceFilters: PremiumUpgradeSourceFilters = {
   kind: "product",
   status: "active",
   page: 1,
-  limit: 50,
+  limit: 20,
 };
 
 const premiumErrorMessages: Record<string, string> = {
   PREMIUM_SOURCE_NOT_FOUND: "المصدر المحدد لم يعد موجودًا",
   PREMIUM_SOURCE_NOT_SELECTABLE: "المصدر المحدد غير متاح للاشتراكات",
+  PREMIUM_SOURCE_RELATION_AMBIGUOUS:
+    "هذا الخيار مرتبط بأكثر من وجبة. اختر العلاقة المحددة من قائمة المصادر.",
   PREMIUM_SOURCE_RELATION_INVALID:
     "علاقة الخيار بالمنتج أو المجموعة غير صالحة",
   PREMIUM_SOURCE_CONFLICT: "هذا المصدر مربوط بترقية مميزة أخرى",
@@ -144,23 +147,19 @@ export function buildCreatePremiumUpgradePayload(form: {
   isVisible: boolean;
   sortOrder: string;
 }): PremiumUpgradeCreatePayload {
-  return {
+  const payload: PremiumUpgradeCreatePayload = {
     kind: form.kind,
     sourceId: form.selectedSource.sourceId,
-    sourceProductId:
-      form.selectedSource.kind === "product"
-        ? form.selectedSource.sourceProductId ?? form.selectedSource.sourceId
-        : form.selectedSource.sourceProductId ?? null,
-    sourceGroupId:
-      form.selectedSource.kind === "product"
-        ? null
-        : form.selectedSource.sourceGroupId ?? null,
     upgradeDeltaHalala: riyalToHalala(form.upgradePriceSarInput),
     currency: form.currency,
     isActive: Boolean(form.isActive),
     isVisible: Boolean(form.isVisible),
     sortOrder: Number(form.sortOrder),
   };
+  if (form.kind === "option" && form.selectedSource.relationId) {
+    payload.relationId = form.selectedSource.relationId;
+  }
+  return payload;
 }
 
 export function buildRelinkPremiumUpgradePayload({
@@ -170,28 +169,36 @@ export function buildRelinkPremiumUpgradePayload({
   row: PremiumUpgradeConfigDto;
   selectedSource: PremiumUpgradeSourceDto;
 }): PremiumUpgradeUpdatePayload {
-  return {
-    expectedRevision: row.revision ?? 0,
+  const payload: PremiumUpgradeUpdatePayload = {
     kind: selectedSource.kind === "product" ? "product" : "option",
     sourceId: selectedSource.sourceId,
-    sourceProductId:
-      selectedSource.kind === "product"
-        ? selectedSource.sourceProductId ?? selectedSource.sourceId
-        : selectedSource.sourceProductId ?? null,
-    sourceGroupId:
-      selectedSource.kind === "product"
-        ? null
-        : selectedSource.sourceGroupId ?? null,
   };
+  if (row.revision !== undefined) payload.expectedRevision = row.revision;
+  if (selectedSource.kind === "option" && selectedSource.relationId) {
+    payload.relationId = selectedSource.relationId;
+  }
+  return payload;
 }
 
 export function showPremiumUpgradeError(error: unknown) {
   const code = getPremiumUpgradeErrorCode(error);
+  const parsed = parseApiError(error);
   toast.error(
-    (code && premiumErrorMessages[code]) ||
-      getApiErrorMessage(error) ||
+    premiumErrorMessageForCode(code) ||
+      parsed.message ||
       "حدث خطأ غير متوقع. حدّث البيانات وحاول مرة أخرى."
   );
+}
+
+export function premiumErrorMessageForCode(code?: string | null) {
+  switch (code) {
+    case "PREMIUM_SOURCE_RELATION_AMBIGUOUS":
+      return "هذا الخيار مرتبط بأكثر من وجبة. اختر العلاقة المحددة من قائمة المصادر.";
+    case "PREMIUM_SOURCE_RELATION_INVALID":
+      return "ربط المصدر غير صحيح. حدّث قائمة المصادر واختر العنصر مرة أخرى.";
+    default:
+      return code ? premiumErrorMessages[code] : undefined;
+  }
 }
 
 export function getPremiumUpgradeErrorCode(error: unknown): string | null {
@@ -227,9 +234,9 @@ export function premiumRowKey(row: PremiumUpgradeConfigDto) {
 }
 
 export function premiumRowKind(row: PremiumUpgradeConfigDto): PremiumUpgradeKind {
-  if (row.kind === "product" || row.sourceType === "menu_product") {
-    return "product";
-  }
+  if (row.kind === "product") return "product";
+  if (row.kind === "option") return "option";
+  if (row.sourceType === "menu_product") return "product";
   return "option";
 }
 
@@ -285,6 +292,127 @@ export function premiumRowStatus(row: PremiumUpgradeConfigDto): string {
   return "active";
 }
 
+export function premiumDetailStatus(
+  compactRow: PremiumUpgradeConfigDto | null | undefined,
+  detailRow: PremiumUpgradeConfigDto
+): PremiumUpgradeStatus {
+  if (compactRow?.status === "archived") return "archived";
+
+  const display = readRecord(detailRow.display);
+  const enabled = display.enabled ?? detailRow.isEnabled;
+  const visible = display.visible ?? detailRow.isVisible;
+
+  if (enabled === false) return "disabled";
+  if (enabled === true && visible === false) return "hidden";
+  if (enabled === true) return "active";
+
+  if (
+    compactRow?.status === "active" ||
+    compactRow?.status === "hidden" ||
+    compactRow?.status === "disabled"
+  ) {
+    return compactRow.status;
+  }
+
+  return "active";
+}
+
+export function premiumEditStateFromRow(row: PremiumUpgradeConfigDto) {
+  const display = readRecord(row.display);
+  if (display.enabled !== undefined || display.visible !== undefined) {
+    return {
+      isActive:
+        display.enabled !== undefined
+          ? Boolean(display.enabled)
+          : row.isEnabled !== false,
+      isVisible:
+        display.visible !== undefined
+          ? Boolean(display.visible)
+          : row.isVisible !== false,
+    };
+  }
+  const status = premiumRowStatus(row);
+  if (status === "active") return { isActive: true, isVisible: true };
+  if (status === "hidden") return { isActive: true, isVisible: false };
+  if (status === "disabled") {
+    return {
+      isActive: false,
+      isVisible: row.isVisible !== undefined ? row.isVisible !== false : false,
+    };
+  }
+  return {
+    isActive: row.isEnabled !== false,
+    isVisible: row.isVisible !== false,
+  };
+}
+
+export function premiumDetailRevision(row: PremiumUpgradeConfigDto) {
+  return Number.isInteger(row.revision) ? row.revision : undefined;
+}
+
+export function premiumDetailSortOrder(row: PremiumUpgradeConfigDto) {
+  const display = readRecord(row.display);
+  const sortOrder = Number(display.sortOrder ?? row.sortOrder ?? 0);
+  return Number.isFinite(sortOrder) ? sortOrder : 0;
+}
+
+export function premiumDetailCurrency(row: PremiumUpgradeConfigDto) {
+  const pricing = readRecord(row.pricing);
+  return String(pricing.currency || row.currency || "SAR").toUpperCase() as "SAR";
+}
+
+export function premiumDetailUpgradeDeltaSar(row: PremiumUpgradeConfigDto) {
+  const pricing = readRecord(row.pricing);
+  if (pricing.upgradeDeltaSar !== undefined && pricing.upgradeDeltaSar !== null) {
+    const amount = Number(pricing.upgradeDeltaSar);
+    if (Number.isFinite(amount)) return amount;
+  }
+  return premiumPriceSar(row);
+}
+
+export function premiumDetailUpgradeDeltaHalala(row: PremiumUpgradeConfigDto) {
+  const pricing = readRecord(row.pricing);
+  if (pricing.upgradeDeltaHalala !== undefined && pricing.upgradeDeltaHalala !== null) {
+    const amount = Number(pricing.upgradeDeltaHalala);
+    if (Number.isFinite(amount)) return amount;
+  }
+  return premiumPriceHalala(row);
+}
+
+export function premiumDetailHealthStatus(row: PremiumUpgradeConfigDto): PremiumUpgradeHealth {
+  const health = readRecord(row.health);
+  if (health.status === "ready" || health.status === "broken") return health.status;
+  return premiumRowHealth(row);
+}
+
+export function premiumDetailHealthCode(row: PremiumUpgradeConfigDto) {
+  const health = readRecord(row.health);
+  return typeof health.code === "string" && health.code ? health.code : row.issueCode || null;
+}
+
+export function normalizePremiumUpgradeRow(
+  row: PremiumUpgradeConfigDto
+): PremiumUpgradeConfigDto {
+  const priceHalala = premiumPriceHalala(row);
+  return {
+    ...row,
+    key: row.key || row.premiumKey || row.sourceKey || "",
+    name: row.name ?? row.sourceName ?? "",
+    kind: row.kind === "product" || row.kind === "option" ? row.kind : premiumRowKind(row),
+    sourceId: row.sourceId || null,
+    priceHalala,
+    priceSar:
+      row.priceSar !== null && row.priceSar !== undefined
+        ? Number(row.priceSar)
+        : halalaToRiyal(priceHalala),
+    currency: row.currency || "SAR",
+    status: premiumRowStatus(row),
+    health: premiumRowHealth(row),
+    issueCode: row.issueCode || null,
+    sortOrder: Number(row.sortOrder || 0),
+  };
+}
+
 export function premiumPriceHalala(row: PremiumUpgradeConfigDto) {
   return Number(
     row.priceHalala ?? row.upgradeDeltaHalala ?? halalaFromSar(row.priceSar)
@@ -328,7 +456,7 @@ export function getSourceRelationId(source: PremiumUpgradeSourceDto) {
 
 export function sourceHasRequiredRelation(source: PremiumUpgradeSourceDto) {
   if (source.kind !== "option") return true;
-  return Boolean(source.sourceId && source.sourceProductId && source.sourceGroupId);
+  return Boolean(source.relationId);
 }
 
 export function isSourceCompatibleWithConfig(
@@ -363,6 +491,13 @@ export function sourceConflictMessage(
   return null;
 }
 
+export function isSourceSelectable(
+  source: PremiumUpgradeSourceDto,
+  currentConfigId?: string
+) {
+  return !sourceConflictMessage(source, currentConfigId);
+}
+
 export function sourceRelationContext(source: PremiumUpgradeSourceDto) {
   const product =
     source.sourceProductKey ||
@@ -379,6 +514,10 @@ export function sourceRelationContext(source: PremiumUpgradeSourceDto) {
   ]
     .filter(Boolean)
     .join(" — ");
+}
+
+export function sourceGroupName(source: PremiumUpgradeSourceDto) {
+  return formatSourceContextValue(source.group);
 }
 
 export function buildListParams(filters: PremiumUpgradeListFilters) {
@@ -420,11 +559,8 @@ function halalaFromSar(value: unknown) {
   return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
 }
 
-function getApiErrorMessage(error: unknown): string | null {
-  return (
-    (error as { normalizedMessage?: string })?.normalizedMessage ||
-    (error as { response?: { data?: { message?: string } } })?.response?.data
-      ?.message ||
-    null
-  );
+function readRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }

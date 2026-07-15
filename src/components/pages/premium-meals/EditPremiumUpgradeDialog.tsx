@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,22 +19,29 @@ import type {
   PremiumUpgradeSourceFilters,
 } from "@/types/premiumUpgradeTypes";
 import {
+  usePremiumUpgradeDetailQuery,
   usePremiumUpgradeSourcesQuery,
   useUpdatePremiumUpgradeMutation,
 } from "@/hooks/usePremiumUpgradesQuery";
+import { parseApiError } from "@/lib/apiErrors";
 import {
   buildRelinkPremiumUpgradePayload,
   defaultPremiumUpgradeSourceFilters,
   getSourceRelationId,
-  isSourceCompatibleWithConfig,
+  premiumDetailCurrency,
+  premiumDetailRevision,
+  premiumDetailSortOrder,
+  premiumDetailUpgradeDeltaSar,
+  premiumEditStateFromRow,
   premiumDisplayName,
-  premiumPriceSar,
+  premiumKindLabel,
   premiumRowHealth,
   premiumRowKind,
   premiumRowName,
   sourceHasRequiredRelation,
   sourceRelationContext,
 } from "@/utils/fetchPremiumUpgrades";
+import { useDebounce } from "@/hooks/useDebounce";
 import { isValidRiyalInput, riyalToHalala } from "@/utils/price";
 import { SelectField } from "./PremiumUpgradeFilters";
 import { ReadOnlyItem, StateToggleLine } from "./PremiumCandidateCard";
@@ -53,6 +60,8 @@ export function EditPremiumUpgradeDialog({
   onSaved: () => void;
 }) {
   const isRelink = mode === "relink";
+  const detailQuery = usePremiumUpgradeDetailQuery(row?.id ?? null);
+  const detail = detailQuery.data?.data ?? null;
 
   return (
     <Dialog open={Boolean(row)} onOpenChange={(next) => !next && onClose()}>
@@ -69,20 +78,30 @@ export function EditPremiumUpgradeDialog({
         </DialogHeader>
 
         {row ? (
+          detailQuery.isLoading ? (
+            <DialogLoading />
+          ) : detailQuery.isError ? (
+            <DialogError error={detailQuery.error} onRetry={() => detailQuery.refetch()} />
+          ) : detail ? (
           isRelink ? (
             <RelinkPremiumUpgradeForm
-              key={row.id}
-              row={row}
+              key={`${detail.id}-${detail.revision ?? "detail"}`}
+              row={detail}
               onClose={onClose}
               onSaved={onSaved}
             />
           ) : (
             <EditPremiumUpgradeForm
-              key={row.id}
-              row={row}
+              key={`${detail.id}-${detail.revision ?? "detail"}`}
+              row={detail}
               onClose={onClose}
               onSaved={onSaved}
             />
+          )
+          ) : (
+            <div className="rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
+              لا توجد بيانات لهذا السجل.
+            </div>
           )
         ) : null}
       </DialogContent>
@@ -99,12 +118,14 @@ function EditPremiumUpgradeForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const editState = premiumEditStateFromRow(row);
+  const revision = premiumDetailRevision(row);
   const [form, setForm] = useState({
-    upgradePriceSarInput: String(premiumPriceSar(row)),
-    currency: "SAR" as const,
-    isActive: row.status ? row.status === "active" : row.isEnabled !== false,
-    isVisible: row.status ? row.status !== "hidden" : row.isVisible !== false,
-    sortOrder: String(row.sortOrder ?? 0),
+    upgradePriceSarInput: String(premiumDetailUpgradeDeltaSar(row)),
+    currency: premiumDetailCurrency(row),
+    isActive: editState.isActive,
+    isVisible: editState.isVisible,
+    sortOrder: String(premiumDetailSortOrder(row)),
   });
   const updateMutation = useUpdatePremiumUpgradeMutation(onSaved);
 
@@ -117,21 +138,24 @@ function EditPremiumUpgradeForm({
     }
 
     const sortOrder = Number(form.sortOrder);
-    if (!Number.isFinite(sortOrder)) {
-      toast.error("الترتيب يجب أن يكون رقمًا.");
+    if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+      toast.error("الترتيب يجب أن يكون رقمًا صحيحًا وغير سالب.");
       return;
     }
 
-    updateMutation.mutate({
-      id: row.id,
-      payload: {
-        expectedRevision: row.revision ?? 0,
+    const payload = {
         upgradeDeltaHalala: riyalToHalala(form.upgradePriceSarInput),
         currency: form.currency,
         isActive: form.isActive,
         isVisible: form.isVisible,
         sortOrder,
-      },
+      };
+    updateMutation.mutate({
+      id: row.id,
+      payload:
+        revision !== undefined
+          ? { ...payload, expectedRevision: revision }
+          : payload,
     });
   }
 
@@ -141,7 +165,7 @@ function EditPremiumUpgradeForm({
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className="space-y-2">
-          <Label>سعر الترقية</Label>
+          <Label>فرق سعر الترقية بالريال</Label>
           <PriceInput
             value={form.upgradePriceSarInput}
             onChange={(upgradePriceSarInput) =>
@@ -149,14 +173,7 @@ function EditPremiumUpgradeForm({
             }
           />
         </div>
-        <SelectField
-          label="العملة"
-          value={form.currency}
-          onValueChange={() =>
-            setForm((current) => ({ ...current, currency: "SAR" }))
-          }
-          options={[["SAR", "SAR"]]}
-        />
+        <ReadOnlyItem label="العملة" value={form.currency} />
         <NumberField
           label="الترتيب"
           value={form.sortOrder}
@@ -213,15 +230,17 @@ function RelinkPremiumUpgradeForm({
     kind,
     excludeConfigId: row.id,
   });
-  const sourcesQuery = usePremiumUpgradeSourcesQuery(sourceFilters, true);
+  const [sourceSearch, setSourceSearch] = useState("");
+  const debouncedSourceSearch = useDebounce(sourceSearch, 350);
+  const sourceQueryFilters = {
+    ...sourceFilters,
+    q: debouncedSourceSearch,
+  };
+  const sourcesQuery = usePremiumUpgradeSourcesQuery(sourceQueryFilters, true);
   const updateMutation = useUpdatePremiumUpgradeMutation(onSaved);
-  const compatibleSources = useMemo(
-    () =>
-      (sourcesQuery.data?.data ?? []).filter((source) =>
-        isSourceCompatibleWithConfig(source, row)
-      ),
-    [row, sourcesQuery.data?.data]
-  );
+  const sources = sourcesQuery.data?.data ?? [];
+  const sourceTotal = sourcesQuery.data?.meta?.total ?? sources.length;
+  const sourceTotalPages = Math.max(1, Math.ceil(sourceTotal / sourceFilters.limit));
 
   function updateKind(value: string) {
     const nextKind = value as PremiumUpgradeKind;
@@ -231,9 +250,9 @@ function RelinkPremiumUpgradeForm({
       ...current,
       kind: nextKind,
       excludeConfigId: row.id,
-      q: "",
       page: 1,
     }));
+    setSourceSearch("");
   }
 
   function submit(event: FormEvent) {
@@ -242,14 +261,15 @@ function RelinkPremiumUpgradeForm({
       toast.error("اختر مصدرًا صالحًا أولاً.");
       return;
     }
-    if (!sourceHasRequiredRelation(selectedSource)) {
-      toast.error(
-        "تعذر تحديد علاقة الخيار بالمنتج والمجموعة. حدّث قائمة المصادر وحاول مرة أخرى."
-      );
+    if (selectedSource.selectable === false) {
+      toast.error("المصدر المحدد غير متاح للاشتراكات.");
       return;
     }
-    if (!isSourceCompatibleWithConfig(selectedSource, row)) {
-      toast.error("المصدر المختار غير متوافق مع هوية الترقية الحالية");
+
+    if (!sourceHasRequiredRelation(selectedSource)) {
+      toast.error(
+        "تعذر تحديد علاقة هذا الخيار. حدّث قائمة المصادر واختر العنصر مرة أخرى."
+      );
       return;
     }
 
@@ -278,16 +298,25 @@ function RelinkPremiumUpgradeForm({
         <div className="space-y-2">
           <Label>المصدر</Label>
           <MenuSourcePicker
-            sources={compatibleSources}
+            sources={sources}
+            selectedSource={selectedSource}
             selectedRelationId={
               selectedSource ? getSourceRelationId(selectedSource) : ""
             }
-            search={sourceFilters.q}
+            search={sourceSearch}
             loading={sourcesQuery.isLoading || sourcesQuery.isFetching}
+            error={sourcesQuery.error}
+            page={sourceQueryFilters.page}
+            totalPages={sourceTotalPages}
             currentConfigId={row.id}
-            onSearchChange={(q) =>
-              setSourceFilters((current) => ({ ...current, q, page: 1 }))
+            onSearchChange={(value) => {
+              setSourceSearch(value);
+              setSourceFilters((current) => ({ ...current, page: 1 }));
+            }}
+            onPageChange={(page) =>
+              setSourceFilters((current) => ({ ...current, page }))
             }
+            onRetry={() => sourcesQuery.refetch()}
             onSelect={setSelectedSource}
           />
         </div>
@@ -300,8 +329,8 @@ function RelinkPremiumUpgradeForm({
             value={premiumDisplayName(selectedSource.name)}
           />
           <ReadOnlyItem
-            label="العلاقة"
-            value={sourceRelationContext(selectedSource) || getSourceRelationId(selectedSource)}
+            label="السياق"
+            value={sourceRelationContext(selectedSource) || "-"}
           />
         </div>
       ) : null}
@@ -321,11 +350,33 @@ function RelinkPremiumUpgradeForm({
   );
 }
 
+function DialogLoading() {
+  return (
+    <div className="space-y-3">
+      <div className="h-16 rounded-lg bg-muted/70" />
+      <div className="h-28 rounded-lg bg-muted/50" />
+    </div>
+  );
+}
+
+function DialogError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const parsed = parseApiError(error);
+  return (
+    <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+      <p className="font-medium">{parsed.message}</p>
+      <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+        إعادة المحاولة
+      </Button>
+    </div>
+  );
+}
+
 function Summary({ row }: { row: PremiumUpgradeConfigDto }) {
   return (
     <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 md:grid-cols-3">
       <ReadOnlyItem label="الاسم" value={premiumRowName(row)} />
       <ReadOnlyItem label="المفتاح" value={row.key || row.premiumKey || "-"} />
+      <ReadOnlyItem label="النوع" value={premiumKindLabel(premiumRowKind(row))} />
       <ReadOnlyItem
         label="الصحة"
         value={premiumRowHealth(row) === "broken" ? "يحتاج إصلاح" : "جاهز"}
