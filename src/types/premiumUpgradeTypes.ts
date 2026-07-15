@@ -32,6 +32,15 @@ export type PremiumUpgradeConfigDto = {
   display?: unknown;
   behavior?: unknown;
   compatibility?: unknown;
+  repair?: {
+    currentPremiumKey?: string | null;
+    missingSourceId?: string | null;
+    expectedKind?: PremiumUpgradeKind | string | null;
+    compatibleReplacementCount?: number | null;
+    compatibleSourceSuggestions?: PremiumUpgradeSourceDto[];
+    canRelink?: boolean;
+    blockingIssueCode?: string | null;
+  } | null;
 
   sourceType?: "menu_option" | "menu_product" | string;
   sourceName?: PremiumUpgradeLocalizedName | null;
@@ -60,12 +69,25 @@ export type PremiumUpgradeConfigDto = {
 
 export type PremiumUpgradeSourceDto = {
   id: string;
+  sourceId: string;
   kind: PremiumUpgradeKind | string;
+  sourceProductId?: string | null;
+  sourceGroupId?: string | null;
+  sourceProductKey?: string | null;
+  sourceGroupKey?: string | null;
+  relationId: string;
   key?: string | null;
   name?: string | PremiumUpgradeLocalizedName | null;
   imageUrl?: string | null;
   group?: string | PremiumUpgradeLocalizedName | { key?: string | null; name?: string | PremiumUpgradeLocalizedName | null } | null;
+  product?: string | PremiumUpgradeLocalizedName | { key?: string | null; name?: string | PremiumUpgradeLocalizedName | null } | null;
+  supportedSelectionType?: "premium_meal" | "premium_large_salad" | string | null;
+  premiumCompatibilityKeys?: string[];
+  compatibilityKeys?: string[];
   selectable?: boolean;
+  linked?: boolean;
+  linkedConfigId?: string | null;
+  conflictReason?: string | null;
 };
 
 export type PremiumUpgradeListResponse<T> = {
@@ -136,11 +158,14 @@ export type PremiumUpgradeSourceFilters = {
   status: "active" | "all";
   page: number;
   limit: number;
+  excludeConfigId?: string;
 };
 
 export type PremiumUpgradeCreatePayload = {
   kind: PremiumUpgradeKind;
   sourceId: string;
+  sourceProductId?: string | null;
+  sourceGroupId?: string | null;
   upgradeDeltaHalala: number;
   currency: "SAR";
   isActive: boolean;
@@ -149,9 +174,11 @@ export type PremiumUpgradeCreatePayload = {
 };
 
 export type PremiumUpgradeUpdatePayload = {
-  expectedRevision?: number;
+  expectedRevision: number;
   kind?: PremiumUpgradeKind;
   sourceId?: string;
+  sourceProductId?: string | null;
+  sourceGroupId?: string | null;
   upgradeDeltaHalala?: number;
   currency?: "SAR";
   isActive?: boolean;

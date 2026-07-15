@@ -42,19 +42,32 @@ export const defaultPremiumUpgradeSourceFilters: PremiumUpgradeSourceFilters = {
 };
 
 const premiumErrorMessages: Record<string, string> = {
+  PREMIUM_SOURCE_NOT_FOUND: "المصدر المحدد لم يعد موجودًا",
+  PREMIUM_SOURCE_NOT_SELECTABLE: "المصدر المحدد غير متاح للاشتراكات",
+  PREMIUM_SOURCE_RELATION_INVALID:
+    "علاقة الخيار بالمنتج أو المجموعة غير صالحة",
+  PREMIUM_SOURCE_CONFLICT: "هذا المصدر مربوط بترقية مميزة أخرى",
+  PREMIUM_KEY_CONFLICT: "يوجد إعداد نشط آخر بنفس مفتاح الترقية",
+  PREMIUM_RELINK_KEY_MISMATCH:
+    "المصدر المختار غير متوافق مع هوية الترقية الحالية",
+  PREMIUM_UPGRADE_REVISION_CONFLICT:
+    "تم تعديل العنصر بواسطة مستخدم آخر. حدّث البيانات وحاول مرة أخرى",
+  PREMIUM_UPGRADE_INVALID_HEALTH: "فلتر حالة الصحة غير صحيح",
   PREMIUM_UPGRADE_INVALID_SOURCE_ID:
     "معرف المصدر غير صحيح. حدّث قائمة المصادر وحاول مرة أخرى.",
-  PREMIUM_UPGRADE_SOURCE_NOT_FOUND: "المصدر المحدد لم يعد موجودا.",
+  PREMIUM_UPGRADE_SOURCE_NOT_FOUND: "المصدر المحدد لم يعد موجودًا.",
   PREMIUM_UPGRADE_SOURCE_NOT_ELIGIBLE:
     "هذا المصدر غير مؤهل ليكون ترقية مميزة.",
-  PREMIUM_UPGRADE_RELATION_INVALID: "ربط المصدر غير صحيح أو غير مكتمل.",
-  PREMIUM_UPGRADE_DUPLICATE: "هذا المصدر مربوط مسبقا كترقية مميزة.",
-  PREMIUM_UPGRADE_KEY_CONFLICT: "مفتاح الترقية المميزة مستخدم مسبقا.",
+  PREMIUM_UPGRADE_RELATION_INVALID:
+    "ربط المصدر غير صحيح أو غير مكتمل.",
+  PREMIUM_UPGRADE_DUPLICATE:
+    "هذا المصدر مربوط مسبقًا كترقية مميزة.",
+  PREMIUM_UPGRADE_KEY_CONFLICT:
+    "مفتاح الترقية المميزة مستخدم مسبقًا.",
   PREMIUM_UPGRADE_INVALID_DELTA:
-    "سعر الترقية يجب أن يكون رقما صحيحا وغير سالب.",
-  PREMIUM_UPGRADE_REVISION_CONFLICT:
-    "تم تعديل هذا العنصر بواسطة مدير آخر. حدّث البيانات وحاول مرة أخرى.",
-  PREMIUM_UPGRADE_ARCHIVED: "هذه الترقية مؤرشفة ولا تقبل هذا الإجراء.",
+    "سعر الترقية يجب أن يكون رقمًا صحيحًا وغير سالب.",
+  PREMIUM_UPGRADE_ARCHIVED:
+    "هذه الترقية مؤرشفة ولا تقبل هذا الإجراء.",
 };
 
 export async function fetchPremiumUpgradeReadiness(): Promise<PremiumUpgradeReadinessResponse> {
@@ -124,7 +137,7 @@ export async function archivePremiumUpgrade({
 
 export function buildCreatePremiumUpgradePayload(form: {
   kind: PremiumUpgradeKind;
-  sourceId: string;
+  selectedSource: PremiumUpgradeSourceDto;
   upgradePriceSarInput: string;
   currency: "SAR";
   isActive: boolean;
@@ -133,12 +146,42 @@ export function buildCreatePremiumUpgradePayload(form: {
 }): PremiumUpgradeCreatePayload {
   return {
     kind: form.kind,
-    sourceId: form.sourceId,
+    sourceId: form.selectedSource.sourceId,
+    sourceProductId:
+      form.selectedSource.kind === "product"
+        ? form.selectedSource.sourceProductId ?? form.selectedSource.sourceId
+        : form.selectedSource.sourceProductId ?? null,
+    sourceGroupId:
+      form.selectedSource.kind === "product"
+        ? null
+        : form.selectedSource.sourceGroupId ?? null,
     upgradeDeltaHalala: riyalToHalala(form.upgradePriceSarInput),
     currency: form.currency,
     isActive: Boolean(form.isActive),
     isVisible: Boolean(form.isVisible),
     sortOrder: Number(form.sortOrder),
+  };
+}
+
+export function buildRelinkPremiumUpgradePayload({
+  row,
+  selectedSource,
+}: {
+  row: PremiumUpgradeConfigDto;
+  selectedSource: PremiumUpgradeSourceDto;
+}): PremiumUpgradeUpdatePayload {
+  return {
+    expectedRevision: row.revision ?? 0,
+    kind: selectedSource.kind === "product" ? "product" : "option",
+    sourceId: selectedSource.sourceId,
+    sourceProductId:
+      selectedSource.kind === "product"
+        ? selectedSource.sourceProductId ?? selectedSource.sourceId
+        : selectedSource.sourceProductId ?? null,
+    sourceGroupId:
+      selectedSource.kind === "product"
+        ? null
+        : selectedSource.sourceGroupId ?? null,
   };
 }
 
@@ -213,12 +256,17 @@ export function premiumHealthLabel(value?: PremiumUpgradeHealth | string | null)
 
 export function premiumIssueMessage(issueCode?: string | null) {
   switch (issueCode) {
+    case "PREMIUM_SOURCE_NOT_FOUND":
     case "SOURCE_NOT_FOUND":
       return "المصدر المرتبط غير موجود";
+    case "PREMIUM_SOURCE_RELATION_INVALID":
     case "SOURCE_RELATION_INVALID":
       return "ربط المصدر غير صحيح";
+    case "PREMIUM_SOURCE_NOT_SELECTABLE":
     case "SOURCE_NOT_SELECTABLE":
       return "المصدر غير متاح للاشتراكات";
+    case "PREMIUM_RELINK_KEY_MISMATCH":
+      return "المصدر المختار غير متوافق مع هوية الترقية الحالية";
     default:
       return "يحتاج إلى إعادة ربط بمصدر صالح";
   }
@@ -274,7 +322,66 @@ export function formatJsonValue(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 
-function buildListParams(filters: PremiumUpgradeListFilters) {
+export function getSourceRelationId(source: PremiumUpgradeSourceDto) {
+  return source.relationId || source.id || source.sourceId;
+}
+
+export function sourceHasRequiredRelation(source: PremiumUpgradeSourceDto) {
+  if (source.kind !== "option") return true;
+  return Boolean(source.sourceId && source.sourceProductId && source.sourceGroupId);
+}
+
+export function isSourceCompatibleWithConfig(
+  source: PremiumUpgradeSourceDto,
+  row: PremiumUpgradeConfigDto
+) {
+  const configKey = row.key || row.premiumKey;
+  if (!configKey) return true;
+  const keys = new Set([
+    ...(source.compatibilityKeys ?? []),
+    ...(source.premiumCompatibilityKeys ?? []),
+  ]);
+  return keys.size === 0 ? true : keys.has(configKey);
+}
+
+export function sourceConflictMessage(
+  source: PremiumUpgradeSourceDto,
+  currentConfigId?: string
+) {
+  if (source.linked && source.linkedConfigId !== currentConfigId) {
+    return "مربوط بترقية أخرى";
+  }
+  if (source.selectable === false) {
+    if (source.conflictReason === "SOURCE_ALREADY_LINKED") {
+      return "مربوط بترقية أخرى";
+    }
+    if (source.conflictReason === "INCOMPATIBLE_PREMIUM_KEY") {
+      return "المصدر غير متوافق مع هذه الترقية";
+    }
+    return "المصدر غير متاح للاشتراكات";
+  }
+  return null;
+}
+
+export function sourceRelationContext(source: PremiumUpgradeSourceDto) {
+  const product =
+    source.sourceProductKey ||
+    formatSourceContextValue(source.product) ||
+    null;
+  const group =
+    source.sourceGroupKey ||
+    formatSourceContextValue(source.group) ||
+    null;
+  if (source.kind === "product") return source.key || source.sourceProductKey || "";
+  return [
+    product ? `المنتج: ${product}` : null,
+    group ? `المجموعة: ${group}` : null,
+  ]
+    .filter(Boolean)
+    .join(" — ");
+}
+
+export function buildListParams(filters: PremiumUpgradeListFilters) {
   const params: Record<string, string | number> = {
     page: filters.page,
     limit: filters.limit,
@@ -286,7 +393,7 @@ function buildListParams(filters: PremiumUpgradeListFilters) {
   return params;
 }
 
-function buildSourceParams(filters: PremiumUpgradeSourceFilters) {
+export function buildSourceParams(filters: PremiumUpgradeSourceFilters) {
   const params: Record<string, string | number> = {
     page: filters.page,
     limit: filters.limit,
@@ -294,7 +401,18 @@ function buildSourceParams(filters: PremiumUpgradeSourceFilters) {
   };
   if (filters.q.trim()) params.q = filters.q.trim();
   if (filters.kind !== "all") params.kind = filters.kind;
+  if (filters.excludeConfigId) params.excludeConfigId = filters.excludeConfigId;
   return params;
+}
+
+function formatSourceContextValue(value: PremiumUpgradeSourceDto["group"]) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if ("name" in value || "key" in value) {
+    return premiumDisplayName(value.name) || value.key || "";
+  }
+  if ("ar" in value || "en" in value) return premiumDisplayName(value);
+  return "";
 }
 
 function halalaFromSar(value: unknown) {

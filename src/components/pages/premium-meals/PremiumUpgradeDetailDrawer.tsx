@@ -12,8 +12,10 @@ import type { PremiumUpgradeConfigDto } from "@/types/premiumUpgradeTypes";
 import { usePremiumUpgradeDetailQuery } from "@/hooks/usePremiumUpgradesQuery";
 import {
   formatJsonValue,
+  premiumDisplayName,
   premiumRowKey,
   premiumRowName,
+  sourceRelationContext,
 } from "@/utils/fetchPremiumUpgrades";
 
 const detailSections: Array<[string, keyof PremiumUpgradeConfigDto]> = [
@@ -62,19 +64,78 @@ export function PremiumUpgradeDetailDrawer({
               تعذر تحميل تفاصيل الترقية.
             </div>
           ) : detail ? (
-            detailSections.map(([label, key]) => (
-              <section key={key} className="rounded-lg border">
-                <div className="border-b bg-muted/20 px-3 py-2 text-sm font-semibold">
-                  {label}
-                </div>
-                <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words p-3 text-xs leading-6">
-                  {formatJsonValue(detail[key])}
-                </pre>
-              </section>
-            ))
+            <>
+              <RepairDiagnostics detail={detail} />
+              {detailSections.map(([label, key]) => (
+                <section key={key} className="rounded-lg border">
+                  <div className="border-b bg-muted/20 px-3 py-2 text-sm font-semibold">
+                    {label}
+                  </div>
+                  <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words p-3 text-xs leading-6">
+                    {formatJsonValue(detail[key])}
+                  </pre>
+                </section>
+              ))}
+            </>
           ) : null}
         </div>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+function RepairDiagnostics({ detail }: { detail: PremiumUpgradeConfigDto }) {
+  const repair = detail.repair;
+  if (!repair) return null;
+
+  return (
+    <section className="rounded-lg border border-amber-200 bg-amber-50/60">
+      <div className="border-b border-amber-200 px-3 py-2 text-sm font-semibold text-amber-950">
+        تشخيص الإصلاح
+      </div>
+      <div className="grid gap-3 p-3 text-sm sm:grid-cols-2">
+        <DetailItem label="هوية الترقية الحالية" value={repair.currentPremiumKey || "-"} />
+        <DetailItem label="المصدر المفقود" value={repair.missingSourceId || "-"} />
+        <DetailItem label="النوع المتوقع" value={repair.expectedKind || "-"} />
+        <DetailItem
+          label="عدد البدائل المتوافقة"
+          value={repair.compatibleReplacementCount ?? 0}
+        />
+        <DetailItem label="مانع الإصلاح" value={repair.blockingIssueCode || "-"} />
+        <DetailItem
+          label="إعادة الربط متاحة"
+          value={repair.canRelink === false ? "لا" : "نعم"}
+        />
+      </div>
+      {repair.compatibleSourceSuggestions?.length ? (
+        <div className="border-t border-amber-200 p-3">
+          <p className="mb-2 text-sm font-medium text-amber-950">
+            مصادر مقترحة
+          </p>
+          <div className="space-y-2">
+            {repair.compatibleSourceSuggestions.map((source) => (
+              <div
+                key={source.relationId || source.id || source.sourceId}
+                className="rounded-md border bg-background/80 p-2 text-sm"
+              >
+                <p className="font-medium">{premiumDisplayName(source.name)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {sourceRelationContext(source) || source.key || source.sourceId}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 break-words font-medium">{value}</p>
+    </div>
   );
 }

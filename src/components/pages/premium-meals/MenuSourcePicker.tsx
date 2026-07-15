@@ -10,32 +10,39 @@ import {
 } from "@/components/ui/popover";
 import type { PremiumUpgradeSourceDto } from "@/types/premiumUpgradeTypes";
 import {
+  getSourceRelationId,
   premiumDisplayName,
   premiumKindLabel,
+  sourceConflictMessage,
+  sourceRelationContext,
 } from "@/utils/fetchPremiumUpgrades";
 import { cn } from "@/lib/utils";
 
 export type MenuSourcePickerProps = {
   sources: PremiumUpgradeSourceDto[];
-  selectedId: string;
+  selectedRelationId: string;
   search: string;
   loading: boolean;
+  currentConfigId?: string;
   onSearchChange: (value: string) => void;
   onSelect: (source: PremiumUpgradeSourceDto) => void;
 };
 
 export function MenuSourcePicker({
   sources,
-  selectedId,
+  selectedRelationId,
   search,
   loading,
+  currentConfigId,
   onSearchChange,
   onSelect,
 }: MenuSourcePickerProps) {
-  const selected = sources.find((source) => source.id === selectedId);
+  const selected = sources.find(
+    (source) => getSourceRelationId(source) === selectedRelationId
+  );
 
   function choose(source: PremiumUpgradeSourceDto) {
-    if (source.selectable === false) return;
+    if (sourceConflictMessage(source, currentConfigId)) return;
     onSelect(source);
   }
 
@@ -57,7 +64,10 @@ export function MenuSourcePicker({
                   {premiumDisplayName(selected.name)}
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">
-                  {selected.key || selected.id} · {premiumKindLabel(selected.kind)}
+                  {sourceRelationContext(selected) ||
+                    selected.key ||
+                    getSourceRelationId(selected)}{" "}
+                  · {premiumKindLabel(selected.kind)}
                 </span>
               </span>
             ) : (
@@ -71,7 +81,7 @@ export function MenuSourcePicker({
         align="start"
         side="bottom"
         sideOffset={8}
-        className="z-[70] w-[min(44rem,calc(100vw-2rem))] max-h-[min(78vh,660px)] overflow-hidden p-0"
+        className="z-[70] max-h-[min(78vh,660px)] w-[min(44rem,calc(100vw-2rem))] overflow-hidden p-0"
         dir="rtl"
       >
         <div className="flex max-h-[min(78vh,660px)] min-h-0 flex-col">
@@ -79,8 +89,8 @@ export function MenuSourcePicker({
             <div>
               <h3 className="font-semibold">اختر مصدر الترقية</h3>
               <p className="text-xs text-muted-foreground">
-                تظهر المنتجات والخيارات من endpoint المصادر. الصفوف غير المتاحة
-                للاشتراكات تكون معطلة.
+                يتم استخدام علاقة المصدر كاملة، خصوصًا خيارات الوجبات المرتبطة
+                بمنتج ومجموعة.
               </p>
             </div>
             <div className="relative mt-3">
@@ -96,8 +106,9 @@ export function MenuSourcePicker({
 
           <SourceList
             sources={sources}
-            selectedId={selectedId}
+            selectedRelationId={selectedRelationId}
             loading={loading}
+            currentConfigId={currentConfigId}
             onSelect={choose}
           />
         </div>
@@ -108,13 +119,15 @@ export function MenuSourcePicker({
 
 function SourceList({
   sources,
-  selectedId,
+  selectedRelationId,
   loading,
+  currentConfigId,
   onSelect,
 }: {
   sources: PremiumUpgradeSourceDto[];
-  selectedId: string;
+  selectedRelationId: string;
   loading: boolean;
+  currentConfigId?: string;
   onSelect: (source: PremiumUpgradeSourceDto) => void;
 }) {
   if (loading) {
@@ -144,13 +157,15 @@ function SourceList({
       onTouchMove={(event) => event.stopPropagation()}
     >
       {sources.map((source) => {
-        const selected = source.id === selectedId;
-        const disabled = source.selectable === false;
+        const relationId = getSourceRelationId(source);
+        const selected = relationId === selectedRelationId;
+        const reason = sourceConflictMessage(source, currentConfigId);
+        const disabled = Boolean(reason);
 
         return (
           <button
             type="button"
-            key={source.id}
+            key={relationId}
             disabled={disabled}
             onClick={() => onSelect(source)}
             className={cn(
@@ -179,8 +194,13 @@ function SourceList({
                       {premiumDisplayName(source.name)}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {source.key || source.id}
+                      {sourceRelationContext(source) || source.key || relationId}
                     </p>
+                    {source.key ? (
+                      <p className="truncate text-xs text-muted-foreground">
+                        المفتاح: {source.key}
+                      </p>
+                    ) : null}
                   </div>
                   {selected ? (
                     <Badge className="shrink-0">
@@ -193,14 +213,12 @@ function SourceList({
                   <Badge variant="secondary">
                     {premiumKindLabel(source.kind)}
                   </Badge>
-                  {source.group ? (
-                    <Badge variant="outline">
-                      {formatSourceGroup(source.group)}
-                    </Badge>
+                  {source.linked ? (
+                    <Badge variant="outline">مرتبط</Badge>
                   ) : null}
-                  {disabled ? (
+                  {reason ? (
                     <Badge variant="outline" className="border-amber-200 text-amber-800">
-                      غير متاح
+                      {reason}
                     </Badge>
                   ) : null}
                 </div>
@@ -211,16 +229,4 @@ function SourceList({
       })}
     </div>
   );
-}
-
-function formatSourceGroup(group: PremiumUpgradeSourceDto["group"]) {
-  if (!group) return "-";
-  if (typeof group === "string") return group;
-  if ("name" in group || "key" in group) {
-    return premiumDisplayName(group.name) || group.key || "-";
-  }
-  if ("ar" in group || "en" in group) {
-    return premiumDisplayName(group);
-  }
-  return "-";
 }

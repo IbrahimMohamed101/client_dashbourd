@@ -1,5 +1,4 @@
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,16 +15,25 @@ import { Label } from "@/components/ui/label";
 import type {
   PremiumUpgradeConfigDto,
   PremiumUpgradeKind,
+  PremiumUpgradeSourceDto,
   PremiumUpgradeSourceFilters,
 } from "@/types/premiumUpgradeTypes";
-import { useUpdatePremiumUpgradeMutation, usePremiumUpgradeSourcesQuery } from "@/hooks/usePremiumUpgradesQuery";
 import {
+  usePremiumUpgradeSourcesQuery,
+  useUpdatePremiumUpgradeMutation,
+} from "@/hooks/usePremiumUpgradesQuery";
+import {
+  buildRelinkPremiumUpgradePayload,
   defaultPremiumUpgradeSourceFilters,
+  getSourceRelationId,
+  isSourceCompatibleWithConfig,
   premiumDisplayName,
   premiumPriceSar,
   premiumRowHealth,
   premiumRowKind,
   premiumRowName,
+  sourceHasRequiredRelation,
+  sourceRelationContext,
 } from "@/utils/fetchPremiumUpgrades";
 import { isValidRiyalInput, riyalToHalala } from "@/utils/price";
 import { SelectField } from "./PremiumUpgradeFilters";
@@ -50,10 +58,12 @@ export function EditPremiumUpgradeDialog({
     <Dialog open={Boolean(row)} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="w-[calc(100%-1.5rem)] max-w-3xl" dir="rtl">
         <DialogHeader>
-          <DialogTitle>{isRelink ? "إعادة ربط الترقية" : "تعديل الترقية"}</DialogTitle>
+          <DialogTitle>
+            {isRelink ? "إعادة ربط الترقية" : "تعديل الترقية"}
+          </DialogTitle>
           <DialogDescription>
             {isRelink
-              ? "اختر نوعا ومصدرا صالحا للترقية المكسورة دون حذفها."
+              ? "اختر مصدرًا متوافقًا يحافظ على هوية الترقية الحالية."
               : "عدّل السعر والحالة والظهور والترتيب فقط."}
           </DialogDescription>
         </DialogHeader>
@@ -102,20 +112,20 @@ function EditPremiumUpgradeForm({
     event.preventDefault();
 
     if (!isValidRiyalInput(form.upgradePriceSarInput)) {
-      toast.error("سعر الترقية يجب أن يكون رقما غير سالب بالريال.");
+      toast.error("سعر الترقية يجب أن يكون رقمًا غير سالب بالريال.");
       return;
     }
 
     const sortOrder = Number(form.sortOrder);
     if (!Number.isFinite(sortOrder)) {
-      toast.error("الترتيب يجب أن يكون رقما.");
+      toast.error("الترتيب يجب أن يكون رقمًا.");
       return;
     }
 
     updateMutation.mutate({
       id: row.id,
       payload: {
-        expectedRevision: row.revision,
+        expectedRevision: row.revision ?? 0,
         upgradeDeltaHalala: riyalToHalala(form.upgradePriceSarInput),
         currency: form.currency,
         isActive: form.isActive,
@@ -196,23 +206,31 @@ function RelinkPremiumUpgradeForm({
   onSaved: () => void;
 }) {
   const [kind, setKind] = useState<PremiumUpgradeKind>(premiumRowKind(row));
-  const [sourceId, setSourceId] = useState(row.sourceId ?? "");
+  const [selectedSource, setSelectedSource] =
+    useState<PremiumUpgradeSourceDto | null>(null);
   const [sourceFilters, setSourceFilters] = useState<PremiumUpgradeSourceFilters>({
     ...defaultPremiumUpgradeSourceFilters,
     kind,
+    excludeConfigId: row.id,
   });
   const sourcesQuery = usePremiumUpgradeSourcesQuery(sourceFilters, true);
   const updateMutation = useUpdatePremiumUpgradeMutation(onSaved);
-  const sources = sourcesQuery.data?.data ?? [];
-  const selected = sources.find((source) => source.id === sourceId);
+  const compatibleSources = useMemo(
+    () =>
+      (sourcesQuery.data?.data ?? []).filter((source) =>
+        isSourceCompatibleWithConfig(source, row)
+      ),
+    [row, sourcesQuery.data?.data]
+  );
 
   function updateKind(value: string) {
     const nextKind = value as PremiumUpgradeKind;
     setKind(nextKind);
-    setSourceId("");
+    setSelectedSource(null);
     setSourceFilters((current) => ({
       ...current,
       kind: nextKind,
+      excludeConfigId: row.id,
       q: "",
       page: 1,
     }));
@@ -220,18 +238,24 @@ function RelinkPremiumUpgradeForm({
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!sourceId) {
-      toast.error("اختر مصدرا صالحا أولا.");
+    if (!selectedSource) {
+      toast.error("اختر مصدرًا صالحًا أولاً.");
+      return;
+    }
+    if (!sourceHasRequiredRelation(selectedSource)) {
+      toast.error(
+        "تعذر تحديد علاقة الخيار بالمنتج والمجموعة. حدّث قائمة المصادر وحاول مرة أخرى."
+      );
+      return;
+    }
+    if (!isSourceCompatibleWithConfig(selectedSource, row)) {
+      toast.error("المصدر المختار غير متوافق مع هوية الترقية الحالية");
       return;
     }
 
     updateMutation.mutate({
       id: row.id,
-      payload: {
-        expectedRevision: row.revision,
-        kind,
-        sourceId,
-      },
+      payload: buildRelinkPremiumUpgradePayload({ row, selectedSource }),
     });
   }
 
@@ -239,7 +263,7 @@ function RelinkPremiumUpgradeForm({
     <form className="space-y-5" onSubmit={submit}>
       <Summary row={row} />
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-        يحتاج إلى إعادة ربط بمصدر صالح
+        يحتاج إلى إعادة ربط بمصدر صالح ومتوافق مع مفتاح الترقية الحالي.
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <SelectField
@@ -254,26 +278,39 @@ function RelinkPremiumUpgradeForm({
         <div className="space-y-2">
           <Label>المصدر</Label>
           <MenuSourcePicker
-            sources={sources}
-            selectedId={sourceId}
+            sources={compatibleSources}
+            selectedRelationId={
+              selectedSource ? getSourceRelationId(selectedSource) : ""
+            }
             search={sourceFilters.q}
             loading={sourcesQuery.isLoading || sourcesQuery.isFetching}
+            currentConfigId={row.id}
             onSearchChange={(q) =>
               setSourceFilters((current) => ({ ...current, q, page: 1 }))
             }
-            onSelect={(source) => setSourceId(source.id)}
+            onSelect={setSelectedSource}
           />
         </div>
       </div>
 
-      {selected ? (
-        <div className="rounded-lg border bg-muted/20 p-3 text-sm">
-          <ReadOnlyItem label="المصدر الجديد" value={premiumDisplayName(selected.name)} />
+      {selectedSource ? (
+        <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 text-sm md:grid-cols-2">
+          <ReadOnlyItem
+            label="المصدر الجديد"
+            value={premiumDisplayName(selectedSource.name)}
+          />
+          <ReadOnlyItem
+            label="العلاقة"
+            value={sourceRelationContext(selectedSource) || getSourceRelationId(selectedSource)}
+          />
         </div>
       ) : null}
 
       <DialogFooter className="gap-2 sm:justify-start">
-        <Button type="submit" disabled={updateMutation.isPending || !sourceId}>
+        <Button
+          type="submit"
+          disabled={updateMutation.isPending || !selectedSource}
+        >
           إعادة الربط
         </Button>
         <Button type="button" variant="outline" onClick={onClose}>

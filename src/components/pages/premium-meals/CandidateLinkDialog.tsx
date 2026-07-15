@@ -1,5 +1,4 @@
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -16,12 +15,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type {
   PremiumUpgradeKind,
+  PremiumUpgradeSourceDto,
   PremiumUpgradeSourceFilters,
 } from "@/types/premiumUpgradeTypes";
 import {
   buildCreatePremiumUpgradePayload,
   defaultPremiumUpgradeSourceFilters,
+  getSourceRelationId,
   premiumDisplayName,
+  sourceHasRequiredRelation,
+  sourceRelationContext,
 } from "@/utils/fetchPremiumUpgrades";
 import { isValidRiyalInput } from "@/utils/price";
 import {
@@ -34,7 +37,7 @@ import { ReadOnlyItem, StateToggleLine } from "./PremiumCandidateCard";
 
 type LinkFormState = {
   kind: PremiumUpgradeKind;
-  sourceId: string;
+  selectedSource: PremiumUpgradeSourceDto | null;
   upgradePriceSarInput: string;
   currency: "SAR";
   isActive: boolean;
@@ -44,7 +47,7 @@ type LinkFormState = {
 
 const defaultLinkForm: LinkFormState = {
   kind: "product",
-  sourceId: "",
+  selectedSource: null,
   upgradePriceSarInput: "0",
   currency: "SAR",
   isActive: true,
@@ -84,7 +87,6 @@ function CandidateLinkDialogContent({
   const sourcesQuery = usePremiumUpgradeSourcesQuery(sourceFilters, true);
   const createMutation = useCreatePremiumUpgradeMutation(onCreated);
   const sources = sourcesQuery.data?.data ?? [];
-  const selected = sources.find((source) => source.id === form.sourceId);
 
   function update(next: Partial<LinkFormState>) {
     setForm((current) => ({ ...current, ...next }));
@@ -92,7 +94,11 @@ function CandidateLinkDialogContent({
 
   function updateKind(kind: string) {
     const nextKind = kind as PremiumUpgradeKind;
-    setForm((current) => ({ ...current, kind: nextKind, sourceId: "" }));
+    setForm((current) => ({
+      ...current,
+      kind: nextKind,
+      selectedSource: null,
+    }));
     setSourceFilters((current) => ({
       ...current,
       kind: nextKind,
@@ -104,22 +110,31 @@ function CandidateLinkDialogContent({
   function submit(event: FormEvent) {
     event.preventDefault();
 
-    if (!form.sourceId) {
-      toast.error("اختر المصدر أولا.");
+    const selectedSource = form.selectedSource;
+    if (!selectedSource) {
+      toast.error("اختر المصدر أولاً.");
+      return;
+    }
+    if (!sourceHasRequiredRelation(selectedSource)) {
+      toast.error(
+        "تعذر تحديد علاقة الخيار بالمنتج والمجموعة. حدّث قائمة المصادر وحاول مرة أخرى."
+      );
       return;
     }
     if (!isValidRiyalInput(form.upgradePriceSarInput)) {
-      toast.error("سعر الترقية يجب أن يكون رقما غير سالب بالريال.");
+      toast.error("سعر الترقية يجب أن يكون رقمًا غير سالب بالريال.");
       return;
     }
 
     const sortOrder = Number(form.sortOrder);
     if (!Number.isFinite(sortOrder)) {
-      toast.error("الترتيب يجب أن يكون رقما.");
+      toast.error("الترتيب يجب أن يكون رقمًا.");
       return;
     }
 
-    createMutation.mutate(buildCreatePremiumUpgradePayload(form));
+    createMutation.mutate(
+      buildCreatePremiumUpgradePayload({ ...form, selectedSource })
+    );
   }
 
   return (
@@ -130,7 +145,8 @@ function CandidateLinkDialogContent({
       <DialogHeader className="border-b px-5 py-4 text-right">
         <DialogTitle>إضافة ترقية مميزة</DialogTitle>
         <DialogDescription>
-          اختر نوع المصدر والمصدر نفسه، ثم أدخل سعر الترقية وإعدادات الظهور.
+          اختر مصدر الترقية الكامل. خيارات الوجبات تحفظ علاقة الخيار بالمنتج
+          والمجموعة حتى لا يتم ربط مصدر خاطئ.
         </DialogDescription>
       </DialogHeader>
 
@@ -151,20 +167,35 @@ function CandidateLinkDialogContent({
               <Label>المصدر</Label>
               <MenuSourcePicker
                 sources={sources}
-                selectedId={form.sourceId}
+                selectedRelationId={
+                  form.selectedSource ? getSourceRelationId(form.selectedSource) : ""
+                }
                 search={sourceFilters.q}
                 loading={sourcesQuery.isLoading || sourcesQuery.isFetching}
                 onSearchChange={(q) =>
                   setSourceFilters((current) => ({ ...current, q, page: 1 }))
                 }
-                onSelect={(source) => update({ sourceId: source.id })}
+                onSelect={(source) => update({ selectedSource: source })}
               />
             </div>
 
-            {selected ? (
+            {form.selectedSource ? (
               <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 text-sm sm:grid-cols-2">
-                <ReadOnlyItem label="اسم المصدر" value={premiumDisplayName(selected.name)} />
-                <ReadOnlyItem label="مفتاح المصدر" value={selected.key || selected.id} />
+                <ReadOnlyItem
+                  label="اسم المصدر"
+                  value={premiumDisplayName(form.selectedSource.name)}
+                />
+                <ReadOnlyItem
+                  label="مفتاح المصدر"
+                  value={form.selectedSource.key || form.selectedSource.sourceId}
+                />
+                <ReadOnlyItem
+                  label="العلاقة"
+                  value={
+                    sourceRelationContext(form.selectedSource) ||
+                    getSourceRelationId(form.selectedSource)
+                  }
+                />
               </div>
             ) : null}
           </section>
@@ -209,7 +240,7 @@ function CandidateLinkDialogContent({
         <DialogFooter className="sticky bottom-0 -mx-4 mt-5 border-t bg-background px-4 pt-4 sm:-mx-5 sm:px-5 sm:justify-start">
           <Button
             type="submit"
-            disabled={createMutation.isPending || !form.sourceId}
+            disabled={createMutation.isPending || !form.selectedSource}
           >
             <Link2 data-icon="inline-start" />
             إضافة

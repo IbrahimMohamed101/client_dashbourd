@@ -104,6 +104,7 @@ export function usePremiumUpgradeInvalidation() {
       queryClient.invalidateQueries({
         queryKey: [PREMIUM_UPGRADES_DETAIL_QUERY_KEY],
       });
+      queryClient.invalidateQueries({ queryKey: ["builder-premium-meals"] });
     },
   };
 }
@@ -123,6 +124,10 @@ function invalidatePremiumQueries(queryClient: QueryClient) {
   });
   queryClient.invalidateQueries({
     queryKey: [PREMIUM_UPGRADES_DETAIL_QUERY_KEY],
+    refetchType: "active",
+  });
+  queryClient.invalidateQueries({
+    queryKey: ["builder-premium-meals"],
     refetchType: "active",
   });
 }
