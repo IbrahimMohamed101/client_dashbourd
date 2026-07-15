@@ -1,5 +1,5 @@
-﻿import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Pencil } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, CheckCircle2, Package, Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,8 +43,8 @@ export function MealBuilderSimpleCard({
             </div>
             <p className="text-sm text-muted-foreground">
               {card.items.length
-                ? `${card.items.length} Ø¹Ù†Ø§ØµØ± Ù…ØªØ§Ø­Ø© Ù„Ù„Ø¹Ù…ÙŠÙ„`
-                : "Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¹Ù†Ø§ØµØ± ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø©"}
+                ? `${card.items.length} عناصر متاحة للعميل`
+                : "لا توجد عناصر في هذه البطاقة"}
             </p>
           </div>
 
@@ -57,14 +57,14 @@ export function MealBuilderSimpleCard({
               onClick={onEdit}
             >
               <Pencil data-icon="inline-start" />
-              ØªØ¹Ø¯ÙŠÙ„
+              تعديل
             </Button>
           ) : null}
         </div>
 
         {isPremium ? (
           <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-            ÙŠØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„ÙˆØ¬Ø¨Ø§Øª Ø§Ù„Ù…Ù…ÙŠØ²Ø© ØªÙ„Ù‚Ø§Ø¦ÙŠÙ‹Ø§ Ù…Ù† ØµÙØ­Ø© Ø§Ù„ÙˆØ¬Ø¨Ø§Øª Ø§Ù„Ù…Ù…ÙŠØ²Ø©.
+            يتم تحديث الوجبات المميزة تلقائيا من صفحة الوجبات المميزة.
           </p>
         ) : null}
       </CardHeader>
@@ -99,7 +99,7 @@ export function MealBuilderSimpleCard({
           </div>
         ) : (
           <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            Ø§ÙØªØ­ Ø§Ù„Ø¨Ø·Ø§Ù‚Ø© ÙˆØ£Ø¶Ù Ø§Ù„Ø¹Ù†Ø§ØµØ± Ø§Ù„Ù…Ù†Ø§Ø³Ø¨Ø©.
+            افتح البطاقة وأضف العناصر المناسبة.
           </div>
         )}
 
@@ -111,7 +111,7 @@ export function MealBuilderSimpleCard({
             className="h-8 px-2 text-xs text-muted-foreground"
             onClick={() => setExpanded((current) => !current)}
           >
-            {expanded ? "Ø¹Ø±Ø¶ Ø£Ù‚Ù„" : `Ø¹Ø±Ø¶ ${remaining} Ø¹Ù†Ø§ØµØ± Ø£Ø®Ø±Ù‰`}
+            {expanded ? "عرض أقل" : `عرض ${remaining} عناصر أخرى`}
           </Button>
         ) : null}
       </CardContent>
@@ -125,12 +125,12 @@ function CardStatus({ card }: { card: MealBuilderVisualCard }) {
   return hasProblem ? (
     <Badge variant="secondary">
       <AlertTriangle data-icon="inline-start" />
-      ÙŠØ­ØªØ§Ø¬ Ù…Ø±Ø§Ø¬Ø¹Ø©
+      يحتاج مراجعة
     </Badge>
   ) : (
     <Badge>
       <CheckCircle2 data-icon="inline-start" />
-      Ø¬Ø§Ù‡Ø²
+      جاهز
     </Badge>
   );
 }
@@ -141,19 +141,33 @@ function PremiumRow({
   item: MealBuilderVisualCard["items"][number];
 }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2.5">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{item.name}</p>
-        <p className="text-xs text-muted-foreground">
-          {item.kind === "product" ? "منتج" : "خيار"} · ترقية{" "}
-          {formatSar(item.upgradePriceHalala, item.currency)}
-        </p>
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-3">
+        {item.imageUrl ? (
+          <img
+            src={item.imageUrl}
+            alt=""
+            className="size-11 shrink-0 rounded-md object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="grid size-11 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
+            <Package className="size-4" />
+          </div>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{item.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {premiumKindLabel(item.kind)} · ترقية{" "}
+            {formatSar(item.upgradePriceHalala, item.currency)}
+          </p>
+        </div>
       </div>
       <Badge
         variant={isReady(item) ? "default" : "secondary"}
         className="shrink-0 text-[11px]"
       >
-        {isReady(item) ? "جاهز" : "مراجعة"}
+        {isReady(item) ? "جاهز" : "يحتاج مراجعة"}
       </Badge>
     </div>
   );
@@ -162,7 +176,7 @@ function PremiumRow({
 function firstVisibleProblem(card: MealBuilderVisualCard) {
   const itemProblem = card.items.find((item) => !isReady(item));
   if (itemProblem) {
-    return `Ø§Ù„Ø¹Ù†ØµØ± Â«${itemProblem.name}Â» ØºÙŠØ± Ø¬Ø§Ù‡Ø² Ù„Ù„Ø¸Ù‡ÙˆØ± Ù„Ù„Ø¹Ù…ÙŠÙ„.`;
+    return `العنصر «${itemProblem.name}» غير جاهز للظهور للعميل.`;
   }
 
   const issue =
@@ -185,4 +199,8 @@ function isReady(item: MealBuilderVisualCard["items"][number]) {
 
 function formatSar(value: number | null | undefined, currency?: string | null) {
   return `${halalaToRiyal(value ?? 0).toFixed(2)} ${currency || "SAR"}`;
+}
+
+function premiumKindLabel(kind: string) {
+  return kind === "product" ? "منتج كامل" : "خيار داخل وجبة";
 }

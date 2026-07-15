@@ -102,7 +102,9 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
   const builderQuery = useMealBuilderQuery();
   const publishedQuery = useMealBuilderPublishedQuery();
   const draftQuery = useMealBuilderDraftQuery(mode === "draft");
-  const hydratedQuery = useMealBuilderHydratedQuery(mode === "draft");
+  const hydratedQuery = useMealBuilderHydratedQuery(
+    mode === "draft" && draftQuery.isSuccess
+  );
   const loadEditableCatalog = mode === "draft";
 
   const productsQuery = useMenuProductsQuery({
@@ -162,7 +164,7 @@ export function MealBuilderPage({ embedded = false }: { embedded?: boolean }) {
       ? [
           builderQuery,
           draftQuery,
-          hydratedQuery,
+          ...(draftQuery.isSuccess ? [hydratedQuery] : []),
           productsQuery,
           categoriesQuery,
           groupsQuery,

@@ -66,6 +66,7 @@ import type {
   MealBuilderContract,
   MealBuilderContractItem,
   MealBuilderContractSection,
+  MealBuilderCheck,
   MealBuilderHydratedDraft,
   MealBuilderHydratedItem,
   MealBuilderLifecycleResponseData,
@@ -120,7 +121,9 @@ export function MealBuilderSimplePage() {
   const builderQuery = useMealBuilderQuery();
   const publishedQuery = useMealBuilderPublishedQuery();
   const draftQuery = useMealBuilderDraftQuery(mode === "draft");
-  const hydratedQuery = useMealBuilderHydratedQuery(mode === "draft");
+  const hydratedQuery = useMealBuilderHydratedQuery(
+    mode === "draft" && draftQuery.isSuccess
+  );
   const loadEditableCatalog = mode === "draft";
 
   const productsQuery = useMenuProductsQuery({
@@ -184,7 +187,7 @@ export function MealBuilderSimplePage() {
           groupsQuery,
           optionsQuery,
           draftQuery,
-          hydratedQuery,
+          ...(draftQuery.isSuccess ? [hydratedQuery] : []),
         ]
       : []),
   ]);
@@ -256,6 +259,10 @@ export function MealBuilderSimplePage() {
 
       {loadError ? (
         <LoadError error={loadError} onRetry={retry} />
+      ) : mode === "draft" &&
+        (draftQuery.isLoading ||
+          (draftQuery.isSuccess && hydratedQuery.isLoading)) ? (
+        <DraftLoadingState hydrated={draftQuery.isSuccess} />
       ) : activeView.config ? (
         mode === "draft" ? (
           <SimpleWorkspace
@@ -386,20 +393,38 @@ function VersionStrip({
   mode: PageMode;
   hasDraft: boolean;
 }) {
+  const isDraft = mode === "draft";
+  const items = isDraft
+    ? [
+        ["الحالة", "مسودة"],
+        ["رقم النسخة", view.versionNumber ?? "-"],
+        [
+          "مبنية على النسخة المنشورة",
+          view.basedOnPublishedVersionId ? "آخر نسخة منشورة" : "غير محدد",
+        ],
+        [
+          "تغييرات غير منشورة",
+          view.hasUnpublishedChanges ? "نعم" : "لا",
+        ],
+        ["آخر تحديث", formatSafeDate(view.updatedAt)],
+      ]
+    : [
+        ["الحالة", "منشور"],
+        ["رقم النسخة", view.versionNumber ?? "-"],
+        ["توجد مسودة", hasDraft ? "نعم" : "لا"],
+        [
+          "تغييرات غير منشورة",
+          view.hasUnpublishedChanges ? "نعم" : "لا",
+        ],
+        ["تاريخ النشر", formatSafeDate(view.publishedAt)],
+        ["آخر تحديث", formatSafeDate(view.updatedAt)],
+      ];
+
   return (
     <div className="grid gap-2 rounded-lg border bg-card p-3 text-sm shadow-none sm:grid-cols-2 xl:grid-cols-6">
-      <MetaPill
-        label="الحالة"
-        value={mode === "draft" ? "مسودة" : "منشور"}
-      />
-      <MetaPill label="رقم النسخة" value={view.versionNumber ?? "-"} />
-      <MetaPill label="توجد مسودة" value={hasDraft ? "نعم" : "لا"} />
-      <MetaPill
-        label="تغييرات غير منشورة"
-        value={view.hasUnpublishedChanges ? "نعم" : "لا"}
-      />
-      <MetaPill label="تاريخ النشر" value={formatSafeDate(view.publishedAt)} />
-      <MetaPill label="آخر تحديث" value={formatSafeDate(view.updatedAt)} />
+      {items.map(([label, value]) => (
+        <MetaPill key={String(label)} label={String(label)} value={value} />
+      ))}
     </div>
   );
 }
@@ -454,6 +479,19 @@ function PublishedView({
         <ValidationNotice validation={validation} dirty={false} />
         <PremiumNotice premiumSection={premiumSection} />
         <CardsGrid cards={cards} readOnly />
+      </CardContent>
+    </Card>
+  );
+}
+
+function DraftLoadingState({ hydrated }: { hydrated: boolean }) {
+  return (
+    <Card className="border-border/80 shadow-none">
+      <CardContent className="flex items-center gap-3 p-5 text-sm text-muted-foreground">
+        <Loader2 className="size-4 shrink-0 animate-spin" />
+        {hydrated
+          ? "جاري تحميل بيانات المسودة التفصيلية..."
+          : "جاري فتح مسودة العمل..."}
       </CardContent>
     </Card>
   );
@@ -846,6 +884,7 @@ function ValidationNotice({
   }
 
   if (!validation) return null;
+  const grouped = groupValidationIssues(validation);
 
   if (validation.errors.length) {
     return (
@@ -854,18 +893,166 @@ function ValidationNotice({
           توجد {validation.errors.length} مشاكل تمنع النشر.
         </p>
         <p className="mt-1">{mealBuilderIssueText(validation.errors[0])}</p>
+        <details className="mt-3 rounded-md border border-destructive/20 bg-background/80 p-3 text-foreground">
+          <summary className="cursor-pointer font-medium text-destructive">
+            عرض الأخطاء
+          </summary>
+          <ValidationIssueGroups groups={grouped} />
+        </details>
       </div>
     );
   }
 
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+      <div className="flex items-start gap-2">
       <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
       {validation.warnings.length
         ? `جاهزة للنشر مع ${validation.warnings.length} ملاحظات غير مانعة.`
         : "المسودة جاهزة للنشر."}
+      </div>
+      {validation.warnings.length ? (
+        <details className="mt-3 rounded-md border border-emerald-200 bg-background/80 p-3 text-foreground">
+          <summary className="cursor-pointer font-medium text-amber-700">
+            عرض التنبيهات
+          </summary>
+          <ValidationIssueGroups groups={grouped} />
+        </details>
+      ) : null}
     </div>
   );
+}
+
+type ValidationIssueGroup = {
+  key: string;
+  label: string;
+  errors: MealBuilderCheck[];
+  warnings: MealBuilderCheck[];
+};
+
+function ValidationIssueGroups({ groups }: { groups: ValidationIssueGroup[] }) {
+  if (!groups.length) {
+    return (
+      <p className="mt-2 text-sm text-muted-foreground">
+        لا توجد تفاصيل إضافية.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-3">
+      {groups.map((group) => (
+        <div key={group.key} className="rounded-md border bg-background p-3">
+          <p className="font-medium">{group.label}</p>
+          {group.errors.length ? (
+            <IssueList title="أخطاء مانعة" issues={group.errors} />
+          ) : null}
+          {group.warnings.length ? (
+            <IssueList title="تنبيهات" issues={group.warnings} />
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function IssueList({
+  title,
+  issues,
+}: {
+  title: string;
+  issues: MealBuilderCheck[];
+}) {
+  return (
+    <div className="mt-2">
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <ul className="mt-1 space-y-1 text-sm text-muted-foreground">
+        {issues.map((issue, index) => (
+          <li key={`${issue.code ?? "issue"}-${index}`}>
+            {validationIssueItemLabel(issue) ? (
+              <span className="font-medium">
+                {validationIssueItemLabel(issue)}:{" "}
+              </span>
+            ) : null}
+            {mealBuilderIssueText(issue)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function groupValidationIssues(
+  validation: MealBuilderValidation
+): ValidationIssueGroup[] {
+  const groups = new Map<string, ValidationIssueGroup>();
+  const add = (issue: MealBuilderCheck, kind: "errors" | "warnings") => {
+    const key = validationGroupKey(issue);
+    const group =
+      groups.get(key) ??
+      ({
+        key,
+        label: validationGroupLabel(issue),
+        errors: [],
+        warnings: [],
+      } satisfies ValidationIssueGroup);
+    group[kind].push(issue);
+    groups.set(key, group);
+  };
+
+  validation.errors.forEach((issue) => add(issue, "errors"));
+  validation.warnings.forEach((issue) => add(issue, "warnings"));
+  return Array.from(groups.values());
+}
+
+function validationGroupKey(issue: MealBuilderCheck) {
+  if (typeof issue.sectionIndex === "number") return `section-${issue.sectionIndex}`;
+  if (issue.sectionType) return `section-type-${issue.sectionType}`;
+  return "general";
+}
+
+function validationGroupLabel(issue: MealBuilderCheck) {
+  const section = sectionKeyFromIssue(issue);
+  if (section) return sectionLabel(section);
+  if (typeof issue.sectionIndex === "number") {
+    return `قسم ${issue.sectionIndex + 1}`;
+  }
+  return "أخطاء عامة";
+}
+
+function validationIssueItemLabel(issue: MealBuilderCheck) {
+  const value =
+    issue.itemName ??
+    issue.productName ??
+    issue.optionName ??
+    issue.itemKey ??
+    issue.productKey ??
+    issue.optionKey ??
+    issue.groupKey;
+  if (typeof value !== "string" || !value.trim()) return null;
+  return value;
+}
+
+function sectionKeyFromIssue(issue: MealBuilderCheck) {
+  const raw = String(issue.cardKey ?? issue.sectionKey ?? issue.sectionType ?? "");
+  if (!raw) return null;
+  return raw.replace(/_/g, "-").toLowerCase();
+}
+
+function sectionLabel(key: string) {
+  const labels: Record<string, string> = {
+    premium: "مميز",
+    sandwich: "ساندويتشات",
+    chicken: "دجاج",
+    beef: "لحوم",
+    fish: "أسماك",
+    eggs: "بيض",
+    carbs: "نشويات",
+    option_group: "مجموعة خيارات",
+    product_category: "تصنيف منتجات",
+    product_list: "قائمة منتجات",
+  };
+  return labels[key] ?? "أخطاء عامة";
 }
 
 function PremiumNotice({
