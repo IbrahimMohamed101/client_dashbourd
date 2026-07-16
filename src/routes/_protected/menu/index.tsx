@@ -1,9 +1,17 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
+import {
+  createFileRoute,
+  useBlocker,
+  useNavigate,
+} from "@tanstack/react-router";
 import { BookOpen, CheckCircle2, FileText, Layers } from "lucide-react";
 
 import { MenuAuditLogTab } from "@/components/pages/menu/audit/MenuAuditLogTab";
 import { MenuCategoriesTab } from "@/components/pages/menu/categories/MenuCategoriesTab";
-import { MealBuilderExperienceShell } from "@/components/pages/menu/meal-builder/MealBuilderExperienceShell";
+import {
+  MealBuilderSimplePage,
+  type MealBuilderNavigationState,
+} from "@/components/pages/menu/meal-builder/MealBuilderSimplePage";
 import { MenuPublishDialog } from "@/components/pages/menu/MenuPublishDialog";
 import { MenuValidationDialog } from "@/components/pages/menu/MenuValidationDialog";
 import { MenuOptionGroupsTab } from "@/components/pages/menu/option-groups/MenuOptionGroupsTab";
@@ -11,6 +19,15 @@ import { MenuOptionsTab } from "@/components/pages/menu/options/MenuOptionsTab";
 import { MenuProductsTab } from "@/components/pages/menu/products/MenuProductsTab";
 import { PublicMenuPreviewTab } from "@/components/pages/menu/public-preview/PublicMenuPreviewTab";
 import { MenuVersionsTab } from "@/components/pages/menu/versions/MenuVersionsTab";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { legacyMenuTabMap, workflowSteps } from "@/constants/menuData";
@@ -32,8 +49,43 @@ export const Route = createFileRoute("/_protected/menu/")({
 function MenuPage() {
   const { tab: activeTab } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
+  const isMealBuilderTab = activeTab === "meal-builder";
+  const [mealBuilderNavigation, setMealBuilderNavigation] =
+    useState<MealBuilderNavigationState>({
+      dirty: false,
+      pending: false,
+      draftWorkspaceReady: false,
+    });
+  const shouldGuardMealBuilderNavigation =
+    isMealBuilderTab &&
+    (mealBuilderNavigation.dirty || mealBuilderNavigation.pending);
+  const navigationBlocker = useBlocker({
+    withResolver: true,
+    enableBeforeUnload: false,
+    disabled: !shouldGuardMealBuilderNavigation,
+    shouldBlockFn: ({ current, next }) => {
+      if (!shouldGuardMealBuilderNavigation) return false;
+      const currentIsMenuMealBuilder =
+        isMenuPath(current.pathname) &&
+        getMenuTabFromSearch(current.search) === "meal-builder";
+
+      if (!currentIsMenuMealBuilder) return false;
+
+      return !(
+        isMenuPath(next.pathname) &&
+        getMenuTabFromSearch(next.search) === "meal-builder"
+      );
+    },
+  });
+  const handleMealBuilderNavigationStateChange = useCallback(
+    (state: MealBuilderNavigationState) => {
+      setMealBuilderNavigation(state);
+    },
+    []
+  );
 
   const setActiveTab = (value: string) => {
+    if (value === activeTab) return;
     navigate({ search: (prev) => ({ ...prev, tab: value }) });
   };
 
@@ -42,6 +94,7 @@ function MenuPage() {
       className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 lg:px-6"
       dir="rtl"
     >
+      {!isMealBuilderTab ? (
       <header className="flex flex-col gap-5 rounded-lg border bg-card p-5 shadow-xs lg:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex gap-4">
@@ -50,40 +103,48 @@ function MenuPage() {
             </div>
             <div className="flex min-w-0 flex-col gap-2">
               <h1 className="text-xl font-semibold tracking-tight">
-                إدارة قائمة الطلبات
+                {isMealBuilderTab ? "منشئ وجبات الاشتراك" : "إدارة قائمة الطلبات"}
               </h1>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                دورة واضحة لبناء القائمة: التصنيفات، المنتجات، مجموعات
-                الخيارات، الربط، معاينة العميل، ثم التحقق والنشر.
+                {isMealBuilderTab
+                  ? "إدارة النسخة المنشورة ومسودة العمل الخاصة بمنشئ وجبات الاشتراك."
+                  : "دورة واضحة لبناء القائمة: التصنيفات، المنتجات، مجموعات الخيارات، الربط، معاينة العميل، ثم التحقق والنشر."}
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <MenuValidationDialog />
-            <MenuPublishDialog />
-          </div>
+          {!isMealBuilderTab ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <MenuValidationDialog />
+              <MenuPublishDialog />
+            </div>
+          ) : null}
         </div>
 
-        <Separator />
+        {!isMealBuilderTab ? (
+          <>
+            <Separator />
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <MenuHeaderMetric
-            icon={CheckCircle2}
-            title="جاهزة للمراجعة"
-            description="تحقق من العلاقات قبل النشر"
-          />
-          <MenuHeaderMetric
-            icon={Layers}
-            title="دورة مترابطة"
-            description="التصنيفات والمنتجات والخيارات في مكان واحد"
-          />
-          <MenuHeaderMetric
-            icon={FileText}
-            title="تتبع التغييرات"
-            description="السجل يعرض آخر عمليات الإدارة"
-          />
-        </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <MenuHeaderMetric
+                icon={CheckCircle2}
+                title="جاهزة للمراجعة"
+                description="تحقق من العلاقات قبل النشر"
+              />
+              <MenuHeaderMetric
+                icon={Layers}
+                title="دورة مترابطة"
+                description="التصنيفات والمنتجات والخيارات في مكان واحد"
+              />
+              <MenuHeaderMetric
+                icon={FileText}
+                title="تتبع التغييرات"
+                description="السجل يعرض آخر عمليات الإدارة"
+              />
+            </div>
+          </>
+        ) : null}
       </header>
+      ) : null}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
         <div className="overflow-x-auto pb-1">
@@ -127,7 +188,10 @@ function MenuPage() {
           </div>
         </TabsContent>
         <TabsContent value="meal-builder" className="mt-5">
-          <MealBuilderExperienceShell />
+          <MealBuilderSimplePage
+            externalNavigationBlocked={navigationBlocker.status === "blocked"}
+            onNavigationStateChange={handleMealBuilderNavigationStateChange}
+          />
         </TabsContent>
         <TabsContent value="preview" className="mt-5">
           <div className="grid gap-5">
@@ -141,7 +205,69 @@ function MenuPage() {
           </div>
         </TabsContent>
       </Tabs>
+      <MealBuilderNavigationGuardDialog
+        open={navigationBlocker.status === "blocked"}
+        pending={mealBuilderNavigation.pending}
+        onStay={() => navigationBlocker.reset?.()}
+        onLeave={() => navigationBlocker.proceed?.()}
+      />
     </div>
+  );
+}
+
+function isMenuPath(pathname: string) {
+  return pathname.replace(/\/+$/, "") === "/menu";
+}
+
+function getMenuTabFromSearch(search: unknown) {
+  const requestedTab =
+    typeof (search as { tab?: unknown } | undefined)?.tab === "string"
+      ? ((search as { tab: string }).tab)
+      : "catalog";
+  return legacyMenuTabMap[requestedTab] || requestedTab;
+}
+
+function MealBuilderNavigationGuardDialog({
+  open,
+  pending,
+  onStay,
+  onLeave,
+}: {
+  open: boolean;
+  pending: boolean;
+  onStay: () => void;
+  onLeave: () => void;
+}) {
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onStay();
+      }}
+    >
+      <AlertDialogContent dir="rtl">
+        <AlertDialogHeader className="text-right">
+          <AlertDialogTitle>
+            {pending ? "العملية قيد التنفيذ" : "مغادرة المسودة؟"}
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-right leading-6">
+            {pending
+              ? "انتظر حتى تنتهي العملية الحالية"
+              : "توجد تغييرات غير محفوظة في المسودة. عند المغادرة الآن سيتم فقدان هذه التغييرات المحلية."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="gap-2 sm:justify-start">
+          <Button type="button" variant="outline" onClick={onStay}>
+            البقاء في المسودة
+          </Button>
+          {!pending ? (
+            <Button type="button" variant="destructive" onClick={onLeave}>
+              مغادرة بدون حفظ
+            </Button>
+          ) : null}
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

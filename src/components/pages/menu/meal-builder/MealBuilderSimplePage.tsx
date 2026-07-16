@@ -6,12 +6,11 @@ import {
   Eye,
   FileEdit,
   Loader2,
-  Plus,
   RefreshCw,
   RotateCcw,
   Save,
   Send,
-  Sparkles,
+  StickyNote,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,9 +21,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -72,11 +68,9 @@ import type {
   MealBuilderLifecycleResponseData,
   MealBuilderPremiumSection,
   MealBuilderSection,
-  MealBuilderSectionType,
   MealBuilderState,
   MealBuilderValidation,
 } from "@/types/mealBuilderTypes";
-import { MealBuilderSectionEditor } from "./MealBuilderSectionEditor";
 import { MealBuilderSimpleCard } from "./MealBuilderSimpleCard";
 import { MealBuilderSimpleCardEditor } from "./MealBuilderSimpleCardEditor";
 import {
@@ -88,10 +82,6 @@ import { orderSections, toBackendSections } from "./mealBuilderUtils";
 import { buildMealBuilderVisualCards } from "./mealBuilderVisualModel";
 
 type PageMode = "published" | "draft";
-type EditorState = {
-  type: MealBuilderSectionType;
-  index: number | null;
-} | null;
 
 type Catalog = {
   products: MenuProduct[];
@@ -112,11 +102,24 @@ type NormalizedMealBuilderView = {
   updatedAt: string | null;
 };
 
-export function MealBuilderSimplePage() {
+export type MealBuilderNavigationState = {
+  dirty: boolean;
+  pending: boolean;
+  draftWorkspaceReady: boolean;
+};
+
+export function MealBuilderSimplePage({
+  externalNavigationBlocked = false,
+  onNavigationStateChange,
+}: {
+  externalNavigationBlocked?: boolean;
+  onNavigationStateChange?: (state: MealBuilderNavigationState) => void;
+}) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<PageMode>("published");
   const [dirty, setDirty] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [mutationPending, setMutationPending] = useState(false);
 
   const builderQuery = useMealBuilderQuery();
   const publishedQuery = useMealBuilderPublishedQuery();
@@ -124,7 +127,8 @@ export function MealBuilderSimplePage() {
   const hydratedQuery = useMealBuilderHydratedQuery(
     mode === "draft" && draftQuery.isSuccess
   );
-  const loadEditableCatalog = mode === "draft";
+  const loadEditableCatalog =
+    mode === "draft" && draftQuery.isSuccess && hydratedQuery.isSuccess;
 
   const productsQuery = useMenuProductsQuery({
     limit: 500,
@@ -165,6 +169,28 @@ export function MealBuilderSimplePage() {
     groups: groupsQuery.data?.data.items ?? [],
     options: optionsQuery.data?.data.items ?? [],
   };
+  const editableCatalogReady =
+    !loadEditableCatalog ||
+    (productsQuery.isSuccess &&
+      categoriesQuery.isSuccess &&
+      groupsQuery.isSuccess &&
+      optionsQuery.isSuccess);
+  const draftWorkspaceReady =
+    mode === "draft" &&
+    Boolean(activeView.config) &&
+    draftQuery.isSuccess &&
+    hydratedQuery.isSuccess &&
+    editableCatalogReady;
+  const draftLoadingStage: DraftLoadingStage | null =
+    mode !== "draft" || draftWorkspaceReady
+      ? null
+      : !draftQuery.isSuccess
+        ? "opening"
+        : !hydratedQuery.isSuccess
+          ? "hydrating"
+          : !editableCatalogReady
+            ? "catalog"
+            : null;
 
   const loading =
     publishedQuery.isLoading ||
@@ -196,6 +222,24 @@ export function MealBuilderSimplePage() {
     state?.metadata?.hasDraft || state?.draft || draftView.config
   );
 
+  useEffect(() => {
+    onNavigationStateChange?.({
+      dirty,
+      pending: mutationPending,
+      draftWorkspaceReady,
+    });
+  }, [dirty, draftWorkspaceReady, mutationPending, onNavigationStateChange]);
+
+  useEffect(() => {
+    return () => {
+      onNavigationStateChange?.({
+        dirty: false,
+        pending: false,
+        draftWorkspaceReady: false,
+      });
+    };
+  }, [onNavigationStateChange]);
+
   async function refresh() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_KEY] }),
@@ -210,8 +254,8 @@ export function MealBuilderSimplePage() {
   function openDraft() {
     if (mode === "draft") return;
     setDirty(false);
-    queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_DRAFT_KEY] });
-    queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_HYDRATED_KEY] });
+    queryClient.removeQueries({ queryKey: [MEAL_BUILDER_DRAFT_KEY] });
+    queryClient.removeQueries({ queryKey: [MEAL_BUILDER_HYDRATED_KEY] });
     setMode("draft");
   }
 
@@ -231,38 +275,48 @@ export function MealBuilderSimplePage() {
   }
 
   async function retry() {
+    if (mode === "published") {
+      await Promise.all([
+        builderQuery.refetch(),
+        publishedQuery.refetch(),
+      ]);
+      return;
+    }
+
+    await builderQuery.refetch();
+    const draftResult = await draftQuery.refetch();
+    if (!draftResult.isSuccess) return;
+
+    const hydratedResult = await hydratedQuery.refetch();
+    if (!hydratedResult.isSuccess) return;
+
     await Promise.all([
-      builderQuery.refetch(),
-      publishedQuery.refetch(),
       productsQuery.refetch(),
       categoriesQuery.refetch(),
       groupsQuery.refetch(),
       optionsQuery.refetch(),
-      ...(mode === "draft"
-        ? [draftQuery.refetch(), hydratedQuery.refetch()]
-        : []),
     ]);
   }
 
   return (
     <div className="grid gap-4" dir="rtl">
-      <SimpleHeader
-        mode={mode}
-        dirty={dirty}
-        loading={loading}
-        hasDraft={hasDraft}
-        onRefresh={refresh}
-        onOpenDraft={openDraft}
-        onShowPublished={showPublished}
-      />
-      <VersionStrip view={activeView} mode={mode} hasDraft={hasDraft} />
+      {mode !== "draft" || !draftWorkspaceReady ? (
+        <MealBuilderCommandBar
+          mode={mode}
+          view={activeView}
+          dirty={dirty}
+          loading={loading}
+          hasDraft={hasDraft}
+          onRefresh={refresh}
+          onOpenDraft={openDraft}
+          onShowPublished={showPublished}
+        />
+      ) : null}
 
       {loadError ? (
         <LoadError error={loadError} onRetry={retry} />
-      ) : mode === "draft" &&
-        (draftQuery.isLoading ||
-          (draftQuery.isSuccess && hydratedQuery.isLoading)) ? (
-        <DraftLoadingState hydrated={draftQuery.isSuccess} />
+      ) : draftLoadingStage ? (
+        <DraftLoadingState stage={draftLoadingStage} />
       ) : activeView.config ? (
         mode === "draft" ? (
           <SimpleWorkspace
@@ -273,12 +327,19 @@ export function MealBuilderSimplePage() {
             catalog={catalog}
             loading={loading}
             dirty={dirty}
+            view={activeView}
+            hasDraft={hasDraft}
+            onRefresh={refresh}
+            onShowPublished={showPublished}
             onDirtyChange={setDirty}
-            onPublished={() => {
+            onPendingChange={setMutationPending}
+            onPublished={async () => {
               setDirty(false);
+              await Promise.all([
+                publishedQuery.refetch(),
+                builderQuery.refetch(),
+              ]);
               setMode("published");
-              publishedQuery.refetch();
-              builderQuery.refetch();
             }}
           />
         ) : (
@@ -286,7 +347,6 @@ export function MealBuilderSimplePage() {
             config={activeView.config}
             validation={activeView.validation}
             premiumSection={activeView.premiumSection}
-            onOpenDraft={openDraft}
           />
         )
       ) : (
@@ -294,7 +354,7 @@ export function MealBuilderSimplePage() {
       )}
 
       <DiscardDraftDialog
-        open={discardOpen}
+        open={discardOpen && !externalNavigationBlocked}
         onClose={() => setDiscardOpen(false)}
         onConfirm={confirmShowPublished}
       />
@@ -302,131 +362,257 @@ export function MealBuilderSimplePage() {
   );
 }
 
-function SimpleHeader({
+function MealBuilderCommandBar({
   mode,
+  view,
   dirty,
   loading,
   hasDraft,
   onOpenDraft,
   onShowPublished,
   onRefresh,
+  onSave,
+  onValidate,
+  onPublish,
+  onReset,
+  onNotes,
+  saving = false,
+  validating = false,
+  publishing = false,
+  resetting = false,
+  pending = false,
 }: {
   mode: PageMode;
+  view: NormalizedMealBuilderView;
   dirty: boolean;
   loading: boolean;
   hasDraft: boolean;
   onOpenDraft: () => void;
   onShowPublished: () => void;
   onRefresh: () => void;
+  onSave?: () => void;
+  onValidate?: () => void;
+  onPublish?: () => void;
+  onReset?: () => void;
+  onNotes?: () => void;
+  saving?: boolean;
+  validating?: boolean;
+  publishing?: boolean;
+  resetting?: boolean;
+  pending?: boolean;
 }) {
-  return (
-    <Card className="border-border/80 shadow-none">
-      <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between lg:p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Sparkles className="size-5" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-semibold">ترتيب خيارات وجبات الاشتراك</h2>
-              {dirty ? (
-                <Badge variant="secondary">غير محفوظ</Badge>
-              ) : mode === "draft" ? (
-                <Badge variant="outline">مسودة محفوظة</Badge>
-              ) : null}
-            </div>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              اختر ما يظهر للعميل داخل كل بطاقة، ثم احفظ وانشر التغييرات.
-            </p>
-          </div>
-        </div>
+  const isDraft = mode === "draft";
+  const draftActionsReady =
+    isDraft &&
+    Boolean(onSave && onValidate && onPublish && onReset && onNotes);
+  const metadata = commandBarMetadata(
+    view,
+    mode,
+    hasDraft,
+    dirty,
+    draftActionsReady
+  );
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <div className="grid grid-cols-2 rounded-lg border bg-muted/30 p-1">
-            <Button
-              type="button"
-              size="sm"
-              variant={mode === "published" ? "default" : "ghost"}
-              disabled={loading}
-              onClick={onShowPublished}
-            >
-              <Eye data-icon="inline-start" /> المعروض للعميل
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={mode === "draft" ? "default" : "ghost"}
-              disabled={loading}
-              onClick={onOpenDraft}
-            >
-              <FileEdit data-icon="inline-start" />
-              {hasDraft ? "المسودة" : "تعديل"}
-            </Button>
+  return (
+    <Card className="border-border/80 bg-background/95 shadow-sm backdrop-blur lg:sticky lg:top-2 lg:z-20">
+      <CardContent className="space-y-4 p-4 lg:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold">منشئ وجبات الاشتراك</h2>
+              <Badge variant={isDraft ? "secondary" : "default"}>
+                {isDraft ? "المسودة" : "النسخة المنشورة"}
+              </Badge>
+              {!isDraft ? null : !draftActionsReady ? (
+                <Badge variant="outline">جاري التجهيز</Badge>
+              ) : dirty ? (
+                <Badge variant="destructive">تغييرات غير محفوظة</Badge>
+              ) : (
+                <Badge variant="outline">محفوظة</Badge>
+              )}
+            </div>
+            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+              {isDraft
+                ? "عدّل المسودة واحفظها، ثم افحصها قبل النشر للعميل."
+                : "هذه هي النسخة التي يراها العميل حاليا. افتح المسودة عند الحاجة للتعديل."}
+            </p>
+            <div className="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-4">
+              {metadata.map(([label, value]) => (
+                <MetaPill key={label} label={label} value={value} />
+              ))}
+            </div>
           </div>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            disabled={loading}
-            onClick={onRefresh}
-            aria-label="تحديث البيانات"
-            title="تحديث البيانات"
-          >
-            {loading ? (
-              <Loader2 className="size-4 animate-spin" />
+
+          <div className="flex w-full flex-col gap-3 xl:w-auto xl:min-w-[34rem]">
+            {draftActionsReady ? (
+              <>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Button
+                    type="button"
+                    disabled={loading || pending || !dirty || !onSave}
+                    onClick={onSave}
+                  >
+                    {saving ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Save data-icon="inline-start" />
+                    )}
+                    حفظ المسودة
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={loading || pending || !onValidate}
+                    onClick={onValidate}
+                  >
+                    {validating ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 data-icon="inline-start" />
+                    )}
+                    فحص المسودة
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    disabled={loading || pending || !onPublish}
+                    onClick={onPublish}
+                  >
+                    {publishing ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send data-icon="inline-start" />
+                    )}
+                    نشر المسودة
+                  </Button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={loading || pending || !onNotes}
+                    onClick={onNotes}
+                  >
+                    <StickyNote data-icon="inline-start" />
+                    ملاحظات النسخة
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={onShowPublished}
+                  >
+                    <Eye data-icon="inline-start" />
+                    عرض النسخة المنشورة
+                  </Button>
+                  <RefreshButton loading={loading} onRefresh={onRefresh} />
+                </div>
+                <div className="flex justify-start border-t pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={loading || pending || !onReset}
+                    onClick={onReset}
+                    className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    {resetting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <RotateCcw data-icon="inline-start" />
+                    )}
+                    إلغاء التعديلات
+                  </Button>
+                </div>
+              </>
+            ) : isDraft ? (
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <div className="flex min-h-10 items-center gap-2 rounded-md border border-dashed px-3 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 shrink-0 animate-spin" />
+                  <span>جاري تجهيز المسودة وأدوات التعديل...</span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={loading}
+                    onClick={onShowPublished}
+                  >
+                    <Eye data-icon="inline-start" />
+                    عرض النسخة المنشورة
+                  </Button>
+                  <RefreshButton loading={loading} onRefresh={onRefresh} />
+                </div>
+              </div>
             ) : (
-              <RefreshCw className="size-4" />
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <Button type="button" disabled={loading} onClick={onOpenDraft}>
+                  <FileEdit data-icon="inline-start" />
+                  فتح المسودة للتعديل
+                </Button>
+                <RefreshButton loading={loading} onRefresh={onRefresh} />
+              </div>
             )}
-          </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function VersionStrip({
-  view,
-  mode,
-  hasDraft,
+function RefreshButton({
+  loading,
+  onRefresh,
 }: {
-  view: NormalizedMealBuilderView;
-  mode: PageMode;
-  hasDraft: boolean;
+  loading: boolean;
+  onRefresh: () => void;
 }) {
-  const isDraft = mode === "draft";
-  const items = isDraft
-    ? [
-        ["الحالة", "مسودة"],
-        ["رقم النسخة", view.versionNumber ?? "-"],
-        [
-          "مبنية على النسخة المنشورة",
-          view.basedOnPublishedVersionId ? "آخر نسخة منشورة" : "غير محدد",
-        ],
-        [
-          "تغييرات غير منشورة",
-          view.hasUnpublishedChanges ? "نعم" : "لا",
-        ],
-        ["آخر تحديث", formatSafeDate(view.updatedAt)],
-      ]
-    : [
-        ["الحالة", "منشور"],
-        ["رقم النسخة", view.versionNumber ?? "-"],
-        ["توجد مسودة", hasDraft ? "نعم" : "لا"],
-        [
-          "تغييرات غير منشورة",
-          view.hasUnpublishedChanges ? "نعم" : "لا",
-        ],
-        ["تاريخ النشر", formatSafeDate(view.publishedAt)],
-        ["آخر تحديث", formatSafeDate(view.updatedAt)],
-      ];
-
   return (
-    <div className="grid gap-2 rounded-lg border bg-card p-3 text-sm shadow-none sm:grid-cols-2 xl:grid-cols-6">
-      {items.map(([label, value]) => (
-        <MetaPill key={String(label)} label={String(label)} value={value} />
-      ))}
-    </div>
+    <Button
+      type="button"
+      size="icon"
+      variant="outline"
+      disabled={loading}
+      onClick={onRefresh}
+      aria-label="تحديث البيانات"
+      title="تحديث البيانات"
+      className="w-full sm:w-10"
+    >
+      {loading ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <RefreshCw className="size-4" />
+      )}
+    </Button>
   );
+}
+
+function commandBarMetadata(
+  view: NormalizedMealBuilderView,
+  mode: PageMode,
+  hasDraft: boolean,
+  dirty: boolean,
+  draftActionsReady: boolean
+) {
+  if (mode === "draft") {
+    if (!draftActionsReady) {
+      return [["حالة المسودة", "جاري التجهيز"]] satisfies Array<
+        [string, string | number]
+      >;
+    }
+
+    return [
+      ["رقم النسخة", view.versionNumber ?? "-"],
+      ["مبنية على آخر نسخة منشورة", view.basedOnPublishedVersionId ? "نعم" : "غير محدد"],
+      ["آخر تحديث", formatSafeDate(view.updatedAt)],
+      ["حالة الحفظ", dirty ? "تغييرات غير محفوظة" : "محفوظة"],
+    ] satisfies Array<[string, string | number]>;
+  }
+
+  return [
+    ["رقم النسخة", view.versionNumber ?? "-"],
+    ["تاريخ النشر", formatSafeDate(view.publishedAt)],
+    ["توجد مسودة عمل", hasDraft ? "نعم" : "لا"],
+  ] satisfies Array<[string, string | number]>;
 }
 
 function MetaPill({
@@ -448,12 +634,10 @@ function PublishedView({
   config,
   validation,
   premiumSection,
-  onOpenDraft,
 }: {
   config: MealBuilderConfig;
   validation: MealBuilderValidation | null;
   premiumSection: MealBuilderPremiumSection | null;
-  onOpenDraft: () => void;
 }) {
   const cards = buildCards(
     config.sections,
@@ -463,35 +647,29 @@ function PublishedView({
   );
 
   return (
-    <Card className="border-border/80 shadow-none">
-      <CardHeader className="flex flex-col gap-3 border-b lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <CardTitle className="text-base">ما يراه العميل حاليًا</CardTitle>
-          <CardDescription>
-            هذه النسخة للقراءة فقط. افتح المسودة لتعديلها.
-          </CardDescription>
-        </div>
-        <Button type="button" onClick={onOpenDraft}>
-          <FileEdit data-icon="inline-start" /> تعديل القائمة
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4 p-4 lg:p-5">
-        <ValidationNotice validation={validation} dirty={false} />
-        <PremiumNotice premiumSection={premiumSection} />
-        <CardsGrid cards={cards} readOnly />
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <ValidationNotice validation={validation} dirty={false} />
+      <PremiumNotice premiumSection={premiumSection} />
+      <CardsGrid cards={cards} readOnly />
+    </div>
   );
 }
 
-function DraftLoadingState({ hydrated }: { hydrated: boolean }) {
+type DraftLoadingStage = "opening" | "hydrating" | "catalog";
+
+function DraftLoadingState({ stage }: { stage: DraftLoadingStage }) {
+  const message =
+    stage === "opening"
+      ? "جاري فتح مسودة العمل..."
+      : stage === "hydrating"
+        ? "جاري تحميل بيانات المسودة..."
+        : "جاري تجهيز عناصر التعديل...";
+
   return (
     <Card className="border-border/80 shadow-none">
       <CardContent className="flex items-center gap-3 p-5 text-sm text-muted-foreground">
         <Loader2 className="size-4 shrink-0 animate-spin" />
-        {hydrated
-          ? "جاري تحميل بيانات المسودة التفصيلية..."
-          : "جاري فتح مسودة العمل..."}
+        {message}
       </CardContent>
     </Card>
   );
@@ -504,7 +682,12 @@ function SimpleWorkspace({
   catalog,
   loading,
   dirty,
+  view,
+  hasDraft,
+  onRefresh,
+  onShowPublished,
   onDirtyChange,
+  onPendingChange,
   onPublished,
 }: {
   draft: MealBuilderConfig;
@@ -513,10 +696,14 @@ function SimpleWorkspace({
   catalog: Catalog;
   loading: boolean;
   dirty: boolean;
+  view: NormalizedMealBuilderView;
+  hasDraft: boolean;
+  onRefresh: () => void;
+  onShowPublished: () => void;
   onDirtyChange: (dirty: boolean) => void;
+  onPendingChange: (pending: boolean) => void;
   onPublished: () => void;
 }) {
-  const queryClient = useQueryClient();
   const saveDraft = useSaveMealBuilderDraftMutation();
   const validateDraft = useValidateMealBuilderDraftMutation();
   const publishDraft = usePublishMealBuilderDraftMutation();
@@ -526,10 +713,11 @@ function SimpleWorkspace({
     toEditableMealBuilderSections(orderSections(draft.sections))
   );
   const [notes, setNotes] = useState(draft.notes ?? "");
-  const [editor, setEditor] = useState<EditorState>(null);
   const [cardEditorKey, setCardEditorKey] = useState<string | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [validationOpen, setValidationOpen] = useState(false);
   const [validation, setValidation] =
     useState<MealBuilderValidation | null>(initialValidation);
 
@@ -545,17 +733,26 @@ function SimpleWorkspace({
   const payload = { sections: toBackendSections(sections), notes };
 
   useEffect(() => {
+    onPendingChange(pending);
+  }, [onPendingChange, pending]);
+
+  useEffect(() => {
+    return () => onPendingChange(false);
+  }, [onPendingChange]);
+
+  useEffect(() => {
     const onLeave = (event: BeforeUnloadEvent) => {
-      if (!dirty) return;
+      if (!dirty && !pending) return;
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", onLeave);
     return () => window.removeEventListener("beforeunload", onLeave);
-  }, [dirty]);
+  }, [dirty, pending]);
 
   function markChanged() {
     setValidation(null);
+    setValidationOpen(false);
     onDirtyChange(true);
   }
 
@@ -583,109 +780,87 @@ function SimpleWorkspace({
     });
   }
 
-  function validateCurrent({
-    serverDraft = false,
+  function validateStoredDraft({
     onValid,
+    openWhenWarnings = false,
   }: {
-    serverDraft?: boolean;
     onValid?: () => void;
+    openWhenWarnings?: boolean;
   } = {}) {
-    validateDraft.mutate(serverDraft ? undefined : payload, {
+    validateDraft.mutate(undefined, {
       onSuccess: (response) => {
         setValidation(response.data);
-        if (!response.data.ready || response.data.errors.length > 0) return;
+        if (!response.data.ready || response.data.errors.length > 0) {
+          setValidationOpen(true);
+          return;
+        }
+        if (openWhenWarnings && response.data.warnings.length > 0) {
+          setValidationOpen(true);
+        }
         onValid?.();
       },
     });
   }
 
-  function publishFlow() {
-    const validateSaved = () =>
-      validateCurrent({
-        serverDraft: true,
-        onValid: () => setPublishOpen(true),
+  function saveThenValidate({
+    onValid,
+    openWhenWarnings = false,
+  }: {
+    onValid?: () => void;
+    openWhenWarnings?: boolean;
+  } = {}) {
+    const validate = () =>
+      validateStoredDraft({
+        onValid,
+        openWhenWarnings,
       });
 
     if (dirty) {
-      saveCurrent(validateSaved);
+      saveCurrent(validate);
       return;
     }
-    validateSaved();
+    validate();
   }
 
-  function saveAdvancedSection(nextSection: MealBuilderSection) {
-    setSections((current) => {
-      if (editor?.index == null) {
-        return [
-          ...current,
-          { ...nextSection, sortOrder: current.length + 1 },
-        ];
-      }
-      return current.map((section, index) =>
-        index === editor.index ? nextSection : section
-      );
+  function publishFlow() {
+    saveThenValidate({
+      openWhenWarnings: false,
+      onValid: () => {
+        setValidationOpen(false);
+        setPublishOpen(true);
+      },
     });
-    setEditor(null);
-    markChanged();
   }
 
   return (
     <>
       <div className="space-y-4">
-        <Card className="sticky top-2 z-20 border-border/80 bg-background/95 shadow-sm backdrop-blur">
-          <CardContent className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between lg:p-4">
-            <div>
-              <p className="font-semibold">تعديل المسودة</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {dirty
-                  ? "لديك تغييرات تحتاج إلى الحفظ."
-                  : "كل التغييرات محفوظة."}
-              </p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <Button
-                type="button"
-                onClick={() => saveCurrent()}
-                disabled={pending || !dirty}
-              >
-                {saveDraft.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Save data-icon="inline-start" />
-                )}
-                حفظ
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => validateCurrent()}
-                disabled={pending}
-              >
-                {validateDraft.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 data-icon="inline-start" />
-                )}
-                فحص
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={publishFlow}
-                disabled={pending}
-              >
-                {publishDraft.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Send data-icon="inline-start" />
-                )}
-                نشر
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <MealBuilderCommandBar
+          mode="draft"
+          view={view}
+          dirty={dirty}
+          loading={loading}
+          hasDraft={hasDraft}
+          onRefresh={onRefresh}
+          onOpenDraft={() => undefined}
+          onShowPublished={onShowPublished}
+          onSave={() => saveCurrent()}
+          onValidate={() => saveThenValidate({ openWhenWarnings: true })}
+          onPublish={publishFlow}
+          onReset={() => setResetOpen(true)}
+          onNotes={() => setNotesOpen(true)}
+          saving={saveDraft.isPending}
+          validating={validateDraft.isPending}
+          publishing={publishDraft.isPending}
+          resetting={resetDraft.isPending}
+          pending={pending}
+        />
 
-        <ValidationNotice validation={validation} dirty={dirty} />
+        <ValidationNotice
+          validation={validation}
+          dirty={dirty}
+          onOpenDetails={() => setValidationOpen(true)}
+        />
         <PremiumNotice premiumSection={premiumSection} />
 
         <div className="grid gap-4 xl:grid-cols-2">
@@ -699,68 +874,7 @@ function SimpleWorkspace({
           ))}
         </div>
 
-        <details className="rounded-lg border bg-card p-4">
-          <summary className="cursor-pointer text-sm font-semibold">
-            إعدادات متقدمة وملاحظات النشر
-          </summary>
-          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                استخدم هذه الأدوات فقط لإضافة قسم جديد غير موجود ضمن البطاقات الأساسية.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setEditor({ type: "option_group", index: null })}
-                >
-                  <Plus data-icon="inline-start" /> مجموعة خيارات
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() =>
-                    setEditor({ type: "product_category", index: null })
-                  }
-                >
-                  <Plus data-icon="inline-start" /> تصنيف منتجات
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => setEditor({ type: "product_list", index: null })}
-                >
-                  <Plus data-icon="inline-start" /> قائمة منتجات
-                </Button>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setResetOpen(true)}
-                disabled={pending}
-              >
-                <RotateCcw data-icon="inline-start" /> إلغاء تعديلات المسودة
-              </Button>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="meal-builder-publish-notes">ملاحظات النشر</Label>
-              <Textarea
-                id="meal-builder-publish-notes"
-                value={notes}
-                onChange={(event) => {
-                  setNotes(event.target.value);
-                  markChanged();
-                }}
-                className="min-h-24"
-                placeholder="مثال: تحديث خيارات الساندويتش"
-              />
-            </div>
-          </div>
-        </details>
+
       </div>
 
       {selectedCard ? (
@@ -778,22 +892,26 @@ function SimpleWorkspace({
         />
       ) : null}
 
-      {editor ? (
-        <MealBuilderSectionEditor
-          key={`${editor.type}:${editor.index ?? "new"}`}
-          open
-          type={editor.type}
-          initial={
-            editor.index == null ? null : (sections[editor.index] ?? null)
+      <NotesDialog
+        key={`${notesOpen ? "open" : "closed"}:${notes}`}
+        open={notesOpen}
+        notes={notes}
+        pending={pending}
+        onClose={() => setNotesOpen(false)}
+        onApply={(nextNotes) => {
+          if (nextNotes !== notes) {
+            setNotes(nextNotes);
+            markChanged();
           }
-          products={catalog.products}
-          categories={catalog.categories}
-          groups={catalog.groups}
-          options={catalog.options}
-          onClose={() => setEditor(null)}
-          onSave={saveAdvancedSection}
-        />
-      ) : null}
+          setNotesOpen(false);
+        }}
+      />
+
+      <ValidationDetailsDialog
+        open={validationOpen}
+        validation={validation}
+        onClose={() => setValidationOpen(false)}
+      />
 
       <PublishDialog
         open={publishOpen}
@@ -830,10 +948,8 @@ function SimpleWorkspace({
                 setValidation(resetView.validation);
               }
               onDirtyChange(false);
+              setValidationOpen(false);
               setResetOpen(false);
-              queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_KEY] });
-              queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_DRAFT_KEY] });
-              queryClient.invalidateQueries({ queryKey: [MEAL_BUILDER_HYDRATED_KEY] });
             },
           })
         }
@@ -870,9 +986,11 @@ function CardsGrid({
 function ValidationNotice({
   validation,
   dirty,
+  onOpenDetails,
 }: {
   validation: MealBuilderValidation | null;
   dirty: boolean;
+  onOpenDetails?: () => void;
 }) {
   if (dirty) {
     return (
@@ -884,45 +1002,101 @@ function ValidationNotice({
   }
 
   if (!validation) return null;
-  const grouped = groupValidationIssues(validation);
+  const hasErrors = validation.errors.length > 0;
+  const hasWarnings = validation.warnings.length > 0;
 
-  if (validation.errors.length) {
+  if (hasErrors) {
     return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-        <p className="font-medium">
-          توجد {validation.errors.length} مشاكل تمنع النشر.
-        </p>
-        <p className="mt-1">{mealBuilderIssueText(validation.errors[0])}</p>
-        <details className="mt-3 rounded-md border border-destructive/20 bg-background/80 p-3 text-foreground">
-          <summary className="cursor-pointer font-medium text-destructive">
-            عرض الأخطاء
-          </summary>
-          <ValidationIssueGroups groups={grouped} />
-        </details>
+      <div className="flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="font-medium">
+            المسودة تحتوي على أخطاء ويجب إصلاحها قبل النشر
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {validation.errors.length} أخطاء · {validation.warnings.length} تنبيهات
+          </p>
+        </div>
+        {onOpenDetails ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onOpenDetails}
+          >
+            عرض التفاصيل
+          </Button>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+    <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-2">
-      <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
-      {validation.warnings.length
-        ? `جاهزة للنشر مع ${validation.warnings.length} ملاحظات غير مانعة.`
-        : "المسودة جاهزة للنشر."}
+        <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+        <span>
+          {hasWarnings
+            ? "المسودة جاهزة للنشر مع وجود ملاحظات"
+            : "المسودة جاهزة للنشر."}
+        </span>
       </div>
-      {validation.warnings.length ? (
-        <details className="mt-3 rounded-md border border-emerald-200 bg-background/80 p-3 text-foreground">
-          <summary className="cursor-pointer font-medium text-amber-700">
-            عرض التنبيهات
-          </summary>
-          <ValidationIssueGroups groups={grouped} />
-        </details>
+      {hasWarnings && onOpenDetails ? (
+        <Button type="button" size="sm" variant="outline" onClick={onOpenDetails}>
+          عرض التفاصيل
+        </Button>
       ) : null}
     </div>
   );
 }
 
+function ValidationDetailsDialog({
+  open,
+  validation,
+  onClose,
+}: {
+  open: boolean;
+  validation: MealBuilderValidation | null;
+  onClose: () => void;
+}) {
+  const groups = validation ? groupValidationIssues(validation) : [];
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <DialogContent
+        className="grid max-h-[85dvh] w-[calc(100vw-1.5rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0"
+        dir="rtl"
+      >
+        <DialogHeader className="border-b px-5 py-4 text-right">
+          <DialogTitle>نتيجة فحص المسودة</DialogTitle>
+          <DialogDescription>
+            راجع الأخطاء والتنبيهات المرتبطة ببطاقات منشئ الوجبات.
+          </DialogDescription>
+          {validation ? (
+            <div className="flex flex-wrap gap-2 pt-2">
+              <Badge variant={validation.ready ? "default" : "outline"}>
+                {validation.ready ? "جاهزة" : "غير جاهزة"}
+              </Badge>
+              <Badge variant={validation.errors.length ? "destructive" : "secondary"}>
+                {validation.errors.length} أخطاء مانعة
+              </Badge>
+              <Badge variant="secondary">
+                {validation.warnings.length} تنبيهات
+              </Badge>
+            </div>
+          ) : null}
+        </DialogHeader>
+        <div className="min-h-0 overflow-y-auto px-5 py-4">
+          <ValidationIssueGroups groups={groups} />
+        </div>
+        <DialogFooter className="border-t px-5 py-3 sm:justify-start">
+          <Button type="button" variant="outline" onClick={onClose}>
+            إغلاق
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 type ValidationIssueGroup = {
   key: string;
   label: string;
@@ -1074,6 +1248,54 @@ function PremiumNotice({
   );
 }
 
+function NotesDialog({
+  open,
+  notes,
+  pending,
+  onClose,
+  onApply,
+}: {
+  open: boolean;
+  notes: string;
+  pending: boolean;
+  onClose: () => void;
+  onApply: (notes: string) => void;
+}) {
+  const [draftNotes, setDraftNotes] = useState(notes);
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-xl" dir="rtl">
+        <DialogHeader className="text-right">
+          <DialogTitle>ملاحظات النسخة</DialogTitle>
+          <DialogDescription>
+            اكتب ملاحظات داخلية لهذه المسودة. سيتم إرسالها مع عملية النشر.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="meal-builder-version-notes">ملاحظات النسخة</Label>
+          <Textarea
+            id="meal-builder-version-notes"
+            value={draftNotes}
+            disabled={pending}
+            onChange={(event) => setDraftNotes(event.target.value)}
+            className="min-h-32 text-right"
+            placeholder="مثال: تحديث خيارات الساندويتش"
+          />
+        </div>
+        <DialogFooter className="gap-2 sm:justify-start">
+          <Button type="button" onClick={() => onApply(draftNotes)} disabled={pending}>
+            تطبيق الملاحظات
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            إلغاء
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PublishDialog({
   open,
   pending,
@@ -1088,8 +1310,13 @@ function PublishDialog({
   onPublish: () => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md" dir="rtl">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !pending) onClose();
+      }}
+    >
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-xl" dir="rtl">
         <DialogHeader className="text-right">
           <DialogTitle>نشر التغييرات للعميل؟</DialogTitle>
           <DialogDescription>
@@ -1106,7 +1333,7 @@ function PublishDialog({
             {pending ? <Loader2 className="size-4 animate-spin" /> : null}
             تأكيد النشر
           </Button>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
             إلغاء
           </Button>
         </DialogFooter>
@@ -1126,7 +1353,7 @@ function DiscardDraftDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md" dir="rtl">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-xl" dir="rtl">
         <DialogHeader className="text-right">
           <DialogTitle>عرض القائمة المنشورة؟</DialogTitle>
           <DialogDescription>
@@ -1161,8 +1388,13 @@ function ResetDialog({
   onReset: () => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="w-[calc(100%-1.5rem)] max-w-md" dir="rtl">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !pending) onClose();
+      }}
+    >
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-xl" dir="rtl">
         <DialogHeader className="text-right">
           <DialogTitle>إلغاء تعديلات المسودة؟</DialogTitle>
           <DialogDescription>
@@ -1184,7 +1416,7 @@ function ResetDialog({
             {pending ? <Loader2 className="size-4 animate-spin" /> : null}
             تأكيد الإلغاء
           </Button>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" disabled={pending} onClick={onClose}>
             رجوع
           </Button>
         </DialogFooter>
