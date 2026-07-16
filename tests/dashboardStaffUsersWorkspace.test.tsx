@@ -611,7 +611,7 @@ describe("dashboard staff users workspace interactions", () => {
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
     await waitFor(() =>
-      expect(screen.queryByText(/Ø³ÙŠØªÙ… Ù…Ù†Ø¹Ù‡/)).not.toBeInTheDocument()
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     );
     expect(getAddUserButton()).toBeDisabled();
     expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
@@ -641,6 +641,57 @@ describe("dashboard staff users workspace interactions", () => {
     expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
     await user.click(getAddUserButton());
     expect(mutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("reset password secrets are cleared when the parent removes the selected user", async () => {
+    const mutateAsync = vi.fn();
+    resetPasswordMutationMock.mockReturnValue(makeMutation(mutateAsync));
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <ResetDashboardStaffPasswordDialog
+        user={staffUser}
+        onOpenChange={onOpenChange}
+        onAccessLoss={() => false}
+        accessBlocked={false}
+      />
+    );
+
+    const user = userEvent.setup();
+    let inputs = document.querySelectorAll<HTMLInputElement>(
+      'input[type="password"]'
+    );
+    await user.type(inputs[0], "StrongPass9!");
+    await user.type(inputs[1], "StrongPass9!");
+    expect(inputs[0]).toHaveValue("StrongPass9!");
+    expect(inputs[1]).toHaveValue("StrongPass9!");
+
+    rerender(
+      <ResetDashboardStaffPasswordDialog
+        user={null}
+        onOpenChange={onOpenChange}
+        onAccessLoss={() => false}
+        accessBlocked
+      />
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    );
+    expect(document.querySelector('input[type="password"]')).not.toBeInTheDocument();
+
+    rerender(
+      <ResetDashboardStaffPasswordDialog
+        user={staffUser}
+        onOpenChange={onOpenChange}
+        onAccessLoss={() => false}
+        accessBlocked={false}
+      />
+    );
+
+    inputs = document.querySelectorAll<HTMLInputElement>('input[type="password"]');
+    expect(inputs[0]).toHaveValue("");
+    expect(inputs[1]).toHaveValue("");
+    expect(mutateAsync).not.toHaveBeenCalled();
   });
 
   it("a list 403 hides stale data and does not expose a retry loop", async () => {

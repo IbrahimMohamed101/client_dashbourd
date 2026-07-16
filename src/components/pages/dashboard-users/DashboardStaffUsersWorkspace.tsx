@@ -1006,27 +1006,38 @@ export function ResetDashboardStaffPasswordDialog({
     shouldFocusError: true,
   });
 
+  const resetSecretState = React.useCallback(() => {
+    form.reset({
+      password: "",
+      confirmPassword: "",
+    });
+    resetMutation();
+    setDialogError(null);
+    submittingRef.current = false;
+    setShowPassword(false);
+  }, [form, resetMutation]);
+
   const cleanup = React.useCallback(
     (open: boolean) => {
       if (!open && mutation.isPending && !accessBlocked) return;
-      if (!open) {
-        form.reset();
-        resetMutation();
-        setDialogError(null);
-        submittingRef.current = false;
-        setShowPassword(false);
-      }
+      if (!open) resetSecretState();
       if (open && accessBlocked) return;
       onOpenChange(open);
     },
-    [accessBlocked, form, mutation.isPending, onOpenChange, resetMutation]
+    [accessBlocked, mutation.isPending, onOpenChange, resetSecretState]
   );
 
   React.useEffect(() => {
     return () => {
-      resetMutation();
+      resetSecretState();
     };
-  }, [resetMutation]);
+  }, [resetSecretState]);
+
+  React.useEffect(() => {
+    if (!user || accessBlocked) {
+      resetSecretState();
+    }
+  }, [accessBlocked, resetSecretState, user]);
 
   if (!user) return null;
 
@@ -1037,7 +1048,7 @@ export function ResetDashboardStaffPasswordDialog({
     try {
       await mutation.mutateAsync({ id: user.id, password: values.password });
       ToastMessage("تم تغيير كلمة المرور بنجاح.", "success");
-      form.reset();
+      resetSecretState();
       cleanup(false);
     } catch (error) {
       if (!onAccessLoss(error)) {
