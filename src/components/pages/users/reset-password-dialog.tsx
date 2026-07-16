@@ -41,11 +41,13 @@ export function ResetPasswordDialog({
   const queryClient = useQueryClient();
   const resetPassword = useResetAdminCustomerPasswordMutation();
   const resetPasswordMutationState = resetPassword.reset;
+  const protectedState =
+    resetPassword.isPending || Boolean(credentials) || malformedSuccessOpen;
 
   useBlocker({
-    disabled: !resetPassword.isPending,
+    disabled: !protectedState,
     enableBeforeUnload: false,
-    shouldBlockFn: () => resetPassword.isPending,
+    shouldBlockFn: () => protectedState,
   });
 
   function closeCredentials() {
@@ -66,13 +68,13 @@ export function ResetPasswordDialog({
 
   useEffect(() => {
     const onLeave = (event: BeforeUnloadEvent) => {
-      if (!resetPassword.isPending) return;
+      if (!protectedState) return;
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", onLeave);
     return () => window.removeEventListener("beforeunload", onLeave);
-  }, [resetPassword.isPending]);
+  }, [protectedState]);
 
   useEffect(() => {
     return () => {
