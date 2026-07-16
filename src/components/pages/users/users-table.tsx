@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
@@ -27,9 +28,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
-import { useUsersListQuery } from "@/hooks/useUsersQuery";
+import {
+  useFilteredUsersCatalogQuery,
+  useUsersListQuery,
+} from "@/hooks/useUsersQuery";
 import { cn } from "@/lib/utils";
 import { UserRoles } from "@/types/auth";
+import type { User } from "@/types/userTypes";
 import type { AuthFilterValue } from "./user-auth-utils";
 import { customerMatchesAuthFilter } from "./user-auth-utils";
 import { usersColumns } from "./users-columns";
@@ -43,6 +48,7 @@ export function UsersTable() {
     pageSize: 10,
   });
   const { user: sessionUser } = useAuth();
+  const queryClient = useQueryClient();
   const canManagePasswords =
     sessionUser?.role === UserRoles.ADMIN ||
     sessionUser?.role === UserRoles.SUPERADMIN;
@@ -55,20 +61,52 @@ export function UsersTable() {
     return () => window.clearTimeout(timeout);
   }, [search]);
 
-  const { data: response, isLoading, isFetching } = useUsersListQuery(
+  const filtersActive = Boolean(debouncedSearch) || authFilter !== "all";
+  const serverQuery = useUsersListQuery(
     pagination.pageIndex + 1,
     pagination.pageSize,
-    debouncedSearch
+    !filtersActive
   );
+  const catalogQuery = useFilteredUsersCatalogQuery(filtersActive);
 
-  const data = React.useMemo(
-    () =>
-      (response?.data || []).filter((user) =>
-        customerMatchesAuthFilter(user, authFilter)
-      ),
-    [authFilter, response?.data]
-  );
-  const meta = response?.meta || { total: 0, totalPages: 1 };
+  React.useEffect(() => {
+    if (filtersActive) return;
+    queryClient.cancelQueries({ queryKey: ["users", "filtered-catalog"] });
+  }, [filtersActive, queryClient]);
+
+  const filteredCatalog = React.useMemo(() => {
+    if (!filtersActive) return [];
+    const query = normalizeSearchTerm(debouncedSearch);
+    return dedupeUsers(catalogQuery.data?.data ?? []).filter((user) => {
+      if (!customerMatchesAuthFilter(user, authFilter)) return false;
+      if (!query) return true;
+      return userSearchText(user).includes(query);
+    });
+  }, [authFilter, catalogQuery.data?.data, debouncedSearch, filtersActive]);
+
+  const filteredPage = React.useMemo(() => {
+    const start = pagination.pageIndex * pagination.pageSize;
+    return filteredCatalog.slice(start, start + pagination.pageSize);
+  }, [filteredCatalog, pagination.pageIndex, pagination.pageSize]);
+
+  const data = filtersActive ? filteredPage : serverQuery.data?.data ?? [];
+  const meta = filtersActive
+    ? {
+        total: filteredCatalog.length,
+        totalPages: Math.max(
+          1,
+          Math.ceil(filteredCatalog.length / pagination.pageSize)
+        ),
+      }
+    : serverQuery.data?.meta || { total: 0, totalPages: 1 };
+  const isLoading = filtersActive
+    ? catalogQuery.isLoading
+    : serverQuery.isLoading;
+  const isFetching = filtersActive
+    ? catalogQuery.isFetching
+    : serverQuery.isFetching;
+  const isError = filtersActive ? catalogQuery.isError : serverQuery.isError;
+  const retry = filtersActive ? catalogQuery.refetch : serverQuery.refetch;
 
   const table = useReactTable({
     data,
@@ -97,9 +135,9 @@ export function UsersTable() {
               }}
               className="max-w-lg pr-9"
             />
-            {isFetching && debouncedSearch ? (
+            {isFetching && filtersActive ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                جاري البحث...
+                جاري تحميل كل المستخدمين لتطبيق البحث والتصفية...
               </p>
             ) : null}
           </div>
@@ -181,6 +219,24 @@ export function UsersTable() {
                     جاري التحميل...
                   </TableCell>
                 </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={usersColumns.length}
+                    className="h-24 text-center"
+                  >
+                    <div className="flex flex-col items-center gap-3">
+                      <span>تعذر تحميل المستخدمين.</span>
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                        onClick={() => retry()}
+                      >
+                        إعادة المحاولة
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
@@ -216,4 +272,26 @@ export function UsersTable() {
       </div>
     </div>
   );
+}
+
+function dedupeUsers(users: User[]) {
+  const map = new Map<string, User>();
+  for (const user of users) {
+    const key =
+      user.id || user.appUserId || user.coreUserId || user.phoneE164 || user.phone;
+    if (key) map.set(key, user);
+  }
+  return Array.from(map.values());
+}
+
+function userSearchText(user: User) {
+  return normalizeSearchTerm(
+    [user.fullName, user.phoneE164, user.phone, user.email]
+      .filter(Boolean)
+      .join(" ")
+  );
+}
+
+function normalizeSearchTerm(value: string) {
+  return value.toLowerCase().replace(/[\s()-]/g, "").trim();
 }

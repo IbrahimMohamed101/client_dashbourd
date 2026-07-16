@@ -13,6 +13,8 @@ import type {
 type ApiRecord = Record<string, unknown>;
 
 const ADMIN_USERS_ROUTE = "/api/admin/users";
+const FULL_LIST_PAGE_SIZE = 100;
+const MAX_FULL_LIST_PAGES = 1000;
 
 const isRecord = (value: unknown): value is ApiRecord =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -165,23 +167,65 @@ function normalizeResetResponse(response: unknown): ResetAdminCustomerPasswordRe
 export const fetchAdminCustomers = async ({
   page = 1,
   limit = 20,
-  q,
+  signal,
 }: {
   page?: number;
   limit?: number;
-  q?: string;
+  signal?: AbortSignal;
 } = {}): Promise<PaginatedUsersResponse> => {
-  const params = new URLSearchParams();
-  if (page) params.append("page", page.toString());
-  if (limit) params.append("limit", limit.toString());
-  const query = q?.trim();
-  if (query) params.append("q", query);
-
-  const response = await api.get(`${ADMIN_USERS_ROUTE}?${params.toString()}`);
+  const response = await api.get(ADMIN_USERS_ROUTE, {
+    params: { page, limit },
+    signal,
+  });
   return normalizeUsersResponse(response.data);
 };
 
 export const fetchUsersList = fetchAdminCustomers;
+
+export const fetchAllAdminCustomers = async ({
+  signal,
+}: {
+  signal?: AbortSignal;
+} = {}): Promise<PaginatedUsersResponse> => {
+  const firstPage = await fetchAdminCustomers({
+    page: 1,
+    limit: FULL_LIST_PAGE_SIZE,
+    signal,
+  });
+  const totalPages = normalizeTotalPages(firstPage.meta.totalPages);
+  const pages = [firstPage];
+
+  for (let page = 2; page <= totalPages; page += 1) {
+    throwIfAborted(signal);
+    pages.push(
+      await fetchAdminCustomers({
+        page,
+        limit: FULL_LIST_PAGE_SIZE,
+        signal,
+      })
+    );
+  }
+
+  const usersById = new Map<string, User>();
+  for (const page of pages) {
+    for (const user of page.data) {
+      const id = normalizeUserIdentity(user);
+      if (id) usersById.set(id, user);
+    }
+  }
+
+  const data = Array.from(usersById.values());
+  return {
+    status: pages.every((page) => page.status),
+    data,
+    meta: {
+      page: 1,
+      limit: data.length || FULL_LIST_PAGE_SIZE,
+      total: data.length,
+      totalPages: 1,
+    },
+  };
+};
 
 export const fetchAdminCustomer = async (userId: string) => {
   const response = await api.get(`${ADMIN_USERS_ROUTE}/${userId}`);
@@ -200,7 +244,9 @@ export const fetchUserSubscriptions = async (userId: string) => {
 export const createAdminCustomer = async (
   payload: CreateAdminCustomerPayload
 ) => {
-  const response = await api.post(ADMIN_USERS_ROUTE, payload);
+  const response = await api.post(ADMIN_USERS_ROUTE, payload, {
+    suppressGlobalForbiddenToast: true,
+  });
   return normalizeCreateResponse(response.data);
 };
 
@@ -215,7 +261,8 @@ export const resetAdminCustomerPassword = async ({
 }) => {
   const response = await api.post(
     `${ADMIN_USERS_ROUTE}/${userId}/reset-password`,
-    payload
+    payload,
+    { suppressGlobalForbiddenToast: true }
   );
   return normalizeResetResponse(response.data);
 };
@@ -250,7 +297,12 @@ export function getAdminCustomerErrorMessage(error: unknown) {
   ) {
     return "رقم الجوال غير صحيح";
   }
-  if (parsed.status === 403 && message.includes("INACTIVE")) {
+  if (
+    parsed.status === 403 &&
+    (message.includes("INACTIVE") ||
+      message.includes("ACTIVATE") ||
+      message.includes("تفعيل"))
+  ) {
     return "يجب تفعيل حساب العميل قبل إعادة تعيين كلمة المرور";
   }
   if (parsed.status === 403 || code === "FORBIDDEN" || code === "UNAUTHORIZED") {
@@ -270,5 +322,23 @@ export function getAdminCustomerErrorMessage(error: unknown) {
   if (parsed.status && parsed.status >= 500) {
     return "تعذر تنفيذ العملية حاليًا";
   }
-  return parsed.message || "تعذر تنفيذ العملية حاليًا";
+  return "تعذر تنفيذ العملية حاليًا";
+}
+
+function normalizeTotalPages(value: number) {
+  if (!Number.isFinite(value) || value < 1) return 1;
+  const pages = Math.floor(value);
+  if (pages > MAX_FULL_LIST_PAGES) {
+    throw new Error("Users pagination metadata is too large");
+  }
+  return pages;
+}
+
+function normalizeUserIdentity(user: User) {
+  return user.id || user.appUserId || user.coreUserId || user.phoneE164 || user.phone;
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (!signal?.aborted) return;
+  throw new DOMException("The users catalog request was cancelled", "AbortError");
 }

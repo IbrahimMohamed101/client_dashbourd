@@ -6,6 +6,7 @@ import { parseApiError } from "./apiErrors";
 declare module "axios" {
   interface AxiosRequestConfig {
     skipAuthRedirect?: boolean;
+    suppressGlobalForbiddenToast?: boolean;
   }
 }
 
@@ -50,13 +51,15 @@ api.interceptors.response.use(
       window.location.href = "/";
     }
 
-    if (parsedError.status === 403) {
+    if (
+      parsedError.status === 403 &&
+      !error.config?.suppressGlobalForbiddenToast
+    ) {
       toast.error(message || "ليس لديك صلاحية للوصول إلى هذا الإجراء");
     }
 
     (error as Error & { normalizedMessage?: string }).normalizedMessage =
       message;
-    console.error("API Error:", message);
     return Promise.reject(error);
   }
 );

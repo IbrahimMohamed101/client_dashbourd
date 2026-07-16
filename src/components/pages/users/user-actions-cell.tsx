@@ -35,6 +35,7 @@ export function UserActionsCell({ user }: UserActionsCellProps) {
   const canManagePasswords =
     sessionUser?.role === UserRoles.ADMIN ||
     sessionUser?.role === UserRoles.SUPERADMIN;
+  const canUpdateAccount = canManagePasswords;
   const canResetPassword =
     canManagePasswords && user.isActive && user.canResetPassword !== false;
 
@@ -106,29 +107,31 @@ export function UserActionsCell({ user }: UserActionsCellProps) {
             </DropdownMenuItem>
           ) : null}
 
-          <DropdownMenuSeparator />
+          {canUpdateAccount ? <DropdownMenuSeparator /> : null}
 
-          <DropdownMenuItem
-            onClick={handleToggleActive}
-            disabled={isPending}
-            className={
-              user.isActive
-                ? "text-destructive focus:text-destructive"
-                : "text-emerald-600 focus:text-emerald-600"
-            }
-          >
-            {user.isActive ? (
-              <>
-                <UserXIcon className="size-4" />
-                تعطيل الحساب
-              </>
-            ) : (
-              <>
-                <UserCheckIcon className="size-4" />
-                تفعيل الحساب
-              </>
-            )}
-          </DropdownMenuItem>
+          {canUpdateAccount ? (
+            <DropdownMenuItem
+              onClick={handleToggleActive}
+              disabled={isPending}
+              className={
+                user.isActive
+                  ? "text-destructive focus:text-destructive"
+                  : "text-emerald-600 focus:text-emerald-600"
+              }
+            >
+              {user.isActive ? (
+                <>
+                  <UserXIcon className="size-4" />
+                  تعطيل الحساب
+                </>
+              ) : (
+                <>
+                  <UserCheckIcon className="size-4" />
+                  تفعيل الحساب
+                </>
+              )}
+            </DropdownMenuItem>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
 

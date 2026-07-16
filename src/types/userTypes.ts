@@ -8,7 +8,7 @@ export interface User {
   email: string | null;
   role: string;
   isActive: boolean;
-  accountStatus?: string;
+  accountStatus?: CustomerAccountStatus | string;
   forcePasswordChange: boolean;
   authState?: CustomerAuthState;
   temporaryPasswordReason?: "admin_created" | "admin_reset" | null;
@@ -27,6 +27,11 @@ export type CustomerAuthState =
   | "active"
   | "temporary_password"
   | "temporary_password_expired";
+
+export type CustomerAccountStatus =
+  | "active"
+  | "pending_activation"
+  | "reset_requested";
 
 export type TemporaryCredentials = {
   temporaryPassword: string;
