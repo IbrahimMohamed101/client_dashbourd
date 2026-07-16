@@ -5,23 +5,26 @@ import {
   subscriptionDeliveryUrl,
   subscriptionExtendUrl,
 } from "../src/utils/subscriptionApiContract";
+import { test } from "vitest";
 
-assert.equal(
-  subscriptionExtendUrl("sub-1"),
-  "/api/dashboard/subscriptions/sub-1/extend"
-);
+test("subscriptionApiContract.test", () => {
+  assert.equal(
+    subscriptionExtendUrl("sub-1"),
+    "/api/dashboard/subscriptions/sub-1/extend"
+  );
 
-assert.equal(
-  subscriptionDeliveryUrl("sub-1"),
-  "/api/dashboard/subscriptions/sub-1/delivery"
-);
+  assert.equal(
+    subscriptionDeliveryUrl("sub-1"),
+    "/api/dashboard/subscriptions/sub-1/delivery"
+  );
 
-assert.equal(
-  subscriptionBalancesUrl("sub-1"),
-  "/api/dashboard/subscriptions/sub-1/balances"
-);
+  assert.equal(
+    subscriptionBalancesUrl("sub-1"),
+    "/api/dashboard/subscriptions/sub-1/balances"
+  );
 
-assert.equal(
-  subscriptionAddonEntitlementsUrl("sub-1"),
-  "/api/dashboard/subscriptions/sub-1/addon-entitlements"
-);
+  assert.equal(
+    subscriptionAddonEntitlementsUrl("sub-1"),
+    "/api/dashboard/subscriptions/sub-1/addon-entitlements"
+  );
+});

@@ -1,22 +1,24 @@
 import {
   keepPreviousData,
+  type QueryClient,
   queryOptions,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { sessionQueryOptions } from "@/lib/authApi";
 import type {
   AccountingDailyReportParams,
   DashboardLogFilters,
   DashboardNotificationLogFilters,
+  DashboardStaffUsersListParams,
   SubscriptionTermsPayload,
 } from "@/types/dashboardAdminTypes";
 import type { DashboardHealthKey } from "@/utils/dashboardApiContract";
 import {
   createDashboardStaffUser,
-  deleteDashboardStaffUser,
-  fetchDashboardStaffUser,
   fetchDashboardStaffUsers,
+  isDashboardStaffForbiddenError,
   resetDashboardStaffUserPassword,
   updateDashboardStaffUser,
 } from "@/utils/fetchDashboardUsers";
@@ -31,19 +33,36 @@ import {
   updateSubscriptionTerms,
 } from "@/utils/fetchDashboardSupportData";
 
-export const dashboardStaffUsersQueryOptions = (page = 1, limit = 20) =>
-  queryOptions({
-    queryKey: ["dashboard-staff-users", { page, limit }],
-    queryFn: () => fetchDashboardStaffUsers({ page, limit }),
-    placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
-  });
+export const dashboardStaffUserKeys = {
+  all: ["dashboard-staff-users"] as const,
+  lists: () => [...dashboardStaffUserKeys.all, "list"] as const,
+  list: (params: DashboardStaffUsersListParams) =>
+    [...dashboardStaffUserKeys.lists(), params] as const,
+};
 
-export const dashboardStaffUserQueryOptions = (id: string) =>
+export const handleDashboardStaffAccessLoss = (queryClient: QueryClient) => {
+  queryClient.removeQueries({ queryKey: dashboardStaffUserKeys.all });
+  queryClient.invalidateQueries({ queryKey: sessionQueryOptions.queryKey });
+};
+
+const handleDashboardStaffMutationError = (
+  error: unknown,
+  queryClient: QueryClient
+) => {
+  if (isDashboardStaffForbiddenError(error)) {
+    handleDashboardStaffAccessLoss(queryClient);
+  }
+};
+
+export const dashboardStaffUsersQueryOptions = (
+  params: DashboardStaffUsersListParams = {}
+) =>
   queryOptions({
-    queryKey: ["dashboard-staff-user", id],
-    queryFn: () => fetchDashboardStaffUser(id),
-    staleTime: 1000 * 60 * 5,
+    queryKey: dashboardStaffUserKeys.list(params),
+    queryFn: ({ signal }) => fetchDashboardStaffUsers(params, signal),
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 15,
+    retry: false,
   });
 
 export const dashboardNotificationSummaryQueryOptions = (limit?: number) =>
@@ -102,8 +121,14 @@ export const dashboardHealthQueryOptions = (key: DashboardHealthKey) =>
     staleTime: 1000 * 60,
   });
 
-export const useDashboardStaffUsersQuery = (page = 1, limit = 20) =>
-  useQuery(dashboardStaffUsersQueryOptions(page, limit));
+export const useDashboardStaffUsersQuery = (
+  params: DashboardStaffUsersListParams = {},
+  enabled = false
+) =>
+  useQuery({
+    ...dashboardStaffUsersQueryOptions(params),
+    enabled,
+  });
 
 export const useAccountingDailyReportQuery = (
   params: AccountingDailyReportParams = {}
@@ -114,8 +139,13 @@ export const useCreateDashboardStaffUserMutation = () => {
 
   return useMutation({
     mutationFn: createDashboardStaffUser,
+    retry: false,
+    gcTime: 0,
+    onError: (error) => {
+      handleDashboardStaffMutationError(error, queryClient);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dashboard-staff-users"] });
+      queryClient.invalidateQueries({ queryKey: dashboardStaffUserKeys.all });
     },
   });
 };
@@ -125,22 +155,12 @@ export const useUpdateDashboardStaffUserMutation = () => {
 
   return useMutation({
     mutationFn: updateDashboardStaffUser,
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["dashboard-staff-users"] });
-      queryClient.invalidateQueries({
-        queryKey: ["dashboard-staff-user", variables.id],
-      });
+    retry: false,
+    onError: (error) => {
+      handleDashboardStaffMutationError(error, queryClient);
     },
-  });
-};
-
-export const useDeleteDashboardStaffUserMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: deleteDashboardStaffUser,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dashboard-staff-users"] });
+      queryClient.invalidateQueries({ queryKey: dashboardStaffUserKeys.all });
     },
   });
 };
@@ -150,11 +170,13 @@ export const useResetDashboardStaffUserPasswordMutation = () => {
 
   return useMutation({
     mutationFn: resetDashboardStaffUserPassword,
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["dashboard-staff-users"] });
-      queryClient.invalidateQueries({
-        queryKey: ["dashboard-staff-user", variables.id],
-      });
+    retry: false,
+    gcTime: 0,
+    onError: (error) => {
+      handleDashboardStaffMutationError(error, queryClient);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: dashboardStaffUserKeys.all });
     },
   });
 };

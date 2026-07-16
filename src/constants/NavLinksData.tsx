@@ -96,7 +96,7 @@ export const NavLinksData = {
       icon: <Users />,
     },
     {
-      title: "مستخدمو اللوحة",
+      title: "مستخدمو لوحة التحكم",
       url: "/dashboard-users",
       icon: <ShieldUser />,
     },

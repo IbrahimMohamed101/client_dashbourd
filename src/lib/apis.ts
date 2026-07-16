@@ -46,7 +46,10 @@ api.interceptors.response.use(
     const parsedError = parseApiError(error);
     const message = parsedError.message;
 
-    if (parsedError.status === 401 && !error.config?.skipAuthRedirect) {
+    if (
+      (parsedError.status === 401 || parsedError.code === "TOKEN_REVOKED") &&
+      !error.config?.skipAuthRedirect
+    ) {
       Cookies.remove("dashboardToken");
       window.location.href = "/";
     }
