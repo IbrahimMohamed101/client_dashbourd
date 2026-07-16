@@ -203,18 +203,18 @@ export function MealBuilderSimpleCardEditor({
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <DialogContent
-        className="grid h-[min(86dvh,840px)] w-[calc(100vw-2rem)] max-w-6xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0"
+        className="grid h-[min(92dvh,920px)] w-[calc(100vw-1rem)] !max-w-[calc(100vw-1rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-[calc(100vw-3rem)] sm:!max-w-[min(94vw,88rem)]"
         dir="rtl"
       >
         <DialogHeader className="border-b px-4 py-4 text-right sm:px-6">
-          <div className="flex max-w-[92%] items-start justify-between gap-3">
+          <div className="flex w-full items-start justify-between gap-4 pl-12">
             <div className="min-w-0 space-y-1">
               <DialogTitle>تعديل {liveCard.labelAr}</DialogTitle>
               <DialogDescription>
                 اختر العناصر التي تظهر للعميل، ثم راجع إعدادات الاختيار عند الحاجة.
               </DialogDescription>
             </div>
-            <Badge variant="secondary" className="shrink-0">
+            <Badge variant="secondary" className="shrink-0 whitespace-nowrap">
               {liveCard.items.length} عناصر
             </Badge>
           </div>
@@ -226,7 +226,7 @@ export function MealBuilderSimpleCardEditor({
           dir="rtl"
         >
           <div className="border-b px-4 py-3 sm:px-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 sm:max-w-xl">
               <TabsTrigger value="items">العناصر</TabsTrigger>
               <TabsTrigger value="settings">إعدادات البطاقة</TabsTrigger>
             </TabsList>
@@ -236,10 +236,10 @@ export function MealBuilderSimpleCardEditor({
             value="items"
             className="m-0 min-h-0 overflow-y-auto px-4 py-4 sm:px-6"
           >
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-              <section className="space-y-3 rounded-lg border p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
+            <div className="grid gap-4 min-[900px]:grid-cols-[minmax(18rem,0.8fr)_minmax(28rem,1.2fr)]">
+              <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <h3 className="text-sm font-semibold">العناصر الحالية</h3>
                     <p className="mt-1 text-xs text-muted-foreground">
                       غيّر الترتيب أو احذف العناصر غير التلقائية.
@@ -254,7 +254,7 @@ export function MealBuilderSimpleCardEditor({
                   </p>
                 ) : null}
 
-                <div className="divide-y overflow-hidden rounded-lg border">
+                <div className="divide-y overflow-hidden rounded-xl border bg-background">
                   {liveCard.items.length ? (
                     liveCard.items.map((item, index) => {
                       const automatic =
@@ -302,8 +302,8 @@ export function MealBuilderSimpleCardEditor({
                 </div>
               </section>
 
-              <section className="space-y-3 rounded-lg border p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <section className="space-y-4 rounded-xl border bg-muted/10 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   <div className="min-w-0 flex-1 space-y-1.5">
                     <Label htmlFor="meal-builder-item-search">إضافة عناصر</Label>
                     <div className="relative">
@@ -319,6 +319,7 @@ export function MealBuilderSimpleCardEditor({
                   </div>
                   <Button
                     type="button"
+                    className="w-full sm:w-auto sm:min-w-28"
                     disabled={
                       !validSelectedIds.length ||
                       (!primarySection && !canCreateMissingSection)
@@ -336,7 +337,7 @@ export function MealBuilderSimpleCardEditor({
                   </p>
                 ) : null}
 
-                <div className="overflow-hidden rounded-lg border">
+                <div className="overflow-hidden rounded-xl border bg-background">
                   {pickerQuery.isLoading ? (
                     <PickerMessage loading>جاري تحميل العناصر المتاحة...</PickerMessage>
                   ) : pickerQuery.isError ? (
@@ -413,8 +414,8 @@ export function MealBuilderSimpleCardEditor({
             value="settings"
             className="m-0 min-h-0 overflow-y-auto px-4 py-4 sm:px-6"
           >
-            <div className="mx-auto max-w-3xl space-y-4">
-              <section className="space-y-4 rounded-lg border p-4">
+            <div className="mx-auto max-w-4xl space-y-4">
+              <section className="space-y-5 rounded-xl border bg-muted/10 p-4 sm:p-5">
                 <div>
                   <h3 className="font-semibold">طريقة ظهور البطاقة</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -516,7 +517,7 @@ export function MealBuilderSimpleCardEditor({
           </TabsContent>
         </Tabs>
 
-        <DialogFooter className="flex-col-reverse gap-2 border-t bg-background px-4 py-3 sm:flex-row sm:justify-start sm:px-6">
+        <DialogFooter className="flex-col-reverse gap-2 border-t bg-popover/95 px-4 py-3 backdrop-blur sm:flex-row sm:justify-start sm:px-6">
           <Button
             type="button"
             className="w-full sm:w-auto"
@@ -554,7 +555,7 @@ function CandidateRow({
 }) {
   return (
     <label
-      className={`flex items-center gap-3 px-3 py-3 ${
+      className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 transition-colors ${
         selectable ? "cursor-pointer hover:bg-muted/40" : "bg-muted/20 opacity-70"
       }`}
     >
@@ -563,11 +564,11 @@ function CandidateRow({
         disabled={!selectable}
         onCheckedChange={onToggle}
       />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">
+      <span className="min-w-0">
+        <span className="line-clamp-2 text-sm font-medium leading-5">
           {hydratedItemName(item)}
         </span>
-        <span className="block text-xs text-muted-foreground">
+        <span className="mt-1 block text-xs text-muted-foreground">
           {alreadyAdded ? "موجود بالفعل" : pickerStateLabel(item.state)}
         </span>
       </span>
@@ -596,18 +597,18 @@ function SelectedItemRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 p-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{item.name}</p>
-        <p className="text-xs text-muted-foreground">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-sm font-medium leading-5">{item.name}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
           {automatic ? "يُدار تلقائيًا" : item.kind === "product" ? "منتج" : "خيار"}
         </p>
       </div>
-      <div className="flex shrink-0 gap-1">
+      <div className="flex shrink-0 items-center gap-0.5 rounded-lg border bg-background p-1">
         <Button
           type="button"
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           disabled={!canMoveUp}
           onClick={() => onMove("up")}
           aria-label={`تحريك ${item.name} لأعلى`}
@@ -617,7 +618,7 @@ function SelectedItemRow({
         <Button
           type="button"
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           disabled={!canMoveDown}
           onClick={() => onMove("down")}
           aria-label={`تحريك ${item.name} لأسفل`}
@@ -627,7 +628,7 @@ function SelectedItemRow({
         <Button
           type="button"
           variant="ghost"
-          size="icon"
+          size="icon-sm"
           disabled={!canRemove}
           onClick={onRemove}
           aria-label={`حذف ${item.name}`}
