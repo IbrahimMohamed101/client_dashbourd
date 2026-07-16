@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { KeyRoundIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangleIcon, KeyRoundIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 
@@ -21,7 +21,7 @@ import type { CredentialsDialogData } from "./temporary-credentials-dialog";
 import { TemporaryCredentialsDialog } from "./temporary-credentials-dialog";
 
 const malformedResetCredentialsMessage =
-  "تمت إعادة التعيين ولكن تعذر عرض كلمة المرور المؤقتة. تحقق من حالة المستخدم قبل إعادة المحاولة.";
+  "تمت إعادة تعيين كلمة المرور، ولكن تعذر عرض بيانات الدخول المؤقتة. تحقق من حالة المستخدم قبل تنفيذ أي إعادة تعيين أخرى.";
 
 export function ResetPasswordDialog({
   user,
@@ -36,6 +36,8 @@ export function ResetPasswordDialog({
   const [credentials, setCredentials] = useState<CredentialsDialogData | null>(
     null
   );
+  const [malformedSuccessOpen, setMalformedSuccessOpen] = useState(false);
+  const requestInFlightRef = useRef(false);
   const queryClient = useQueryClient();
   const resetPassword = useResetAdminCustomerPasswordMutation();
   const resetPasswordMutationState = resetPassword.reset;
@@ -48,6 +50,14 @@ export function ResetPasswordDialog({
 
   function closeCredentials() {
     setCredentials(null);
+    setReason("");
+    resetPasswordMutationState();
+    queryClient.invalidateQueries({ queryKey: ["users"] });
+    queryClient.invalidateQueries({ queryKey: ["user-details", user.id] });
+  }
+
+  function closeMalformedSuccess() {
+    setMalformedSuccessOpen(false);
     setReason("");
     resetPasswordMutationState();
     queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -67,11 +77,15 @@ export function ResetPasswordDialog({
   useEffect(() => {
     return () => {
       setCredentials(null);
+      setMalformedSuccessOpen(false);
+      requestInFlightRef.current = false;
       resetPasswordMutationState();
     };
   }, [resetPasswordMutationState]);
 
   function submitReset() {
+    if (requestInFlightRef.current) return;
+    requestInFlightRef.current = true;
     resetPassword.mutate(
       {
         userId: user.id,
@@ -79,6 +93,7 @@ export function ResetPasswordDialog({
       },
       {
         onSuccess: (result) => {
+          onOpenChange(false);
           const phoneE164 = result.phoneE164 || user.phoneE164 || user.phone;
           if (
             !phoneE164 ||
@@ -86,10 +101,9 @@ export function ResetPasswordDialog({
             !result.temporaryPasswordExpiresAt
           ) {
             resetPasswordMutationState();
-            ToastMessage(malformedResetCredentialsMessage, "error");
+            setMalformedSuccessOpen(true);
             return;
           }
-          onOpenChange(false);
           setCredentials({
             title: "تمت إعادة تعيين كلمة المرور",
             customerName: user.fullName,
@@ -102,6 +116,9 @@ export function ResetPasswordDialog({
         },
         onError: (error) => {
           ToastMessage(getAdminCustomerErrorMessage(error), "error");
+        },
+        onSettled: () => {
+          requestInFlightRef.current = false;
         },
       }
     );
@@ -173,6 +190,29 @@ export function ResetPasswordDialog({
         credentials={credentials}
         onClose={closeCredentials}
       />
+
+      <Dialog open={malformedSuccessOpen}>
+        <DialogContent
+          dir="rtl"
+          showCloseButton={false}
+          className="max-w-md"
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onPointerDownOutside={(event) => event.preventDefault()}
+        >
+          <DialogHeader className="text-right">
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangleIcon className="size-5 text-amber-600" />
+              تعذر عرض بيانات الدخول المؤقتة
+            </DialogTitle>
+            <DialogDescription>{malformedResetCredentialsMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-start">
+            <Button type="button" onClick={closeMalformedSuccess}>
+              تم
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

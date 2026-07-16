@@ -16,26 +16,31 @@ import type {
 export const usersQueryOptions = (page: number, limit: number) =>
   queryOptions({
     queryKey: ["users", "list", page, limit],
-    queryFn: () => fetchUsersList({ page, limit }),
+    queryFn: ({ signal }) => fetchUsersList({ page, limit, signal }),
   });
 
 export const allUsersQueryOptions = () =>
   queryOptions({
     queryKey: ["users", "all"],
-    queryFn: fetchAllAdminCustomers,
+    queryFn: ({ signal }) => fetchAllAdminCustomers({ signal }),
     staleTime: 1000 * 60 * 5,
   });
 
 export const filteredUsersCatalogQueryOptions = () =>
   queryOptions({
     queryKey: ["users", "filtered-catalog"],
-    queryFn: fetchAllAdminCustomers,
+    queryFn: ({ signal }) => fetchAllAdminCustomers({ signal }),
     staleTime: 1000 * 60 * 2,
   });
 
-export const useUsersListQuery = (page: number, limit: number) => {
+export const useUsersListQuery = (
+  page: number,
+  limit: number,
+  enabled = true
+) => {
   return useQuery({
     ...usersQueryOptions(page, limit),
+    enabled,
   });
 };
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { AlertTriangleIcon, Loader2 } from "lucide-react";
 
 import { ToastMessage } from "@/components/global/ToastMessage";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -23,12 +31,13 @@ import type { CredentialsDialogData } from "./temporary-credentials-dialog";
 import { TemporaryCredentialsDialog } from "./temporary-credentials-dialog";
 
 const malformedCreateCredentialsMessage =
-  "تم إنشاء الحساب ولكن تعذر عرض بيانات الدخول المؤقتة. لا تحاول إعادة العملية قبل التحقق من حالة المستخدم.";
+  "تم إنشاء الحساب، ولكن تعذر عرض بيانات الدخول المؤقتة. تحقق من حالة المستخدم قبل محاولة إنشاء الحساب مرة أخرى.";
 
 export function CreateUserForm() {
   const [credentials, setCredentials] = useState<CredentialsDialogData | null>(
     null
   );
+  const [malformedSuccessOpen, setMalformedSuccessOpen] = useState(false);
   const {
     register,
     handleSubmit,
@@ -50,9 +59,17 @@ export function CreateUserForm() {
     navigate({ to: "/users" });
   }
 
+  function closeMalformedSuccess() {
+    setMalformedSuccessOpen(false);
+    resetCreateCustomerMutation();
+    queryClient.invalidateQueries({ queryKey: ["users"] });
+    navigate({ to: "/users" });
+  }
+
   useEffect(() => {
     return () => {
       setCredentials(null);
+      setMalformedSuccessOpen(false);
       resetCreateCustomerMutation();
     };
   }, [resetCreateCustomerMutation]);
@@ -71,7 +88,7 @@ export function CreateUserForm() {
           const phoneE164 = result.user.phoneE164 || result.user.phone;
           if (!temp.temporaryPassword || !temp.expiresAt || !phoneE164) {
             resetCreateCustomerMutation();
-            ToastMessage(malformedCreateCredentialsMessage, "error");
+            setMalformedSuccessOpen(true);
             return;
           }
           setCredentials({
@@ -203,6 +220,29 @@ export function CreateUserForm() {
         credentials={credentials}
         onClose={closeCredentials}
       />
+
+      <Dialog open={malformedSuccessOpen}>
+        <DialogContent
+          dir="rtl"
+          showCloseButton={false}
+          className="max-w-md"
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onPointerDownOutside={(event) => event.preventDefault()}
+        >
+          <DialogHeader className="text-right">
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangleIcon className="size-5 text-amber-600" />
+              تعذر عرض بيانات الدخول المؤقتة
+            </DialogTitle>
+            <DialogDescription>{malformedCreateCredentialsMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-start">
+            <Button type="button" onClick={closeMalformedSuccess}>
+              تم
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

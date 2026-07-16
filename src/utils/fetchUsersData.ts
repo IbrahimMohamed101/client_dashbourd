@@ -167,31 +167,41 @@ function normalizeResetResponse(response: unknown): ResetAdminCustomerPasswordRe
 export const fetchAdminCustomers = async ({
   page = 1,
   limit = 20,
+  signal,
 }: {
   page?: number;
   limit?: number;
+  signal?: AbortSignal;
 } = {}): Promise<PaginatedUsersResponse> => {
   const response = await api.get(ADMIN_USERS_ROUTE, {
     params: { page, limit },
+    signal,
   });
   return normalizeUsersResponse(response.data);
 };
 
 export const fetchUsersList = fetchAdminCustomers;
 
-export const fetchAllAdminCustomers = async (): Promise<PaginatedUsersResponse> => {
+export const fetchAllAdminCustomers = async ({
+  signal,
+}: {
+  signal?: AbortSignal;
+} = {}): Promise<PaginatedUsersResponse> => {
   const firstPage = await fetchAdminCustomers({
     page: 1,
     limit: FULL_LIST_PAGE_SIZE,
+    signal,
   });
   const totalPages = normalizeTotalPages(firstPage.meta.totalPages);
   const pages = [firstPage];
 
   for (let page = 2; page <= totalPages; page += 1) {
+    throwIfAborted(signal);
     pages.push(
       await fetchAdminCustomers({
         page,
         limit: FULL_LIST_PAGE_SIZE,
+        signal,
       })
     );
   }
@@ -326,4 +336,9 @@ function normalizeTotalPages(value: number) {
 
 function normalizeUserIdentity(user: User) {
   return user.id || user.appUserId || user.coreUserId || user.phoneE164 || user.phone;
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (!signal?.aborted) return;
+  throw new DOMException("The users catalog request was cancelled", "AbortError");
 }

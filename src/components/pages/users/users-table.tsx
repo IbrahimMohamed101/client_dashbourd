@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   flexRender,
   getCoreRowModel,
@@ -47,6 +48,7 @@ export function UsersTable() {
     pageSize: 10,
   });
   const { user: sessionUser } = useAuth();
+  const queryClient = useQueryClient();
   const canManagePasswords =
     sessionUser?.role === UserRoles.ADMIN ||
     sessionUser?.role === UserRoles.SUPERADMIN;
@@ -62,9 +64,15 @@ export function UsersTable() {
   const filtersActive = Boolean(debouncedSearch) || authFilter !== "all";
   const serverQuery = useUsersListQuery(
     pagination.pageIndex + 1,
-    pagination.pageSize
+    pagination.pageSize,
+    !filtersActive
   );
   const catalogQuery = useFilteredUsersCatalogQuery(filtersActive);
+
+  React.useEffect(() => {
+    if (filtersActive) return;
+    queryClient.cancelQueries({ queryKey: ["users", "filtered-catalog"] });
+  }, [filtersActive, queryClient]);
 
   const filteredCatalog = React.useMemo(() => {
     if (!filtersActive) return [];
