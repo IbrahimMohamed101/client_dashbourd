@@ -26,13 +26,40 @@ export const DASHBOARD_STAFF_STATUS_LABELS = {
   inactive: "غير نشط",
 } as const;
 
+export const WEAK_DASHBOARD_PASSWORD_MESSAGE =
+  "كلمة المرور شائعة أو افتراضية. اختر كلمة مرور أقوى.";
+
+export const DASHBOARD_PASSWORD_REQUIREMENTS = [
+  "12 حرفا على الأقل",
+  "حرف كبير وحرف صغير",
+  "رقم ورمز خاص",
+  "ليست كلمة مرور شائعة أو افتراضية",
+];
+
+const weakDashboardPasswords = new Set(
+  [
+    "Password@123",
+    "Password123!",
+    "Admin@123456",
+    "Admin123456!",
+    "Qwerty@12345",
+    "Welcome@123",
+  ].map((password) => password.trim().toLowerCase())
+);
+
+export const isKnownWeakDashboardPassword = (password: string) =>
+  weakDashboardPasswords.has(password.trim().toLowerCase());
+
 const passwordSchema = z
   .string()
   .min(12, "كلمة المرور يجب أن تكون 12 حرفا على الأقل.")
   .regex(/[A-Z]/, "كلمة المرور يجب أن تحتوي على حرف كبير.")
   .regex(/[a-z]/, "كلمة المرور يجب أن تحتوي على حرف صغير.")
   .regex(/[0-9]/, "كلمة المرور يجب أن تحتوي على رقم.")
-  .regex(/[^A-Za-z0-9]/, "كلمة المرور يجب أن تحتوي على رمز.");
+  .regex(/[^A-Za-z0-9]/, "كلمة المرور يجب أن تحتوي على رمز.")
+  .refine((password) => !isKnownWeakDashboardPassword(password), {
+    message: WEAK_DASHBOARD_PASSWORD_MESSAGE,
+  });
 
 const roleSchema = z.custom<DashboardStaffRole>(
   isDashboardStaffRole,
@@ -99,6 +126,38 @@ export const defaultAssignableRoles = (): DashboardStaffRole[] => [
 ];
 
 export const getAssignableDashboardStaffRoles = normalizeDashboardStaffRoles;
+
+export const getDefaultDashboardStaffRole = (
+  assignableRoles: DashboardStaffRole[]
+): DashboardStaffRole =>
+  assignableRoles.includes("admin") ? "admin" : assignableRoles[0] ?? "admin";
+
+export const isAssignableDashboardStaffRole = (
+  role: DashboardStaffRole,
+  assignableRoles: DashboardStaffRole[]
+) => assignableRoles.includes(role);
+
+export const createDashboardStaffUserSchemaForRoles = (
+  assignableRoles: DashboardStaffRole[]
+) =>
+  createDashboardStaffUserSchema.refine(
+    (value) => isAssignableDashboardStaffRole(value.role, assignableRoles),
+    {
+      path: ["role"],
+      message: "نوع صلاحية المستخدم غير صحيح.",
+    }
+  );
+
+export const editDashboardStaffUserSchemaForRoles = (
+  assignableRoles: DashboardStaffRole[]
+) =>
+  editDashboardStaffUserSchema.refine(
+    (value) => isAssignableDashboardStaffRole(value.role, assignableRoles),
+    {
+      path: ["role"],
+      message: "نوع صلاحية المستخدم غير صحيح.",
+    }
+  );
 
 export const buildCreateDashboardStaffUserPayload = (
   values: ParsedCreateDashboardStaffUserFormValues

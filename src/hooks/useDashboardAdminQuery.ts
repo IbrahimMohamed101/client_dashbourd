@@ -1,10 +1,12 @@
 import {
   keepPreviousData,
+  type QueryClient,
   queryOptions,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { sessionQueryOptions } from "@/lib/authApi";
 import type {
   AccountingDailyReportParams,
   DashboardLogFilters,
@@ -16,6 +18,7 @@ import type { DashboardHealthKey } from "@/utils/dashboardApiContract";
 import {
   createDashboardStaffUser,
   fetchDashboardStaffUsers,
+  isDashboardStaffForbiddenError,
   resetDashboardStaffUserPassword,
   updateDashboardStaffUser,
 } from "@/utils/fetchDashboardUsers";
@@ -35,6 +38,20 @@ export const dashboardStaffUserKeys = {
   lists: () => [...dashboardStaffUserKeys.all, "list"] as const,
   list: (params: DashboardStaffUsersListParams) =>
     [...dashboardStaffUserKeys.lists(), params] as const,
+};
+
+export const handleDashboardStaffAccessLoss = (queryClient: QueryClient) => {
+  queryClient.removeQueries({ queryKey: dashboardStaffUserKeys.all });
+  queryClient.invalidateQueries({ queryKey: sessionQueryOptions.queryKey });
+};
+
+const handleDashboardStaffMutationError = (
+  error: unknown,
+  queryClient: QueryClient
+) => {
+  if (isDashboardStaffForbiddenError(error)) {
+    handleDashboardStaffAccessLoss(queryClient);
+  }
 };
 
 export const dashboardStaffUsersQueryOptions = (
@@ -124,6 +141,9 @@ export const useCreateDashboardStaffUserMutation = () => {
     mutationFn: createDashboardStaffUser,
     retry: false,
     gcTime: 0,
+    onError: (error) => {
+      handleDashboardStaffMutationError(error, queryClient);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dashboardStaffUserKeys.all });
     },
@@ -136,6 +156,9 @@ export const useUpdateDashboardStaffUserMutation = () => {
   return useMutation({
     mutationFn: updateDashboardStaffUser,
     retry: false,
+    onError: (error) => {
+      handleDashboardStaffMutationError(error, queryClient);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dashboardStaffUserKeys.all });
     },
@@ -149,6 +172,9 @@ export const useResetDashboardStaffUserPasswordMutation = () => {
     mutationFn: resetDashboardStaffUserPassword,
     retry: false,
     gcTime: 0,
+    onError: (error) => {
+      handleDashboardStaffMutationError(error, queryClient);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dashboardStaffUserKeys.all });
     },

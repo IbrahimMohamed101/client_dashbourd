@@ -65,14 +65,13 @@ import {
 import { ROLE_DEFAULTS } from "@/constants/routes";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  dashboardStaffUserKeys,
+  handleDashboardStaffAccessLoss,
   useCreateDashboardStaffUserMutation,
   useDashboardStaffUsersQuery,
   useResetDashboardStaffUserPasswordMutation,
   useUpdateDashboardStaffUserMutation,
 } from "@/hooks/useDashboardAdminQuery";
 import { useDebounce } from "@/hooks/useDebounce";
-import { sessionQueryOptions } from "@/lib/authApi";
 import { canManageDashboardStaffUsers } from "@/lib/dashboardStaffPermissions";
 import type { UserRole } from "@/types/auth";
 import type {
@@ -92,8 +91,12 @@ import {
   buildCreateDashboardStaffUserPayload,
   buildUpdateDashboardStaffUserPatch,
   createDashboardStaffUserSchema,
+  createDashboardStaffUserSchemaForRoles,
+  DASHBOARD_PASSWORD_REQUIREMENTS,
   defaultAssignableRoles,
   editDashboardStaffUserSchema,
+  editDashboardStaffUserSchemaForRoles,
+  getDefaultDashboardStaffRole,
   getAssignableDashboardStaffRoles,
   hasUpdatePatchChanges,
   resetDashboardStaffPasswordSchema,
@@ -139,6 +142,8 @@ export function DashboardStaffUsersWorkspace() {
     React.useState<DashboardStaffUserDto | null>(null);
   const [statusUser, setStatusUser] =
     React.useState<DashboardStaffUserDto | null>(null);
+  const [accessLost, setAccessLost] = React.useState(false);
+  const accessLossMessageShownRef = React.useRef(false);
   const debouncedSearch = useDebounce(search.trim(), 400);
 
   React.useEffect(() => {
@@ -160,20 +165,32 @@ export function DashboardStaffUsersWorkspace() {
     [debouncedSearch, limit, page, role, status]
   );
 
-  const staffQuery = useDashboardStaffUsersQuery(params, isVerifiedSuperadmin);
+  const staffQuery = useDashboardStaffUsersQuery(
+    params,
+    isVerifiedSuperadmin && !accessLost
+  );
   const assignableRoles = getAssignableDashboardStaffRoles(
     staffQuery.data?.assignableRoles
   );
 
-  React.useEffect(() => {
-    if (!staffQuery.error || !isDashboardStaffForbiddenError(staffQuery.error)) {
-      return;
-    }
+  const handleStaffAccessLoss = React.useCallback(
+    (error: unknown) => {
+      if (!isDashboardStaffForbiddenError(error)) return false;
 
-    queryClient.removeQueries({ queryKey: dashboardStaffUserKeys.all });
-    queryClient.invalidateQueries({ queryKey: sessionQueryOptions.queryKey });
-    ToastMessage(getDashboardStaffUserErrorMessage(staffQuery.error), "error");
-  }, [queryClient, staffQuery.error]);
+      setAccessLost(true);
+      handleDashboardStaffAccessLoss(queryClient);
+      if (!accessLossMessageShownRef.current) {
+        ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
+        accessLossMessageShownRef.current = true;
+      }
+      return true;
+    },
+    [queryClient]
+  );
+
+  React.useEffect(() => {
+    if (staffQuery.error) handleStaffAccessLoss(staffQuery.error);
+  }, [handleStaffAccessLoss, staffQuery.error]);
 
   React.useEffect(() => {
     if (!user || isVerifiedSuperadmin) return;
@@ -220,7 +237,7 @@ export function DashboardStaffUsersWorkspace() {
             إنشاء وإدارة حسابات فريق الإدارة والمطبخ والتوصيل والكاشير.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button disabled={accessLost} onClick={() => setCreateOpen(true)}>
           <Plus className="size-4" />
           إضافة مستخدم
         </Button>
@@ -318,12 +335,18 @@ export function DashboardStaffUsersWorkspace() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {staffQuery.isLoading ? (
+          {accessLost ? (
+            <ErrorState
+              message="ليس لديك صلاحية لتنفيذ هذا الإجراء."
+              showRetry={false}
+            />
+          ) : staffQuery.isLoading ? (
             <DashboardStaffUsersSkeleton />
           ) : staffQuery.isError ? (
             <ErrorState
               message={getDashboardStaffUserErrorMessage(staffQuery.error)}
               onRetry={() => staffQuery.refetch()}
+              showRetry={!isDashboardStaffForbiddenError(staffQuery.error)}
             />
           ) : users.length === 0 ? (
             <EmptyState
@@ -375,6 +398,7 @@ export function DashboardStaffUsersWorkspace() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         assignableRoles={assignableRoles}
+        onAccessLoss={handleStaffAccessLoss}
       />
       <EditDashboardStaffUserDialog
         user={editUser}
@@ -382,24 +406,27 @@ export function DashboardStaffUsersWorkspace() {
           if (!open) setEditUser(null);
         }}
         assignableRoles={assignableRoles}
+        onAccessLoss={handleStaffAccessLoss}
       />
       <DashboardStaffUserStatusDialog
         user={statusUser}
         onOpenChange={(open) => {
           if (!open) setStatusUser(null);
         }}
+        onAccessLoss={handleStaffAccessLoss}
       />
       <ResetDashboardStaffPasswordDialog
         user={resetUser}
         onOpenChange={(open) => {
           if (!open) setResetUser(null);
         }}
+        onAccessLoss={handleStaffAccessLoss}
       />
     </div>
   );
 }
 
-function DashboardStaffUsersTable({
+export function DashboardStaffUsersTable({
   users,
   onEdit,
   onResetPassword,
@@ -411,7 +438,7 @@ function DashboardStaffUsersTable({
   onStatusChange: (user: DashboardStaffUserDto) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-md border">
+    <div className="w-full overflow-x-auto rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -488,23 +515,32 @@ function DashboardStaffUsersTable({
   );
 }
 
-function CreateDashboardStaffUserDialog({
+export function CreateDashboardStaffUserDialog({
   open,
   onOpenChange,
   assignableRoles,
+  onAccessLoss,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   assignableRoles: DashboardStaffRole[];
+  onAccessLoss: (error: unknown) => boolean;
 }) {
   const mutation = useCreateDashboardStaffUserMutation();
+  const resetMutation = mutation.reset;
   const submittingRef = React.useRef(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [dialogError, setDialogError] = React.useState<unknown>(null);
+  const safeRoles = React.useMemo(
+    () => (assignableRoles.length ? assignableRoles : defaultAssignableRoles()),
+    [assignableRoles]
+  );
+  const defaultRole = getDefaultDashboardStaffRole(safeRoles);
   const form = useForm<CreateDashboardStaffUserFormValues>({
     resolver: zodResolver(createDashboardStaffUserSchema),
     defaultValues: {
       email: "",
-      role: "admin",
+      role: defaultRole,
       password: "",
       confirmPassword: "",
       isActive: true,
@@ -514,32 +550,63 @@ function CreateDashboardStaffUserDialog({
 
   const closeAndCleanup = React.useCallback(
     (nextOpen: boolean) => {
+      if (!nextOpen && mutation.isPending) return;
       if (!nextOpen) {
-        form.reset();
-        mutation.reset();
+        form.reset({
+          email: "",
+          role: defaultRole,
+          password: "",
+          confirmPassword: "",
+          isActive: true,
+        });
+        resetMutation();
+        setDialogError(null);
         submittingRef.current = false;
         setShowPassword(false);
       }
       onOpenChange(nextOpen);
     },
-    [form, mutation, onOpenChange]
+    [defaultRole, form, mutation.isPending, onOpenChange, resetMutation]
   );
 
-  React.useEffect(() => () => mutation.reset(), [mutation]);
+  React.useEffect(() => {
+    if (!open) return;
+    const currentRole = form.getValues("role");
+    if (!safeRoles.includes(currentRole as DashboardStaffRole)) {
+      form.setValue("role", defaultRole, { shouldValidate: true });
+    }
+  }, [defaultRole, form, open, safeRoles]);
+
+  React.useEffect(() => {
+    return () => {
+      resetMutation();
+    };
+  }, [resetMutation]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    setDialogError(null);
     try {
-      const parsedValues = createDashboardStaffUserSchema.parse(values);
+      const parsedValues =
+        createDashboardStaffUserSchemaForRoles(safeRoles).parse(values);
       await mutation.mutateAsync(
         buildCreateDashboardStaffUserPayload(parsedValues)
       );
       ToastMessage("تم إضافة مستخدم لوحة التحكم بنجاح.", "success");
-      form.reset();
+      form.reset({
+        email: "",
+        role: defaultRole,
+        password: "",
+        confirmPassword: "",
+        isActive: true,
+      });
       closeAndCleanup(false);
     } catch (error) {
-      ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
+      if (!onAccessLoss(error)) {
+        setDialogError(error);
+        ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
+      }
     } finally {
       submittingRef.current = false;
     }
@@ -547,7 +614,15 @@ function CreateDashboardStaffUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={closeAndCleanup}>
-      <DialogContent dir="rtl">
+      <DialogContent
+        dir="rtl"
+        onEscapeKeyDown={(event) => {
+          if (mutation.isPending) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (mutation.isPending) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>إضافة مستخدم</DialogTitle>
           <DialogDescription>
@@ -555,7 +630,7 @@ function CreateDashboardStaffUserDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="grid gap-4">
-          <FormError message={mutation.error} />
+          <FormError message={mutation.error ?? dialogError} />
           <Field label="البريد الإلكتروني" error={form.formState.errors.email?.message}>
             <Input
               {...form.register("email")}
@@ -583,6 +658,7 @@ function CreateDashboardStaffUserDialog({
             passwordLabel="كلمة المرور"
             confirmLabel="تأكيد كلمة المرور"
           />
+          <PasswordRequirements />
           <div className="flex items-center justify-between rounded-md border p-3">
             <Label htmlFor="create-is-active">الحساب نشط</Label>
             <Switch
@@ -613,16 +689,24 @@ function CreateDashboardStaffUserDialog({
   );
 }
 
-function EditDashboardStaffUserDialog({
+export function EditDashboardStaffUserDialog({
   user,
   onOpenChange,
   assignableRoles,
+  onAccessLoss,
 }: {
   user: DashboardStaffUserDto | null;
   onOpenChange: (open: boolean) => void;
   assignableRoles: DashboardStaffRole[];
+  onAccessLoss: (error: unknown) => boolean;
 }) {
   const mutation = useUpdateDashboardStaffUserMutation();
+  const resetMutation = mutation.reset;
+  const safeRoles = React.useMemo(
+    () => (assignableRoles.length ? assignableRoles : defaultAssignableRoles()),
+    [assignableRoles]
+  );
+  const [dialogError, setDialogError] = React.useState<unknown>(null);
   const [pendingPatch, setPendingPatch] =
     React.useState<UpdateDashboardStaffUserPayload | null>(null);
   const submittingRef = React.useRef(false);
@@ -636,7 +720,11 @@ function EditDashboardStaffUserDialog({
     shouldFocusError: true,
   });
 
-  React.useEffect(() => () => mutation.reset(), [mutation]);
+  React.useEffect(() => {
+    return () => {
+      resetMutation();
+    };
+  }, [resetMutation]);
 
   if (!user) return null;
 
@@ -652,21 +740,27 @@ function EditDashboardStaffUserDialog({
   const submitPatch = async (patchToSubmit: UpdateDashboardStaffUserPayload) => {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    setDialogError(null);
     try {
       await mutation.mutateAsync({ id: user.id, data: patchToSubmit });
       ToastMessage("تم تحديث مستخدم لوحة التحكم بنجاح.", "success");
-      mutation.reset();
+      resetMutation();
+      setPendingPatch(null);
       onOpenChange(false);
     } catch (error) {
-      ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
+      if (!onAccessLoss(error)) {
+        setDialogError(error);
+        ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
+      }
     } finally {
       submittingRef.current = false;
-      setPendingPatch(null);
     }
   };
 
   const onSubmit = form.handleSubmit(async (values) => {
-    const parsedValues = editDashboardStaffUserSchema.parse(values);
+    const parsedValues = editDashboardStaffUserSchemaForRoles(safeRoles).parse(
+      values
+    );
     const nextPatch = buildUpdateDashboardStaffUserPatch(
       user,
       parsedValues as ParsedEditDashboardStaffUserFormValues
@@ -681,8 +775,27 @@ function EditDashboardStaffUserDialog({
 
   return (
     <>
-      <Dialog open={!!user} onOpenChange={onOpenChange}>
-        <DialogContent dir="rtl">
+      <Dialog
+        open={!!user}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && mutation.isPending) return;
+          if (!nextOpen) {
+            resetMutation();
+            setDialogError(null);
+            setPendingPatch(null);
+          }
+          onOpenChange(nextOpen);
+        }}
+      >
+        <DialogContent
+          dir="rtl"
+          onEscapeKeyDown={(event) => {
+            if (mutation.isPending) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (mutation.isPending) event.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>تعديل</DialogTitle>
             <DialogDescription>
@@ -690,7 +803,7 @@ function EditDashboardStaffUserDialog({
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={onSubmit} className="grid gap-4">
-            <FormError message={mutation.error} />
+            <FormError message={mutation.error ?? dialogError} />
             <Field
               label="البريد الإلكتروني"
               error={form.formState.errors.email?.message}
@@ -741,7 +854,14 @@ function EditDashboardStaffUserDialog({
                 type="button"
                 variant="outline"
                 disabled={mutation.isPending}
-                onClick={() => onOpenChange(false)}
+                onClick={() => {
+                  if (!mutation.isPending) {
+                    resetMutation();
+                    setDialogError(null);
+                    setPendingPatch(null);
+                    onOpenChange(false);
+                  }
+                }}
               >
                 إلغاء
               </Button>
@@ -757,25 +877,36 @@ function EditDashboardStaffUserDialog({
         open={!!pendingPatch}
         isActive={Boolean(pendingPatch?.isActive)}
         isPending={mutation.isPending}
-        onCancel={() => setPendingPatch(null)}
+        onCancel={() => {
+          if (!mutation.isPending) setPendingPatch(null);
+        }}
         onConfirm={() => {
           if (pendingPatch) void submitPatch(pendingPatch);
         }}
+        error={mutation.error ?? dialogError}
       />
     </>
   );
 }
 
-function DashboardStaffUserStatusDialog({
+export function DashboardStaffUserStatusDialog({
   user,
   onOpenChange,
+  onAccessLoss,
 }: {
   user: DashboardStaffUserDto | null;
   onOpenChange: (open: boolean) => void;
+  onAccessLoss: (error: unknown) => boolean;
 }) {
   const mutation = useUpdateDashboardStaffUserMutation();
+  const resetMutation = mutation.reset;
   const submittingRef = React.useRef(false);
-  React.useEffect(() => () => mutation.reset(), [mutation]);
+  const [dialogError, setDialogError] = React.useState<unknown>(null);
+  React.useEffect(() => {
+    return () => {
+      resetMutation();
+    };
+  }, [resetMutation]);
 
   if (!user) return null;
 
@@ -784,6 +915,7 @@ function DashboardStaffUserStatusDialog({
   const onConfirm = async () => {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    setDialogError(null);
     try {
       await mutation.mutateAsync({
         id: user.id,
@@ -793,9 +925,14 @@ function DashboardStaffUserStatusDialog({
         nextActive ? "تم تفعيل المستخدم بنجاح." : "تم تعطيل المستخدم بنجاح.",
         "success"
       );
+      resetMutation();
+      setDialogError(null);
       onOpenChange(false);
     } catch (error) {
-      ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
+      if (!onAccessLoss(error)) {
+        setDialogError(error);
+        ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
+      }
     } finally {
       submittingRef.current = false;
     }
@@ -806,23 +943,33 @@ function DashboardStaffUserStatusDialog({
       open={!!user}
       isActive={nextActive}
       isPending={mutation.isPending}
-      onCancel={() => onOpenChange(false)}
+      onCancel={() => {
+        if (!mutation.isPending) {
+          resetMutation();
+          setDialogError(null);
+          onOpenChange(false);
+        }
+      }}
       onConfirm={onConfirm}
-      error={mutation.error}
+      error={mutation.error ?? dialogError}
     />
   );
 }
 
-function ResetDashboardStaffPasswordDialog({
+export function ResetDashboardStaffPasswordDialog({
   user,
   onOpenChange,
+  onAccessLoss,
 }: {
   user: DashboardStaffUserDto | null;
   onOpenChange: (open: boolean) => void;
+  onAccessLoss: (error: unknown) => boolean;
 }) {
   const mutation = useResetDashboardStaffUserPasswordMutation();
+  const resetMutation = mutation.reset;
   const submittingRef = React.useRef(false);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [dialogError, setDialogError] = React.useState<unknown>(null);
   const form = useForm<ResetDashboardStaffPasswordFormValues>({
     resolver: zodResolver(resetDashboardStaffPasswordSchema),
     defaultValues: { password: "", confirmPassword: "" },
@@ -831,31 +978,41 @@ function ResetDashboardStaffPasswordDialog({
 
   const cleanup = React.useCallback(
     (open: boolean) => {
+      if (!open && mutation.isPending) return;
       if (!open) {
         form.reset();
-        mutation.reset();
+        resetMutation();
+        setDialogError(null);
         submittingRef.current = false;
         setShowPassword(false);
       }
       onOpenChange(open);
     },
-    [form, mutation, onOpenChange]
+    [form, mutation.isPending, onOpenChange, resetMutation]
   );
 
-  React.useEffect(() => () => mutation.reset(), [mutation]);
+  React.useEffect(() => {
+    return () => {
+      resetMutation();
+    };
+  }, [resetMutation]);
 
   if (!user) return null;
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    setDialogError(null);
     try {
       await mutation.mutateAsync({ id: user.id, password: values.password });
       ToastMessage("تم تغيير كلمة المرور بنجاح.", "success");
       form.reset();
       cleanup(false);
     } catch (error) {
-      ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
+      if (!onAccessLoss(error)) {
+        setDialogError(error);
+        ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
+      }
     } finally {
       submittingRef.current = false;
     }
@@ -863,7 +1020,15 @@ function ResetDashboardStaffPasswordDialog({
 
   return (
     <Dialog open={!!user} onOpenChange={cleanup}>
-      <DialogContent dir="rtl">
+      <DialogContent
+        dir="rtl"
+        onEscapeKeyDown={(event) => {
+          if (mutation.isPending) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (mutation.isPending) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>تغيير كلمة المرور</DialogTitle>
           <DialogDescription>
@@ -872,7 +1037,7 @@ function ResetDashboardStaffPasswordDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="grid gap-4">
-          <FormError message={mutation.error} />
+          <FormError message={mutation.error ?? dialogError} />
           <PasswordFields
             register={form.register}
             errors={form.formState.errors}
@@ -882,6 +1047,7 @@ function ResetDashboardStaffPasswordDialog({
             passwordLabel="كلمة المرور الجديدة"
             confirmLabel="تأكيد كلمة المرور"
           />
+          <PasswordRequirements />
           <DialogFooter>
             <Button
               type="button"
@@ -917,8 +1083,21 @@ function ConfirmStatusChangeDialog({
   error?: unknown;
 }) {
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
-      <DialogContent dir="rtl">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !isPending) onCancel();
+      }}
+    >
+      <DialogContent
+        dir="rtl"
+        onEscapeKeyDown={(event) => {
+          if (isPending) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (isPending) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{isActive ? "تفعيل" : "تعطيل"}</DialogTitle>
           <DialogDescription>
@@ -933,7 +1112,9 @@ function ConfirmStatusChangeDialog({
             type="button"
             variant="outline"
             disabled={isPending}
-            onClick={onCancel}
+            onClick={() => {
+              if (!isPending) onCancel();
+            }}
           >
             إلغاء
           </Button>
@@ -987,6 +1168,19 @@ function RoleSelectField({
         </SelectContent>
       </Select>
     </Field>
+  );
+}
+
+function PasswordRequirements() {
+  return (
+    <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+      <p className="font-medium text-foreground">متطلبات كلمة المرور</p>
+      <ul className="mt-2 list-inside list-disc space-y-1">
+        {DASHBOARD_PASSWORD_REQUIREMENTS.map((requirement) => (
+          <li key={requirement}>{requirement}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -1101,16 +1295,20 @@ function EmptyState({ message }: { message: string }) {
 function ErrorState({
   message,
   onRetry,
+  showRetry = true,
 }: {
   message: string;
-  onRetry: () => void;
+  onRetry?: () => void;
+  showRetry?: boolean;
 }) {
   return (
     <div className="grid gap-3 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
       <p>{message}</p>
-      <Button type="button" variant="outline" onClick={onRetry}>
-        إعادة المحاولة
-      </Button>
+      {showRetry && onRetry ? (
+        <Button type="button" variant="outline" onClick={onRetry}>
+          إعادة المحاولة
+        </Button>
+      ) : null}
     </div>
   );
 }
