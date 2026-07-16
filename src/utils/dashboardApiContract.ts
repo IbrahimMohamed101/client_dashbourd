@@ -1,6 +1,6 @@
 import { buildListQuery } from "@/utils/buildListQuery";
 
-type QueryParams = Record<string, string | number | boolean | undefined | null>;
+type QueryParams = object;
 
 export const dashboardSearchUrl = (q: string) =>
   `/api/dashboard/search${buildListQuery({ q })}`;
@@ -20,13 +20,13 @@ export const accountingDailyReportExportUrl = (params: QueryParams = {}) =>
   })}`;
 
 export const dashboardStaffUsersUrl = (params: QueryParams = {}) =>
-  `/api/dashboard/dashboard-users${buildListQuery(params)}`;
+  `/api/dashboard/staff-users${buildListQuery(params)}`;
 
 export const dashboardStaffUserUrl = (id: string) =>
-  `/api/dashboard/dashboard-users/${id}`;
+  `/api/dashboard/staff-users/${id}`;
 
 export const dashboardStaffResetPasswordUrl = (id: string) =>
-  `/api/dashboard/dashboard-users/${id}/reset-password`;
+  `/api/dashboard/staff-users/${id}/reset-password`;
 
 export const subscriptionTermsUrl = (locale?: string) =>
   `/api/dashboard/content/terms/subscription${buildListQuery({ locale })}`;

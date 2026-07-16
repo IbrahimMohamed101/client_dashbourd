@@ -58,10 +58,18 @@ assert.deepEqual(navMainUrlsForRole("admin"), [
   "/delivery",
   "/zones",
   "/users",
+]);
+
+assert.deepEqual(navMainUrlsForRole("superadmin"), [
+  ...navMainUrlsForRole("admin"),
   "/dashboard-users",
 ]);
 
-assert.deepEqual(navMainUrlsForRole("superadmin"), navMainUrlsForRole("admin"));
+assert.equal(navMainUrlsForRole("admin").includes("/dashboard-users"), false);
+assert.equal(navMainUrlsForRole("kitchen").includes("/dashboard-users"), false);
+assert.equal(navMainUrlsForRole("courier").includes("/dashboard-users"), false);
+assert.equal(navMainUrlsForRole("cashier").includes("/dashboard-users"), false);
+assert.equal(navMainUrlsForRole("superadmin").includes("/dashboard-users"), true);
 
 assert.deepEqual(secondaryUrlsForRole("admin"), [
   "/settings",

@@ -1,5 +1,3 @@
-import type { UserRole } from "@/types/auth";
-
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | JsonObject;
 
@@ -19,51 +17,53 @@ export interface DashboardStatusResponse<T> {
   data: T;
 }
 
-export interface DashboardStaffUser {
+export type DashboardStaffRole = "admin" | "kitchen" | "courier" | "cashier";
+
+export type DashboardStaffStatusFilter = "active" | "inactive";
+
+export interface DashboardStaffUserDto {
   id: string;
   email: string;
-  role: UserRole;
+  role: DashboardStaffRole;
   isActive: boolean;
-  lastLoginAt?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-  passwordChangedAt?: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface DashboardStaffUserCreatePayload {
+export interface DashboardStaffUsersListParams {
+  q?: string;
+  role?: DashboardStaffRole;
+  status?: DashboardStaffStatusFilter;
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateDashboardStaffUserPayload {
   email: string;
-  role: UserRole;
   password: string;
+  role: DashboardStaffRole;
+  isActive: boolean;
+}
+
+export interface UpdateDashboardStaffUserPayload {
+  email?: string;
+  role?: DashboardStaffRole;
   isActive?: boolean;
 }
 
-export interface DashboardStaffUserUpdatePayload {
-  role?: UserRole;
-  isActive?: boolean;
+export interface ResetDashboardStaffPasswordPayload {
+  password: string;
 }
 
 export interface DashboardStaffUsersListResponse
-  extends DashboardStatusResponse<DashboardStaffUser[]> {
+  extends DashboardStatusResponse<DashboardStaffUserDto[]> {
   meta: DashboardPaginationMeta;
+  assignableRoles: DashboardStaffRole[];
 }
 
 export type DashboardStaffUserResponse =
-  DashboardStatusResponse<DashboardStaffUser>;
-
-export interface DashboardStaffUserCreateResponse {
-  status: boolean;
-  data: {
-    id: string;
-  };
-}
-
-export interface DashboardStaffResetPasswordResponse {
-  status: boolean;
-  data: {
-    id: string;
-    passwordChangedAt: string | null;
-  };
-}
+  DashboardStatusResponse<DashboardStaffUserDto>;
 
 export interface DashboardNotificationSummaryItem {
   id: string;

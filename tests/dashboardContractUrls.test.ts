@@ -42,18 +42,24 @@ assert.equal(
   settingEndpointUrl("custom-meal-base-price"),
   "/api/dashboard/settings/custom-meal-base-price"
 );
-assert.equal(dashboardStaffUsersUrl(), "/api/dashboard/dashboard-users");
+assert.equal(dashboardStaffUsersUrl(), "/api/dashboard/staff-users");
 assert.equal(
-  dashboardStaffUsersUrl({ page: 2, limit: 10 }),
-  "/api/dashboard/dashboard-users?page=2&limit=10"
+  dashboardStaffUsersUrl({
+    page: 2,
+    limit: 10,
+    q: "manager",
+    role: "admin",
+    status: "active",
+  }),
+  "/api/dashboard/staff-users?page=2&limit=10&q=manager&role=admin&status=active"
 );
 assert.equal(
   dashboardStaffUserUrl("staff-1"),
-  "/api/dashboard/dashboard-users/staff-1"
+  "/api/dashboard/staff-users/staff-1"
 );
 assert.equal(
   dashboardStaffResetPasswordUrl("staff-1"),
-  "/api/dashboard/dashboard-users/staff-1/reset-password"
+  "/api/dashboard/staff-users/staff-1/reset-password"
 );
 assert.equal(
   promoCodeValidateUrl(),

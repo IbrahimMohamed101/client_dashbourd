@@ -26,7 +26,6 @@ const adminProtectedRoutes = [
   "/manual-deduction",
   "/menu",
   "/premium-meals",
-  "/dashboard-users",
   "/settings",
   "/restaurant-hours",
   "/pickup-branches",
@@ -34,7 +33,11 @@ const adminProtectedRoutes = [
   "/profile",
 ];
 
-assert.deepEqual(SUPERADMIN_ROUTES, adminProtectedRoutes);
+assert.deepEqual(SUPERADMIN_ROUTES, [
+  ...adminProtectedRoutes.slice(0, 15),
+  "/dashboard-users",
+  ...adminProtectedRoutes.slice(15),
+]);
 assert.deepEqual(ADMIN_ROUTES, adminProtectedRoutes);
 
 assert.deepEqual(CASHIER_ROUTES, [
@@ -75,8 +78,10 @@ assert.deepEqual(ROLE_DEFAULTS, {
 });
 
 assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/subscriptions/create"), true);
+assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/dashboard-users"), false);
 assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/one-time-orders"), true);
 assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/users/user-1"), true);
+assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/dashboard-users"), true);
 assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/one-time-orders"), true);
 assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/operations"), true);
 assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/one-time-orders"), true);

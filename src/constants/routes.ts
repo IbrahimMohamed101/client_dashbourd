@@ -41,7 +41,6 @@ const ADMIN_ROUTES = [
   "/manual-deduction",
   "/menu",
   "/premium-meals",
-  "/dashboard-users",
   "/settings",
   "/restaurant-hours",
   "/pickup-branches",
