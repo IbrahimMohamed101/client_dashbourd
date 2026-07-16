@@ -15,7 +15,14 @@ export function CustomerAuthStateBadge({ user }: { user: User }) {
     return <Badge variant="destructive">{getCustomerAuthStateLabel(state)}</Badge>;
   }
   if (state === "temporary_password") {
-    return <Badge variant="secondary">{getCustomerAuthStateLabel(state)}</Badge>;
+    return (
+      <Badge
+        variant="outline"
+        className="border-amber-300 bg-amber-50 text-amber-900"
+      >
+        {getCustomerAuthStateLabel(state)}
+      </Badge>
+    );
   }
   return <Badge variant="default">{getCustomerAuthStateLabel(state)}</Badge>;
 }

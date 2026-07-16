@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyRoundIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 
 import { ToastMessage } from "@/components/global/ToastMessage";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,9 @@ import { getAdminCustomerErrorMessage } from "@/utils/fetchUsersData";
 import type { CredentialsDialogData } from "./temporary-credentials-dialog";
 import { TemporaryCredentialsDialog } from "./temporary-credentials-dialog";
 
+const malformedResetCredentialsMessage =
+  "تمت إعادة التعيين ولكن تعذر عرض كلمة المرور المؤقتة. تحقق من حالة المستخدم قبل إعادة المحاولة.";
+
 export function ResetPasswordDialog({
   user,
   open,
@@ -34,13 +38,38 @@ export function ResetPasswordDialog({
   );
   const queryClient = useQueryClient();
   const resetPassword = useResetAdminCustomerPasswordMutation();
+  const resetPasswordMutationState = resetPassword.reset;
+
+  useBlocker({
+    disabled: !resetPassword.isPending,
+    enableBeforeUnload: false,
+    shouldBlockFn: () => resetPassword.isPending,
+  });
 
   function closeCredentials() {
     setCredentials(null);
     setReason("");
+    resetPasswordMutationState();
     queryClient.invalidateQueries({ queryKey: ["users"] });
     queryClient.invalidateQueries({ queryKey: ["user-details", user.id] });
   }
+
+  useEffect(() => {
+    const onLeave = (event: BeforeUnloadEvent) => {
+      if (!resetPassword.isPending) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onLeave);
+    return () => window.removeEventListener("beforeunload", onLeave);
+  }, [resetPassword.isPending]);
+
+  useEffect(() => {
+    return () => {
+      setCredentials(null);
+      resetPasswordMutationState();
+    };
+  }, [resetPasswordMutationState]);
 
   function submitReset() {
     resetPassword.mutate(
@@ -50,15 +79,26 @@ export function ResetPasswordDialog({
       },
       {
         onSuccess: (result) => {
+          const phoneE164 = result.phoneE164 || user.phoneE164 || user.phone;
+          if (
+            !phoneE164 ||
+            !result.temporaryPassword ||
+            !result.temporaryPasswordExpiresAt
+          ) {
+            resetPasswordMutationState();
+            ToastMessage(malformedResetCredentialsMessage, "error");
+            return;
+          }
           onOpenChange(false);
           setCredentials({
             title: "تمت إعادة تعيين كلمة المرور",
             customerName: user.fullName,
-            phoneE164: result.phoneE164 || user.phoneE164 || user.phone,
+            phoneE164,
             temporaryPassword: result.temporaryPassword,
             expiresAt: result.temporaryPasswordExpiresAt,
             sessionsRevoked: result.sessionsRevoked,
           });
+          resetPasswordMutationState();
         },
         onError: (error) => {
           ToastMessage(getAdminCustomerErrorMessage(error), "error");
@@ -69,8 +109,23 @@ export function ResetPasswordDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent dir="rtl" className="max-w-lg">
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && resetPassword.isPending) return;
+          onOpenChange(nextOpen);
+        }}
+      >
+        <DialogContent
+          dir="rtl"
+          className="max-w-lg"
+          onEscapeKeyDown={(event) => {
+            if (resetPassword.isPending) event.preventDefault();
+          }}
+          onPointerDownOutside={(event) => {
+            if (resetPassword.isPending) event.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>إعادة تعيين كلمة المرور</DialogTitle>
             <DialogDescription>
@@ -86,6 +141,7 @@ export function ResetPasswordDialog({
             <Textarea
               id="reset-reason"
               value={reason}
+              disabled={resetPassword.isPending}
               onChange={(event) => setReason(event.target.value)}
               placeholder="العميل حضر إلى الفرع وطلب إعادة تعيين كلمة المرور"
               className="min-h-24"

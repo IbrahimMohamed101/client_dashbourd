@@ -1,6 +1,7 @@
 import { queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createAdminCustomer,
+  fetchAllAdminCustomers,
   fetchUserDetails,
   fetchUserSubscriptions,
   fetchUsersList,
@@ -12,24 +13,37 @@ import type {
   ResetAdminCustomerPasswordPayload,
 } from "@/types/userTypes";
 
-export const usersQueryOptions = (page: number, limit: number, search = "") =>
+export const usersQueryOptions = (page: number, limit: number) =>
   queryOptions({
-    queryKey: ["users", page, limit, search],
-    queryFn: () => fetchUsersList({ page, limit, q: search }),
+    queryKey: ["users", "list", page, limit],
+    queryFn: () => fetchUsersList({ page, limit }),
   });
 
 export const allUsersQueryOptions = () =>
   queryOptions({
     queryKey: ["users", "all"],
-    queryFn: () => fetchUsersList({ page: 1, limit: 200 }),
+    queryFn: fetchAllAdminCustomers,
     staleTime: 1000 * 60 * 5,
   });
 
-export const useUsersListQuery = (page: number, limit: number, search = "") => {
+export const filteredUsersCatalogQueryOptions = () =>
+  queryOptions({
+    queryKey: ["users", "filtered-catalog"],
+    queryFn: fetchAllAdminCustomers,
+    staleTime: 1000 * 60 * 2,
+  });
+
+export const useUsersListQuery = (page: number, limit: number) => {
   return useQuery({
-    ...usersQueryOptions(page, limit, search),
+    ...usersQueryOptions(page, limit),
   });
 };
+
+export const useFilteredUsersCatalogQuery = (enabled: boolean) =>
+  useQuery({
+    ...filteredUsersCatalogQueryOptions(),
+    enabled,
+  });
 
 export const useAllUsersQuery = () => {
   return useQuery(allUsersQueryOptions());
@@ -72,6 +86,7 @@ export const useCreateAdminCustomerMutation = () => {
     mutationFn: (payload: CreateAdminCustomerPayload) =>
       createAdminCustomer(payload),
     retry: false,
+    gcTime: 0,
   });
 };
 
@@ -85,5 +100,6 @@ export const useResetAdminCustomerPasswordMutation = () => {
       payload: ResetAdminCustomerPasswordPayload;
     }) => resetAdminCustomerPassword({ userId, payload }),
     retry: false,
+    gcTime: 0,
   });
 };

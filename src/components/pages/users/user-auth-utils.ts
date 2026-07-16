@@ -37,6 +37,19 @@ export function getCustomerAuthStateLabel(state: CustomerAuthState) {
   }
 }
 
+export function getCustomerAccountStatusLabel(status?: User["accountStatus"]) {
+  switch (status) {
+    case "active":
+      return "نشط";
+    case "pending_activation":
+      return "بانتظار التفعيل";
+    case "reset_requested":
+      return "طلب إعادة تعيين";
+    default:
+      return "—";
+  }
+}
+
 export function getTemporaryPasswordReasonLabel(
   reason?: User["temporaryPasswordReason"]
 ) {

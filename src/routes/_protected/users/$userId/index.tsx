@@ -20,6 +20,7 @@ import {
 import {
   formatCustomerDateTime,
   formatExpiry,
+  getCustomerAccountStatusLabel,
   getTemporaryPasswordReasonLabel,
 } from "@/components/pages/users/user-auth-utils";
 import { Badge } from "@/components/ui/badge";
@@ -128,7 +129,14 @@ function UserDetailsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <DetailRow label="حالة الحساب" value={user.isActive ? "نشط" : "غير نشط"} />
+            <DetailRow
+              label="حالة التفعيل"
+              value={user.isActive ? "نشط" : "غير نشط"}
+            />
+            <DetailRow
+              label="حالة الحساب"
+              value={getCustomerAccountStatusLabel(user.accountStatus)}
+            />
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="text-muted-foreground">حالة الدخول</span>
               <CustomerAuthStateBadge user={user} />

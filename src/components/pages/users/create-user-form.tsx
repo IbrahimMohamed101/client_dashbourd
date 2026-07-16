@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
@@ -22,6 +22,9 @@ import { getAdminCustomerErrorMessage } from "@/utils/fetchUsersData";
 import type { CredentialsDialogData } from "./temporary-credentials-dialog";
 import { TemporaryCredentialsDialog } from "./temporary-credentials-dialog";
 
+const malformedCreateCredentialsMessage =
+  "تم إنشاء الحساب ولكن تعذر عرض بيانات الدخول المؤقتة. لا تحاول إعادة العملية قبل التحقق من حالة المستخدم.";
+
 export function CreateUserForm() {
   const [credentials, setCredentials] = useState<CredentialsDialogData | null>(
     null
@@ -37,13 +40,22 @@ export function CreateUserForm() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const createCustomer = useCreateAdminCustomerMutation();
+  const resetCreateCustomerMutation = createCustomer.reset;
   const isActive = watch("isActive");
 
   function closeCredentials() {
     setCredentials(null);
+    resetCreateCustomerMutation();
     queryClient.invalidateQueries({ queryKey: ["users"] });
     navigate({ to: "/users" });
   }
+
+  useEffect(() => {
+    return () => {
+      setCredentials(null);
+      resetCreateCustomerMutation();
+    };
+  }, [resetCreateCustomerMutation]);
 
   function onSubmit(data: CreateUserSchemaType) {
     createCustomer.mutate(
@@ -56,13 +68,20 @@ export function CreateUserForm() {
       {
         onSuccess: (result) => {
           const temp = result.temporaryCredentials;
+          const phoneE164 = result.user.phoneE164 || result.user.phone;
+          if (!temp.temporaryPassword || !temp.expiresAt || !phoneE164) {
+            resetCreateCustomerMutation();
+            ToastMessage(malformedCreateCredentialsMessage, "error");
+            return;
+          }
           setCredentials({
             title: "تم إنشاء المستخدم",
             customerName: result.user.fullName,
-            phoneE164: result.user.phoneE164 || result.user.phone,
+            phoneE164,
             temporaryPassword: temp.temporaryPassword,
             expiresAt: temp.expiresAt,
           });
+          resetCreateCustomerMutation();
         },
         onError: (error) => {
           ToastMessage(getAdminCustomerErrorMessage(error), "error");

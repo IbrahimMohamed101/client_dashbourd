@@ -23,6 +23,9 @@ export type CredentialsDialogData = {
 
 const mandatoryNotice =
   "كلمة المرور مؤقتة وتُستخدم مرة واحدة لتسجيل الدخول. سيُطلب من العميل إنشاء كلمة مرور جديدة فور تسجيل الدخول.";
+const copyFailureMessage =
+  "تعذر النسخ تلقائيًا. حدّد البيانات وانسخها يدويًا.";
+const printFailureMessage = "تعذر بدء الطباعة من المتصفح.";
 
 export function TemporaryCredentialsDialog({
   credentials,
@@ -45,15 +48,56 @@ export function TemporaryCredentialsDialog({
 
   async function copyValue(value: string, successMessage: string) {
     if (!value) return;
-    await navigator.clipboard.writeText(value);
-    ToastMessage(successMessage, "success");
+    try {
+      await navigator.clipboard.writeText(value);
+      ToastMessage(successMessage, "success");
+    } catch {
+      ToastMessage(copyFailureMessage, "error");
+    }
   }
 
   function printCredentials() {
     if (!credentials) return;
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
-    if (!printWindow) return;
-    printWindow.document.write(`<!doctype html>
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.opacity = "0";
+    iframe.setAttribute("aria-hidden", "true");
+
+    const removeFrame = () => {
+      window.setTimeout(() => iframe.remove(), 250);
+    };
+
+    const startPrint = () => {
+      try {
+        const printWindow = iframe.contentWindow;
+        if (!printWindow) {
+          throw new Error("Print frame is unavailable");
+        }
+        printWindow.focus();
+        printWindow.print();
+        printWindow.addEventListener("afterprint", removeFrame, {
+          once: true,
+        });
+        window.setTimeout(removeFrame, 5000);
+      } catch {
+        removeFrame();
+        ToastMessage(printFailureMessage, "error");
+      }
+    };
+
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument;
+    if (!doc) {
+      removeFrame();
+      ToastMessage(printFailureMessage, "error");
+      return;
+    }
+
+    doc.open();
+    doc.write(`<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
@@ -65,6 +109,7 @@ export function TemporaryCredentialsDialog({
     p { margin: 10px 0; font-size: 15px; }
     .password { direction: ltr; font-size: 20px; font-weight: 700; letter-spacing: 1px; }
     .notice { margin-top: 20px; color: #92400e; }
+    .revoked { margin-top: 12px; color: #991b1b; }
   </style>
 </head>
 <body>
@@ -75,14 +120,17 @@ export function TemporaryCredentialsDialog({
     <p><strong>كلمة المرور المؤقتة:</strong></p>
     <p class="password">${escapeHtml(credentials.temporaryPassword)}</p>
     <p><strong>تنتهي في:</strong> ${escapeHtml(expiry)}</p>
-    <p class="notice">${mandatoryNotice}</p>
+    <p class="notice">${escapeHtml(mandatoryNotice)}</p>
+    ${
+      credentials.sessionsRevoked
+        ? `<p class="revoked">${escapeHtml("تم إلغاء الجلسات السابقة للعميل بعد إعادة التعيين.")}</p>`
+        : ""
+    }
   </section>
 </body>
-</html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    </html>`);
+    doc.close();
+    window.setTimeout(startPrint, 50);
   }
 
   return (
@@ -90,42 +138,53 @@ export function TemporaryCredentialsDialog({
       <DialogContent
         dir="rtl"
         showCloseButton={false}
-        className="max-h-[90dvh] max-w-lg overflow-y-auto"
+        className="grid max-h-[90dvh] max-w-lg grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0"
         onEscapeKeyDown={(event) => event.preventDefault()}
         onPointerDownOutside={(event) => event.preventDefault()}
       >
-        <DialogHeader>
+        <DialogHeader className="border-b px-4 py-4 text-right sm:px-6">
           <DialogTitle>{credentials?.title}</DialogTitle>
           <DialogDescription>{mandatoryNotice}</DialogDescription>
         </DialogHeader>
 
-        {credentials ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <dl className="grid gap-3 text-sm">
-                <CredentialRow label="اسم العميل" value={credentials.customerName || "—"} />
-                <CredentialRow label="رقم الجوال" value={credentials.phoneE164} ltr />
-                <CredentialRow
-                  label="كلمة المرور المؤقتة"
-                  value={credentials.temporaryPassword}
-                  ltr
-                  strong
-                />
-                <CredentialRow label="تنتهي في" value={expiry} />
-              </dl>
-            </div>
-            {credentials.sessionsRevoked ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                تم تسجيل خروج العميل من جميع الأجهزة وإلغاء الجلسات السابقة.
+        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-6">
+          {credentials ? (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <dl className="grid gap-3 text-sm">
+                  <CredentialRow
+                    label="اسم العميل"
+                    value={credentials.customerName || "—"}
+                  />
+                  <CredentialRow
+                    label="رقم الجوال"
+                    value={credentials.phoneE164}
+                    ltr
+                  />
+                  <CredentialRow
+                    label="كلمة المرور المؤقتة"
+                    value={credentials.temporaryPassword}
+                    ltr
+                    strong
+                  />
+                  <CredentialRow label="تنتهي في" value={expiry} />
+                </dl>
               </div>
-            ) : null}
-          </div>
-        ) : null}
+              {credentials.sessionsRevoked ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  تم تسجيل خروج العميل من جميع الأجهزة وإلغاء الجلسات السابقة.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
-        <DialogFooter className="gap-2 sm:justify-start">
+        <DialogFooter className="gap-2 border-t bg-popover/95 px-4 py-3 backdrop-blur sm:justify-start sm:px-6">
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
+            aria-label="نسخ رقم الجوال"
             onClick={() => copyValue(credentials?.phoneE164 ?? "", "تم نسخ رقم الجوال")}
           >
             <CopyIcon data-icon="inline-start" />
@@ -134,6 +193,8 @@ export function TemporaryCredentialsDialog({
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
+            aria-label="نسخ كلمة المرور المؤقتة"
             onClick={() =>
               copyValue(credentials?.temporaryPassword ?? "", "تم نسخ كلمة المرور")
             }
@@ -144,16 +205,23 @@ export function TemporaryCredentialsDialog({
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
+            aria-label="نسخ بيانات الدخول المؤقتة"
             onClick={() => copyValue(copyText, "تم نسخ بيانات الدخول")}
           >
             <CopyIcon data-icon="inline-start" />
             نسخ بيانات الدخول
           </Button>
-          <Button type="button" variant="outline" onClick={printCredentials}>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={printCredentials}
+          >
             <PrinterIcon data-icon="inline-start" />
             طباعة
           </Button>
-          <Button type="button" onClick={onClose}>
+          <Button type="button" className="w-full sm:w-auto" onClick={onClose}>
             تم
           </Button>
         </DialogFooter>
@@ -178,7 +246,11 @@ function CredentialRow({
       <dt className="text-muted-foreground">{label}</dt>
       <dd
         dir={ltr ? "ltr" : "rtl"}
-        className={strong ? "font-mono text-base font-bold" : "font-medium"}
+        className={
+          strong
+            ? "break-all font-mono text-base font-bold"
+            : "break-words font-medium"
+        }
       >
         {value}
       </dd>
