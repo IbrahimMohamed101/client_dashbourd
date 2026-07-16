@@ -178,6 +178,10 @@ export function DashboardStaffUsersWorkspace() {
       if (!isDashboardStaffForbiddenError(error)) return false;
 
       setAccessLost(true);
+      setCreateOpen(false);
+      setEditUser(null);
+      setResetUser(null);
+      setStatusUser(null);
       handleDashboardStaffAccessLoss(queryClient);
       if (!accessLossMessageShownRef.current) {
         ToastMessage(getDashboardStaffUserErrorMessage(error), "error");
@@ -399,6 +403,7 @@ export function DashboardStaffUsersWorkspace() {
         onOpenChange={setCreateOpen}
         assignableRoles={assignableRoles}
         onAccessLoss={handleStaffAccessLoss}
+        accessBlocked={accessLost}
       />
       <EditDashboardStaffUserDialog
         user={editUser}
@@ -407,6 +412,7 @@ export function DashboardStaffUsersWorkspace() {
         }}
         assignableRoles={assignableRoles}
         onAccessLoss={handleStaffAccessLoss}
+        accessBlocked={accessLost}
       />
       <DashboardStaffUserStatusDialog
         user={statusUser}
@@ -414,6 +420,7 @@ export function DashboardStaffUsersWorkspace() {
           if (!open) setStatusUser(null);
         }}
         onAccessLoss={handleStaffAccessLoss}
+        accessBlocked={accessLost}
       />
       <ResetDashboardStaffPasswordDialog
         user={resetUser}
@@ -421,6 +428,7 @@ export function DashboardStaffUsersWorkspace() {
           if (!open) setResetUser(null);
         }}
         onAccessLoss={handleStaffAccessLoss}
+        accessBlocked={accessLost}
       />
     </div>
   );
@@ -520,11 +528,13 @@ export function CreateDashboardStaffUserDialog({
   onOpenChange,
   assignableRoles,
   onAccessLoss,
+  accessBlocked = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   assignableRoles: DashboardStaffRole[];
   onAccessLoss: (error: unknown) => boolean;
+  accessBlocked?: boolean;
 }) {
   const mutation = useCreateDashboardStaffUserMutation();
   const resetMutation = mutation.reset;
@@ -548,25 +558,28 @@ export function CreateDashboardStaffUserDialog({
     shouldFocusError: true,
   });
 
+  const resetFormState = React.useCallback(() => {
+    form.reset({
+      email: "",
+      role: defaultRole,
+      password: "",
+      confirmPassword: "",
+      isActive: true,
+    });
+    resetMutation();
+    setDialogError(null);
+    submittingRef.current = false;
+    setShowPassword(false);
+  }, [defaultRole, form, resetMutation]);
+
   const closeAndCleanup = React.useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen && mutation.isPending) return;
-      if (!nextOpen) {
-        form.reset({
-          email: "",
-          role: defaultRole,
-          password: "",
-          confirmPassword: "",
-          isActive: true,
-        });
-        resetMutation();
-        setDialogError(null);
-        submittingRef.current = false;
-        setShowPassword(false);
-      }
+      if (!nextOpen && mutation.isPending && !accessBlocked) return;
+      if (!nextOpen) resetFormState();
+      if (nextOpen && accessBlocked) return;
       onOpenChange(nextOpen);
     },
-    [defaultRole, form, mutation.isPending, onOpenChange, resetMutation]
+    [accessBlocked, mutation.isPending, onOpenChange, resetFormState]
   );
 
   React.useEffect(() => {
@@ -583,8 +596,12 @@ export function CreateDashboardStaffUserDialog({
     };
   }, [resetMutation]);
 
+  React.useEffect(() => {
+    if (!open) resetFormState();
+  }, [open, resetFormState]);
+
   const onSubmit = form.handleSubmit(async (values) => {
-    if (submittingRef.current) return;
+    if (accessBlocked || submittingRef.current) return;
     submittingRef.current = true;
     setDialogError(null);
     try {
@@ -617,10 +634,10 @@ export function CreateDashboardStaffUserDialog({
       <DialogContent
         dir="rtl"
         onEscapeKeyDown={(event) => {
-          if (mutation.isPending) event.preventDefault();
+          if (mutation.isPending || accessBlocked) event.preventDefault();
         }}
         onPointerDownOutside={(event) => {
-          if (mutation.isPending) event.preventDefault();
+          if (mutation.isPending || accessBlocked) event.preventDefault();
         }}
       >
         <DialogHeader>
@@ -636,7 +653,7 @@ export function CreateDashboardStaffUserDialog({
               {...form.register("email")}
               type="email"
               autoComplete="email"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || accessBlocked}
               dir="ltr"
             />
           </Field>
@@ -646,13 +663,13 @@ export function CreateDashboardStaffUserDialog({
               form.setValue("role", value, { shouldValidate: true })
             }
             roles={assignableRoles}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || accessBlocked}
             error={form.formState.errors.role?.message}
           />
           <PasswordFields
             register={form.register}
             errors={form.formState.errors}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || accessBlocked}
             showPassword={showPassword}
             setShowPassword={setShowPassword}
             passwordLabel="كلمة المرور"
@@ -667,19 +684,19 @@ export function CreateDashboardStaffUserDialog({
               onCheckedChange={(checked) =>
                 form.setValue("isActive", checked, { shouldValidate: true })
               }
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || accessBlocked}
             />
           </div>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || accessBlocked}
               onClick={() => closeAndCleanup(false)}
             >
               إلغاء
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button type="submit" disabled={mutation.isPending || accessBlocked}>
               إضافة مستخدم
             </Button>
           </DialogFooter>
@@ -694,11 +711,13 @@ export function EditDashboardStaffUserDialog({
   onOpenChange,
   assignableRoles,
   onAccessLoss,
+  accessBlocked = false,
 }: {
   user: DashboardStaffUserDto | null;
   onOpenChange: (open: boolean) => void;
   assignableRoles: DashboardStaffRole[];
   onAccessLoss: (error: unknown) => boolean;
+  accessBlocked?: boolean;
 }) {
   const mutation = useUpdateDashboardStaffUserMutation();
   const resetMutation = mutation.reset;
@@ -735,10 +754,13 @@ export function EditDashboardStaffUserDialog({
     isActive: currentValues.isActive,
   });
   const saveDisabled =
-    mutation.isPending || !hasUpdatePatchChanges(patch) || submittingRef.current;
+    accessBlocked ||
+    mutation.isPending ||
+    !hasUpdatePatchChanges(patch) ||
+    submittingRef.current;
 
   const submitPatch = async (patchToSubmit: UpdateDashboardStaffUserPayload) => {
-    if (submittingRef.current) return;
+    if (accessBlocked || submittingRef.current) return;
     submittingRef.current = true;
     setDialogError(null);
     try {
@@ -758,6 +780,7 @@ export function EditDashboardStaffUserDialog({
   };
 
   const onSubmit = form.handleSubmit(async (values) => {
+    if (accessBlocked || submittingRef.current) return;
     const parsedValues = editDashboardStaffUserSchemaForRoles(safeRoles).parse(
       values
     );
@@ -778,7 +801,8 @@ export function EditDashboardStaffUserDialog({
       <Dialog
         open={!!user}
         onOpenChange={(nextOpen) => {
-          if (!nextOpen && mutation.isPending) return;
+          if (!nextOpen && mutation.isPending && !accessBlocked) return;
+          if (nextOpen && accessBlocked) return;
           if (!nextOpen) {
             resetMutation();
             setDialogError(null);
@@ -790,10 +814,10 @@ export function EditDashboardStaffUserDialog({
         <DialogContent
           dir="rtl"
           onEscapeKeyDown={(event) => {
-            if (mutation.isPending) event.preventDefault();
+            if (mutation.isPending || accessBlocked) event.preventDefault();
           }}
           onPointerDownOutside={(event) => {
-            if (mutation.isPending) event.preventDefault();
+            if (mutation.isPending || accessBlocked) event.preventDefault();
           }}
         >
           <DialogHeader>
@@ -812,7 +836,7 @@ export function EditDashboardStaffUserDialog({
                 {...form.register("email")}
                 type="email"
                 autoComplete="email"
-                disabled={mutation.isPending}
+                disabled={mutation.isPending || accessBlocked}
                 dir="ltr"
               />
             </Field>
@@ -822,7 +846,7 @@ export function EditDashboardStaffUserDialog({
                 form.setValue("role", value, { shouldValidate: true })
               }
               roles={assignableRoles}
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || accessBlocked}
               error={form.formState.errors.role?.message}
             />
             <div className="flex items-center justify-between rounded-md border p-3">
@@ -840,7 +864,7 @@ export function EditDashboardStaffUserDialog({
                       shouldValidate: true,
                     })
                   }
-                  disabled={mutation.isPending}
+                  disabled={mutation.isPending || accessBlocked}
                 />
               </div>
             </div>
@@ -853,9 +877,9 @@ export function EditDashboardStaffUserDialog({
               <Button
                 type="button"
                 variant="outline"
-                disabled={mutation.isPending}
+                disabled={mutation.isPending || accessBlocked}
                 onClick={() => {
-                  if (!mutation.isPending) {
+                  if (!mutation.isPending && !accessBlocked) {
                     resetMutation();
                     setDialogError(null);
                     setPendingPatch(null);
@@ -877,8 +901,9 @@ export function EditDashboardStaffUserDialog({
         open={!!pendingPatch}
         isActive={Boolean(pendingPatch?.isActive)}
         isPending={mutation.isPending}
+        accessBlocked={accessBlocked}
         onCancel={() => {
-          if (!mutation.isPending) setPendingPatch(null);
+          if (!mutation.isPending && !accessBlocked) setPendingPatch(null);
         }}
         onConfirm={() => {
           if (pendingPatch) void submitPatch(pendingPatch);
@@ -893,10 +918,12 @@ export function DashboardStaffUserStatusDialog({
   user,
   onOpenChange,
   onAccessLoss,
+  accessBlocked = false,
 }: {
   user: DashboardStaffUserDto | null;
   onOpenChange: (open: boolean) => void;
   onAccessLoss: (error: unknown) => boolean;
+  accessBlocked?: boolean;
 }) {
   const mutation = useUpdateDashboardStaffUserMutation();
   const resetMutation = mutation.reset;
@@ -913,7 +940,7 @@ export function DashboardStaffUserStatusDialog({
   const nextActive = !user.isActive;
 
   const onConfirm = async () => {
-    if (submittingRef.current) return;
+    if (accessBlocked || submittingRef.current) return;
     submittingRef.current = true;
     setDialogError(null);
     try {
@@ -943,8 +970,9 @@ export function DashboardStaffUserStatusDialog({
       open={!!user}
       isActive={nextActive}
       isPending={mutation.isPending}
+      accessBlocked={accessBlocked}
       onCancel={() => {
-        if (!mutation.isPending) {
+        if (!mutation.isPending && !accessBlocked) {
           resetMutation();
           setDialogError(null);
           onOpenChange(false);
@@ -960,10 +988,12 @@ export function ResetDashboardStaffPasswordDialog({
   user,
   onOpenChange,
   onAccessLoss,
+  accessBlocked = false,
 }: {
   user: DashboardStaffUserDto | null;
   onOpenChange: (open: boolean) => void;
   onAccessLoss: (error: unknown) => boolean;
+  accessBlocked?: boolean;
 }) {
   const mutation = useResetDashboardStaffUserPasswordMutation();
   const resetMutation = mutation.reset;
@@ -978,7 +1008,7 @@ export function ResetDashboardStaffPasswordDialog({
 
   const cleanup = React.useCallback(
     (open: boolean) => {
-      if (!open && mutation.isPending) return;
+      if (!open && mutation.isPending && !accessBlocked) return;
       if (!open) {
         form.reset();
         resetMutation();
@@ -986,9 +1016,10 @@ export function ResetDashboardStaffPasswordDialog({
         submittingRef.current = false;
         setShowPassword(false);
       }
+      if (open && accessBlocked) return;
       onOpenChange(open);
     },
-    [form, mutation.isPending, onOpenChange, resetMutation]
+    [accessBlocked, form, mutation.isPending, onOpenChange, resetMutation]
   );
 
   React.useEffect(() => {
@@ -1000,7 +1031,7 @@ export function ResetDashboardStaffPasswordDialog({
   if (!user) return null;
 
   const onSubmit = form.handleSubmit(async (values) => {
-    if (submittingRef.current) return;
+    if (accessBlocked || submittingRef.current) return;
     submittingRef.current = true;
     setDialogError(null);
     try {
@@ -1023,10 +1054,10 @@ export function ResetDashboardStaffPasswordDialog({
       <DialogContent
         dir="rtl"
         onEscapeKeyDown={(event) => {
-          if (mutation.isPending) event.preventDefault();
+          if (mutation.isPending || accessBlocked) event.preventDefault();
         }}
         onPointerDownOutside={(event) => {
-          if (mutation.isPending) event.preventDefault();
+          if (mutation.isPending || accessBlocked) event.preventDefault();
         }}
       >
         <DialogHeader>
@@ -1041,7 +1072,7 @@ export function ResetDashboardStaffPasswordDialog({
           <PasswordFields
             register={form.register}
             errors={form.formState.errors}
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || accessBlocked}
             showPassword={showPassword}
             setShowPassword={setShowPassword}
             passwordLabel="كلمة المرور الجديدة"
@@ -1052,12 +1083,12 @@ export function ResetDashboardStaffPasswordDialog({
             <Button
               type="button"
               variant="outline"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || accessBlocked}
               onClick={() => cleanup(false)}
             >
               إلغاء
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button type="submit" disabled={mutation.isPending || accessBlocked}>
               تغيير كلمة المرور
             </Button>
           </DialogFooter>
@@ -1071,6 +1102,7 @@ function ConfirmStatusChangeDialog({
   open,
   isActive,
   isPending,
+  accessBlocked = false,
   onCancel,
   onConfirm,
   error,
@@ -1078,24 +1110,26 @@ function ConfirmStatusChangeDialog({
   open: boolean;
   isActive: boolean;
   isPending: boolean;
+  accessBlocked?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
   error?: unknown;
 }) {
+  const isActionBlocked = isPending || accessBlocked;
   return (
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen && !isPending) onCancel();
+        if (!nextOpen && !isActionBlocked) onCancel();
       }}
     >
       <DialogContent
         dir="rtl"
         onEscapeKeyDown={(event) => {
-          if (isPending) event.preventDefault();
+          if (isActionBlocked) event.preventDefault();
         }}
         onPointerDownOutside={(event) => {
-          if (isPending) event.preventDefault();
+          if (isActionBlocked) event.preventDefault();
         }}
       >
         <DialogHeader>
@@ -1111,9 +1145,9 @@ function ConfirmStatusChangeDialog({
           <Button
             type="button"
             variant="outline"
-            disabled={isPending}
+            disabled={isActionBlocked}
             onClick={() => {
-              if (!isPending) onCancel();
+              if (!isActionBlocked) onCancel();
             }}
           >
             إلغاء
@@ -1121,8 +1155,10 @@ function ConfirmStatusChangeDialog({
           <Button
             type="button"
             variant={isActive ? "default" : "destructive"}
-            disabled={isPending}
-            onClick={onConfirm}
+            disabled={isActionBlocked}
+            onClick={() => {
+              if (!isActionBlocked) onConfirm();
+            }}
           >
             {isActive ? "تفعيل" : "تعطيل"}
           </Button>

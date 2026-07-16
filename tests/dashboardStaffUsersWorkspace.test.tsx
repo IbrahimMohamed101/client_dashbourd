@@ -151,6 +151,24 @@ const clickButtonContaining = async (text: string) => {
   await userEvent.click(button);
 };
 
+const forbiddenError = {
+  response: { status: 403, data: { code: "FORBIDDEN" } },
+};
+
+const getAddUserButton = () => {
+  const button = document.querySelector<HTMLButtonElement>("section button");
+  if (!button) throw new Error("Add user button not found");
+  return button;
+};
+
+const openStaffAction = async (index: number) => {
+  const actionButton = document.querySelector<HTMLButtonElement>("tbody button");
+  if (!actionButton) throw new Error("Staff action button not found");
+  await userEvent.click(actionButton);
+  const items = await screen.findAllByRole("menuitem");
+  await userEvent.click(items[index]);
+};
+
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
@@ -529,6 +547,102 @@ describe("dashboard staff users workspace interactions", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["session"] });
   });
 
+  it("create mutation 403 closes management UI and blocks resubmission", async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(forbiddenError);
+    createMutationMock.mockReturnValue(makeMutation(mutateAsync));
+    const { queryClient } = renderWithQueryClient(<DashboardStaffUsersWorkspace />);
+    const removeSpy = vi.spyOn(queryClient, "removeQueries");
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const addButton = getAddUserButton();
+    await userEvent.click(addButton);
+    const user = await fillCreateForm();
+    await user.click(getSubmitButton());
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(removeSpy).toHaveBeenCalledWith({
+        queryKey: ["dashboard-staff-users"],
+      })
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["session"] });
+    expect(toastMock).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('input[type="password"]')).not.toBeInTheDocument();
+    expect(getAddUserButton()).toBeDisabled();
+    expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
+
+    await user.click(getAddUserButton());
+    expect(document.querySelector('input[type="password"]')).not.toBeInTheDocument();
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("edit mutation 403 closes the edit workflow and blocks further staff actions", async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(forbiddenError);
+    updateMutationMock.mockReturnValue(makeMutation(mutateAsync));
+    renderWithQueryClient(<DashboardStaffUsersWorkspace />);
+
+    await openStaffAction(0);
+    const emailInput = document.querySelector<HTMLInputElement>(
+      'input[type="email"]'
+    )!;
+    const user = userEvent.setup();
+    await user.clear(emailInput);
+    await user.type(emailInput, "blocked@example.com");
+    await user.click(getSubmitButton());
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(document.querySelector('input[type="email"]')).not.toBeInTheDocument()
+    );
+    expect(getAddUserButton()).toBeDisabled();
+    expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
+    await user.click(getAddUserButton());
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("status mutation 403 closes confirmation and blocks further staff actions", async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(forbiddenError);
+    updateMutationMock.mockReturnValue(makeMutation(mutateAsync));
+    renderWithQueryClient(<DashboardStaffUsersWorkspace />);
+
+    await openStaffAction(2);
+    const dialogButtons = screen.getByRole("dialog").querySelectorAll("button");
+    await userEvent.click(dialogButtons[1]);
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(screen.queryByText(/Ø³ÙŠØªÙ… Ù…Ù†Ø¹Ù‡/)).not.toBeInTheDocument()
+    );
+    expect(getAddUserButton()).toBeDisabled();
+    expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
+    await userEvent.click(getAddUserButton());
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("reset password mutation 403 closes reset dialog and clears password fields", async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(forbiddenError);
+    resetPasswordMutationMock.mockReturnValue(makeMutation(mutateAsync));
+    renderWithQueryClient(<DashboardStaffUsersWorkspace />);
+
+    await openStaffAction(1);
+    const user = userEvent.setup();
+    const inputs = document.querySelectorAll<HTMLInputElement>(
+      'input[type="password"]'
+    );
+    await user.type(inputs[0], "StrongPass9!");
+    await user.type(inputs[1], "StrongPass9!");
+    await user.click(getSubmitButton());
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(document.querySelector('input[type="password"]')).not.toBeInTheDocument()
+    );
+    expect(getAddUserButton()).toBeDisabled();
+    expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
+    await user.click(getAddUserButton());
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+  });
+
   it("a list 403 hides stale data and does not expose a retry loop", async () => {
     staffQueryMock.mockReturnValue({
       data: {
@@ -550,6 +664,29 @@ describe("dashboard staff users workspace interactions", () => {
       expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument()
     );
     expect(screen.queryByText(/إعادة المحاولة/)).not.toBeInTheDocument();
+  });
+
+  it("list 403 leaves no actionable staff-management controls", async () => {
+    staffQueryMock.mockReturnValue({
+      data: {
+        status: true,
+        data: [staffUser],
+        meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        assignableRoles: ["admin"],
+      },
+      isLoading: false,
+      isError: true,
+      isFetching: false,
+      error: forbiddenError,
+      refetch: vi.fn(),
+    });
+
+    renderWithQueryClient(<DashboardStaffUsersWorkspace />);
+
+    await waitFor(() => expect(getAddUserButton()).toBeDisabled());
+    expect(screen.queryByText("staff@example.com")).not.toBeInTheDocument();
+    expect(document.querySelector("tbody button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("password values are not written to browser storage", async () => {
