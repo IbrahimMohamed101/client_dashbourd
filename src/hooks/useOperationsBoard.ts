@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { getApiErrorMessage } from "@/lib/apiErrors";
 import api from "@/lib/apis";
 import {
   buildOperationsActionPayload,
   getCourierItems,
-  getEndpointForAction,
+  getInvalidActionReason,
   getPickupItems,
   getScreensForRole,
   OPERATIONS_SCREENS,
@@ -19,6 +21,11 @@ import {
   fetchDashboardOpsList,
   fetchDashboardOpsSearch,
 } from "@/utils/fetchDashboardOpsData";
+
+export type PendingOperationsActions = Record<
+  string,
+  { actionId: string; label: string }
+>;
 
 interface UseOperationsBoardParams {
   date?: string;
@@ -50,26 +57,18 @@ const ACTIVE_PREPARATION_STATUSES = new Set([
   "in_preparation",
 ]);
 
-function getActionId(action: string | { id?: string }): string | undefined {
-  return typeof action === "string" ? action : action.id;
-}
-
 function hasPreparationAction(item: UnifiedQueueItem): boolean {
-  const actionIds = [
-    ...(item.allowedActions || []).map((action) => action.id),
-    ...(item.actions?.allowed || []).map(getActionId),
-  ];
+  const actionIds = (item.allowedActions || []).map((action) => action.id);
 
   return actionIds.some((id) => Boolean(id && PREPARATION_ACTIONS.has(id)));
 }
 
 function hasKitchenWorkload(item: UnifiedQueueItem): boolean {
+  if (item.kitchen?.version !== "v2") return false;
   return Boolean(
-    item.kitchenDetails?.mealSlots?.length ||
-      item.kitchen?.meals?.length ||
-      item.mealSlots?.length ||
-      item.context.requiredMealCount ||
-      item.context.mealCount
+    item.kitchen.mealCount > 0 ||
+      item.kitchen.cards.length > 0 ||
+      item.kitchen.addonGroups.length > 0
   );
 }
 
@@ -95,6 +94,8 @@ function excludeItems(
 export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const pendingActionsRef = useRef<PendingOperationsActions>({});
+  const [pendingActions, setPendingActions] = useState<PendingOperationsActions>({});
   const role = user?.role;
   const { label: screenLabel, screens: visibleScreens } =
     getScreensForRole(role);
@@ -157,6 +158,8 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     }: {
       item: UnifiedQueueItem;
       action: string;
+      orderId: string;
+      actionLabel?: string;
       reason?: string;
       notes?: string;
       pickupCode?: string;
@@ -164,8 +167,15 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
       const actionDef = item.allowedActions?.find(
         (entry) => entry.id === action
       );
-      const endpoint = actionDef?.endpoint || getEndpointForAction(action);
-      const method = (actionDef?.method || "POST").toLowerCase();
+      if (!actionDef) {
+        throw new Error("هذا الإجراء غير موجود ضمن الصلاحيات المرسلة من الخادم.");
+      }
+      const invalidReason =
+        actionDef.disabledReason || getInvalidActionReason(actionDef);
+      if (actionDef.disabled || invalidReason) {
+        throw new Error(invalidReason || "هذا الإجراء غير متاح حالياً.");
+      }
+      const method = actionDef.method.toLowerCase();
       const payload = buildOperationsActionPayload(
         item,
         action,
@@ -174,38 +184,58 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
         pickupCode
       );
       const { data } = await api.request<DashboardOpsActionResponse>({
-        url: endpoint,
+        url: actionDef.endpoint,
         method,
         data: payload,
       });
       return data;
     },
-    onSuccess: (_data, variables) => {
-      toast.success(`تم تنفيذ ${variables.action} بنجاح`);
-      queryClient.invalidateQueries({ queryKey: ["operations-board", "queue"] });
+    onSuccess: async (_data, variables) => {
+      toast.success(`تم تنفيذ ${variables.actionLabel || variables.action} بنجاح`);
+      await queryClient.refetchQueries({
+        queryKey: ["operations-board", "queue"],
+        type: "active",
+      });
     },
     onError: (error: unknown) => {
-      const err = error as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      toast.error(
-        err?.response?.data?.message || err?.message || "تعذر تنفيذ الإجراء"
-      );
-      queryClient.invalidateQueries({ queryKey: ["operations-board", "queue"] });
+      toast.error(getApiErrorMessage(error) || "تعذر تنفيذ الإجراء");
+    },
+    onSettled: (_data, _error, variables) => {
+      if (!variables) return;
+      const next = { ...pendingActionsRef.current };
+      delete next[variables.orderId];
+      pendingActionsRef.current = next;
+      setPendingActions(next);
     },
   });
 
   const requestAction = (
     item: UnifiedQueueItem,
     action: string,
-    _actionLabel?: string,
+    actionLabel?: string,
     _isDangerous?: boolean,
     reason?: string,
     notes?: string,
     pickupCode?: string
   ) => {
-    actionMutation.mutate({ item, action, reason, notes, pickupCode });
+    const orderId = item.id;
+    if (pendingActionsRef.current[orderId]) return;
+
+    const next = {
+      ...pendingActionsRef.current,
+      [orderId]: { actionId: action, label: actionLabel || action },
+    };
+    pendingActionsRef.current = next;
+    setPendingActions(next);
+    actionMutation.mutate({
+      item,
+      action,
+      orderId,
+      actionLabel,
+      reason,
+      notes,
+      pickupCode,
+    });
   };
 
   return {
@@ -215,7 +245,8 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     allItems,
     itemsByScreen,
     isLoading: queueQuery.isLoading,
-    isPending: actionMutation.isPending,
+    isPending: Object.keys(pendingActions).length > 0,
+    pendingActions,
     requestAction,
     queueQuery,
     actionMutation,
