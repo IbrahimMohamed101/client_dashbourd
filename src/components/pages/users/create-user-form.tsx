@@ -121,6 +121,7 @@ export function CreateUserForm() {
             phoneE164,
             temporaryPassword: temp.temporaryPassword,
             expiresAt: temp.expiresAt,
+            isActive: result.user.isActive,
           });
           resetCreateCustomerMutation();
         },
