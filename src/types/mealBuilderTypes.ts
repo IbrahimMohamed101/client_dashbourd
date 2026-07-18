@@ -430,7 +430,7 @@ export interface MealBuilderPickerMeta {
   unavailable?: number;
 }
 
-export interface MealBuilderPickerResponseData {
+export interface MealBuilderLegacyPickerResponseData {
   contractVersion: string;
   sectionKey: string;
   targetSectionKey?: string | null;
@@ -439,8 +439,27 @@ export interface MealBuilderPickerResponseData {
   group?: { id: string; key: string; name: LocalizedText } | null;
   category?: MealBuilderPickerCategory | null;
   rules?: Record<string, unknown>;
-  candidates: MealBuilderPickerCandidate[];
+  candidates: MealBuilderHydratedItem[];
   meta?: MealBuilderPickerMeta;
+}
+
+export interface MealBuilderDirectProductPickerResponseData
+  extends Omit<MealBuilderLegacyPickerResponseData, "candidates"> {
+  candidates: MealBuilderPickerCandidate[];
+}
+
+export type MealBuilderPickerResponseData =
+  | MealBuilderLegacyPickerResponseData
+  | MealBuilderDirectProductPickerResponseData;
+
+export interface MealBuilderLegacyPickerResponse {
+  status: boolean;
+  data: MealBuilderLegacyPickerResponseData;
+}
+
+export interface MealBuilderDirectProductPickerResponse {
+  status: boolean;
+  data: MealBuilderDirectProductPickerResponseData;
 }
 
 export interface MealBuilderPickerResponse {

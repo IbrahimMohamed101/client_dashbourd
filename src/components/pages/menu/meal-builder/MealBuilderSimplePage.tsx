@@ -709,6 +709,16 @@ function SimpleWorkspace({
     useState<MealBuilderValidation | null>(initialValidation);
 
   const cards = buildCards(sections, catalog, validation, premiumSection);
+  const directCardKeys = useMemo(
+    () =>
+      new Set(
+        sections
+          .filter(isDirectProductCard)
+          .map((section) => section.key)
+          .filter(Boolean)
+      ),
+    [sections]
+  );
   const selectedCard = cardEditorKey
     ? cards.find((card) => card.key === cardEditorKey) ?? null
     : null;
@@ -892,17 +902,13 @@ function SimpleWorkspace({
         />
 
         <div className="grid gap-4 xl:grid-cols-2">
-          {cards.map((card) => (
+          {cards.filter((card) => !directCardKeys.has(card.key)).map((card) => (
             <MealBuilderSimpleCard
               key={card.key}
               card={card}
               readOnly={
                 card.key === "premium" ||
-                loading ||
-                sections.some(
-                  (section) =>
-                    section.key === card.key && isDirectProductCard(section)
-                )
+                loading
               }
               onEdit={() => setCardEditorKey(card.key)}
             />

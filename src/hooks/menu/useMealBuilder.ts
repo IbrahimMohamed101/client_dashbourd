@@ -14,8 +14,10 @@ import {
   deleteMealBuilderProductSection,
   getMealBuilder,
   getMealBuilderDraft,
+  getExistingDirectCardProductPicker,
   getMealBuilderHydratedDraft,
   getMealBuilderPicker,
+  getNewDirectCardProductPicker,
   getMealBuilderReadiness,
   getPublishedMealBuilder,
   publishMealBuilderDraft,
@@ -31,8 +33,10 @@ import type {
   MealBuilderConfig,
   MealBuilderDirectCardPatchPayload,
   MealBuilderDraftPayload,
+  MealBuilderDirectProductPickerResponse,
   MealBuilderLifecycleResponse,
   MealBuilderLifecycleResponseData,
+  MealBuilderLegacyPickerResponse,
   MealBuilderPickerParams,
 } from "@/types/mealBuilderTypes";
 import { mealBuilderErrorMessage } from "@/components/pages/menu/meal-builder/mealBuilderFrontendUtils";
@@ -166,7 +170,22 @@ export const mealBuilderPickerQueryOptions = (
 ) =>
   queryOptions({
     queryKey: [MEAL_BUILDER_PICKER_KEY, sectionKey, params],
-    queryFn: () => getMealBuilderPicker(sectionKey, params),
+    queryFn: (): Promise<MealBuilderLegacyPickerResponse> =>
+      getMealBuilderPicker(sectionKey, params),
+    enabled: Boolean(sectionKey),
+    staleTime: 1000 * 10,
+  });
+
+export const directMealBuilderPickerQueryOptions = (
+  sectionKey: string,
+  params: MealBuilderPickerParams
+) =>
+  queryOptions({
+    queryKey: [MEAL_BUILDER_PICKER_KEY, "direct", sectionKey, params],
+    queryFn: (): Promise<MealBuilderDirectProductPickerResponse> =>
+      sectionKey === "products"
+        ? getNewDirectCardProductPicker(params)
+        : getExistingDirectCardProductPicker(sectionKey, params),
     enabled: Boolean(sectionKey),
     staleTime: 1000 * 10,
   });
@@ -190,6 +209,11 @@ export const useMealBuilderPickerQuery = (
   sectionKey: string,
   params: MealBuilderPickerParams
 ) => useQuery(mealBuilderPickerQueryOptions(sectionKey, params));
+
+export const useDirectMealBuilderPickerQuery = (
+  sectionKey: string,
+  params: MealBuilderPickerParams
+) => useQuery(directMealBuilderPickerQueryOptions(sectionKey, params));
 
 export const useMealBuilderReadinessQuery = () =>
   useQuery(mealBuilderReadinessQueryOptions());
@@ -364,17 +388,12 @@ function useMealBuilderCardActionMutation<TVariables>({
   mutationFn: (variables: TVariables) => Promise<MealBuilderCardActionResponse>;
   successMessage: string;
 }) {
+  void successMessage;
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
     onSuccess: (response) => {
       applyMealBuilderCardActionResult(queryClient, response);
-      toast.success(successMessage);
-    },
-    onError: (error) => {
-      toast.error(
-        mealBuilderErrorMessage(error, "تعذر تنفيذ عملية بطاقة المنتجات")
-      );
     },
   });
 }

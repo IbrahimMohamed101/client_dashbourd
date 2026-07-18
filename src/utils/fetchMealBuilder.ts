@@ -9,8 +9,9 @@ import type {
   MealBuilderDraftPayload,
   MealBuilderHydratedDraftResponse,
   MealBuilderLifecycleResponse,
+  MealBuilderDirectProductPickerResponse,
+  MealBuilderLegacyPickerResponse,
   MealBuilderPickerParams,
-  MealBuilderPickerResponse,
   MealBuilderPublishResponse,
   MealBuilderReadinessResponse,
   MealBuilderStateResponse,
@@ -53,7 +54,7 @@ export const getMealBuilderHydratedDraft =
 export const getMealBuilderPicker = async (
   sectionKey: string,
   params: MealBuilderPickerParams = {}
-): Promise<MealBuilderPickerResponse> => {
+): Promise<MealBuilderLegacyPickerResponse> => {
   const response = await api.get(`${MEAL_BUILDER_BASE_ROUTE}/pickers/${sectionKey}`, {
     params: {
       q: params.q || undefined,
@@ -73,25 +74,25 @@ export const getMealBuilderPicker = async (
 
 export const getNewDirectCardProductPicker = async (
   params: MealBuilderPickerParams = {}
-): Promise<MealBuilderPickerResponse> =>
+): Promise<MealBuilderDirectProductPickerResponse> =>
   getMealBuilderPicker("products", {
     limit: 1000,
     unassignedOnly: true,
     includeUnavailable: false,
     ...params,
-  });
+  }) as Promise<MealBuilderDirectProductPickerResponse>;
 
 export const getExistingDirectCardProductPicker = async (
   sectionKey: string,
   params: MealBuilderPickerParams = {}
-): Promise<MealBuilderPickerResponse> =>
+): Promise<MealBuilderDirectProductPickerResponse> =>
   getMealBuilderPicker(sectionKey, {
     limit: 1000,
     unassignedOnly: true,
     includeUnavailable: false,
     targetSectionKey: sectionKey,
     ...params,
-  });
+  }) as Promise<MealBuilderDirectProductPickerResponse>;
 
 export const createMealBuilderDraft =
   async (): Promise<MealBuilderConfigResponse> => {

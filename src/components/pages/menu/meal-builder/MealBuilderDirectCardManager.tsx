@@ -34,7 +34,7 @@ import {
   useCreateMealBuilderProductSectionMutation,
   useDeleteMealBuilderProductSectionMutation,
   useAddMealBuilderProductsMutation,
-  useMealBuilderPickerQuery,
+  useDirectMealBuilderPickerQuery,
   useRemoveMealBuilderProductMutation,
   useUpdateMealBuilderProductSectionMutation,
 } from "@/hooks/menu";
@@ -48,7 +48,12 @@ import type {
 } from "@/types/mealBuilderTypes";
 import { halalaToRiyal } from "@/utils/price";
 import { mealBuilderIssueText } from "./mealBuilderIssueText";
-import { isDirectProductCard } from "./mealBuilderDirectCardUtils";
+import {
+  isDirectProductCard,
+  productIdsForDirectCard,
+  selectedProductsForDirectCard,
+} from "./mealBuilderDirectCardUtils";
+import { isDirectMealBuilderCandidateSelectable } from "./mealBuilderFrontendUtils";
 
 const KEY_PATTERN = /^[a-z0-9][a-z0-9_-]{1,63}$/;
 
@@ -92,11 +97,13 @@ export function MealBuilderDirectCardManager({
     0
   );
   const deleteMutation = useDeleteMealBuilderProductSectionMutation();
-  const actionPending = pending || deleteMutation.isPending;
+  const ownedPending = deleteMutation.isPending;
+  const actionPending = pending || ownedPending;
 
   useEffect(() => {
-    onPendingChange?.(actionPending);
-  }, [actionPending, onPendingChange]);
+    onPendingChange?.(ownedPending);
+    return () => onPendingChange?.(false);
+  }, [ownedPending, onPendingChange]);
 
   async function deleteCard(section: MealBuilderSection) {
     if (actionPending) return;
@@ -105,6 +112,7 @@ export function MealBuilderDirectCardManager({
       const response = await deleteMutation.mutateAsync(section.key || "");
       onActionApplied(response);
       setDeleteSection(null);
+      toast.success("تم حذف بطاقة المنتجات");
     } catch (error) {
       toast.error(mealBuilderError(error, "تعذر حذف البطاقة"));
     }
@@ -123,6 +131,7 @@ export function MealBuilderDirectCardManager({
           type="button"
           className="w-full sm:w-auto"
           disabled={actionPending}
+          aria-label="create-direct-card"
           onClick={() => setDialogMode({ type: "create" })}
         >
           <Plus data-icon="inline-start" />
@@ -196,7 +205,7 @@ function DirectSectionCard({
 }) {
   const issues = validationIssuesForSection(validation, section);
   const hasErrors = issues.some((issue) => issue.level === "error");
-  const products = selectedProducts(section);
+  const products = selectedProductsForDirectCard(section);
 
   return (
     <div className="space-y-3 rounded-lg border bg-background p-3">
@@ -303,7 +312,7 @@ function DirectCardDialog({
   const [sortOrder, setSortOrder] = useState(String(existing?.sortOrder ?? defaultSortOrder));
   const [visible, setVisible] = useState(existing?.visible !== false);
   const [productIds, setProductIds] = useState<string[]>(
-    existing ? productIdsForSection(existing) : []
+    existing ? productIdsForDirectCard(existing) : []
   );
   const [query, setQuery] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -313,8 +322,11 @@ function DirectCardDialog({
   const addMutation = useAddMealBuilderProductsMutation();
   const updateMutation = useUpdateMealBuilderProductSectionMutation();
   const removeMutation = useRemoveMealBuilderProductMutation();
+  const deleteMutation = useDeleteMealBuilderProductSectionMutation();
+  const submitLockRef = useRef(false);
+  const lastSubmittedSnapshotRef = useRef<string | null>(null);
   const pickerSectionKey = mode.type === "edit" ? mode.sectionKey : "products";
-  const pickerQuery = useMealBuilderPickerQuery(pickerSectionKey, {
+  const pickerQuery = useDirectMealBuilderPickerQuery(pickerSectionKey, {
     q: deferredQuery || undefined,
     search: deferredQuery || undefined,
     limit: 1000,
@@ -323,16 +335,41 @@ function DirectCardDialog({
     targetSectionKey: mode.type === "edit" ? mode.sectionKey : undefined,
   });
   const candidates = pickerQuery.data?.data.candidates ?? [];
-  const actionPending =
-    pending ||
+  const ownedPending =
     createMutation.isPending ||
     addMutation.isPending ||
     updateMutation.isPending ||
-    removeMutation.isPending;
+    removeMutation.isPending ||
+    deleteMutation.isPending;
+  const actionPending = pending || ownedPending;
+  const initialSnapshot = useMemo(
+    () =>
+      JSON.stringify({
+        key: existing?.key ?? "",
+        titleAr: existing?.titleOverride?.ar ?? "",
+        titleEn: existing?.titleOverride?.en ?? "",
+        sortOrder: String(existing?.sortOrder ?? defaultSortOrder),
+        visible: existing?.visible !== false,
+        productIds: existing ? productIdsForDirectCard(existing) : [],
+      }),
+    [defaultSortOrder, existing]
+  );
+  const currentSnapshot = JSON.stringify({
+    key,
+    titleAr,
+    titleEn,
+    sortOrder,
+    visible,
+    productIds,
+  });
+  const dirty = currentSnapshot !== initialSnapshot;
+  const [deleteFromEditor, setDeleteFromEditor] =
+    useState<MealBuilderSection | null>(null);
 
   useEffect(() => {
-    onPendingChange?.(actionPending);
-  }, [actionPending, onPendingChange]);
+    onPendingChange?.(ownedPending);
+    return () => onPendingChange?.(false);
+  }, [ownedPending, onPendingChange]);
   const selectedCount = productIds.length;
   const title = mode.type === "edit" ? "تعديل بطاقة منتجات" : "إضافة بطاقة منتجات";
 
@@ -343,7 +380,7 @@ function DirectCardDialog({
 
   function toggleProduct(candidate: MealBuilderPickerCandidate) {
     const id = candidate.productId || candidate.id;
-    const selectable = candidate.selected || candidate.assignable;
+    const selectable = isDirectMealBuilderCandidateSelectable(candidate);
     if (!selectable) return;
     setProductIds((current) =>
       current.includes(id)
@@ -353,7 +390,21 @@ function DirectCardDialog({
     setFieldErrors((current) => ({ ...current, products: undefined }));
   }
 
+  function requestClose() {
+    if (actionPending) return;
+    if (
+      dirty &&
+      !window.confirm("لديك تغييرات غير محفوظة. هل تريد إغلاق النافذة؟")
+    ) {
+      return;
+    }
+    onClose();
+  }
+
   async function save() {
+    if (submitLockRef.current || actionPending) return;
+    if (lastSubmittedSnapshotRef.current === currentSnapshot) return;
+    submitLockRef.current = true;
     const parsedSortOrder = Number(sortOrder);
     const nextErrors: FieldErrors = {};
     if (!KEY_PATTERN.test(key.trim())) {
@@ -369,7 +420,10 @@ function DirectCardDialog({
       nextErrors.products = "اختر منتجا واحدا على الأقل.";
     }
     setFieldErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
+    if (Object.keys(nextErrors).length) {
+      submitLockRef.current = false;
+      return;
+    }
 
     try {
       await onBeforeAction();
@@ -395,6 +449,7 @@ function DirectCardDialog({
             });
       onActionApplied(response);
       setFieldErrors({});
+      lastSubmittedSnapshotRef.current = currentSnapshot;
       toast.success(mode.type === "create" ? "تم إنشاء البطاقة" : "تم حفظ البطاقة");
     } catch (error) {
       const mapped = mapCardActionError(error);
@@ -403,15 +458,30 @@ function DirectCardDialog({
       if (mapped.conflicts?.length) {
         pickerQuery.refetch();
       }
+    } finally {
+      window.setTimeout(() => {
+        submitLockRef.current = false;
+      }, 0);
     }
   }
 
   async function removeProduct(productId: string) {
+    if (!existing || actionPending) return;
+    const candidate = candidates.find(
+      (item) => (item.productId || item.id) === productId
+    );
     if (productIds.length <= 1) {
       setFieldErrors({
-        products: "لا يمكن حذف آخر منتج كإجراء عادي. استخدم حذف البطاقة بدلا من ذلك.",
+        products: "The last product cannot be removed as a normal product action. Delete the card instead.",
         wouldBeEmpty: true,
       });
+      setDeleteFromEditor(existing);
+      return;
+    }
+    const cardName =
+      existing.titleOverride?.ar || existing.titleOverride?.en || existing.key;
+    const productName = candidate ? candidateName(candidate) : productId;
+    if (!window.confirm(`Remove ${productName} from ${cardName}?`)) {
       return;
     }
     try {
@@ -423,11 +493,35 @@ function DirectCardDialog({
       onActionApplied(response);
       setProductIds((current) => current.filter((item) => item !== productId));
       pickerQuery.refetch();
+      toast.success("Product removed from the card");
     } catch (error) {
       const mapped = mapCardActionError(error);
       setFieldErrors(mapped);
-      toast.error(mapped.general || mealBuilderError(error, "تعذر حذف المنتج"));
+      if (mapped.wouldBeEmpty) {
+        setDeleteFromEditor(existing);
+      }
+      toast.error(mapped.general || mealBuilderError(error, "Could not remove product"));
       pickerQuery.refetch();
+    }
+  }
+
+  async function deleteCurrentCard() {
+    if (!deleteFromEditor || submitLockRef.current || actionPending) return;
+    submitLockRef.current = true;
+    try {
+      await onBeforeAction();
+      const response = await deleteMutation.mutateAsync(deleteFromEditor.key || "");
+      onActionApplied(response);
+      setDeleteFromEditor(null);
+      toast.success("Product card deleted");
+    } catch (error) {
+      const mapped = mapCardActionError(error);
+      setFieldErrors(mapped);
+      toast.error(mapped.general || mealBuilderError(error, "Could not delete card"));
+    } finally {
+      window.setTimeout(() => {
+        submitLockRef.current = false;
+      }, 0);
     }
   }
 
@@ -435,7 +529,7 @@ function DirectCardDialog({
     <Dialog
       open
       onOpenChange={(nextOpen) => {
-        if (!nextOpen && !actionPending) onClose();
+        if (!nextOpen) requestClose();
       }}
     >
       <DialogContent
@@ -582,7 +676,8 @@ function DirectCardDialog({
                     {candidates.map((candidate) => {
                       const id = candidate.productId || candidate.id;
                       const checked = productIds.includes(id) || candidate.selected;
-                      const selectable = candidate.selected || candidate.assignable;
+                      const selectable =
+                        isDirectMealBuilderCandidateSelectable(candidate);
                       return (
                         <CandidateRow
                           key={id}
@@ -608,6 +703,7 @@ function DirectCardDialog({
             type="button"
             className="w-full sm:w-auto"
             disabled={actionPending || pickerQuery.isLoading}
+            aria-label="save-direct-card"
             onClick={save}
           >
             {actionPending ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -618,12 +714,19 @@ function DirectCardDialog({
             variant="outline"
             className="w-full sm:w-auto"
             disabled={actionPending}
-            onClick={onClose}
+            aria-label="close-direct-card-dialog"
+            onClick={requestClose}
           >
             إلغاء
           </Button>
         </DialogFooter>
       </DialogContent>
+      <DeleteCardDialog
+        section={deleteFromEditor}
+        pending={actionPending}
+        onClose={() => setDeleteFromEditor(null)}
+        onConfirm={deleteCurrentCard}
+      />
     </Dialog>
   );
 }
@@ -741,7 +844,7 @@ function DeleteCardDialog({
   onConfirm: () => void;
 }) {
   if (!section) return null;
-  const products = selectedProducts(section);
+  const products = selectedProductsForDirectCard(section);
   return (
     <Dialog
       open
@@ -773,7 +876,7 @@ function DeleteCardDialog({
 function ProductChip({
   product,
 }: {
-  product: ReturnType<typeof selectedProducts>[number];
+  product: ReturnType<typeof selectedProductsForDirectCard>[number];
 }) {
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-md border bg-muted/10 px-2 py-1.5 text-xs">
@@ -879,7 +982,7 @@ function changedPatch(
     patch.sortOrder = next.sortOrder;
   }
   if ((current.visible !== false) !== next.visible) patch.visible = next.visible;
-  if (!sameIds(productIdsForSection(current), next.selectedProductIds)) {
+  if (!sameIds(productIdsForDirectCard(current), next.selectedProductIds)) {
     patch.selectedProductIds = next.selectedProductIds;
   }
   return patch;
@@ -904,7 +1007,7 @@ async function saveExistingCard({
   addProducts: (value: { sectionKey: string; productIds: string[] }) => Promise<MealBuilderCardActionResponse>;
   updateSection: (value: { sectionKey: string; patch: ReturnType<typeof changedPatch> }) => Promise<MealBuilderCardActionResponse>;
 }) {
-  const previousProductIds = existing ? productIdsForSection(existing) : [];
+  const previousProductIds = existing ? productIdsForDirectCard(existing) : [];
   const added = payload.selectedProductIds.filter(
     (productId) => !previousProductIds.includes(productId)
   );
@@ -954,20 +1057,6 @@ function mapCardActionError(error: unknown): FieldErrors {
     return { ...base, products: parsed.message, wouldBeEmpty: true };
   }
   return base;
-}
-
-function selectedProducts(section: MealBuilderSection) {
-  return [
-    ...(section.selectedProducts ?? []),
-    ...(section.items ?? []).filter((item) => item.type?.includes("product")),
-  ];
-}
-
-function productIdsForSection(section: MealBuilderSection) {
-  const hydratedIds = selectedProducts(section)
-    .map((item) => item.productId || item.id)
-    .filter((id): id is string => Boolean(id));
-  return hydratedIds.length ? uniqueIds(hydratedIds) : uniqueIds(section.selectedProductIds);
 }
 
 function validationIssuesForSection(

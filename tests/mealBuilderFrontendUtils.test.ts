@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canMoveMealBuilderItem,
   explicitProductIdsForSection,
+  isDirectMealBuilderCandidateSelectable,
   isMealBuilderCandidateSelectable,
   mealBuilderErrorMessage,
   toEditableMealBuilderSection,
@@ -43,23 +44,13 @@ test("mealBuilderFrontendUtils.test", () => {
 
   assert.equal(
     isMealBuilderCandidateSelectable({
-      id: "option-1",
-      type: "option",
-      assignable: true,
-    }),
-    true,
-    "Backend assignable candidates are selectable"
-  );
-
-  assert.equal(
-    isMealBuilderCandidateSelectable({
       id: "option-2",
       type: "option",
       selected: false,
-      assignable: false,
+      eligible: true,
     }),
-    false,
-    "Frontend must not recreate assignability from local status fields"
+    true,
+    "Legacy eligible candidates remain selectable without assignable"
   );
 
   assert.equal(
@@ -71,6 +62,18 @@ test("mealBuilderFrontendUtils.test", () => {
     }),
     true,
     "Selected candidates remain selectable so admins can keep them checked"
+  );
+
+  assert.equal(
+    isDirectMealBuilderCandidateSelectable({
+      id: "product-1",
+      type: "product",
+      selected: false,
+      eligible: true,
+      assignable: false,
+    }),
+    false,
+    "Direct candidates use explicit assignable instead of legacy eligibility"
   );
 
   assert.equal(validateMealBuilderSectionDraft(baseSection), null);

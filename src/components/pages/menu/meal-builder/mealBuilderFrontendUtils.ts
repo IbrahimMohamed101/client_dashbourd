@@ -48,10 +48,20 @@ export function mealBuilderErrorMessage(
 export function isMealBuilderCandidateSelectable(
   item: MealBuilderHydratedItem
 ): boolean {
-  const candidate = item as MealBuilderHydratedItem & {
-    assignable?: boolean;
-  };
-  return Boolean(item.id && (candidate.selected === true || candidate.assignable === true));
+  return Boolean(
+    item.id &&
+      (item.selected === true ||
+        item.eligible === true ||
+        item.state === "eligible")
+  );
+}
+
+export function isDirectMealBuilderCandidateSelectable(
+  item: MealBuilderHydratedItem & { assignable?: boolean }
+): boolean {
+  return Boolean(
+    item.id && (item.selected === true || item.assignable === true)
+  );
 }
 
 export function toEditableMealBuilderSection(
@@ -86,10 +96,10 @@ export function explicitProductIdsForSection(
   section: MealBuilderSection,
   products: MenuProduct[]
 ): string[] {
-  const hydratedIds = [
-    ...(section.selectedProducts ?? []),
-    ...(section.items ?? []).filter((item) => item.type?.includes("product")),
-  ]
+  const hydratedProducts = section.selectedProducts?.length
+    ? section.selectedProducts
+    : (section.items ?? []).filter((item) => item.type?.includes("product"));
+  const hydratedIds = hydratedProducts
     .map((item) => item.productId || item.id)
     .filter(
       (id): id is string => typeof id === "string" && id.length > 0

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { isMealBuilderCandidateSelectable } from "../src/components/pages/menu/meal-builder/mealBuilderFrontendUtils";
+import {
+  isDirectMealBuilderCandidateSelectable,
+  isMealBuilderCandidateSelectable,
+} from "../src/components/pages/menu/meal-builder/mealBuilderFrontendUtils";
 import type {
   MealBuilderPickerCandidate,
   MealBuilderPickerResponseData,
@@ -79,9 +82,32 @@ test("picker candidate selection is backend-authoritative", () => {
     reasonCodes: ["PRODUCT_UNAVAILABLE"],
   });
 
-  assert.equal(isMealBuilderCandidateSelectable(selectedButNotAssignable), true);
-  assert.equal(isMealBuilderCandidateSelectable(assignedElsewhere), false);
-  assert.equal(isMealBuilderCandidateSelectable(unavailableButLocallyLooksGood), false);
+  assert.equal(isDirectMealBuilderCandidateSelectable(selectedButNotAssignable), true);
+  assert.equal(isDirectMealBuilderCandidateSelectable(assignedElsewhere), false);
+  assert.equal(isDirectMealBuilderCandidateSelectable(unavailableButLocallyLooksGood), false);
+});
+
+test("legacy picker candidate selection does not require assignable", () => {
+  assert.equal(
+    isMealBuilderCandidateSelectable({
+      id: "option-1",
+      type: "option",
+      selected: false,
+      eligible: true,
+      state: "eligible",
+    }),
+    true
+  );
+  assert.equal(
+    isMealBuilderCandidateSelectable({
+      id: "option-2",
+      type: "option",
+      selected: true,
+      eligible: false,
+      state: "unavailable",
+    }),
+    true
+  );
 });
 
 test("picker contract includes required metadata and state fields", () => {
