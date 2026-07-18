@@ -1,6 +1,5 @@
 import {
   useDeferredValue,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -103,11 +102,6 @@ export function MealBuilderCardEditor({
   const [includeNotLinked, setIncludeNotLinked] = useState(false);
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    setPage(1);
-    setSelectedIds([]);
-  }, [deferredQuery, includeUnavailable, includeNotLinked]);
-
   const liveCard = rebuildCard(card.key, draftSections, catalog, card);
   const primaryIndex = findPrimarySectionIndex(card.key, draftSections, catalog);
   const primarySection =
@@ -129,8 +123,7 @@ export function MealBuilderCardEditor({
   });
   const picker = pickerQuery.data?.data ?? null;
   const candidates = (picker?.candidates ?? []).filter(
-    (item): item is MealBuilderHydratedItem & { id: string } =>
-      typeof item.id === "string" && item.id.length > 0
+    (item) => typeof item.id === "string" && item.id.length > 0
   );
   const totalPages = Math.max(1, picker?.meta?.pages ?? 1);
   const selectedItemKeys = useMemo(
@@ -371,7 +364,11 @@ export function MealBuilderCardEditor({
                   <Label>إضافة عناصر مؤهلة</Label>
                   <Input
                     value={query}
-                    onChange={(event) => setQuery(event.target.value)}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setPage(1);
+                      setSelectedIds([]);
+                    }}
                     placeholder="ابحث بالاسم أو المفتاح"
                     className="text-right"
                   />
@@ -397,12 +394,20 @@ export function MealBuilderCardEditor({
                   <SwitchLine
                     label="إظهار غير المتاح"
                     checked={includeUnavailable}
-                    onChange={setIncludeUnavailable}
+                    onChange={(checked) => {
+                      setIncludeUnavailable(checked);
+                      setPage(1);
+                      setSelectedIds([]);
+                    }}
                   />
                   <SwitchLine
                     label="إظهار غير المرتبط"
                     checked={includeNotLinked}
-                    onChange={setIncludeNotLinked}
+                    onChange={(checked) => {
+                      setIncludeNotLinked(checked);
+                      setPage(1);
+                      setSelectedIds([]);
+                    }}
                   />
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">

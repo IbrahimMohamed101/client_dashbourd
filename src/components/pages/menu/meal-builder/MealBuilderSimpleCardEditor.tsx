@@ -145,8 +145,7 @@ export function MealBuilderSimpleCardEditor({
   });
   const picker = pickerQuery.data?.data ?? null;
   const candidates = (picker?.candidates ?? []).filter(
-    (item): item is MealBuilderHydratedItem & { id: string } =>
-      typeof item.id === "string" && item.id.length > 0
+    (item) => typeof item.id === "string" && item.id.length > 0
   );
   const totalPages = Math.max(1, picker?.meta?.pages ?? 1);
   const selectedItemKeys = useMemo(

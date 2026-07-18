@@ -111,7 +111,14 @@ export interface MealBuilderHydratedItem {
   reasonCodes?: string[];
   warnings?: MealBuilderCheck[];
   errors?: MealBuilderCheck[];
-  state?: "selected" | "eligible" | "not_linked" | "unavailable" | "invalid" | string;
+  state?:
+    | "eligible"
+    | "selected"
+    | "assigned_elsewhere"
+    | "unavailable"
+    | "not_linked"
+    | "invalid"
+    | string;
   includedVia?: string | null;
   automatic?: boolean;
   action?: {
@@ -119,7 +126,7 @@ export interface MealBuilderHydratedItem {
     treatAsFullMeal?: boolean;
     [key: string]: unknown;
   };
-  pricing?: Record<string, unknown>;
+  pricing?: MealBuilderPickerPricing | Record<string, unknown>;
   relation?: Record<string, unknown> | null;
   imageUrl?: string | null;
   kind?: string | null;
@@ -130,6 +137,25 @@ export interface MealBuilderHydratedItem {
   sortOrder?: number | null;
   health?: string | null;
   status?: string | null;
+}
+
+export interface MealBuilderBackendErrorDetails {
+  message?: string;
+  field?: string;
+  value?: unknown;
+  conflicts?: MealBuilderAssignmentConflict[];
+  products?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+}
+
+export interface MealBuilderAssignmentConflict {
+  productId?: string;
+  id?: string;
+  productName?: string;
+  name?: string;
+  sectionKey?: string;
+  assignedSectionKey?: string;
+  [key: string]: unknown;
 }
 
 export interface MealBuilderValidation {
@@ -331,27 +357,90 @@ export interface MealBuilderHydratedDraftResponse {
 
 export interface MealBuilderPickerParams {
   q?: string;
+  search?: string;
+  targetSectionKey?: string;
+  diagnostics?: boolean | string;
+  include?: string;
+  unassignedOnly?: boolean;
   includeUnavailable?: boolean;
   includeNotLinked?: boolean;
   page?: number;
   limit?: number;
 }
 
+export interface MealBuilderPickerCategory {
+  id: string;
+  key: string;
+  name: LocalizedText;
+}
+
+export interface MealBuilderPickerPricing {
+  pricingModel?: string;
+  model?: string;
+  priceHalala?: number;
+  basePriceHalala?: number;
+  currency?: string;
+}
+
+export interface MealBuilderPickerCandidate
+  extends Omit<MealBuilderHydratedItem, "id" | "pricing" | "category"> {
+  id: string;
+  productId?: string;
+  key: string;
+  name?: LocalizedText;
+  label?: string;
+  imageUrl?: string | null;
+  itemType?: string;
+  categoryId?: string | null;
+  categoryKey?: string;
+  category?: MealBuilderPickerCategory | null;
+  selectionType?: string;
+  configurable?: boolean;
+  pricing?: MealBuilderPickerPricing;
+  selected: boolean;
+  assigned: boolean;
+  assignedSectionKey?: string | null;
+  assignable: boolean;
+  required: boolean;
+  eligible: boolean;
+  linked: boolean;
+  available: boolean;
+  active: boolean;
+  visible: boolean;
+  published: boolean;
+  subscriptionEnabled: boolean;
+  relationExists: boolean;
+  catalogItemAvailable: boolean;
+  reasonCodes: string[];
+  warnings: MealBuilderCheck[];
+  errors: MealBuilderCheck[];
+  state: "eligible" | "selected" | "assigned_elsewhere" | "unavailable" | string;
+  sortOrder?: number | null;
+}
+
+export interface MealBuilderPickerMeta {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+  catalogTotal?: number;
+  selectedInCurrentCard?: number;
+  assignedToOtherCards?: number;
+  unassigned?: number;
+  unavailable?: number;
+}
+
 export interface MealBuilderPickerResponseData {
   contractVersion: string;
   sectionKey: string;
+  targetSectionKey?: string | null;
   candidateType: "option" | "product" | "mixed" | string;
   product?: { id: string; key: string; name: LocalizedText } | null;
   group?: { id: string; key: string; name: LocalizedText } | null;
-  category?: { id: string; key: string; name: LocalizedText } | null;
+  category?: MealBuilderPickerCategory | null;
   rules?: Record<string, unknown>;
-  candidates: MealBuilderHydratedItem[];
-  meta?: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
+  candidates: MealBuilderPickerCandidate[];
+  meta?: MealBuilderPickerMeta;
 }
 
 export interface MealBuilderPickerResponse {
@@ -362,6 +451,71 @@ export interface MealBuilderPickerResponse {
 export interface MealBuilderDraftPayload {
   sections: MealBuilderSection[];
   notes?: string;
+}
+
+export interface MealBuilderDirectCardCreatePayload {
+  key: string;
+  titleOverride: LocalizedText;
+  selectedProductIds: string[];
+  selectionType?: string;
+  sortOrder?: number;
+  required?: boolean;
+  minSelections?: number;
+  maxSelections?: number | null;
+  multiSelect?: boolean;
+  visible?: boolean;
+  metadata?: Record<string, unknown>;
+  rules?: Record<string, unknown>;
+}
+
+export type MealBuilderDirectCardPatchPayload =
+  Partial<Omit<MealBuilderDirectCardCreatePayload, "selectedProductIds">> & {
+    selectedProductIds?: string[];
+    productIds?: string[];
+  };
+
+export interface MealBuilderAddProductsPayload {
+  productIds: string[];
+}
+
+export interface MealBuilderCardActionSummary {
+  sectionCount: number;
+  selectedProductCount: number;
+  ready: boolean;
+  errorCount: number;
+  warningCount: number;
+}
+
+export interface MealBuilderCardActionData {
+  contractVersion: "dashboard_meal_builder_card_action.v1" | string;
+  action:
+    | "created"
+    | "updated"
+    | "deleted"
+    | "products_added"
+    | "product_removed"
+    | string;
+  sectionKey: string | null;
+  previousSectionKey: string | null;
+  productId: string | null;
+  section: MealBuilderSection | null;
+  draft: MealBuilderConfig;
+  validation: MealBuilderValidation;
+  summary: MealBuilderCardActionSummary;
+}
+
+export interface MealBuilderCardActionResponse {
+  status: boolean;
+  data: MealBuilderCardActionData;
+}
+
+export interface MealPlannerPublicV3Envelope {
+  status: boolean;
+  data: {
+    currency?: string;
+    builderCatalog?: MealPlannerMenuContract | null;
+    addonCatalog?: unknown;
+  };
 }
 
 export interface MealBuilderCatalogData {

@@ -48,16 +48,10 @@ export function mealBuilderErrorMessage(
 export function isMealBuilderCandidateSelectable(
   item: MealBuilderHydratedItem
 ): boolean {
-  return Boolean(
-    item.id &&
-      item.eligible === true &&
-      item.available !== false &&
-      item.active !== false &&
-      item.visible !== false &&
-      item.published !== false &&
-      item.subscriptionEnabled !== false &&
-      item.catalogItemAvailable !== false
-  );
+  const candidate = item as MealBuilderHydratedItem & {
+    assignable?: boolean;
+  };
+  return Boolean(item.id && (candidate.selected === true || candidate.assignable === true));
 }
 
 export function toEditableMealBuilderSection(

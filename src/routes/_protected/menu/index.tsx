@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createFileRoute,
   useBlocker,
@@ -31,6 +31,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { legacyMenuTabMap, workflowSteps } from "@/constants/menuData";
+import { useAuth } from "@/hooks/useAuth";
+import { UserRoles } from "@/types/auth";
 
 const menuTabValues = new Set(workflowSteps.map((step) => step.value));
 
@@ -49,6 +51,16 @@ export const Route = createFileRoute("/_protected/menu/")({
 function MenuPage() {
   const { tab: activeTab } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
+  const { user } = useAuth();
+  const canAccessMealBuilder =
+    user?.role === UserRoles.ADMIN || user?.role === UserRoles.SUPERADMIN;
+  const allowedWorkflowSteps = useMemo(
+    () =>
+      workflowSteps.filter(
+        (step) => step.value !== "meal-builder" || canAccessMealBuilder
+      ),
+    [canAccessMealBuilder]
+  );
   const isMealBuilderTab = activeTab === "meal-builder";
   const [mealBuilderNavigation, setMealBuilderNavigation] =
     useState<MealBuilderNavigationState>({
@@ -88,6 +100,11 @@ function MenuPage() {
     if (value === activeTab) return;
     navigate({ search: (prev) => ({ ...prev, tab: value }) });
   };
+
+  useEffect(() => {
+    if (!isMealBuilderTab || canAccessMealBuilder) return;
+    navigate({ search: (prev) => ({ ...prev, tab: "catalog" }), replace: true });
+  }, [canAccessMealBuilder, isMealBuilderTab, navigate]);
 
   return (
     <div
@@ -148,8 +165,12 @@ function MenuPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} dir="rtl">
         <div className="overflow-x-auto pb-1">
-          <TabsList className="grid min-h-max min-w-[760px] grid-cols-5 gap-2 bg-muted/70 p-2">
-            {workflowSteps.map((step, index) => {
+          <TabsList
+            className={`grid min-h-max min-w-[760px] gap-2 bg-muted/70 p-2 ${
+              canAccessMealBuilder ? "grid-cols-5" : "grid-cols-4"
+            }`}
+          >
+            {allowedWorkflowSteps.map((step, index) => {
               const Icon = step.icon;
               return (
                 <TabsTrigger
@@ -188,10 +209,12 @@ function MenuPage() {
           </div>
         </TabsContent>
         <TabsContent value="meal-builder" className="mt-5">
-          <MealBuilderSimplePage
-            externalNavigationBlocked={navigationBlocker.status === "blocked"}
-            onNavigationStateChange={handleMealBuilderNavigationStateChange}
-          />
+          {canAccessMealBuilder ? (
+            <MealBuilderSimplePage
+              externalNavigationBlocked={navigationBlocker.status === "blocked"}
+              onNavigationStateChange={handleMealBuilderNavigationStateChange}
+            />
+          ) : null}
         </TabsContent>
         <TabsContent value="preview" className="mt-5">
           <div className="grid gap-5">

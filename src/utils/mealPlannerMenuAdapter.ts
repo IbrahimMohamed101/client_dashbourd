@@ -217,4 +217,37 @@ export function mapMealPlannerMenuResponse(
   };
 }
 
+export function mapMealPlannerBuilderCatalogV3(
+  raw: unknown
+): MealPlannerMenuContract {
+  const envelope = asRecord(raw);
+  const data = asRecord(envelope.data);
+  const builderCatalog = asRecord(data.builderCatalog);
+  const contractVersion = asString(builderCatalog.contractVersion);
+
+  if (!Object.keys(builderCatalog).length) {
+    throw new Error("Meal Planner public preview contract mismatch: missing data.builderCatalog");
+  }
+
+  if (contractVersion !== "meal_planner_menu.v3") {
+    throw new Error(
+      `Meal Planner public preview contract mismatch: expected meal_planner_menu.v3, got ${contractVersion || "unknown"}`
+    );
+  }
+
+  return {
+    contractVersion,
+    catalogVersion: asString(
+      builderCatalog.catalogVersion || builderCatalog.contractVersion,
+      "meal_planner_menu.v3"
+    ),
+    catalogHash: asString(builderCatalog.catalogHash),
+    publishedVersionId: asString(builderCatalog.publishedVersionId),
+    currency: asString(data.currency || builderCatalog.currency, SYSTEM_CURRENCY),
+    sections: asArray(builderCatalog.sections).map(normalizeSection),
+    rules: asRecord(builderCatalog.rules),
+    legacyIncluded: false,
+  };
+}
+
 /* eslint-enable @typescript-eslint/no-explicit-any */

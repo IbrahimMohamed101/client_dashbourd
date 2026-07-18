@@ -45,33 +45,32 @@ test("mealBuilderFrontendUtils.test", () => {
     isMealBuilderCandidateSelectable({
       id: "option-1",
       type: "option",
-      eligible: true,
-      linked: false,
-      available: true,
-      active: true,
-      visible: true,
-      published: true,
-      subscriptionEnabled: true,
-      catalogItemAvailable: true,
+      assignable: true,
     }),
     true,
-    "Backend addable candidates may intentionally be unlinked"
+    "Backend assignable candidates are selectable"
   );
 
   assert.equal(
     isMealBuilderCandidateSelectable({
       id: "option-2",
       type: "option",
-      eligible: true,
-      available: true,
-      active: true,
-      visible: true,
-      published: false,
-      subscriptionEnabled: true,
-      catalogItemAvailable: true,
+      selected: false,
+      assignable: false,
     }),
     false,
-    "Unpublished candidates must not be added to a publishable draft"
+    "Frontend must not recreate assignability from local status fields"
+  );
+
+  assert.equal(
+    isMealBuilderCandidateSelectable({
+      id: "option-3",
+      type: "option",
+      selected: true,
+      assignable: false,
+    }),
+    true,
+    "Selected candidates remain selectable so admins can keep them checked"
   );
 
   assert.equal(validateMealBuilderSectionDraft(baseSection), null);

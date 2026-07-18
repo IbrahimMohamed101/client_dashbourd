@@ -2,13 +2,13 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 
 import { fetchMealPlannerMenuPreview } from "@/utils/fetchMealPlannerMenu";
 
-const MEAL_PLANNER_MENU_PREVIEW_KEY = "menu.mealPlannerPreview";
+export const MEAL_PLANNER_MENU_PREVIEW_KEY = "subscriptions.meal-planner-menu";
 
 export const mealPlannerMenuPreviewQueryOptions = () =>
   queryOptions({
-    queryKey: [MEAL_PLANNER_MENU_PREVIEW_KEY],
+    queryKey: [MEAL_PLANNER_MENU_PREVIEW_KEY, "ar"],
     queryFn: fetchMealPlannerMenuPreview,
-    staleTime: 1000 * 60,
+    staleTime: 1000 * 10,
   });
 
 export const useMealPlannerMenuPreviewQuery = () =>

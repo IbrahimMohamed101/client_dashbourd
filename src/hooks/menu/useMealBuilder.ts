@@ -8,7 +8,10 @@ import { toast } from "sonner";
 
 import { useMutationWithToast } from "@/hooks/useMutationWithToast";
 import {
+  addMealBuilderProducts,
+  createMealBuilderProductSection,
   createMealBuilderDraft,
+  deleteMealBuilderProductSection,
   getMealBuilder,
   getMealBuilderDraft,
   getMealBuilderHydratedDraft,
@@ -16,18 +19,24 @@ import {
   getMealBuilderReadiness,
   getPublishedMealBuilder,
   publishMealBuilderDraft,
+  removeMealBuilderProduct,
   resetMealBuilderDraft,
+  updateMealBuilderProductSection,
   updateMealBuilderDraft,
   validateMealBuilderDraft,
 } from "@/utils/fetchMealBuilder";
 import type {
+  MealBuilderAddProductsPayload,
+  MealBuilderCardActionResponse,
   MealBuilderConfig,
+  MealBuilderDirectCardPatchPayload,
   MealBuilderDraftPayload,
   MealBuilderLifecycleResponse,
   MealBuilderLifecycleResponseData,
   MealBuilderPickerParams,
 } from "@/types/mealBuilderTypes";
 import { mealBuilderErrorMessage } from "@/components/pages/menu/meal-builder/mealBuilderFrontendUtils";
+import { MEAL_PLANNER_MENU_PREVIEW_KEY } from "./useMealPlannerMenuPreview";
 
 export const MEAL_BUILDER_KEY = "dashboard.meal-builder";
 export const MEAL_BUILDER_PUBLISHED_KEY = "dashboard.meal-builder.published";
@@ -38,10 +47,10 @@ export const MEAL_BUILDER_PICKER_KEY = "dashboard.meal-builder.picker";
 
 const mealBuilderInvalidateKeys = [
   [MEAL_BUILDER_KEY],
-  [MEAL_BUILDER_PUBLISHED_KEY],
   [MEAL_BUILDER_DRAFT_KEY],
   [MEAL_BUILDER_HYDRATED_KEY],
   [MEAL_BUILDER_READINESS_KEY],
+  [MEAL_BUILDER_PICKER_KEY],
 ];
 
 export const mealBuilderQueryOptions = () =>
@@ -159,7 +168,7 @@ export const mealBuilderPickerQueryOptions = (
     queryKey: [MEAL_BUILDER_PICKER_KEY, sectionKey, params],
     queryFn: () => getMealBuilderPicker(sectionKey, params),
     enabled: Boolean(sectionKey),
-    staleTime: 1000 * 15,
+    staleTime: 1000 * 10,
   });
 
 export const useMealBuilderQuery = (enabled = true) =>
@@ -247,8 +256,55 @@ export const usePublishMealBuilderDraftMutation = () =>
       mealBuilderErrorMessage(error, "تعذر نشر مسودة منشئ الوجبات"),
     invalidateKeys: [
       ...mealBuilderInvalidateKeys,
-      ["menu.mealPlannerPreview"],
+      [MEAL_BUILDER_PUBLISHED_KEY],
+      [MEAL_PLANNER_MENU_PREVIEW_KEY],
     ],
+  });
+
+export const useCreateMealBuilderProductSectionMutation = () =>
+  useMealBuilderCardActionMutation({
+    mutationFn: createMealBuilderProductSection,
+    successMessage: "تم إنشاء بطاقة المنتجات",
+  });
+
+export const useUpdateMealBuilderProductSectionMutation = () =>
+  useMealBuilderCardActionMutation({
+    mutationFn: ({
+      sectionKey,
+      patch,
+    }: {
+      sectionKey: string;
+      patch: MealBuilderDirectCardPatchPayload;
+    }) => updateMealBuilderProductSection({ sectionKey, patch }),
+    successMessage: "تم حفظ بطاقة المنتجات",
+  });
+
+export const useDeleteMealBuilderProductSectionMutation = () =>
+  useMealBuilderCardActionMutation({
+    mutationFn: deleteMealBuilderProductSection,
+    successMessage: "تم حذف بطاقة المنتجات",
+  });
+
+export const useAddMealBuilderProductsMutation = () =>
+  useMealBuilderCardActionMutation({
+    mutationFn: ({
+      sectionKey,
+      productIds,
+    }: MealBuilderAddProductsPayload & { sectionKey: string }) =>
+      addMealBuilderProducts({ sectionKey, productIds }),
+    successMessage: "تمت إضافة المنتجات",
+  });
+
+export const useRemoveMealBuilderProductMutation = () =>
+  useMealBuilderCardActionMutation({
+    mutationFn: ({
+      sectionKey,
+      productId,
+    }: {
+      sectionKey: string;
+      productId: string;
+    }) => removeMealBuilderProduct({ sectionKey, productId }),
+    successMessage: "تم حذف المنتج من البطاقة",
   });
 
 function invalidateMealBuilderQueries(
@@ -256,6 +312,70 @@ function invalidateMealBuilderQueries(
 ) {
   mealBuilderInvalidateKeys.forEach((queryKey) => {
     queryClient.invalidateQueries({ queryKey });
+  });
+}
+
+export function applyMealBuilderCardActionResult(
+  queryClient: ReturnType<typeof useQueryClient>,
+  response: MealBuilderCardActionResponse
+) {
+  const draft = response.data.draft;
+  const validation = response.data.validation;
+  queryClient.setQueryData([MEAL_BUILDER_DRAFT_KEY], {
+    status: true,
+    data: {
+      config: draft,
+      draft,
+      mode: "draft",
+      versionId: draft.id,
+      draftVersionId: draft.id,
+      versionNumber: null,
+      basedOnPublishedVersionId: null,
+      hasDraft: true,
+      hasUnpublishedChanges: true,
+      publishedAt: draft.publishedAt ?? null,
+      updatedAt: draft.updatedAt ?? null,
+      status: draft.status ?? "draft",
+      validation,
+    },
+  } satisfies MealBuilderLifecycleResponse);
+  queryClient.setQueryData([MEAL_BUILDER_HYDRATED_KEY], (current: unknown) => {
+    if (!current || typeof current !== "object") return current;
+    return {
+      ...(current as Record<string, unknown>),
+      data: {
+        ...((current as { data?: Record<string, unknown> }).data ?? {}),
+        draft,
+        sections: draft.sections,
+        validation,
+        ready: validation.ready,
+        errors: validation.errors,
+        warnings: validation.warnings,
+      },
+    };
+  });
+  invalidateMealBuilderQueries(queryClient);
+}
+
+function useMealBuilderCardActionMutation<TVariables>({
+  mutationFn,
+  successMessage,
+}: {
+  mutationFn: (variables: TVariables) => Promise<MealBuilderCardActionResponse>;
+  successMessage: string;
+}) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: (response) => {
+      applyMealBuilderCardActionResult(queryClient, response);
+      toast.success(successMessage);
+    },
+    onError: (error) => {
+      toast.error(
+        mealBuilderErrorMessage(error, "تعذر تنفيذ عملية بطاقة المنتجات")
+      );
+    },
   });
 }
 
