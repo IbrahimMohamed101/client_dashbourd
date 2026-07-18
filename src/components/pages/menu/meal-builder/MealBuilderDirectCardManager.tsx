@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Loader2,
@@ -20,6 +21,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -31,6 +42,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
+  invalidateMealBuilderQueries,
   useCreateMealBuilderProductSectionMutation,
   useDeleteMealBuilderProductSectionMutation,
   useAddMealBuilderProductsMutation,
@@ -71,6 +83,12 @@ type DirectCardDialogMode =
   | { type: "create" }
   | { type: "edit"; sectionKey: string };
 
+type RemoveProductRequest = {
+  productId: string;
+  productName: string;
+  cardName: string;
+};
+
 export function MealBuilderDirectCardManager({
   sections,
   validation,
@@ -88,6 +106,7 @@ export function MealBuilderDirectCardManager({
 }) {
   const [dialogMode, setDialogMode] = useState<DirectCardDialogMode | null>(null);
   const [deleteSection, setDeleteSection] = useState<MealBuilderSection | null>(null);
+  const queryClient = useQueryClient();
   const directSections = useMemo(
     () => sections.filter(isDirectProductCard),
     [sections]
@@ -114,7 +133,22 @@ export function MealBuilderDirectCardManager({
       setDeleteSection(null);
       toast.success("تم حذف بطاقة المنتجات");
     } catch (error) {
-      toast.error(mealBuilderError(error, "تعذر حذف البطاقة"));
+      const parsed = parseApiError(error);
+      if (
+        parsed.code === "MEAL_BUILDER_CARD_NOT_FOUND" ||
+        parsed.code === "MEAL_BUILDER_CONFLICT" ||
+        parsed.code === "MEAL_BUILDER_CARD_TYPE_UNSUPPORTED"
+      ) {
+        await invalidateMealBuilderQueries(queryClient);
+        setDeleteSection(null);
+      }
+      toast.error(
+        parsed.code === "MEAL_BUILDER_CARD_NOT_FOUND"
+          ? "تعذر حذف البطاقة لأنها حذفت أو تغير اسمها على الخادم. تم تحديث المسودة."
+          : parsed.code === "MEAL_BUILDER_CARD_TYPE_UNSUPPORTED"
+            ? "هذه البطاقة يجب تعديلها أو حذفها من محرر البطاقة القديمة."
+            : mealBuilderError(error, "تعذر حذف البطاقة")
+      );
     }
   }
 
@@ -131,7 +165,7 @@ export function MealBuilderDirectCardManager({
           type="button"
           className="w-full sm:w-auto"
           disabled={actionPending}
-          aria-label="create-direct-card"
+          aria-label="إضافة بطاقة منتجات مباشرة"
           onClick={() => setDialogMode({ type: "create" })}
         >
           <Plus data-icon="inline-start" />
@@ -302,6 +336,7 @@ function DirectCardDialog({
   onPendingChange?: (pending: boolean) => void;
   onActionApplied: (response: MealBuilderCardActionResponse) => void;
 }) {
+  const queryClient = useQueryClient();
   const existing =
     mode.type === "edit"
       ? sections.find((section) => section.key === mode.sectionKey) ?? null
@@ -316,6 +351,9 @@ function DirectCardDialog({
   );
   const [query, setQuery] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [dirtyCloseOpen, setDirtyCloseOpen] = useState(false);
+  const [removeRequest, setRemoveRequest] = useState<RemoveProductRequest | null>(null);
+  const [recoveryPending, setRecoveryPending] = useState(false);
   const deferredQuery = useDeferredValue(query.trim());
   const firstInputRef = useRef<HTMLInputElement>(null);
   const createMutation = useCreateMealBuilderProductSectionMutation();
@@ -340,7 +378,8 @@ function DirectCardDialog({
     addMutation.isPending ||
     updateMutation.isPending ||
     removeMutation.isPending ||
-    deleteMutation.isPending;
+    deleteMutation.isPending ||
+    recoveryPending;
   const actionPending = pending || ownedPending;
   const initialSnapshot = useMemo(
     () =>
@@ -392,13 +431,96 @@ function DirectCardDialog({
 
   function requestClose() {
     if (actionPending) return;
-    if (
-      dirty &&
-      !window.confirm("لديك تغييرات غير محفوظة. هل تريد إغلاق النافذة؟")
-    ) {
+    if (dirty) {
+      setDirtyCloseOpen(true);
       return;
     }
     onClose();
+  }
+
+  async function refreshAuthoritativeState(includePicker = true) {
+    setRecoveryPending(true);
+    try {
+      await invalidateMealBuilderQueries(queryClient);
+      if (includePicker) {
+        await pickerQuery.refetch();
+      }
+    } finally {
+      setRecoveryPending(false);
+    }
+  }
+
+  async function handleActionError(error: unknown, fallback: string) {
+    const mapped = mapCardActionError(error);
+    const parsed = parseApiError(error);
+    const nextErrors = { ...mapped };
+    let closeEditor = false;
+
+    switch (parsed.code) {
+      case "MEAL_BUILDER_CARD_NOT_FOUND":
+        nextErrors.general =
+          "تعذر متابعة التعديل لأن البطاقة حذفت أو تغير اسمها على الخادم. تم تحديث المسودة.";
+        closeEditor = true;
+        await refreshAuthoritativeState(true);
+        break;
+      case "MEAL_BUILDER_PRODUCT_NOT_FOUND":
+        setProductIds((current) =>
+          removeIds(current, extractProductIds(parsed.details))
+        );
+        nextErrors.products =
+          mapped.products || "تمت إزالة منتجات لم تعد موجودة من الاختيار الحالي.";
+        await pickerQuery.refetch();
+        break;
+      case "MEAL_BUILDER_PRODUCT_NOT_IN_CARD":
+        nextErrors.products =
+          mapped.products || "هذا المنتج لم يعد موجودا في البطاقة. تم تحديث بيانات المسودة.";
+        await refreshAuthoritativeState(true);
+        break;
+      case "MEAL_BUILDER_PRODUCT_ALREADY_ASSIGNED": {
+        const existingIds = existing ? productIdsForDirectCard(existing) : [];
+        const conflictIds = conflictProductIds(mapped.conflicts, parsed.details);
+        setProductIds((current) =>
+          current.filter(
+            (productId) => existingIds.includes(productId) || !conflictIds.includes(productId)
+          )
+        );
+        nextErrors.products =
+          mapped.products || "بعض المنتجات مخصصة بالفعل في بطاقات أخرى.";
+        await refreshAuthoritativeState(true);
+        break;
+      }
+      case "MEAL_BUILDER_CONFLICT":
+        nextErrors.general =
+          mapped.general || "تغيرت المسودة على الخادم. تم تحديث البيانات، حاول مرة أخرى.";
+        await refreshAuthoritativeState(true);
+        break;
+      case "MEAL_BUILDER_PRODUCT_TYPE_INVALID":
+      case "MEAL_BUILDER_PRODUCT_UNAVAILABLE":
+        setProductIds((current) =>
+          removeIds(current, extractProductIds(parsed.details))
+        );
+        nextErrors.products =
+          mapped.products || "بعض المنتجات غير صالحة أو غير متاحة وتمت إزالتها من الاختيار.";
+        await pickerQuery.refetch();
+        break;
+      case "MEAL_BUILDER_CARD_TYPE_UNSUPPORTED":
+        nextErrors.general =
+          "هذه البطاقة لا يمكن تعديلها من محرر بطاقات المنتجات المباشر. استخدم محرر البطاقة القديمة.";
+        closeEditor = true;
+        await refreshAuthoritativeState(false);
+        break;
+      default:
+        if (parsed.status === 500 || parsed.code === "MEAL_BUILDER_INTERNAL_ERROR") {
+          nextErrors.general =
+            mapped.general || "تعذر تنفيذ العملية مؤقتا. احتفظنا بالقيم الحالية، حاول مرة أخرى.";
+        }
+        break;
+    }
+
+    setFieldErrors(nextErrors);
+    toast.error(nextErrors.general || mealBuilderError(error, fallback));
+    if (mapped.wouldBeEmpty) setDeleteFromEditor(existing);
+    if (closeEditor) onClose();
   }
 
   async function save() {
@@ -452,12 +574,7 @@ function DirectCardDialog({
       lastSubmittedSnapshotRef.current = currentSnapshot;
       toast.success(mode.type === "create" ? "تم إنشاء البطاقة" : "تم حفظ البطاقة");
     } catch (error) {
-      const mapped = mapCardActionError(error);
-      setFieldErrors(mapped);
-      toast.error(mapped.general || mealBuilderError(error, "تعذر حفظ بطاقة المنتجات"));
-      if (mapped.conflicts?.length) {
-        pickerQuery.refetch();
-      }
+      await handleActionError(error, "تعذر حفظ بطاقة المنتجات");
     } finally {
       window.setTimeout(() => {
         submitLockRef.current = false;
@@ -472,36 +589,33 @@ function DirectCardDialog({
     );
     if (productIds.length <= 1) {
       setFieldErrors({
-        products: "The last product cannot be removed as a normal product action. Delete the card instead.",
+        products: "لا يمكن إزالة آخر منتج كإجراء عادي. احذف البطاقة بدلا من ذلك.",
         wouldBeEmpty: true,
       });
       setDeleteFromEditor(existing);
       return;
     }
     const cardName =
-      existing.titleOverride?.ar || existing.titleOverride?.en || existing.key;
+      existing.titleOverride?.ar || existing.titleOverride?.en || existing.key || productId;
     const productName = candidate ? candidateName(candidate) : productId;
-    if (!window.confirm(`Remove ${productName} from ${cardName}?`)) {
-      return;
-    }
+    setRemoveRequest({ productId, productName, cardName });
+  }
+
+  async function confirmRemoveProduct() {
+    if (!existing || !removeRequest || actionPending) return;
     try {
       await onBeforeAction();
       const response = await removeMutation.mutateAsync({
         sectionKey: mode.type === "edit" ? mode.sectionKey : key,
-        productId,
+        productId: removeRequest.productId,
       });
       onActionApplied(response);
-      setProductIds((current) => current.filter((item) => item !== productId));
+      setProductIds((current) => current.filter((item) => item !== removeRequest.productId));
+      setRemoveRequest(null);
       pickerQuery.refetch();
-      toast.success("Product removed from the card");
+      toast.success("تمت إزالة المنتج من البطاقة");
     } catch (error) {
-      const mapped = mapCardActionError(error);
-      setFieldErrors(mapped);
-      if (mapped.wouldBeEmpty) {
-        setDeleteFromEditor(existing);
-      }
-      toast.error(mapped.general || mealBuilderError(error, "Could not remove product"));
-      pickerQuery.refetch();
+      await handleActionError(error, "تعذر إزالة المنتج");
     }
   }
 
@@ -513,11 +627,9 @@ function DirectCardDialog({
       const response = await deleteMutation.mutateAsync(deleteFromEditor.key || "");
       onActionApplied(response);
       setDeleteFromEditor(null);
-      toast.success("Product card deleted");
+      toast.success("تم حذف بطاقة المنتجات");
     } catch (error) {
-      const mapped = mapCardActionError(error);
-      setFieldErrors(mapped);
-      toast.error(mapped.general || mealBuilderError(error, "Could not delete card"));
+      await handleActionError(error, "تعذر حذف البطاقة");
     } finally {
       window.setTimeout(() => {
         submitLockRef.current = false;
@@ -526,15 +638,24 @@ function DirectCardDialog({
   }
 
   return (
-    <Dialog
-      open
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) requestClose();
-      }}
-    >
+    <>
+      <Dialog
+        open
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) requestClose();
+        }}
+      >
       <DialogContent
         className="grid h-[min(92dvh,860px)] w-[calc(100vw-1rem)] !max-w-[calc(100vw-1rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-[calc(100vw-2rem)] sm:!max-w-[min(94vw,72rem)]"
         dir="rtl"
+        onEscapeKeyDown={(event) => {
+          event.preventDefault();
+          requestClose();
+        }}
+        onInteractOutside={(event) => {
+          event.preventDefault();
+          if (dirty) requestClose();
+        }}
       >
         <DialogHeader className="border-b px-4 py-4 text-right sm:px-6">
           <DialogTitle>{title}</DialogTitle>
@@ -576,7 +697,7 @@ function DirectCardDialog({
                 <FieldError message={fieldErrors.title} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="direct-card-title-en">English title</Label>
+                <Label htmlFor="direct-card-title-en">العنوان الإنجليزي</Label>
                 <Input
                   id="direct-card-title-en"
                   dir="ltr"
@@ -703,7 +824,7 @@ function DirectCardDialog({
             type="button"
             className="w-full sm:w-auto"
             disabled={actionPending || pickerQuery.isLoading}
-            aria-label="save-direct-card"
+            aria-label={mode.type === "edit" ? "حفظ بطاقة المنتجات" : "إنشاء بطاقة المنتجات"}
             onClick={save}
           >
             {actionPending ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -714,7 +835,7 @@ function DirectCardDialog({
             variant="outline"
             className="w-full sm:w-auto"
             disabled={actionPending}
-            aria-label="close-direct-card-dialog"
+            aria-label="إغلاق محرر بطاقة المنتجات"
             onClick={requestClose}
           >
             إلغاء
@@ -727,7 +848,128 @@ function DirectCardDialog({
         onClose={() => setDeleteFromEditor(null)}
         onConfirm={deleteCurrentCard}
       />
-    </Dialog>
+      </Dialog>
+      <DirtyCloseDialog
+        open={dirtyCloseOpen}
+        pending={actionPending}
+        onContinue={() => setDirtyCloseOpen(false)}
+        onDiscard={() => {
+          if (actionPending) return;
+          setDirtyCloseOpen(false);
+          onClose();
+        }}
+      />
+      <RemoveProductDialog
+        request={removeRequest}
+        pending={actionPending}
+        onCancel={() => setRemoveRequest(null)}
+        onConfirm={confirmRemoveProduct}
+      />
+    </>
+  );
+}
+
+function DirtyCloseDialog({
+  open,
+  pending,
+  onContinue,
+  onDiscard,
+}: {
+  open: boolean;
+  pending: boolean;
+  onContinue: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !pending) onContinue();
+      }}
+    >
+      <AlertDialogContent
+        className="w-[calc(100vw-1rem)] max-w-sm"
+        dir="rtl"
+        onEscapeKeyDown={(event) => {
+          if (pending) event.preventDefault();
+        }}
+      >
+        <AlertDialogHeader className="text-right">
+          <AlertDialogTitle>تجاهل التغييرات غير المحفوظة؟</AlertDialogTitle>
+          <AlertDialogDescription className="text-right leading-6">
+            لم يتم حفظ التغييرات التي أجريتها على بطاقة المنتجات.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="gap-2 sm:justify-start">
+          <AlertDialogCancel disabled={pending} onClick={onContinue}>
+            متابعة التعديل
+          </AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={pending}
+            onClick={onDiscard}
+          >
+            تجاهل وإغلاق
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function RemoveProductDialog({
+  request,
+  pending,
+  onCancel,
+  onConfirm,
+}: {
+  request: RemoveProductRequest | null;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog
+      open={Boolean(request)}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && !pending) onCancel();
+      }}
+    >
+      <AlertDialogContent
+        className="w-[calc(100vw-1rem)] max-w-sm"
+        dir="rtl"
+        onEscapeKeyDown={(event) => {
+          if (pending) event.preventDefault();
+        }}
+      >
+        <AlertDialogHeader className="text-right">
+          <AlertDialogTitle>إزالة المنتج من البطاقة؟</AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2 text-right leading-6">
+            <span className="block">
+              سيتم إزالة <bdi dir="auto">{request?.productName}</bdi> من بطاقة{" "}
+              <bdi dir="auto">{request?.cardName}</bdi>.
+            </span>
+            <span className="block">
+              سيصبح المنتج متاحا لبطاقة مسودة أخرى، ولن يتغير تطبيق العميل العام أو الجوال حتى يتم النشر.
+            </span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="gap-2 sm:justify-start">
+          <AlertDialogCancel disabled={pending} onClick={onCancel}>
+            إلغاء
+          </AlertDialogCancel>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={pending}
+            onClick={onConfirm}
+          >
+            {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+            إزالة المنتج
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -1056,7 +1298,62 @@ function mapCardActionError(error: unknown): FieldErrors {
   if (parsed.code === "MEAL_BUILDER_CARD_WOULD_BE_EMPTY") {
     return { ...base, products: parsed.message, wouldBeEmpty: true };
   }
+  if (
+    parsed.code === "MEAL_BUILDER_PRODUCT_NOT_FOUND" ||
+    parsed.code === "MEAL_BUILDER_PRODUCT_NOT_IN_CARD" ||
+    parsed.code === "MEAL_BUILDER_PRODUCT_ALREADY_ASSIGNED" ||
+    parsed.code === "MEAL_BUILDER_PRODUCT_TYPE_INVALID" ||
+    parsed.code === "MEAL_BUILDER_PRODUCT_UNAVAILABLE"
+  ) {
+    return { ...base, products: parsed.message };
+  }
   return base;
+}
+
+function extractProductIds(details: unknown): string[] {
+  if (!isRecord(details)) return [];
+  return uniqueIds([
+    ...idsFromUnknown(details.productIds),
+    ...idsFromUnknown(details.productId),
+    ...idsFromUnknown(details.missingProductIds),
+    ...idsFromUnknown(details.invalidProductIds),
+    ...idsFromUnknown(details.unavailableProductIds),
+    ...idsFromUnknown(details.conflictingProductIds),
+    ...idsFromUnknown(details.conflicts),
+  ]);
+}
+
+function conflictProductIds(
+  conflicts: MealBuilderAssignmentConflict[] | undefined,
+  details: unknown
+) {
+  return uniqueIds([
+    ...extractProductIds(details),
+    ...(conflicts ?? []).flatMap((conflict) =>
+      [conflict.productId, conflict.id].filter(Boolean).map(String)
+    ),
+  ]);
+}
+
+function idsFromUnknown(value: unknown): string[] {
+  if (typeof value === "string" || typeof value === "number") {
+    return [String(value)];
+  }
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item === "string" || typeof item === "number") {
+      return [String(item)];
+    }
+    if (isRecord(item)) {
+      return [item.productId, item.id, item._id].filter(Boolean).map(String);
+    }
+    return [];
+  });
+}
+
+function removeIds(current: string[], idsToRemove: string[]) {
+  if (!idsToRemove.length) return current;
+  return current.filter((productId) => !idsToRemove.includes(productId));
 }
 
 function validationIssuesForSection(

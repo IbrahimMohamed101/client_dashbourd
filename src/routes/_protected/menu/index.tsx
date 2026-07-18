@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { legacyMenuTabMap, workflowSteps } from "@/constants/menuData";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,18 +49,21 @@ export const Route = createFileRoute("/_protected/menu/")({
   component: MenuPage,
 });
 
-function MenuPage() {
+export function MenuPage() {
   const { tab: activeTab } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const { user } = useAuth();
-  const canAccessMealBuilder =
-    user?.role === UserRoles.ADMIN || user?.role === UserRoles.SUPERADMIN;
+  const { user, isLoading: authLoading } = useAuth();
+  const canAccessMealBuilder = canAccessMealBuilderRole(user?.role);
+  const mealBuilderAccessPending = authLoading && activeTab === "meal-builder";
   const allowedWorkflowSteps = useMemo(
     () =>
       workflowSteps.filter(
-        (step) => step.value !== "meal-builder" || canAccessMealBuilder
+        (step) =>
+          step.value !== "meal-builder" ||
+          canAccessMealBuilder ||
+          authLoading
       ),
-    [canAccessMealBuilder]
+    [authLoading, canAccessMealBuilder]
   );
   const isMealBuilderTab = activeTab === "meal-builder";
   const [mealBuilderNavigation, setMealBuilderNavigation] =
@@ -102,9 +106,9 @@ function MenuPage() {
   };
 
   useEffect(() => {
-    if (!isMealBuilderTab || canAccessMealBuilder) return;
+    if (!isMealBuilderTab || authLoading || canAccessMealBuilder) return;
     navigate({ search: (prev) => ({ ...prev, tab: "catalog" }), replace: true });
-  }, [canAccessMealBuilder, isMealBuilderTab, navigate]);
+  }, [authLoading, canAccessMealBuilder, isMealBuilderTab, navigate]);
 
   return (
     <div
@@ -167,7 +171,7 @@ function MenuPage() {
         <div className="overflow-x-auto pb-1">
           <TabsList
             className={`grid min-h-max min-w-[760px] gap-2 bg-muted/70 p-2 ${
-              canAccessMealBuilder ? "grid-cols-5" : "grid-cols-4"
+              canAccessMealBuilder || authLoading ? "grid-cols-5" : "grid-cols-4"
             }`}
           >
             {allowedWorkflowSteps.map((step, index) => {
@@ -209,7 +213,9 @@ function MenuPage() {
           </div>
         </TabsContent>
         <TabsContent value="meal-builder" className="mt-5">
-          {canAccessMealBuilder ? (
+          {mealBuilderAccessPending ? (
+            <MealBuilderAuthLoadingState />
+          ) : canAccessMealBuilder ? (
             <MealBuilderSimplePage
               externalNavigationBlocked={navigationBlocker.status === "blocked"}
               onNavigationStateChange={handleMealBuilderNavigationStateChange}
@@ -234,6 +240,26 @@ function MenuPage() {
         onStay={() => navigationBlocker.reset?.()}
         onLeave={() => navigationBlocker.proceed?.()}
       />
+    </div>
+  );
+}
+
+function canAccessMealBuilderRole(role: unknown) {
+  return role === UserRoles.ADMIN || role === UserRoles.SUPERADMIN;
+}
+
+function MealBuilderAuthLoadingState() {
+  return (
+    <div
+      className="grid gap-4 rounded-lg border bg-card p-4"
+      aria-label="تحميل صلاحية منشئ الوجبات"
+    >
+      <Skeleton className="h-6 w-48" />
+      <Skeleton className="h-24 w-full" />
+      <div className="grid gap-3 md:grid-cols-2">
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
     </div>
   );
 }

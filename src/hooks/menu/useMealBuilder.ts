@@ -331,12 +331,14 @@ export const useRemoveMealBuilderProductMutation = () =>
     successMessage: "تم حذف المنتج من البطاقة",
   });
 
-function invalidateMealBuilderQueries(
+export function invalidateMealBuilderQueries(
   queryClient: ReturnType<typeof useQueryClient>
 ) {
-  mealBuilderInvalidateKeys.forEach((queryKey) => {
-    queryClient.invalidateQueries({ queryKey });
-  });
+  return Promise.all(
+    mealBuilderInvalidateKeys.map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey })
+    )
+  );
 }
 
 export function applyMealBuilderCardActionResult(

@@ -213,7 +213,7 @@ describe("MealBuilderDirectCardManager", () => {
   it("renders direct-product cards with lifecycle controls", () => {
     renderManager();
 
-    expect(screen.getByRole("button", { name: "create-direct-card" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إضافة بطاقة منتجات مباشرة" })).toBeInTheDocument();
     expect(screen.getByText("اختيارات الشيف")).toBeInTheDocument();
     expect(screen.getByText(/chef_choices/)).toBeInTheDocument();
     expect(screen.getByText("2 منتجات")).toBeInTheDocument();
@@ -280,13 +280,13 @@ describe("MealBuilderDirectCardManager", () => {
       onActionApplied,
     });
 
-    await user.click(screen.getByRole("button", { name: "create-direct-card" }));
+    await user.click(screen.getByRole("button", { name: "إضافة بطاقة منتجات مباشرة" }));
     await waitFor(() => expect(apiMock.get).toHaveBeenCalled());
     await user.type(document.querySelector<HTMLInputElement>("#direct-card-key")!, "chef_choices");
     await user.type(document.querySelector<HTMLInputElement>("#direct-card-title-en")!, "Chef Choices");
     await user.click(screen.getByRole("checkbox", { name: /product-2/ }));
 
-    const saveButton = screen.getByRole("button", { name: "save-direct-card" });
+    const saveButton = screen.getByRole("button", { name: "إنشاء بطاقة المنتجات" });
     await Promise.all([user.click(saveButton), user.click(saveButton)]);
 
     await waitFor(() => expect(apiMock.post).toHaveBeenCalledTimes(1));
@@ -297,36 +297,54 @@ describe("MealBuilderDirectCardManager", () => {
     expect(toastMock.success).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps dirty dialog open when close confirmation is cancelled", async () => {
+  it("keeps dirty dialog open when styled close confirmation continues editing", async () => {
     const user = userEvent.setup();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValueOnce(false);
+    const confirmSpy = vi.spyOn(window, "confirm");
     renderManager({ sections: [] });
 
-    await user.click(screen.getByRole("button", { name: "create-direct-card" }));
+    await user.click(screen.getByRole("button", { name: "إضافة بطاقة منتجات مباشرة" }));
     await user.type(document.querySelector<HTMLInputElement>("#direct-card-key")!, "chef_choices");
-    await user.click(screen.getByRole("button", { name: "close-direct-card-dialog" }));
+    await user.click(screen.getByRole("button", { name: "إغلاق محرر بطاقة المنتجات" }));
 
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("button", { name: "save-direct-card" })).toBeInTheDocument();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "تجاهل التغييرات غير المحفوظة؟" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "متابعة التعديل" }));
+    expect(screen.getByRole("button", { name: "إنشاء بطاقة المنتجات" })).toBeInTheDocument();
+  });
+
+  it("discards a dirty direct-card dialog from the styled confirmation", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm");
+    renderManager({ sections: [] });
+
+    await user.click(screen.getByRole("button", { name: "إضافة بطاقة منتجات مباشرة" }));
+    await user.type(document.querySelector<HTMLInputElement>("#direct-card-key")!, "chef_choices");
+    await user.click(screen.getByRole("button", { name: "إغلاق محرر بطاقة المنتجات" }));
+    await user.click(screen.getByRole("button", { name: "تجاهل وإغلاق" }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "إنشاء بطاقة المنتجات" })).not.toBeInTheDocument()
+    );
   });
 
   it("closes clean dialog without confirmation", async () => {
     const user = userEvent.setup();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const confirmSpy = vi.spyOn(window, "confirm");
     renderManager({ sections: [] });
 
-    await user.click(screen.getByRole("button", { name: "create-direct-card" }));
-    await user.click(screen.getByRole("button", { name: "close-direct-card-dialog" }));
+    await user.click(screen.getByRole("button", { name: "إضافة بطاقة منتجات مباشرة" }));
+    await user.click(screen.getByRole("button", { name: "إغلاق محرر بطاقة المنتجات" }));
 
     expect(confirmSpy).not.toHaveBeenCalled();
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "save-direct-card" })).not.toBeInTheDocument()
+      expect(screen.queryByRole("button", { name: "إنشاء بطاقة المنتجات" })).not.toBeInTheDocument()
     );
   });
 
   it("requires confirmation before removing an existing product", async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, "confirm").mockReturnValueOnce(true);
+    const confirmSpy = vi.spyOn(window, "confirm");
     apiMock.delete.mockResolvedValueOnce({
       data: actionResponse("product_removed", [
         directSection({ selectedProductIds: ["product-2"] }),
@@ -335,24 +353,29 @@ describe("MealBuilderDirectCardManager", () => {
     const onActionApplied = vi.fn();
     renderManager({ onActionApplied });
 
-    await user.click(screen.getAllByLabelText(/chef_choices/)[0]);
+    await user.click(screen.getByRole("button", { name: /تعديل chef_choices/ }));
     await waitFor(() => expect(apiMock.get).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: /product-1/ }));
+    expect(screen.getByRole("alertdialog", { name: "إزالة المنتج من البطاقة؟" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "إزالة المنتج" }));
 
     await waitFor(() => expect(apiMock.delete).toHaveBeenCalledTimes(1));
+    expect(confirmSpy).not.toHaveBeenCalled();
     expect(onActionApplied).toHaveBeenCalledTimes(1);
     expect(toastMock.success).toHaveBeenCalledTimes(1);
   });
 
   it("does not remove a product when confirmation is cancelled", async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, "confirm").mockReturnValueOnce(false);
+    const confirmSpy = vi.spyOn(window, "confirm");
     renderManager();
 
-    await user.click(screen.getAllByLabelText(/chef_choices/)[0]);
+    await user.click(screen.getByRole("button", { name: /تعديل chef_choices/ }));
     await waitFor(() => expect(apiMock.get).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: /product-1/ }));
+    await user.click(screen.getByRole("button", { name: "إلغاء" }));
 
+    expect(confirmSpy).not.toHaveBeenCalled();
     expect(apiMock.delete).not.toHaveBeenCalled();
   });
 
@@ -375,7 +398,7 @@ describe("MealBuilderDirectCardManager", () => {
       ],
     });
 
-    await user.click(screen.getAllByLabelText(/chef_choices/)[0]);
+    await user.click(screen.getByRole("button", { name: /تعديل chef_choices/ }));
     await waitFor(() => expect(apiMock.get).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: /product-1/ }));
 

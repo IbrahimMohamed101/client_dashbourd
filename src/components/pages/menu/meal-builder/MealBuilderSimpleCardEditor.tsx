@@ -486,7 +486,7 @@ export function MealBuilderSimpleCardEditor({
                   </p>
                   <div className="mt-3">
                     <TextField
-                      label="English title"
+                      label="العنوان الإنجليزي"
                       value={
                         primarySection?.titleOverride.en ??
                         VISUAL_SECTION_LABELS[liveCard.key]?.en ??
