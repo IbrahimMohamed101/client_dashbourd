@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canMoveMealBuilderItem,
   explicitProductIdsForSection,
+  isDirectMealBuilderCandidateSelectable,
   isMealBuilderCandidateSelectable,
   mealBuilderErrorMessage,
   toEditableMealBuilderSection,
@@ -43,35 +44,36 @@ test("mealBuilderFrontendUtils.test", () => {
 
   assert.equal(
     isMealBuilderCandidateSelectable({
-      id: "option-1",
+      id: "option-2",
       type: "option",
+      selected: false,
       eligible: true,
-      linked: false,
-      available: true,
-      active: true,
-      visible: true,
-      published: true,
-      subscriptionEnabled: true,
-      catalogItemAvailable: true,
     }),
     true,
-    "Backend addable candidates may intentionally be unlinked"
+    "Legacy eligible candidates remain selectable without assignable"
   );
 
   assert.equal(
     isMealBuilderCandidateSelectable({
-      id: "option-2",
+      id: "option-3",
       type: "option",
+      selected: true,
+      assignable: false,
+    }),
+    true,
+    "Selected candidates remain selectable so admins can keep them checked"
+  );
+
+  assert.equal(
+    isDirectMealBuilderCandidateSelectable({
+      id: "product-1",
+      type: "product",
+      selected: false,
       eligible: true,
-      available: true,
-      active: true,
-      visible: true,
-      published: false,
-      subscriptionEnabled: true,
-      catalogItemAvailable: true,
+      assignable: false,
     }),
     false,
-    "Unpublished candidates must not be added to a publishable draft"
+    "Direct candidates use explicit assignable instead of legacy eligibility"
   );
 
   assert.equal(validateMealBuilderSectionDraft(baseSection), null);

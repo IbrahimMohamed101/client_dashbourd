@@ -155,6 +155,7 @@ export function buildMealBuilderVisualCards({
       section.key &&
       Array.isArray(section.items) &&
       (REQUIRED_SECTION_ORDER.includes(section.key) ||
+        section.sectionType === "product_list" ||
         (section.sectionType !== "option_group" && sectionTreatsAsFullMeal(section)))
     ) {
       hydrateVisualCardFromBackend(

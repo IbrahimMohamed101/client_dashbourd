@@ -1,6 +1,6 @@
 import api from "@/lib/apis";
 import type { MealPlannerMenuResponse } from "@/types/mealPlannerMenuTypes";
-import { mapMealPlannerMenuResponse } from "@/utils/mealPlannerMenuAdapter";
+import { mapMealPlannerBuilderCatalogV3 } from "@/utils/mealPlannerMenuAdapter";
 
 export const mealPlannerMenuPreviewUrl = () =>
   "/api/subscriptions/meal-planner-menu?lang=ar";
@@ -10,6 +10,6 @@ export const fetchMealPlannerMenuPreview =
     const response = await api.get(mealPlannerMenuPreviewUrl());
     return {
       status: response.data?.status ?? true,
-      data: mapMealPlannerMenuResponse(response.data),
+      data: mapMealPlannerBuilderCatalogV3(response.data),
     };
   };

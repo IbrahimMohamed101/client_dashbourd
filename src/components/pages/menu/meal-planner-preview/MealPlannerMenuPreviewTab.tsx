@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMealPlannerMenuPreviewQuery } from "@/hooks/menu";
+import { parseApiError } from "@/lib/apiErrors";
 import {
   MenuEmptyState,
   MenuKeyBadge,
@@ -245,10 +246,11 @@ function PreviewSkeleton() {
 }
 
 export function MealPlannerMenuPreviewTab() {
-  const { data, isLoading, isFetching, refetch } =
+  const { data, error, isError, isLoading, isFetching, refetch } =
     useMealPlannerMenuPreviewQuery();
   const contract = data?.data;
   const sections = contract?.sections || [];
+  const previewUnavailable = isMealPlannerPublicCatalogUnavailable(error);
   const productCount = sections.reduce(
     (total, section) => total + section.products.length,
     0
@@ -317,14 +319,38 @@ export function MealPlannerMenuPreviewTab() {
 
       {isLoading ? <PreviewSkeleton /> : null}
 
-      {!isLoading && sections.length === 0 ? (
+      {!isLoading && isError ? (
+        <div className="flex min-h-52 flex-col items-center justify-center gap-3 rounded-lg border border-dashed bg-muted/20 p-8 text-center">
+          <p className="text-sm font-medium text-foreground">
+            {previewUnavailable
+              ? "معاينة التطبيق غير متاحة مؤقتا"
+              : "تعذر تحميل معاينة مخطط الوجبات"}
+          </p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            {previewUnavailable
+              ? "الكتالوج المنشور فارغ أو غير جاهز حاليا. لن نستخدم بيانات المسودة أو الحقول القديمة كبديل."
+              : parseApiError(error).message}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw data-icon="inline-start" />
+            إعادة المحاولة
+          </Button>
+        </div>
+      ) : null}
+
+      {!isLoading && !isError && sections.length === 0 ? (
         <MenuEmptyState
           title="لا يوجد عقد مخطط وجبات"
           description="انشر القائمة أو تحقق من تفعيل نقطة نهاية مخطط الوجبات."
         />
       ) : null}
 
-      {!isLoading && sections.length ? (
+      {!isLoading && !isError && sections.length ? (
         <div className="grid gap-4">
           {sections.map((section) => (
             <PlannerSectionPreview
@@ -335,5 +361,13 @@ export function MealPlannerMenuPreviewTab() {
         </div>
       ) : null}
     </MenuSectionCard>
+  );
+}
+
+function isMealPlannerPublicCatalogUnavailable(error: unknown) {
+  const parsed = parseApiError(error);
+  return (
+    parsed.status === 503 &&
+    parsed.code === "MEAL_PLANNER_PRIMARY_CONTENT_EMPTY"
   );
 }

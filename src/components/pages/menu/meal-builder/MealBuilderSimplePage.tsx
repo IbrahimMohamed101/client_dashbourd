@@ -70,9 +70,12 @@ import type {
   MealBuilderSection,
   MealBuilderState,
   MealBuilderValidation,
+  MealBuilderCardActionResponse,
 } from "@/types/mealBuilderTypes";
 import { MealBuilderSimpleCard } from "./MealBuilderSimpleCard";
 import { MealBuilderSimpleCardEditor } from "./MealBuilderSimpleCardEditor";
+import { MealBuilderDirectCardManager } from "./MealBuilderDirectCardManager";
+import { isDirectProductCard } from "./mealBuilderDirectCardUtils";
 import {
   mealBuilderErrorMessage,
   toEditableMealBuilderSections,
@@ -169,18 +172,11 @@ export function MealBuilderSimplePage({
     groups: groupsQuery.data?.data.items ?? [],
     options: optionsQuery.data?.data.items ?? [],
   };
-  const editableCatalogReady =
-    !loadEditableCatalog ||
-    (productsQuery.isSuccess &&
-      categoriesQuery.isSuccess &&
-      groupsQuery.isSuccess &&
-      optionsQuery.isSuccess);
   const draftWorkspaceReady =
     mode === "draft" &&
     Boolean(activeView.config) &&
     draftQuery.isSuccess &&
-    hydratedQuery.isSuccess &&
-    editableCatalogReady;
+    hydratedQuery.isSuccess;
   const draftLoadingStage: DraftLoadingStage | null =
     mode !== "draft" || draftWorkspaceReady
       ? null
@@ -188,18 +184,12 @@ export function MealBuilderSimplePage({
         ? "opening"
         : !hydratedQuery.isSuccess
           ? "hydrating"
-          : !editableCatalogReady
-            ? "catalog"
-            : null;
+          : null;
 
   const loading =
     publishedQuery.isLoading ||
     (mode === "draft" &&
       (builderQuery.isLoading ||
-        productsQuery.isLoading ||
-        categoriesQuery.isLoading ||
-        groupsQuery.isLoading ||
-        optionsQuery.isLoading ||
         draftQuery.isLoading ||
         hydratedQuery.isLoading));
 
@@ -208,10 +198,6 @@ export function MealBuilderSimplePage({
     ...(mode === "draft"
       ? [
           builderQuery,
-          productsQuery,
-          categoriesQuery,
-          groupsQuery,
-          optionsQuery,
           draftQuery,
           ...(draftQuery.isSuccess ? [hydratedQuery] : []),
         ]
@@ -291,10 +277,10 @@ export function MealBuilderSimplePage({
     if (!hydratedResult.isSuccess) return;
 
     await Promise.all([
-      productsQuery.refetch(),
-      categoriesQuery.refetch(),
-      groupsQuery.refetch(),
-      optionsQuery.refetch(),
+      productsQuery.refetch().catch(() => null),
+      categoriesQuery.refetch().catch(() => null),
+      groupsQuery.refetch().catch(() => null),
+      optionsQuery.refetch().catch(() => null),
     ]);
   }
 
@@ -718,10 +704,21 @@ function SimpleWorkspace({
   const [resetOpen, setResetOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
+  const [directActionPending, setDirectActionPending] = useState(false);
   const [validation, setValidation] =
     useState<MealBuilderValidation | null>(initialValidation);
 
   const cards = buildCards(sections, catalog, validation, premiumSection);
+  const directCardKeys = useMemo(
+    () =>
+      new Set(
+        sections
+          .filter(isDirectProductCard)
+          .map((section) => section.key)
+          .filter(Boolean)
+      ),
+    [sections]
+  );
   const selectedCard = cardEditorKey
     ? cards.find((card) => card.key === cardEditorKey) ?? null
     : null;
@@ -729,7 +726,8 @@ function SimpleWorkspace({
     saveDraft.isPending ||
     validateDraft.isPending ||
     publishDraft.isPending ||
-    resetDraft.isPending;
+    resetDraft.isPending ||
+    directActionPending;
   const payload = { sections: toBackendSections(sections), notes };
 
   useEffect(() => {
@@ -771,13 +769,10 @@ function SimpleWorkspace({
     onDirtyChange(false);
   }
 
-  function saveCurrent(onSaved?: () => void) {
-    saveDraft.mutate(payload, {
-      onSuccess: (response) => {
-        syncSaved(response.data);
-        onSaved?.();
-      },
-    });
+  async function saveCurrent(onSaved?: () => void) {
+    const response = await saveDraft.mutateAsync(payload);
+    syncSaved(response.data);
+    onSaved?.();
   }
 
   function validateStoredDraft({
@@ -816,10 +811,43 @@ function SimpleWorkspace({
       });
 
     if (dirty) {
-      saveCurrent(validate);
+      saveCurrent(validate).catch(() => undefined);
       return;
     }
     validate();
+  }
+
+  async function saveBeforeDirectAction() {
+    if (pending) {
+      throw new Error("عملية أخرى قيد التنفيذ");
+    }
+    if (!dirty) return;
+    const response = await saveDraft.mutateAsync(payload);
+    syncSaved(response.data);
+  }
+
+  function applyDirectAction(response: MealBuilderCardActionResponse) {
+    const returnedDraft = response.data.draft;
+    setSections(
+      toEditableMealBuilderSections(orderSections(returnedDraft.sections))
+    );
+    setNotes(returnedDraft.notes ?? "");
+    setValidation(response.data.validation);
+    setValidationOpen(false);
+    onDirtyChange(false);
+
+    if (response.data.action === "deleted") {
+      setCardEditorKey(null);
+      return;
+    }
+
+    if (
+      response.data.sectionKey &&
+      response.data.previousSectionKey &&
+      response.data.previousSectionKey === cardEditorKey
+    ) {
+      setCardEditorKey(response.data.sectionKey);
+    }
   }
 
   function publishFlow() {
@@ -844,7 +872,9 @@ function SimpleWorkspace({
           onRefresh={onRefresh}
           onOpenDraft={() => undefined}
           onShowPublished={onShowPublished}
-          onSave={() => saveCurrent()}
+          onSave={() => {
+            saveCurrent().catch(() => undefined);
+          }}
           onValidate={() => saveThenValidate({ openWhenWarnings: true })}
           onPublish={publishFlow}
           onReset={() => setResetOpen(true)}
@@ -862,13 +892,24 @@ function SimpleWorkspace({
           onOpenDetails={() => setValidationOpen(true)}
         />
         <PremiumNotice premiumSection={premiumSection} />
+        <MealBuilderDirectCardManager
+          sections={sections}
+          validation={validation}
+          pending={pending}
+          onBeforeAction={saveBeforeDirectAction}
+          onActionApplied={applyDirectAction}
+          onPendingChange={setDirectActionPending}
+        />
 
         <div className="grid gap-4 xl:grid-cols-2">
-          {cards.map((card) => (
+          {cards.filter((card) => !directCardKeys.has(card.key)).map((card) => (
             <MealBuilderSimpleCard
               key={card.key}
               card={card}
-              readOnly={card.key === "premium" || loading}
+              readOnly={
+                card.key === "premium" ||
+                loading
+              }
               onEdit={() => setCardEditorKey(card.key)}
             />
           ))}
