@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, Loader2, Package, Save } from "lucide-react";
@@ -9,24 +9,32 @@ import menuProductSchema, {
   type MenuProductSchemaInput,
   type MenuProductSchemaType,
 } from "@/lib/validations/menuProductSchema";
-import {
-  useMenuProductComposerQuery,
-  useUpdateMenuProductMutation,
-} from "@/hooks/useMenuQuery";
+import { useMenuProductDetailQuery } from "@/hooks/useMenuQuery";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/global/loader";
 import { MenuProductFormFields } from "@/components/pages/menu/products/MenuProductFormFields";
 import { ProductCustomizationPanel } from "@/components/pages/menu/products/ProductCustomizationPanel";
-import { toUpdateMenuProductPayload } from "@/utils/menuPayloadMappers";
+import { ProductWeightPricingPreview } from "@/components/pages/menu/products/ProductWeightPricingPreview";
+import { saveMenuProductWithWeightPricing } from "@/utils/menuProductMutationFlow";
+import type {
+  MenuProductRetryStage,
+  ModernTransitionIntent,
+} from "@/utils/menuProductMutationFlow";
+import {
+  deriveWeightPricingFormMode,
+  isModernWeightPricingFormMode,
+} from "@/utils/menuWeightPricingMode";
 import {
   fetchUploadImage,
   resolveUploadedImageUrl,
 } from "@/utils/fetchUploadImage";
 import { ToastMessage } from "@/components/global/ToastMessage";
 import { getMenuProductFormValues } from "@/utils/menuFormValues";
-import type { MenuProductComposer } from "@/types/menuTypes";
+import { parseApiError } from "@/lib/apiErrors";
+import type { MenuProduct, WeightPricingDescriptor } from "@/types/menuTypes";
+import { MENU_PRODUCT_INVALIDATION_KEYS } from "@/hooks/menu/menuProductInvalidation";
 
 export const Route = createFileRoute(
   "/_protected/menu/products/$productId/update"
@@ -37,59 +45,93 @@ export const Route = createFileRoute(
   ),
 });
 
+const errorSummary = (error: unknown) => {
+  const parsed = parseApiError(error);
+  const details =
+    parsed.details === undefined
+      ? ""
+      : typeof parsed.details === "string"
+        ? parsed.details
+        : JSON.stringify(parsed.details);
+  return [parsed.message, parsed.code, details].filter(Boolean).join(" - ");
+};
+
+type PartialEditState = {
+  warning: string;
+  retryStage: MenuProductRetryStage;
+  product: MenuProduct;
+  weightPricing?: WeightPricingDescriptor | null;
+  transitionIntent?: ModernTransitionIntent;
+};
+
+function invalidateProductCaches(queryClient: ReturnType<typeof useQueryClient>) {
+  MENU_PRODUCT_INVALIDATION_KEYS.forEach((queryKey) => {
+    queryClient.invalidateQueries({ queryKey });
+  });
+}
+
 function UpdateMenuProductPage() {
   const { productId } = Route.useParams();
   const {
-    data: composerData,
+    data: productData,
     isLoading,
     isError,
     error,
-  } = useMenuProductComposerQuery(productId);
+  } = useMenuProductDetailQuery(productId);
 
   if (isLoading) {
     return <Loader variant="full-screen" label="جار تحميل المنتج..." />;
   }
 
-  if (isError || !composerData?.data?.product) {
-    ToastMessage(
-      (error as any)?.response?.data?.message || "تعذر تحميل بيانات المنتج",
-      "error"
-    );
+  if (isError || !productData?.data?.id) {
+    ToastMessage(errorSummary(error) || "تعذر تحميل بيانات المنتج", "error");
     return null;
   }
 
-  const product = composerData.data.product;
-
   return (
     <UpdateMenuProductForm
-      key={product.id || productId}
-      composer={composerData.data}
+      key={productData.data.id || productId}
+      product={productData.data.product ?? productData.data}
       productId={productId}
     />
   );
 }
 
-function UpdateMenuProductForm({
-  composer,
+export function UpdateMenuProductForm({
+  product,
   productId,
+  initialValues,
 }: {
-  composer: MenuProductComposer;
+  product: MenuProduct;
   productId: string;
+  initialValues?: MenuProductSchemaInput;
 }) {
   const router = useRouter();
-  const mutation = useUpdateMenuProductMutation();
-  const product = composer.product;
+  const queryClient = useQueryClient();
+  const [canonicalProduct, setCanonicalProduct] = useState(product);
+  const [isSaving, setIsSaving] = useState(false);
+  const [partialEdit, setPartialEdit] = useState<PartialEditState | null>(null);
+  const [submitError, setSubmitError] = useState("");
+  const [weightPreview, setWeightPreview] =
+    useState<WeightPricingDescriptor | null>(product.weightPricing ?? null);
+  const [modernSuccess, setModernSuccess] = useState(false);
+  const savingRef = useRef(false);
 
   const form = useForm<MenuProductSchemaInput, unknown, MenuProductSchemaType>({
     resolver: zodResolver(menuProductSchema),
-    defaultValues: getMenuProductFormValues(product),
+    defaultValues: initialValues ?? getMenuProductFormValues(product),
     mode: "onSubmit",
     reValidateMode: "onChange",
   });
 
   const onSubmit = useCallback(
     async (data: MenuProductSchemaType) => {
-      let updateStarted = false;
+      if (savingRef.current || modernSuccess) return;
+
+      savingRef.current = true;
+      setIsSaving(true);
+      setSubmitError("");
+      setModernSuccess(false);
 
       try {
         let imageUrl =
@@ -99,8 +141,6 @@ function UpdateMenuProductForm({
           const uploadRes = await fetchUploadImage(data.imageFile);
           imageUrl = resolveUploadedImageUrl(uploadRes);
 
-          // Keep the uploaded URL in form state. If the product PATCH fails,
-          // retrying will reuse this upload instead of creating a duplicate.
           form.setValue("imageUrl", imageUrl, {
             shouldDirty: true,
             shouldValidate: true,
@@ -111,40 +151,113 @@ function UpdateMenuProductForm({
           });
         }
 
-        updateStarted = true;
-        await mutation.mutateAsync({
-          id: productId,
-          data: toUpdateMenuProductPayload({ ...data, imageFile: undefined, imageUrl }),
+        const result = await saveMenuProductWithWeightPricing({
+          mode: "edit",
+          values: data,
+          imageUrl,
+          productId,
+          initialProduct: canonicalProduct,
+          retryStage: partialEdit?.retryStage ?? "full",
+          restoredWeightPricing: partialEdit?.weightPricing ?? null,
+          restoredProduct: partialEdit?.product ?? canonicalProduct,
+          transitionIntent: partialEdit?.transitionIntent ?? null,
         });
 
-        router.navigate({
-          to: "/menu",
-          search: { tab: "catalog" },
-        });
-      } catch (submitError: unknown) {
-        // Product mutation errors are already shown by useMutationWithToast.
-        // Only show a local error when upload/response parsing failed first.
-        if (!updateStarted) {
-          ToastMessage(
-            (submitError as {
-              normalizedMessage?: string;
-              response?: { data?: { message?: string } };
-            })?.normalizedMessage ||
-              (submitError as { response?: { data?: { message?: string } } })
-                ?.response?.data?.message ||
-              "تعذر رفع الصورة الجديدة. حاول مرة أخرى.",
-            "error"
+        invalidateProductCaches(queryClient);
+
+        if (result.status === "partial_weight_pricing_failed") {
+          const warning = errorSummary(result.error);
+          setCanonicalProduct(result.product);
+          setPartialEdit({
+            warning,
+            retryStage: "full",
+            product: result.product,
+            weightPricing:
+              result.weightPricing ?? canonicalProduct.weightPricing ?? null,
+            transitionIntent: result.transitionIntent,
+          });
+          setWeightPreview(
+            result.weightPricing ?? canonicalProduct.weightPricing ?? null
           );
+          ToastMessage("تم حفظ بيانات المنتج لكن فشل تسعير الوزن", "error");
+          invalidateProductCaches(queryClient);
+          return;
         }
+
+        if (result.status === "partial_final_metadata_restore_failed") {
+          const warning = errorSummary(result.error);
+          setCanonicalProduct(result.product);
+          setPartialEdit({
+            warning,
+            retryStage: "final_metadata_restore",
+            product: result.product,
+            weightPricing: result.weightPricing,
+            transitionIntent: result.transitionIntent,
+          });
+          setWeightPreview(result.weightPricing);
+          ToastMessage("تم حفظ تسعير الوزن لكن فشل إظهار المنتج أو استعادة حالته", "error");
+          invalidateProductCaches(queryClient);
+          return;
+        }
+
+        if (result.pricingOutcome === "modern_weight") {
+          setCanonicalProduct(result.product);
+          setWeightPreview(result.weightPricing ?? null);
+          setPartialEdit(null);
+          form.reset(getMenuProductFormValues(result.product));
+          setModernSuccess(true);
+          ToastMessage("تم تحديث المنتج وتسعير الوزن بنجاح", "success");
+          invalidateProductCaches(queryClient);
+          return;
+        }
+
+        setCanonicalProduct(result.product);
+        setPartialEdit(null);
+        setWeightPreview(null);
+        form.reset(getMenuProductFormValues(result.product));
+        ToastMessage("تم تحديث المنتج بنجاح", "success");
+        router.navigate({ to: "/menu", search: { tab: "catalog" } });
+      } catch (submitError) {
+        const message = errorSummary(submitError) || "تعذر حفظ المنتج";
+        setSubmitError(message);
+        ToastMessage(message, "error");
+      } finally {
+        savingRef.current = false;
+        setIsSaving(false);
       }
     },
-    [form, mutation, productId, router]
+    [
+      canonicalProduct,
+      form,
+      modernSuccess,
+      partialEdit,
+      productId,
+      queryClient,
+      router,
+    ]
   );
 
   const showValidationSummary =
     form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0;
   const isCustomizable = form.watch("isCustomizable") ?? false;
-  const isSaving = mutation.isPending || form.formState.isSubmitting;
+  const pricingModel = form.watch("pricingModel");
+  const useWeightStepPricing = form.watch("useWeightStepPricing") ?? false;
+  const effectiveWeightPricingMode = deriveWeightPricingFormMode({
+    pageMode: "edit",
+    pricingModel: pricingModel ?? "fixed",
+    initialProduct: canonicalProduct,
+    useWeightStepPricing,
+  });
+  const showWeightPreview =
+    pricingModel === "per_100g" &&
+    isModernWeightPricingFormMode(effectiveWeightPricingMode);
+  const productDisplayName =
+    canonicalProduct.name.ar || canonicalProduct.name.en || canonicalProduct.key;
+  const submitLabel = partialEdit
+    ? partialEdit.retryStage === "final_metadata_restore"
+      ? "إكمال إظهار المنتج"
+      : "إكمال تسعير الوزن"
+    : "حفظ التعديلات";
 
   return (
     <div className="w-full px-4 py-8 lg:px-8" dir="rtl">
@@ -156,7 +269,7 @@ function UpdateMenuProductForm({
           <div>
             <h1 className="text-2xl font-bold tracking-tight">تعديل المنتج</h1>
             <p className="text-sm text-muted-foreground">
-              تعديل بيانات "{product.name.ar || product.name.en || product.key}"
+              تعديل بيانات "{productDisplayName}"
             </p>
           </div>
         </div>
@@ -167,7 +280,35 @@ function UpdateMenuProductForm({
         className="space-y-6"
         noValidate
       >
-        <MenuProductFormFields form={form} isEdit />
+        <MenuProductFormFields
+          form={form}
+          isEdit
+          initialProduct={canonicalProduct}
+        />
+
+        {showWeightPreview ? (
+          <ProductWeightPricingPreview weightPricing={weightPreview} />
+        ) : null}
+
+        {modernSuccess ? (
+          <Alert className="text-right">
+            <AlertCircle className="size-4" />
+            <AlertTitle>تم حفظ تسعير الوزن بنجاح</AlertTitle>
+            <AlertDescription className="space-y-3">
+              <p>راجع اختيارات الوزن التي رجعت من الخادم قبل الرجوع للكتالوج.</p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  router.navigate({ to: "/menu", search: { tab: "catalog" } })
+                }
+              >
+                الرجوع للكتالوج
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         <ProductCustomizationPanel
           productId={productId}
           isCustomizable={isCustomizable}
@@ -179,6 +320,43 @@ function UpdateMenuProductForm({
           }
         />
 
+        {partialEdit ? (
+          <Alert className="text-right">
+            <AlertCircle className="size-4" />
+            <AlertTitle>
+              {partialEdit.retryStage === "final_metadata_restore"
+                ? "تم حفظ تسعير الوزن، لكن فشل إظهار المنتج"
+                : "تم حفظ بيانات المنتج، لكن فشل تسعير الوزن"}
+            </AlertTitle>
+            <AlertDescription className="space-y-2">
+              {partialEdit.retryStage === "final_metadata_restore" ? (
+                <p>
+                  تم حفظ تسعير الوزن واختياراته من الخادم، لكن فشل إظهار المنتج أو استعادة حالته. أعد المحاولة لإكمال هذه الخطوة فقط.
+                </p>
+              ) : null}
+              {partialEdit.retryStage === "final_metadata_restore" ? null : (
+                <p>
+                  لن يتم مغادرة الصفحة. راجع الإعدادات ثم أعد المحاولة لإكمال
+                  تسعير الوزن.
+                </p>
+              )}
+              <p dir="ltr" className="break-words text-xs">
+                {partialEdit.warning}
+              </p>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {submitError ? (
+          <Alert variant="destructive" className="text-right">
+            <AlertCircle className="size-4" />
+            <AlertTitle>تعذر حفظ المنتج</AlertTitle>
+            <AlertDescription dir="ltr" className="break-words text-xs">
+              {submitError}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         <div className="sticky bottom-6 z-10 pt-2">
           <Card className="border-primary/30 bg-card/95 shadow-2xl ring-1 shadow-primary/10 ring-primary/10 backdrop-blur-md">
             <CardContent className="space-y-3 p-4 sm:px-6">
@@ -187,8 +365,7 @@ function UpdateMenuProductForm({
                   <AlertCircle className="size-4" />
                   <AlertTitle>بيانات مطلوبة ناقصة أو غير صحيحة</AlertTitle>
                   <AlertDescription>
-                    يرجى مراجعة الحقول المحددة وتعبئة البيانات المطلوبة بشكل
-                    صحيح ثم إعادة الحفظ.
+                    يرجى مراجعة الحقول المحددة ثم إعادة الحفظ.
                   </AlertDescription>
                 </Alert>
               ) : null}
@@ -199,7 +376,7 @@ function UpdateMenuProductForm({
                 <Button
                   type="submit"
                   size="lg"
-                  disabled={isSaving}
+                  disabled={isSaving || modernSuccess}
                   className="w-full gap-2 px-10 text-base font-semibold shadow-md sm:w-auto"
                 >
                   {isSaving ? (
@@ -210,7 +387,7 @@ function UpdateMenuProductForm({
                   ) : (
                     <>
                       <Save className="size-4" />
-                      حفظ التعديلات
+                      {submitLabel}
                     </>
                   )}
                 </Button>
