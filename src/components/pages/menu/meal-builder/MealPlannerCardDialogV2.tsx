@@ -1,84 +1,27 @@
 import { useId, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Layers3, Package } from "lucide-react";
-
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { MenuOptionGroup } from "@/types/menuTypes";
-import type {
-  MealPlannerBuilderGroup,
-  MealPlannerCardContractV2,
-  MealPlannerCatalogV2,
-  MealPlannerCreatePayloadV2,
-  MealPlannerSectionV2,
-} from "@/types/mealPlannerDashboardTypes";
-import {
-  fetchMenuOptionGroupOptions,
-  fetchMenuOptionGroups,
-} from "@/utils/fetchMenuOptionGroups";
+import type { MealPlannerBuilderGroup, MealPlannerCardContractV2, MealPlannerCatalogV2, MealPlannerCreatePayloadV2, MealPlannerSectionV2 } from "@/types/mealPlannerDashboardTypes";
+import { fetchMenuOptionGroupOptions, fetchMenuOptionGroups } from "@/utils/fetchMenuOptionGroups";
 import { MealPlannerBuilderGroupSelector } from "./MealPlannerBuilderGroupSelector";
 import { MealPlannerCandidatePickerV2 } from "./MealPlannerCandidatePickerV2";
-import {
-  builderGroupContextLabel,
-  matchingEligibleBuilderGroups,
-  optionRoleLabel,
-} from "./mealPlannerOptionGroupFlow";
-import {
-  allowedOptionRoles,
-  authoritativeBuilderGroups,
-  buildMealPlannerCreatePayload,
-  creatableCardTypes,
-  findBuilderGroup,
-  normalizeCardType,
-  sectionItems,
-  sectionOptionRole,
-  selectedIdsForSection,
-  type MealPlannerCardFormValue,
-} from "./mealPlannerV2Utils";
+import { builderGroupContextLabel, matchingEligibleBuilderGroups, optionRoleLabel } from "./mealPlannerOptionGroupFlow";
+import { allowedOptionRoles, authoritativeBuilderGroups, buildMealPlannerCreatePayload, creatableCardTypes, findBuilderGroup, normalizeCardType, sectionItems, sectionOptionRole, selectedIdsForSection, type MealPlannerCardFormValue } from "./mealPlannerV2Utils";
 
-export function MealPlannerCardDialogV2({
-  section,
-  catalog,
-  cardContract,
-  pending,
-  onClose,
-  onSubmit,
-}: {
+export function MealPlannerCardDialogV2({ section, catalog, cardContract, pending, onClose, onSubmit }: {
   section?: MealPlannerSectionV2 | null;
   catalog: MealPlannerCatalogV2;
   cardContract?: MealPlannerCardContractV2 | null;
   pending: boolean;
   onClose: () => void;
-  onSubmit: (
-    payload: MealPlannerCreatePayloadV2,
-    previousKey?: string
-  ) => Promise<void>;
+  onSubmit: (payload: MealPlannerCreatePayloadV2, previousKey?: string) => Promise<void>;
 }) {
   const editing = Boolean(section);
   const cardTypes = useMemo(() => creatableCardTypes(cardContract), [cardContract]);
@@ -94,11 +37,7 @@ export function MealPlannerCardDialogV2({
   const dirty = JSON.stringify(value) !== JSON.stringify(initialValue);
 
   const builderGroups = authoritativeBuilderGroups(catalog);
-  const selectedBuilderGroup = findBuilderGroup(
-    catalog,
-    value.productContextId,
-    value.sourceGroupId
-  );
+  const selectedBuilderGroup = findBuilderGroup(catalog, value.productContextId, value.sourceGroupId);
   const matchingBuilderGroups = useMemo(
     () => matchingEligibleBuilderGroups(value.sourceGroupId || "", builderGroups),
     [builderGroups, value.sourceGroupId]
@@ -111,105 +50,52 @@ export function MealPlannerCardDialogV2({
     staleTime: 30_000,
   });
   const menuGroups = menuGroupsQuery.data?.data.items || [];
-  const selectedMenuGroup = menuGroups.find(
-    (group) => group.id === value.sourceGroupId
-  );
-
+  const selectedMenuGroup = menuGroups.find((group) => group.id === value.sourceGroupId);
   const menuOptionsQuery = useQuery({
     queryKey: ["menu.optionGroupOptions", value.sourceGroupId, { limit: 100 }],
-    queryFn: ({ signal }) =>
-      fetchMenuOptionGroupOptions(value.sourceGroupId || "", { limit: 100 }, signal),
-    enabled:
-      value.cardType === "option_family" && Boolean(value.sourceGroupId),
+    queryFn: ({ signal }) => fetchMenuOptionGroupOptions(value.sourceGroupId || "", { limit: 100 }, signal),
+    enabled: value.cardType === "option_family" && Boolean(value.sourceGroupId),
     staleTime: 10_000,
   });
   const menuOptions = menuOptionsQuery.data?.data.items || [];
-
   const families = selectedBuilderGroup?.families || [];
   const supportedContext = Boolean(
     selectedBuilderGroup &&
-      selectedBuilderGroup.eligible === true &&
-      (selectedBuilderGroup.optionRole === "protein" ||
-        selectedBuilderGroup.optionRole === "carbs")
+    selectedBuilderGroup.eligible === true &&
+    (selectedBuilderGroup.optionRole === "protein" || selectedBuilderGroup.optionRole === "carbs") &&
+    optionRoles.includes(selectedBuilderGroup.optionRole)
   );
-  const baseFieldsReady = Boolean(
-    value.key.trim() &&
-      value.titleAr.trim() &&
-      value.titleEn.trim() &&
-      value.selectedIds.length
-  );
-  const rulesReady =
-    value.cardType === "direct_product" ||
-    (Number.isInteger(Number(value.minSelections ?? 0)) &&
-      Number(value.minSelections ?? 0) >= 0 &&
-      (value.maxSelections === null ||
-        (Number.isInteger(Number(value.maxSelections)) &&
-          Number(value.maxSelections) >= Number(value.minSelections ?? 0))));
-  const canSubmit =
-    baseFieldsReady &&
-    rulesReady &&
-    (value.cardType === "direct_product" || supportedContext);
+  const baseFieldsReady = Boolean(value.key.trim() && value.titleAr.trim() && value.titleEn.trim() && value.selectedIds.length);
+  const rulesReady = value.cardType === "direct_product" || (Number.isInteger(Number(value.minSelections ?? 0)) && Number(value.minSelections ?? 0) >= 0 && (value.maxSelections === null || (Number.isInteger(Number(value.maxSelections)) && Number(value.maxSelections) >= Number(value.minSelections ?? 0))));
+  const canSubmit = baseFieldsReady && rulesReady && (value.cardType === "direct_product" || supportedContext);
 
   function requestClose() {
     if (pending) return;
     if (dirty) return setDiscardOpen(true);
     onClose();
   }
-
   async function submit() {
     if (pending || !canSubmit) return;
     setFormError("");
-    try {
-      await onSubmit(buildMealPlannerCreatePayload(value), section?.key);
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : "تعذر حفظ الكارت");
-    }
+    try { await onSubmit(buildMealPlannerCreatePayload(value), section?.key); }
+    catch (error) { setFormError(error instanceof Error ? error.message : "تعذر حفظ الكارت"); }
   }
-
   function changeType(cardType: "direct_product" | "option_family") {
     if (editing || cardType === value.cardType) return;
-    setValue((current) => ({
-      ...current,
-      cardType,
-      selectedIds: [],
-      optionRole: undefined,
-      familyKey: "",
-      productContextId: "",
-      sourceGroupId: "",
-      required: false,
-      minSelections: 0,
-      maxSelections: 1,
-      multiSelect: false,
-    }));
+    setValue((current) => ({ ...current, cardType, selectedIds: [], optionRole: undefined, familyKey: "", productContextId: "", sourceGroupId: "", required: false, minSelections: 0, maxSelections: 1, multiSelect: false }));
   }
-
   function applyBuilderGroup(group: MealPlannerBuilderGroup | null) {
     if (!group) {
-      setValue((current) => ({
-        ...current,
-        productContextId: "",
-        optionRole: undefined,
-        familyKey: "",
-        selectedIds: [],
-      }));
+      setValue((current) => ({ ...current, productContextId: "", optionRole: undefined, familyKey: "", selectedIds: [] }));
       return;
     }
     const minSelections = Number(group.rules?.minSelections ?? 0);
-    const maxSelections =
-      group.rules?.maxSelections === null
-        ? null
-        : Number(
-            group.rules?.maxSelections ??
-              (group.optionRole === "carbs" ? 2 : 1)
-          );
+    const maxSelections = group.rules?.maxSelections === null ? null : Number(group.rules?.maxSelections ?? (group.optionRole === "carbs" ? 2 : 1));
     setValue((current) => ({
       ...current,
       productContextId: group.productContextId,
       sourceGroupId: group.sourceGroupId,
-      optionRole:
-        group.optionRole === "protein" || group.optionRole === "carbs"
-          ? group.optionRole
-          : undefined,
+      optionRole: group.optionRole === "protein" || group.optionRole === "carbs" ? group.optionRole : undefined,
       familyKey: "",
       selectedIds: [],
       required: group.rules?.isRequired === true,
@@ -218,297 +104,54 @@ export function MealPlannerCardDialogV2({
       multiSelect: maxSelections === null || Number(maxSelections) > 1,
     }));
   }
-
   function selectMenuGroup(group: MenuOptionGroup) {
     if (editing) return;
     const matches = matchingEligibleBuilderGroups(group.id, builderGroups);
-    setValue((current) => ({
-      ...current,
-      sourceGroupId: group.id,
-      productContextId: "",
-      optionRole: undefined,
-      familyKey: "",
-      selectedIds: [],
-      required: false,
-      minSelections: 0,
-      maxSelections: 1,
-      multiSelect: false,
-    }));
-    if (matches.length === 1) {
-      window.queueMicrotask(() => applyBuilderGroup(matches[0]));
-    }
+    setValue((current) => ({ ...current, sourceGroupId: group.id, productContextId: "", optionRole: undefined, familyKey: "", selectedIds: [], required: false, minSelections: 0, maxSelections: 1, multiSelect: false }));
+    if (matches.length === 1) window.queueMicrotask(() => applyBuilderGroup(matches[0]));
   }
 
-  return (
-    <>
-      <Dialog open onOpenChange={(open) => !open && requestClose()}>
-        <DialogContent
-          dir="rtl"
-          className="max-h-[94dvh] w-[calc(100vw-1rem)] overflow-y-auto p-0 sm:max-w-4xl"
-        >
-          <div className="border-b bg-muted/25 p-4 sm:p-6">
-            <DialogHeader className="text-right">
-              <DialogTitle>
-                {editing ? "تعديل كارت الوجبات" : "إضافة كارت جديد"}
-              </DialogTitle>
-              <DialogDescription className="text-right leading-6">
-                افصل بين المنتجات الكاملة وخيارات الوجبة المركبة، واستخدم بيانات الـBackend الموثقة فقط.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="space-y-6 p-4 sm:p-6">
-            <section className="space-y-3">
-              <FieldLabel>نوع الكارت</FieldLabel>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {cardTypes.includes("direct_product") ? (
-                  <TypeChoice
-                    active={value.cardType === "direct_product"}
-                    disabled={editing}
-                    icon={Package}
-                    title="منتجات كاملة"
-                    description="يستخدم Product Picker للوجبات الكاملة فقط"
-                    onClick={() => changeType("direct_product")}
-                  />
-                ) : null}
-                {cardTypes.includes("option_family") ? (
-                  <TypeChoice
-                    active={value.cardType === "option_family"}
-                    disabled={editing}
-                    icon={Layers3}
-                    title="خيارات وجبة مركبة"
-                    description="اختر مجموعة ثم خياراتها، بدون عرض منتجات كاملة"
-                    onClick={() => changeType("option_family")}
-                  />
-                ) : null}
-              </div>
-            </section>
-
-            <section className="grid gap-4 sm:grid-cols-2">
-              <TextField label="الاسم العربي" value={value.titleAr} onChange={(titleAr) => setValue((current) => ({ ...current, titleAr }))} />
-              <TextField label="الاسم الإنجليزي" value={value.titleEn} dir="ltr" onChange={(titleEn) => setValue((current) => ({ ...current, titleEn }))} />
-              <TextField label="مفتاح الكارت" value={value.key} dir="ltr" onChange={(key) => setValue((current) => ({ ...current, key: key.toLowerCase().replace(/\s+/g, "_") }))} />
-              <TextField label="الترتيب" value={String(value.sortOrder ?? 0)} type="number" min={0} onChange={(sortOrder) => setValue((current) => ({ ...current, sortOrder: Number(sortOrder || 0) }))} />
-            </section>
-
-            {value.cardType === "option_family" ? (
-              <section className="space-y-4 rounded-2xl border bg-muted/15 p-4">
-                <MealPlannerBuilderGroupSelector
-                  menuGroups={menuGroups}
-                  builderGroups={builderGroups}
-                  selectedMenuGroupId={value.sourceGroupId}
-                  disabled={editing}
-                  loading={menuGroupsQuery.isLoading}
-                  error={Boolean(menuGroupsQuery.error)}
-                  onRetry={() => void menuGroupsQuery.refetch()}
-                  onSelect={selectMenuGroup}
-                />
-
-                {selectedMenuGroup ? (
-                  <div className="rounded-xl border bg-background p-3 text-sm">
-                    <p className="font-medium">
-                      المجموعة المحددة: {selectedMenuGroup.name?.ar || selectedMenuGroup.key}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {matchingBuilderGroups.length
-                        ? "متاحة للنشر في Meal Builder"
-                        : "هذه المجموعة متاحة في كتالوج المنيو لكنها غير مدعومة حاليًا ككارت قابل للنشر في Meal Builder."}
-                    </p>
-                  </div>
-                ) : null}
-
-                {matchingBuilderGroups.length > 1 ? (
-                  <SelectField
-                    label="سياق المنتج الأساسي"
-                    value={value.productContextId || ""}
-                    placeholder="اختر المنتج المرتبط بهذه المجموعة"
-                    options={matchingBuilderGroups.map((group) => ({
-                      value: group.productContextId,
-                      label: builderGroupContextLabel(group),
-                    }))}
-                    onChange={(productContextId) =>
-                      applyBuilderGroup(
-                        matchingBuilderGroups.find(
-                          (group) => group.productContextId === productContextId
-                        ) || null
-                      )
-                    }
-                  />
-                ) : null}
-
-                {selectedBuilderGroup ? (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <SelectField
-                      label="دور الخيارات"
-                      value={selectedBuilderGroup.optionRole || "unsupported"}
-                      disabled
-                      options={[{
-                        value: selectedBuilderGroup.optionRole || "unsupported",
-                        label: optionRoleLabel(selectedBuilderGroup.optionRole),
-                      }]}
-                      onChange={() => undefined}
-                    />
-                    {selectedBuilderGroup.optionRole === "protein" && families.length ? (
-                      <SelectField
-                        label="عائلة البروتين"
-                        value={value.familyKey || "all"}
-                        options={[
-                          { value: "all", label: "كل العائلات" },
-                          ...families.map((family) => ({ value: family, label: family })),
-                        ]}
-                        onChange={(family) =>
-                          setValue((current) => ({
-                            ...current,
-                            familyKey: family === "all" ? "" : family,
-                            selectedIds: [],
-                          }))
-                        }
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
-
-            {value.cardType === "direct_product" ? (
-              <MealPlannerCandidatePickerV2
-                type="product"
-                targetSectionKey={section?.key}
-                selectedIds={value.selectedIds}
-                seedCandidates={section ? sectionItems(section) : []}
-                onChange={(selectedIds) => setValue((current) => ({ ...current, selectedIds }))}
-              />
-            ) : (
-              <MealPlannerCandidatePickerV2
-                type="option"
-                targetSectionKey={section?.key}
-                selectedIds={value.selectedIds}
-                seedCandidates={section ? sectionItems(section) : []}
-                menuOptions={menuOptions}
-                menuOptionsLoading={menuOptionsQuery.isLoading}
-                menuOptionsError={Boolean(menuOptionsQuery.error)}
-                onRetryMenuOptions={() => void menuOptionsQuery.refetch()}
-                productContextId={value.productContextId}
-                sourceGroupId={value.sourceGroupId}
-                optionRole={value.optionRole}
-                familyKey={value.familyKey}
-                disabled={!selectedBuilderGroup}
-                onChange={(selectedIds) => setValue((current) => ({ ...current, selectedIds }))}
-              />
-            )}
-
-            {value.cardType === "option_family" ? (
-              <section className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2">
-                <TextField label="الحد الأدنى" value={String(value.minSelections ?? 0)} type="number" min={0} onChange={(input) => setValue((current) => ({ ...current, minSelections: Number(input || 0) }))} />
-                <TextField label="الحد الأقصى" value={value.maxSelections === null ? "" : String(value.maxSelections ?? 1)} type="number" min={0} onChange={(input) => setValue((current) => ({ ...current, maxSelections: input === "" ? null : Number(input) }))} />
-                <ToggleField label="الاختيار مطلوب" checked={value.required === true} onChange={(required) => setValue((current) => ({ ...current, required }))} />
-                <ToggleField label="اختيار متعدد" checked={value.multiSelect === true} onChange={(multiSelect) => setValue((current) => ({ ...current, multiSelect }))} />
-              </section>
-            ) : null}
-
-            <ToggleField label="إظهار الكارت" checked={value.visible} onChange={(visible) => setValue((current) => ({ ...current, visible }))} />
-
-            {formError ? <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{formError}</p> : null}
-          </div>
-
-          <DialogFooter className="sticky bottom-0 gap-2 border-t bg-background/95 p-4 backdrop-blur sm:justify-start sm:p-5">
-            <Button type="button" variant="outline" disabled={pending} onClick={requestClose}>إلغاء</Button>
-            <Button type="button" disabled={pending || !canSubmit} onClick={() => void submit()}>
-              <Check className="size-4" />
-              {editing ? "حفظ التعديلات" : "إنشاء الكارت"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader className="text-right">
-            <AlertDialogTitle>تجاهل التغييرات غير المحفوظة؟</AlertDialogTitle>
-            <AlertDialogDescription className="text-right">توجد تغييرات لم تُحفظ بعد.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:justify-start">
-            <AlertDialogCancel>متابعة التعديل</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={onClose}>تجاهل وإغلاق</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
+  return <>
+    <Dialog open onOpenChange={(open) => !open && requestClose()}>
+      <DialogContent dir="rtl" className="max-h-[94dvh] w-[calc(100vw-1rem)] overflow-y-auto p-0 sm:max-w-4xl">
+        <div className="border-b bg-muted/25 p-4 sm:p-6"><DialogHeader className="text-right"><DialogTitle>{editing ? "تعديل كارت الوجبات" : "إضافة كارت جديد"}</DialogTitle><DialogDescription className="text-right leading-6">افصل بين المنتجات الكاملة وخيارات الوجبة المركبة، واستخدم بيانات الـBackend الموثقة فقط.</DialogDescription></DialogHeader></div>
+        <div className="space-y-6 p-4 sm:p-6">
+          <section className="space-y-3"><FieldLabel>نوع الكارت</FieldLabel><div className="grid gap-3 sm:grid-cols-2">
+            {cardTypes.includes("direct_product") ? <TypeChoice active={value.cardType === "direct_product"} disabled={editing} icon={Package} title="منتجات كاملة" description="يستخدم Product Picker للوجبات الكاملة فقط" onClick={() => changeType("direct_product")} /> : null}
+            {cardTypes.includes("option_family") ? <TypeChoice active={value.cardType === "option_family"} disabled={editing} icon={Layers3} title="خيارات وجبة مركبة" description="اختر مجموعة ثم خياراتها، بدون عرض منتجات كاملة" onClick={() => changeType("option_family")} /> : null}
+          </div></section>
+          <section className="grid gap-4 sm:grid-cols-2">
+            <TextField label="الاسم العربي" value={value.titleAr} onChange={(titleAr) => setValue((current) => ({ ...current, titleAr }))} />
+            <TextField label="الاسم الإنجليزي" value={value.titleEn} dir="ltr" onChange={(titleEn) => setValue((current) => ({ ...current, titleEn }))} />
+            <TextField label="مفتاح الكارت" value={value.key} dir="ltr" onChange={(key) => setValue((current) => ({ ...current, key: key.toLowerCase().replace(/\s+/g, "_") }))} />
+            <TextField label="الترتيب" value={String(value.sortOrder ?? 0)} type="number" min={0} onChange={(sortOrder) => setValue((current) => ({ ...current, sortOrder: Number(sortOrder || 0) }))} />
+          </section>
+          {value.cardType === "option_family" ? <section className="space-y-4 rounded-2xl border bg-muted/15 p-4">
+            <MealPlannerBuilderGroupSelector menuGroups={menuGroups} builderGroups={builderGroups} selectedMenuGroupId={value.sourceGroupId} disabled={editing} loading={menuGroupsQuery.isLoading} error={Boolean(menuGroupsQuery.error)} onRetry={() => void menuGroupsQuery.refetch()} onSelect={selectMenuGroup} />
+            {selectedMenuGroup ? <div className="rounded-xl border bg-background p-3 text-sm"><p className="font-medium">المجموعة المحددة: {selectedMenuGroup.name?.ar || selectedMenuGroup.key}</p><p className="mt-1 text-xs text-muted-foreground">{matchingBuilderGroups.length ? "متاحة للنشر في Meal Builder" : "هذه المجموعة متاحة في كتالوج المنيو لكنها غير مدعومة حاليًا ككارت قابل للنشر في Meal Builder."}</p></div> : null}
+            {matchingBuilderGroups.length > 1 ? <SelectField label="سياق المنتج الأساسي" value={value.productContextId || ""} placeholder="اختر المنتج المرتبط بهذه المجموعة" options={matchingBuilderGroups.map((group) => ({ value: group.productContextId, label: builderGroupContextLabel(group) }))} onChange={(productContextId) => applyBuilderGroup(matchingBuilderGroups.find((group) => group.productContextId === productContextId) || null)} /> : null}
+            {selectedBuilderGroup ? <div className="grid gap-4 sm:grid-cols-2"><SelectField label="دور الخيارات" value={selectedBuilderGroup.optionRole || "unsupported"} disabled options={[{ value: selectedBuilderGroup.optionRole || "unsupported", label: optionRoleLabel(selectedBuilderGroup.optionRole) }]} onChange={() => undefined} />{selectedBuilderGroup.optionRole === "protein" && families.length ? <SelectField label="عائلة البروتين" value={value.familyKey || "all"} options={[{ value: "all", label: "كل العائلات" }, ...families.map((family) => ({ value: family, label: family }))]} onChange={(family) => setValue((current) => ({ ...current, familyKey: family === "all" ? "" : family, selectedIds: [] }))} /> : null}</div> : null}
+          </section> : null}
+          {value.cardType === "direct_product" ? <MealPlannerCandidatePickerV2 type="product" targetSectionKey={section?.key} selectedIds={value.selectedIds} seedCandidates={section ? sectionItems(section) : []} onChange={(selectedIds) => setValue((current) => ({ ...current, selectedIds }))} /> : <MealPlannerCandidatePickerV2 type="option" targetSectionKey={section?.key} selectedIds={value.selectedIds} seedCandidates={section ? sectionItems(section) : []} menuOptions={menuOptions} menuOptionsLoading={menuOptionsQuery.isLoading} menuOptionsError={Boolean(menuOptionsQuery.error)} onRetryMenuOptions={() => void menuOptionsQuery.refetch()} productContextId={value.productContextId} sourceGroupId={value.sourceGroupId} optionRole={value.optionRole} familyKey={value.familyKey} disabled={!selectedBuilderGroup} onChange={(selectedIds) => setValue((current) => ({ ...current, selectedIds }))} />}
+          {value.cardType === "option_family" ? <section className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2"><TextField label="الحد الأدنى" value={String(value.minSelections ?? 0)} type="number" min={0} onChange={(input) => setValue((current) => ({ ...current, minSelections: Number(input || 0) }))} /><TextField label="الحد الأقصى" value={value.maxSelections === null ? "" : String(value.maxSelections ?? 1)} type="number" min={0} onChange={(input) => setValue((current) => ({ ...current, maxSelections: input === "" ? null : Number(input) }))} /><ToggleField label="الاختيار مطلوب" checked={value.required === true} onChange={(required) => setValue((current) => ({ ...current, required }))} /><ToggleField label="اختيار متعدد" checked={value.multiSelect === true} onChange={(multiSelect) => setValue((current) => ({ ...current, multiSelect }))} /></section> : null}
+          <ToggleField label="إظهار الكارت" checked={value.visible} onChange={(visible) => setValue((current) => ({ ...current, visible }))} />
+          {formError ? <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{formError}</p> : null}
+        </div>
+        <DialogFooter className="sticky bottom-0 gap-2 border-t bg-background/95 p-4 backdrop-blur sm:justify-start sm:p-5"><Button type="button" variant="outline" disabled={pending} onClick={requestClose}>إلغاء</Button><Button type="button" disabled={pending || !canSubmit} onClick={() => void submit()}><Check className="size-4" />{editing ? "حفظ التعديلات" : "إنشاء الكارت"}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+    <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}><AlertDialogContent dir="rtl"><AlertDialogHeader className="text-right"><AlertDialogTitle>تجاهل التغييرات غير المحفوظة؟</AlertDialogTitle><AlertDialogDescription className="text-right">توجد تغييرات لم تُحفظ بعد.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter className="gap-2 sm:justify-start"><AlertDialogCancel>متابعة التعديل</AlertDialogCancel><AlertDialogAction variant="destructive" onClick={onClose}>تجاهل وإغلاق</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+  </>;
 }
 
-function buildInitialValue(
-  section: MealPlannerSectionV2 | null | undefined,
-  catalog: MealPlannerCatalogV2
-): MealPlannerCardFormValue {
+function buildInitialValue(section: MealPlannerSectionV2 | null | undefined, catalog: MealPlannerCatalogV2): MealPlannerCardFormValue {
   const cardType = section && normalizeCardType(section) === "option_family" ? "option_family" : "direct_product";
   const optionRole = section ? sectionOptionRole(section) || undefined : undefined;
-  return {
-    cardType,
-    key: section?.key || "",
-    titleAr: section?.titleOverride?.ar || "",
-    titleEn: section?.titleOverride?.en || "",
-    visible: section?.visible !== false,
-    sortOrder: Number(section?.sortOrder ?? suggestedSortOrder(catalog)),
-    selectedIds: section ? selectedIdsForSection(section) : [],
-    optionRole,
-    familyKey: String(section?.metadata?.familyKey || section?.metadata?.proteinFamilyKey || ""),
-    productContextId: String(section?.productContextId || ""),
-    sourceGroupId: String(section?.sourceGroupId || ""),
-    required: section?.required === true,
-    minSelections: Number(section?.minSelections ?? 0),
-    maxSelections: section?.maxSelections === null ? null : Number(section?.maxSelections ?? (optionRole === "carbs" ? 2 : 1)),
-    multiSelect: section?.multiSelect === true,
-  };
+  return { cardType, key: section?.key || "", titleAr: section?.titleOverride?.ar || "", titleEn: section?.titleOverride?.en || "", visible: section?.visible !== false, sortOrder: Number(section?.sortOrder ?? suggestedSortOrder(catalog)), selectedIds: section ? selectedIdsForSection(section) : [], optionRole, familyKey: String(section?.metadata?.familyKey || section?.metadata?.proteinFamilyKey || ""), productContextId: String(section?.productContextId || ""), sourceGroupId: String(section?.sourceGroupId || ""), required: section?.required === true, minSelections: Number(section?.minSelections ?? 0), maxSelections: section?.maxSelections === null ? null : Number(section?.maxSelections ?? (optionRole === "carbs" ? 2 : 1)), multiSelect: section?.multiSelect === true };
 }
-
-function suggestedSortOrder(catalog: MealPlannerCatalogV2) {
-  const sections = Array.isArray(catalog.sections) ? catalog.sections : [];
-  return sections.length * 10 + 10;
-}
-
-function TypeChoice({ active, disabled, icon: Icon, title, description, onClick }: {
-  active: boolean;
-  disabled: boolean;
-  icon: typeof Package;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button type="button" disabled={disabled} onClick={onClick} className={`flex min-h-24 items-start gap-3 rounded-2xl border p-4 text-right transition ${active ? "border-primary bg-primary/5 ring-2 ring-primary/15" : "hover:border-primary/40 hover:bg-muted/30"} disabled:cursor-default disabled:opacity-80`}>
-      <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${active ? "bg-primary text-primary-foreground" : "bg-muted"}`}><Icon className="size-5" /></span>
-      <span><span className="flex items-center gap-2 font-medium">{title}{active ? <Check className="size-4 text-primary" /> : null}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span></span>
-    </button>
-  );
-}
-
-function TextField({ label, value, onChange, type = "text", ...props }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-} & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type">) {
-  const id = useId();
-  return <div className="space-y-2"><FieldLabel htmlFor={id}>{label}</FieldLabel><Input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} {...props} /></div>;
-}
-
-function SelectField({ label, value, placeholder, disabled, options, onChange }: {
-  label: string;
-  value: string;
-  placeholder?: string;
-  disabled?: boolean;
-  options: Array<{ value: string; label: string }>;
-  onChange: (value: string) => void;
-}) {
-  const id = useId();
-  return <div className="space-y-2"><FieldLabel id={`${id}-label`}>{label}</FieldLabel><Select value={value || undefined} disabled={disabled} onValueChange={onChange}><SelectTrigger className="w-full" aria-labelledby={`${id}-label`}><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent dir="rtl">{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>;
-}
-
-function ToggleField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return <div className="flex items-center justify-between gap-4 rounded-xl border bg-background p-3"><FieldLabel>{label}</FieldLabel><Switch checked={checked} onCheckedChange={onChange} /></div>;
-}
-
-function FieldLabel(props: React.ComponentProps<"label">) {
-  return <label className="text-sm font-medium" {...props} />;
-}
+function suggestedSortOrder(catalog: MealPlannerCatalogV2) { const sections = Array.isArray(catalog.sections) ? catalog.sections : []; return sections.length * 10 + 10; }
+function TypeChoice({ active, disabled, icon: Icon, title, description, onClick }: { active: boolean; disabled: boolean; icon: typeof Package; title: string; description: string; onClick: () => void }) { return <button type="button" disabled={disabled} onClick={onClick} className={`flex min-h-24 items-start gap-3 rounded-2xl border p-4 text-right transition ${active ? "border-primary bg-primary/5 ring-2 ring-primary/15" : "hover:border-primary/40 hover:bg-muted/30"} disabled:cursor-default disabled:opacity-80`}><span className={`grid size-10 shrink-0 place-items-center rounded-xl ${active ? "bg-primary text-primary-foreground" : "bg-muted"}`}><Icon className="size-5" /></span><span><span className="flex items-center gap-2 font-medium">{title}{active ? <Check className="size-4 text-primary" /> : null}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span></span></button>; }
+function TextField({ label, value, onChange, type = "text", ...props }: { label: string; value: string; onChange: (value: string) => void; type?: string } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type">) { const id = useId(); return <div className="space-y-2"><FieldLabel htmlFor={id}>{label}</FieldLabel><Input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} {...props} /></div>; }
+function SelectField({ label, value, placeholder, disabled, options, onChange }: { label: string; value: string; placeholder?: string; disabled?: boolean; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) { const id = useId(); return <div className="space-y-2"><FieldLabel id={`${id}-label`}>{label}</FieldLabel><Select value={value || undefined} disabled={disabled} onValueChange={onChange}><SelectTrigger className="w-full" aria-labelledby={`${id}-label`}><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent dir="rtl">{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>; }
+function ToggleField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) { return <div className="flex items-center justify-between gap-4 rounded-xl border bg-background p-3"><FieldLabel>{label}</FieldLabel><Switch checked={checked} onCheckedChange={onChange} /></div>; }
+function FieldLabel(props: React.ComponentProps<"label">) { return <label className="text-sm font-medium" {...props} />; }
