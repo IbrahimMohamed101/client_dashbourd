@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import {
-  Check,
-  ChevronDown,
-  Loader2,
-  Search,
-  UtensilsCrossed,
-  X,
-} from "lucide-react";
+import { Check, ChevronDown, Loader2, Search, UtensilsCrossed, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { MenuOption } from "@/types/menuTypes";
 import type {
   MealPlannerCatalogCandidate,
   MealPlannerOptionRole,
@@ -33,28 +27,37 @@ import {
   candidateReason,
   candidateSelectable,
 } from "./mealPlannerV2Utils";
+import { mergeMenuOptionsWithPicker } from "./mealPlannerOptionGroupFlow";
 
 export function MealPlannerCandidatePickerV2({
   type,
   targetSectionKey,
   selectedIds,
   seedCandidates = [],
+  menuOptions = [],
+  menuOptionsLoading = false,
+  menuOptionsError = false,
   productContextId,
   sourceGroupId,
   optionRole,
   familyKey,
   disabled = false,
+  onRetryMenuOptions,
   onChange,
 }: {
   type: "product" | "option";
   targetSectionKey?: string;
   selectedIds: string[];
   seedCandidates?: MealPlannerCatalogCandidate[];
+  menuOptions?: MenuOption[];
+  menuOptionsLoading?: boolean;
+  menuOptionsError?: boolean;
   productContextId?: string;
   sourceGroupId?: string;
   optionRole?: MealPlannerOptionRole;
   familyKey?: string;
   disabled?: boolean;
+  onRetryMenuOptions?: () => void;
   onChange: (ids: string[]) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -66,9 +69,15 @@ export function MealPlannerCandidatePickerV2({
     return () => window.clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    setSearch("");
+    setDebouncedSearch("");
+    setCategory("all");
+  }, [type, sourceGroupId, productContextId, familyKey]);
+
   const contextReady =
-    type === "product" ||
-    Boolean(productContextId && sourceGroupId && optionRole);
+    type === "product" || Boolean(productContextId && sourceGroupId && optionRole);
+
   const query = useInfiniteQuery({
     queryKey: [
       "dashboard.meal-planner.v2.picker",
@@ -83,27 +92,34 @@ export function MealPlannerCandidatePickerV2({
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) =>
       type === "product"
-        ? getMealPlannerProductsPicker({
-            targetSectionKey,
-            q: debouncedSearch || undefined,
-            includeUnavailable: true,
-            unassignedOnly: true,
-            page: Number(pageParam),
-            limit: 1000,
-          }, signal)
-        : getMealPlannerOptionsPicker({
-            targetSectionKey,
-            productContextId,
-            sourceGroupId,
-            optionRole,
-            familyKey:
-              optionRole === "protein" && familyKey ? familyKey : undefined,
-            q: debouncedSearch || undefined,
-            includeUnavailable: true,
-            unassignedOnly: true,
-            page: Number(pageParam),
-            limit: 1000,
-          }, signal),
+        ? getMealPlannerProductsPicker(
+            {
+              targetSectionKey,
+              q: debouncedSearch || undefined,
+              includeUnavailable: true,
+              unassignedOnly: true,
+              page: Number(pageParam),
+              limit: 1000,
+              lang: "ar",
+            },
+            signal
+          )
+        : getMealPlannerOptionsPicker(
+            {
+              targetSectionKey,
+              productContextId,
+              sourceGroupId,
+              optionRole,
+              familyKey:
+                optionRole === "protein" && familyKey ? familyKey : undefined,
+              includeUnavailable: true,
+              unassignedOnly: false,
+              page: Number(pageParam),
+              limit: 1000,
+              lang: "ar",
+            },
+            signal
+          ),
     getNextPageParam: (lastPage) => {
       const page = Number(lastPage.data.meta?.page || 1);
       const pages = Number(lastPage.data.meta?.pages || 1);
@@ -114,33 +130,30 @@ export function MealPlannerCandidatePickerV2({
   });
 
   const fetchedCandidates = useMemo(
-    () =>
-      query.data?.pages.flatMap((page) => page.data.candidates) ?? [],
+    () => query.data?.pages.flatMap((page) => page.data.candidates) ?? [],
     [query.data?.pages]
   );
 
+  const candidates = useMemo(() => {
+    if (type === "option") {
+      return mergeMenuOptionsWithPicker(menuOptions, fetchedCandidates, selectedIds);
+    }
+    return mergeCandidates(seedCandidates, fetchedCandidates, selectedIds);
+  }, [fetchedCandidates, menuOptions, seedCandidates, selectedIds, type]);
+
   useEffect(() => {
-    if (!query.data || !selectedIds.length) return;
-    const fetchedById = new Map(
+    if (type !== "option" || !query.data || !selectedIds.length) return;
+    const authoritativeIds = new Map(
       fetchedCandidates.map((candidate) => [candidateId(candidate), candidate])
     );
     const reconciled = selectedIds.filter((id) => {
-      const candidate = fetchedById.get(id);
-      if (!candidate) return true;
+      const candidate = authoritativeIds.get(id);
+      if (!candidate) return false;
       return candidate.selected === true || candidate.assignable === true;
     });
-    if (
-      reconciled.length !== selectedIds.length ||
-      reconciled.some((id, index) => id !== selectedIds[index])
-    ) {
-      onChange(reconciled);
-    }
-  }, [fetchedCandidates, onChange, query.data, selectedIds]);
+    if (reconciled.length !== selectedIds.length) onChange(reconciled);
+  }, [fetchedCandidates, onChange, query.data, selectedIds, type]);
 
-  const candidates = useMemo(
-    () => mergeCandidates(seedCandidates, fetchedCandidates, selectedIds),
-    [fetchedCandidates, seedCandidates, selectedIds]
-  );
   const categories = useMemo(
     () =>
       [...new Set(candidates.map((candidate) => candidate.categoryKey).filter(Boolean))]
@@ -148,28 +161,44 @@ export function MealPlannerCandidatePickerV2({
         .sort((left, right) => left.localeCompare(right, "ar")),
     [candidates]
   );
-  const visibleCandidates = useMemo(
-    () =>
-      type === "product" && category !== "all"
-        ? candidates.filter(
-            (candidate) =>
-              selectedIds.includes(candidateId(candidate)) ||
-              candidate.categoryKey === category
-          )
-        : candidates,
-    [candidates, category, selectedIds, type]
-  );
-  const initialLoading = query.isLoading && !query.data && !seedCandidates.length;
+
+  const visibleCandidates = useMemo(() => {
+    const queryText = debouncedSearch.toLowerCase();
+    let rows = candidates;
+    if (type === "product" && category !== "all") {
+      rows = rows.filter(
+        (candidate) =>
+          selectedIds.includes(candidateId(candidate)) ||
+          candidate.categoryKey === category
+      );
+    }
+    if (type === "option" && queryText) {
+      rows = rows.filter((candidate) =>
+        [candidate.key, candidate.name?.ar, candidate.name?.en]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(queryText)
+      );
+    }
+    return rows;
+  }, [candidates, category, debouncedSearch, selectedIds, type]);
+
+  const initialLoading =
+    (type === "option" && menuOptionsLoading) ||
+    (query.isLoading && !query.data && !candidates.length);
 
   return (
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-sm font-medium">
-            {type === "product" ? "المنتجات داخل الكارت" : "الخيارات داخل الكارت"}
+            {type === "product" ? "المنتجات داخل الكارت" : "الخيارات داخل المجموعة"}
           </p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            العناصر غير الجاهزة أو المستخدمة في كارت آخر تظهر معطلة وسبب واضح.
+            {type === "product"
+              ? "المنتجات الكاملة تأتي من Product Picker فقط."
+              : "القائمة من مجموعة المنيو، وحالة الاختيار من Meal Builder Picker."}
           </p>
         </div>
         <Badge variant="outline">{selectedIds.length} محدد</Badge>
@@ -183,7 +212,7 @@ export function MealPlannerCandidatePickerV2({
             onChange={(event) => setSearch(event.target.value)}
             placeholder="ابحث بالاسم أو المفتاح..."
             className="pr-9"
-            disabled={disabled || !contextReady}
+            disabled={type === "product" ? disabled || !contextReady : menuOptionsLoading}
           />
         </div>
         {type === "product" ? (
@@ -203,82 +232,34 @@ export function MealPlannerCandidatePickerV2({
         ) : null}
       </div>
 
-      {!contextReady ? (
-        <PickerMessage text="اختر المنتج الأساسي ومجموعة الخيارات أولًا." />
+      {type === "option" && menuOptionsError ? (
+        <PickerMessage
+          text="تعذر تحميل خيارات المجموعة من الـBackend."
+          destructive
+          action={onRetryMenuOptions}
+        />
+      ) : type === "option" && !sourceGroupId ? (
+        <PickerMessage text="اختر مجموعة خيارات أولًا." />
       ) : initialLoading ? (
         <div className="grid min-h-40 place-items-center rounded-2xl border">
           <Loader2 className="size-6 animate-spin text-primary" />
         </div>
-      ) : query.error ? (
-        <PickerMessage
-          text="تعذر تحميل العناصر من الـBackend. راجع الاختيارات وحاول مرة أخرى."
-          destructive
+      ) : type === "option" && !contextReady ? (
+        <OptionRows
+          candidates={visibleCandidates}
+          selectedIds={selectedIds}
+          onChange={onChange}
+          publishingDisabled
         />
+      ) : query.error ? (
+        <PickerMessage text="تعذر تحميل حالة الإتاحة من Meal Builder." destructive />
       ) : visibleCandidates.length ? (
         <>
-          <div className="grid max-h-80 gap-2 overflow-y-auto rounded-2xl border bg-muted/15 p-2 sm:grid-cols-2">
-            {visibleCandidates.map((candidate) => {
-              const id = candidateId(candidate);
-              const selected = selectedIds.includes(id);
-              const selectable = candidateSelectable(candidate);
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  disabled={!selectable}
-                  aria-pressed={selected}
-                  onClick={() =>
-                    onChange(
-                      selected
-                        ? selectedIds.filter((item) => item !== id)
-                        : [...selectedIds, id]
-                    )
-                  }
-                  className={`flex min-h-16 items-center gap-3 rounded-xl border p-3 text-right transition ${
-                    selected
-                      ? "border-primary bg-primary/5"
-                      : "bg-background hover:border-primary/35"
-                  } disabled:cursor-not-allowed disabled:opacity-60`}
-                >
-                  {candidate.imageUrl ? (
-                    <img
-                      src={candidate.imageUrl}
-                      alt=""
-                      className="size-11 rounded-lg object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-muted">
-                      <UtensilsCrossed className="size-4 text-muted-foreground" />
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">
-                      {candidateName(candidate)}
-                    </span>
-                    <span className="mt-1 block truncate text-xs text-muted-foreground">
-                      {selectable
-                        ? candidateMeta(candidate)
-                        : candidateReason(candidate)}
-                    </span>
-                  </span>
-                  <span
-                    className={`grid size-6 shrink-0 place-items-center rounded-full border ${
-                      selected
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "bg-background"
-                    }`}
-                  >
-                    {selected ? (
-                      <Check className="size-3.5" />
-                    ) : selectable ? null : (
-                      <X className="size-3.5" />
-                    )}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <OptionRows
+            candidates={visibleCandidates}
+            selectedIds={selectedIds}
+            onChange={onChange}
+          />
           {query.hasNextPage ? (
             <Button
               type="button"
@@ -297,28 +278,86 @@ export function MealPlannerCandidatePickerV2({
           ) : null}
         </>
       ) : (
-        <PickerMessage text="لا توجد نتائج مطابقة أو عناصر مرتبطة بهذه الاختيارات." />
+        <PickerMessage text="لا توجد خيارات داخل هذه المجموعة." />
       )}
     </section>
+  );
+}
+
+function OptionRows({
+  candidates,
+  selectedIds,
+  onChange,
+  publishingDisabled = false,
+}: {
+  candidates: MealPlannerCatalogCandidate[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  publishingDisabled?: boolean;
+}) {
+  if (!candidates.length) return <PickerMessage text="لا توجد نتائج مطابقة." />;
+  return (
+    <div className="grid max-h-80 gap-2 overflow-y-auto rounded-2xl border bg-muted/15 p-2 sm:grid-cols-2">
+      {candidates.map((candidate) => {
+        const id = candidateId(candidate);
+        const selected = selectedIds.includes(id);
+        const selectable = !publishingDisabled && candidateSelectable(candidate);
+        return (
+          <button
+            key={id}
+            type="button"
+            disabled={!selectable}
+            aria-pressed={selected}
+            onClick={() =>
+              onChange(
+                selected
+                  ? selectedIds.filter((item) => item !== id)
+                  : [...selectedIds, id]
+              )
+            }
+            className={`flex min-h-16 items-center gap-3 rounded-xl border p-3 text-right transition ${
+              selected ? "border-primary bg-primary/5" : "bg-background hover:border-primary/35"
+            } disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            {candidate.imageUrl ? (
+              <img src={candidate.imageUrl} alt="" className="size-11 rounded-lg object-cover" loading="lazy" />
+            ) : (
+              <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-muted">
+                <UtensilsCrossed className="size-4 text-muted-foreground" />
+              </span>
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">{candidateName(candidate)}</span>
+              <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                {selectable ? candidateMeta(candidate) : candidateReason(candidate)}
+                {candidate.assignedSectionKey ? ` • الكارت: ${candidate.assignedSectionKey}` : ""}
+              </span>
+            </span>
+            <span className={`grid size-6 shrink-0 place-items-center rounded-full border ${selected ? "border-primary bg-primary text-primary-foreground" : "bg-background"}`}>
+              {selected ? <Check className="size-3.5" /> : selectable ? null : <X className="size-3.5" />}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
 function PickerMessage({
   text,
   destructive = false,
+  action,
 }: {
   text: string;
   destructive?: boolean;
+  action?: () => void;
 }) {
   return (
-    <div
-      className={`grid min-h-32 place-items-center rounded-2xl border border-dashed p-4 text-center text-sm ${
-        destructive
-          ? "border-destructive/30 bg-destructive/5 text-destructive"
-          : "text-muted-foreground"
-      }`}
-    >
-      {text}
+    <div className={`grid min-h-32 place-items-center rounded-2xl border border-dashed p-4 text-center text-sm ${destructive ? "border-destructive/30 bg-destructive/5 text-destructive" : "text-muted-foreground"}`}>
+      <div className="space-y-2">
+        <p>{text}</p>
+        {action ? <button type="button" className="underline" onClick={action}>إعادة المحاولة</button> : null}
+      </div>
     </div>
   );
 }
@@ -335,25 +374,12 @@ function mergeCandidates(
   }
   for (const id of selectedIds) {
     const candidate = map.get(id);
-    map.set(
-      id,
-      candidate
-        ? { ...candidate, selected: true }
-        : {
-            id,
-            label: id,
-            selected: true,
-            assignable: true,
-          }
-    );
+    map.set(id, candidate ? { ...candidate, selected: true } : { id, label: id, selected: true, assignable: true });
   }
   return [...map.values()].sort((left, right) => {
     const leftSelected = selectedIds.includes(candidateId(left)) ? 1 : 0;
     const rightSelected = selectedIds.includes(candidateId(right)) ? 1 : 0;
-    return (
-      rightSelected - leftSelected ||
-      candidateName(left).localeCompare(candidateName(right), "ar")
-    );
+    return rightSelected - leftSelected || candidateName(left).localeCompare(candidateName(right), "ar");
   });
 }
 
@@ -362,8 +388,6 @@ function candidateMeta(candidate: MealPlannerCatalogCandidate) {
   const family = candidate.familyKey || candidate.proteinFamilyKey;
   if (family) parts.push(`العائلة: ${family}`);
   const price = candidate.extraPriceHalala ?? candidate.priceHalala;
-  if (typeof price === "number") {
-    parts.push(`${(price / 100).toFixed(2)} ${candidate.currency || "SAR"}`);
-  }
+  if (typeof price === "number") parts.push(`${(price / 100).toFixed(2)} ${candidate.currency || "SAR"}`);
   return parts.filter(Boolean).join(" • ") || "جاهز للاختيار";
 }
