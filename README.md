@@ -305,7 +305,7 @@ This project is proprietary and confidential. All rights reserved.
 - [TanStack Router](https://tanstack.com/router/v1) for type-safe routing
 - [Tailwind CSS](https://tailwindcss.com/) for utility-first styling
 - [Vite](https://vitejs.dev/) for fast development experience
-- [Lucide](https://lucide.dev/) for beautiful icons
+- [Lucide React](https://lucide.dev/) for beautiful icons
 - [Recharts](https://recharts.org/) for data visualization
 - [Motion](https://motion.dev/) for animations
 - [Sonner](https://sonner.emilkowalski.ski/) for toast notifications
@@ -323,3 +323,5 @@ This project is proprietary and confidential. All rights reserved.
 
 ---
 *Built with ❤️ using modern web technologies*
+
+<!-- production redeploy trigger: 2026-07-20 -->
