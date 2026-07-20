@@ -16,8 +16,7 @@ const addonSelectionSchema = z.object({
   quantityPerDay: z
     .number()
     .int("الكمية اليومية يجب أن تكون رقماً صحيحاً")
-    .min(1, "الكمية اليومية يجب أن تكون 1 على الأقل")
-    .default(1),
+    .min(1, "الكمية اليومية يجب أن تكون 1 على الأقل"),
 });
 
 const deliveryAddressSchema = z.object({
