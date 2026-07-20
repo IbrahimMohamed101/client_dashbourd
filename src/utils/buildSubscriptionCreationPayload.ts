@@ -1,6 +1,6 @@
 import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubscriptionSchema";
 
-export interface SubscriptionCreationPayload {
+export interface SubscriptionCreationPayload extends Record<string, unknown> {
   userId: string;
   planId: string;
   grams: number;
