@@ -89,7 +89,7 @@ export function MealPlannerCandidatePickerV2({
             includeUnavailable: true,
             unassignedOnly: true,
             page: Number(pageParam),
-            limit: 100,
+            limit: 1000,
           }, signal)
         : getMealPlannerOptionsPicker({
             targetSectionKey,
@@ -102,7 +102,7 @@ export function MealPlannerCandidatePickerV2({
             includeUnavailable: true,
             unassignedOnly: true,
             page: Number(pageParam),
-            limit: 100,
+            limit: 1000,
           }, signal),
     getNextPageParam: (lastPage) => {
       const page = Number(lastPage.data.meta?.page || 1);
@@ -118,6 +118,25 @@ export function MealPlannerCandidatePickerV2({
       query.data?.pages.flatMap((page) => page.data.candidates) ?? [],
     [query.data?.pages]
   );
+
+  useEffect(() => {
+    if (!query.data || !selectedIds.length) return;
+    const fetchedById = new Map(
+      fetchedCandidates.map((candidate) => [candidateId(candidate), candidate])
+    );
+    const reconciled = selectedIds.filter((id) => {
+      const candidate = fetchedById.get(id);
+      if (!candidate) return true;
+      return candidate.selected === true || candidate.assignable === true;
+    });
+    if (
+      reconciled.length !== selectedIds.length ||
+      reconciled.some((id, index) => id !== selectedIds[index])
+    ) {
+      onChange(reconciled);
+    }
+  }, [fetchedCandidates, onChange, query.data, selectedIds]);
+
   const candidates = useMemo(
     () => mergeCandidates(seedCandidates, fetchedCandidates, selectedIds),
     [fetchedCandidates, seedCandidates, selectedIds]
@@ -140,7 +159,7 @@ export function MealPlannerCandidatePickerV2({
         : candidates,
     [candidates, category, selectedIds, type]
   );
-  const initialLoading = query.isLoading && !query.data;
+  const initialLoading = query.isLoading && !query.data && !seedCandidates.length;
 
   return (
     <section className="space-y-3">
@@ -239,7 +258,7 @@ export function MealPlannerCandidatePickerV2({
                     </span>
                     <span className="mt-1 block truncate text-xs text-muted-foreground">
                       {selectable
-                        ? candidate.key || "جاهز للاختيار"
+                        ? candidateMeta(candidate)
                         : candidateReason(candidate)}
                     </span>
                   </span>
@@ -319,7 +338,7 @@ function mergeCandidates(
     map.set(
       id,
       candidate
-        ? { ...candidate, selected: true, assignable: true }
+        ? { ...candidate, selected: true }
         : {
             id,
             label: id,
@@ -336,4 +355,15 @@ function mergeCandidates(
       candidateName(left).localeCompare(candidateName(right), "ar")
     );
   });
+}
+
+function candidateMeta(candidate: MealPlannerCatalogCandidate) {
+  const parts = [candidate.key];
+  const family = candidate.familyKey || candidate.proteinFamilyKey;
+  if (family) parts.push(`العائلة: ${family}`);
+  const price = candidate.extraPriceHalala ?? candidate.priceHalala;
+  if (typeof price === "number") {
+    parts.push(`${(price / 100).toFixed(2)} ${candidate.currency || "SAR"}`);
+  }
+  return parts.filter(Boolean).join(" • ") || "جاهز للاختيار";
 }
