@@ -29,15 +29,18 @@ export function AddonsSection({ form }: AddonsSectionProps) {
     name: "addons",
   });
 
-  const getSelectedSet = () => new Set(fields.map((f) => f.value));
+  const getSelectedSet = () =>
+    new Set(fields.map((field) => field.addonPlanId));
 
   const toggleAddon = useCallback(
-    (addonId: string) => {
-      const idx = fields.findIndex((f) => f.value === addonId);
+    (addonPlanId: string) => {
+      const idx = fields.findIndex(
+        (field) => field.addonPlanId === addonPlanId
+      );
       if (idx >= 0) {
         remove(idx);
       } else {
-        append({ value: addonId });
+        append({ addonPlanId, quantityPerDay: 1 });
       }
     },
     [fields, remove, append]
@@ -139,7 +142,6 @@ function getAddonPlanId(addon: Addon) {
   return addon.id || addon._id;
 }
 
-/** Isolated card component to prevent parent re-renders from propagating */
 function AddonCard({
   addon,
   selectedPlanId,
@@ -180,7 +182,6 @@ function AddonCard({
           : "border-border/50 hover:border-border hover:bg-muted/30"
       }`}
     >
-      {/* Custom checkbox visual — no Radix button */}
       <div className="pt-0.5">
         <div
           className={`flex size-4 shrink-0 items-center justify-center rounded-[4px] border shadow-xs transition-colors ${

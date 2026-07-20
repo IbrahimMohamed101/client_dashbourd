@@ -5,6 +5,7 @@ import useCreateSubscriptionForm from "@/hooks/useCreateSubscriptionForm";
 import { getApiErrorMessage } from "@/lib/apiErrors";
 import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubscriptionSchema";
 import { useCreateSubscriptionMutation } from "@/hooks/useSubscriptionsQuery";
+import { buildSubscriptionCreationPayload } from "@/utils/buildSubscriptionCreationPayload";
 import { fetchSubscriptionQuote } from "@/utils/fetchSubscriptionsData";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2, FileCheck2 } from "lucide-react";
@@ -46,41 +47,6 @@ function readSubscriptionLabel(response: unknown) {
   );
 }
 
-function buildSubscriptionPayload(
-  data: CreateSubscriptionSchemaType
-): Record<string, unknown> {
-  const isDelivery = data.delivery.type === "delivery";
-  const deliveryWindow = data.delivery.slot?.window?.trim();
-
-  return {
-    userId: data.userId,
-    planId: data.planId,
-    grams: data.grams,
-    mealsPerDay: data.mealsPerDay,
-    startDate: data.startDate,
-    delivery: {
-      type: data.delivery.type,
-      ...(isDelivery
-        ? {
-            zoneId: data.delivery.zoneId,
-            address: data.delivery.address,
-          }
-        : {
-            pickupLocationId: data.delivery.pickupLocationId,
-          }),
-      ...(deliveryWindow ? { window: deliveryWindow } : {}),
-    },
-    premiumItems: data.premiumItems.map((item) => ({
-      premiumKey: item.premiumKey,
-      qty: item.qty,
-    })),
-    addons: data.addons.map((addon) => ({
-      addonId: addon.value,
-      qty: 1,
-    })),
-  };
-}
-
 export function CreateSubscriptionFormContent({
   userId,
 }: CreateSubscriptionFormContentProps) {
@@ -91,7 +57,7 @@ export function CreateSubscriptionFormContent({
   const isSubmitting = isPending || isQuoting;
 
   const onSubmit = async (data: CreateSubscriptionSchemaType) => {
-    const payload = buildSubscriptionPayload(data);
+    const payload = buildSubscriptionCreationPayload(data);
 
     try {
       setIsQuoting(true);

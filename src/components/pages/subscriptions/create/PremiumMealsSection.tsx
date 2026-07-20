@@ -24,14 +24,25 @@ interface PremiumMealsSectionProps {
   form: UseFormReturn<CreateSubscriptionSchemaType>;
 }
 
-interface BuilderPremiumMeal {
+export interface BuilderPremiumMeal {
   id: string;
+  configId?: string | null;
+  sourceId?: string | null;
   premiumKey: string;
+  sourceModel?: string;
+  sourceType?: string;
+  kind?: string;
+  selectionType?: string;
   name: { ar?: string; en?: string } | string;
   imageUrl?: string;
   extraFeeHalala?: number;
+  priceHalala?: number;
   currency?: string;
   isActive?: boolean;
+  availableForSubscription?: boolean;
+  health?: string;
+  issueCode?: string | null;
+  legacy?: boolean;
 }
 
 interface BuilderPremiumMealsResponse {
@@ -43,6 +54,16 @@ const fetchBuilderPremiumMeals = async (): Promise<BuilderPremiumMealsResponse> 
   const response = await api.get("/api/admin/builder-premium-meals");
   return response.data;
 };
+
+export function isSelectablePremiumMeal(meal: BuilderPremiumMeal): boolean {
+  return (
+    typeof meal.premiumKey === "string" &&
+    meal.premiumKey.trim().length > 0 &&
+    meal.isActive !== false &&
+    meal.availableForSubscription !== false &&
+    (!meal.health || meal.health === "ready")
+  );
+}
 
 const getMealName = (meal: BuilderPremiumMeal) =>
   typeof meal.name === "string" ? meal.name : meal.name.ar || meal.name.en || "";
@@ -58,8 +79,7 @@ export function PremiumMealsSection({ form }: PremiumMealsSectionProps) {
     queryFn: fetchBuilderPremiumMeals,
     staleTime: 1000 * 60 * 2,
   });
-  const premiumMeals =
-    premiumResponse?.data.filter((meal) => meal.isActive !== false) || [];
+  const premiumMeals = premiumResponse?.data.filter(isSelectablePremiumMeal) || [];
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -118,7 +138,8 @@ export function PremiumMealsSection({ form }: PremiumMealsSectionProps) {
               const premiumKey = premiumItems[index]?.premiumKey || "";
               const qty = Math.max(1, Number(premiumItems[index]?.qty) || 1);
               const selectedMeal = getSelectedMeal(premiumKey);
-              const unitPriceHalala = selectedMeal?.extraFeeHalala || 0;
+              const unitPriceHalala =
+                selectedMeal?.extraFeeHalala ?? selectedMeal?.priceHalala ?? 0;
               const totalHalala = unitPriceHalala * qty;
 
               return (
@@ -162,7 +183,7 @@ export function PremiumMealsSection({ form }: PremiumMealsSectionProps) {
                               <span className="flex items-center gap-2">
                                 {getMealName(meal)}
                                 <span className="text-xs text-muted-foreground">
-                                  ({formatSar(meal.extraFeeHalala || 0)} ريال)
+                                  ({formatSar(meal.extraFeeHalala ?? meal.priceHalala ?? 0)} ريال)
                                 </span>
                               </span>
                             </SelectItem>
@@ -187,6 +208,11 @@ export function PremiumMealsSection({ form }: PremiumMealsSectionProps) {
                           valueAsNumber: true,
                         })}
                       />
+                      {form.formState.errors.premiumItems?.[index]?.qty && (
+                        <p className="text-xs text-destructive">
+                          {form.formState.errors.premiumItems[index].qty?.message}
+                        </p>
+                      )}
                     </div>
 
                     {selectedMeal && (
