@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Check, Layers3, Package } from "lucide-react";
 
 import {
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type {
+  MealPlannerCardContractV2,
   MealPlannerCatalogCandidate,
   MealPlannerCatalogV2,
   MealPlannerCreatePayloadV2,
@@ -39,8 +40,10 @@ import type {
 } from "@/types/mealPlannerDashboardTypes";
 import { MealPlannerCandidatePickerV2 } from "./MealPlannerCandidatePickerV2";
 import {
+  allowedOptionRoles,
   buildMealPlannerCreatePayload,
   candidateId,
+  creatableCardTypes,
   candidateName,
   normalizeCardType,
   sectionItems,
@@ -52,12 +55,14 @@ import {
 export function MealPlannerCardDialogV2({
   section,
   catalog,
+  cardContract,
   pending,
   onClose,
   onSubmit,
 }: {
   section?: MealPlannerSectionV2 | null;
   catalog: MealPlannerCatalogV2;
+  cardContract?: MealPlannerCardContractV2 | null;
   pending: boolean;
   onClose: () => void;
   onSubmit: (
@@ -66,10 +71,24 @@ export function MealPlannerCardDialogV2({
   ) => Promise<void>;
 }) {
   const editing = Boolean(section);
-  const initialValue = useMemo(
-    () => buildInitialValue(section, catalog),
-    [catalog, section]
+  const cardTypes = useMemo(
+    () => creatableCardTypes(cardContract),
+    [cardContract]
   );
+  const optionRoles = useMemo(
+    () => allowedOptionRoles(cardContract),
+    [cardContract]
+  );
+  const initialValue = useMemo(() => {
+    const initial = buildInitialValue(section, catalog);
+    if (section || cardTypes.includes(initial.cardType)) return initial;
+    const cardType = cardTypes[0] || "direct_product";
+    return {
+      ...initial,
+      cardType,
+      optionRole: optionRoles[0] || "protein",
+    };
+  }, [cardTypes, catalog, optionRoles, section]);
   const [value, setValue] = useState<MealPlannerCardFormValue>(initialValue);
   const [formError, setFormError] = useState("");
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -116,16 +135,17 @@ export function MealPlannerCardDialogV2({
 
   function changeType(cardType: "direct_product" | "option_family") {
     if (editing || cardType === value.cardType) return;
+    const defaultRole = optionRoles[0] || "protein";
     setValue((current) => ({
       ...current,
       cardType,
       selectedIds: [],
-      optionRole: "protein",
+      optionRole: defaultRole,
       familyKey: "",
       productContextId: "",
       sourceGroupId: "",
-      maxSelections: 1,
-      multiSelect: false,
+      maxSelections: defaultRole === "carbs" ? 2 : 1,
+      multiSelect: defaultRole === "carbs",
     }));
   }
 
@@ -165,22 +185,26 @@ export function MealPlannerCardDialogV2({
             <section className="space-y-3">
               <FieldLabel>نوع الكارت</FieldLabel>
               <div className="grid gap-3 sm:grid-cols-2">
-                <TypeChoice
-                  active={value.cardType === "direct_product"}
-                  disabled={editing}
-                  icon={Package}
-                  title="منتجات كاملة"
-                  description="منتجات تُضاف مباشرة وتستهلك وجبة كاملة"
-                  onClick={() => changeType("direct_product")}
-                />
-                <TypeChoice
-                  active={value.cardType === "option_family"}
-                  disabled={editing}
-                  icon={Layers3}
-                  title="خيارات وجبة مركبة"
-                  description="خيارات بروتين أو كارب تحتاج كارتًا مكملًا"
-                  onClick={() => changeType("option_family")}
-                />
+                {cardTypes.includes("direct_product") ? (
+                  <TypeChoice
+                    active={value.cardType === "direct_product"}
+                    disabled={editing}
+                    icon={Package}
+                    title="منتجات كاملة"
+                    description="منتجات تُضاف مباشرة وتستهلك وجبة كاملة"
+                    onClick={() => changeType("direct_product")}
+                  />
+                ) : null}
+                {cardTypes.includes("option_family") ? (
+                  <TypeChoice
+                    active={value.cardType === "option_family"}
+                    disabled={editing}
+                    icon={Layers3}
+                    title="خيارات وجبة مركبة"
+                    description="خيارات بروتين أو كارب تحتاج كارتًا مكملًا"
+                    onClick={() => changeType("option_family")}
+                  />
+                ) : null}
               </div>
               {editing ? (
                 <p className="text-xs text-muted-foreground">
@@ -246,10 +270,10 @@ export function MealPlannerCardDialogV2({
                     label="نوع الخيارات"
                     value={value.optionRole || "protein"}
                     onChange={(role) => changeRole(role as MealPlannerOptionRole)}
-                    options={[
-                      { value: "protein", label: "خيارات بروتين" },
-                      { value: "carbs", label: "خيارات كارب" },
-                    ]}
+                    options={optionRoles.map((role) => ({
+                      value: role,
+                      label: role === "protein" ? "خيارات بروتين" : "خيارات كارب",
+                    }))}
                   />
                   <SelectField
                     label="المنتج الأساسي"
@@ -480,10 +504,12 @@ function TextField({
   onChange: (value: string) => void;
   type?: string;
 } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type">) {
+  const id = useId();
   return (
     <div className="space-y-2">
-      <FieldLabel>{label}</FieldLabel>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Input
+        id={id}
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -508,11 +534,13 @@ function SelectField({
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
 }) {
+  const id = useId();
+  const labelId = `${id}-label`;
   return (
     <div className="space-y-2">
-      <FieldLabel>{label}</FieldLabel>
+      <FieldLabel id={labelId}>{label}</FieldLabel>
       <Select value={value || undefined} disabled={disabled} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" aria-labelledby={labelId}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent dir="rtl">
@@ -551,8 +579,20 @@ function ToggleField({
   );
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm font-medium">{children}</p>;
+function FieldLabel({
+  children,
+  htmlFor,
+  id,
+}: {
+  children: React.ReactNode;
+  htmlFor?: string;
+  id?: string;
+}) {
+  return (
+    <label id={id} htmlFor={htmlFor} className="text-sm font-medium">
+      {children}
+    </label>
+  );
 }
 
 function suggestedSortOrder(catalog: MealPlannerCatalogV2) {

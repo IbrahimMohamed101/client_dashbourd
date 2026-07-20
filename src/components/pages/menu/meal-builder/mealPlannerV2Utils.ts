@@ -2,6 +2,7 @@ import { parseApiError } from "@/lib/apiErrors";
 import type {
   DirectProductCardPayloadV2,
   LocalizedTextValue,
+  MealPlannerCardContractV2,
   MealPlannerCatalogCandidate,
   MealPlannerCreatePayloadV2,
   MealPlannerOptionRole,
@@ -98,21 +99,63 @@ export function normalizeCardType(
   ) {
     return "system_premium";
   }
-  const explicit = String(section.cardType || section.metadata?.cardType || "");
-  if (explicit === "direct_product" || explicit === "option_family") return explicit;
-  if (section.sectionType === "product_list" || section.selectedProductIds?.length) {
+  const selectionType = String(section.selectionType || "");
+  const sectionType = String(section.sectionType || "");
+  const selectedProductCount = section.selectedProductIds?.length || 0;
+  const selectedOptionCount = section.selectedOptionIds?.length || 0;
+
+  // Canonical meal identity wins over contradictory historical card metadata.
+  // Production contains legacy sections where a complete sandwich product still
+  // carries option-family metadata. Those sections must remain direct meals.
+  if (
+    selectionType === "full_meal_product" ||
+    selectionType === "sandwich" ||
+    sectionType === "product_list" ||
+    sectionType === "product_category" ||
+    (selectedProductCount > 0 && selectedOptionCount === 0)
+  ) {
     return "direct_product";
   }
+
+  const explicit = String(section.cardType || section.metadata?.cardType || "");
+  if (explicit === "direct_product" || explicit === "option_family") return explicit;
   if (
-    section.sectionType === "option_group" ||
-    section.sectionType === "option_family" ||
-    section.selectedOptionIds?.length ||
+    sectionType === "option_group" ||
+    sectionType === "option_family" ||
+    selectedOptionCount > 0 ||
     section.productContextId ||
     section.sourceGroupId
   ) {
     return "option_family";
   }
   return "legacy";
+}
+
+export function creatableCardTypes(
+  contract?: MealPlannerCardContractV2 | null
+): Array<"direct_product" | "option_family"> {
+  const values = (contract?.dynamicCardTypes || [])
+    .map((entry) => String(entry.cardType || ""))
+    .filter(
+      (value): value is "direct_product" | "option_family" =>
+        value === "direct_product" || value === "option_family"
+    );
+  return values.length
+    ? Array.from(new Set(values))
+    : ["direct_product", "option_family"];
+}
+
+export function allowedOptionRoles(
+  contract?: MealPlannerCardContractV2 | null
+): MealPlannerOptionRole[] {
+  const optionContract = contract?.dynamicCardTypes?.find(
+    (entry) => entry.cardType === "option_family"
+  );
+  const values = (optionContract?.allowedOptionRoles || []).filter(
+    (value): value is MealPlannerOptionRole =>
+      value === "protein" || value === "carbs"
+  );
+  return values.length ? Array.from(new Set(values)) : ["protein", "carbs"];
 }
 
 export function canonicalSelectionType(section: MealPlannerSectionV2) {
@@ -210,6 +253,7 @@ export function mealPlannerErrorMessage(error: unknown, fallback: string) {
 
 export const ERROR_MESSAGES: Record<string, string> = {
   MEAL_BUILDER_CARD_KEY_INVALID: "مفتاح الكارت غير صالح",
+  MEAL_BUILDER_CARD_NUMBER_INVALID: "قيمة الترتيب أو العدد غير صالحة",
   MEAL_BUILDER_CARD_KEY_DUPLICATE: "يوجد كارت آخر بنفس المفتاح",
   MEAL_BUILDER_CARD_NOT_FOUND: "الكارت غير موجود",
   MEAL_BUILDER_CARD_TYPE_INVALID: "نوع الكارت غير مدعوم",
@@ -220,8 +264,11 @@ export const ERROR_MESSAGES: Record<string, string> = {
   MEAL_BUILDER_CARD_SELECTION_TYPE_REQUIRED: "نوع الوجبة مطلوب",
   MEAL_BUILDER_CARD_SELECTION_TYPE_INVALID: "نوع الوجبة غير صالح",
   MEAL_BUILDER_CARD_PRODUCTS_REQUIRED: "اختر منتجًا واحدًا على الأقل",
+  MEAL_BUILDER_PRODUCT_IDS_INVALID: "قائمة المنتجات المرسلة غير صالحة",
+  MEAL_BUILDER_PRODUCT_IDS_REQUIRED: "اختر منتجًا واحدًا على الأقل",
   MEAL_BUILDER_PRODUCT_NOT_FOUND: "أحد المنتجات غير موجود",
   MEAL_BUILDER_PRODUCT_UNAVAILABLE: "أحد المنتجات غير جاهز للاشتراكات",
+  MEAL_BUILDER_PRODUCT_TYPE_INVALID: "نوع أحد المنتجات غير مدعوم في الكارت",
   MEAL_BUILDER_PRODUCT_ALREADY_ASSIGNED: "المنتج موجود في كارت آخر",
   MEAL_BUILDER_PRODUCT_NOT_IN_CARD: "المنتج غير موجود داخل هذا الكارت",
   MEAL_BUILDER_OPTION_ROLE_REQUIRED: "اختر نوع الخيارات: بروتين أو كارب",
@@ -239,6 +286,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   MEAL_BUILDER_PREMIUM_OPTION_SYSTEM_MANAGED: "خيارات Premium تُدار من كارت Premium",
   MEAL_BUILDER_CARBS_CARD_REQUIRED: "كروت البروتين تحتاج كارت كارب لنفس المنتج الأساسي",
   MEAL_BUILDER_DRAFT_NOT_FOUND: "لا توجد تغييرات غير منشورة",
+  MEAL_BUILDER_VALIDATION_ERROR: "بيانات الكارت غير صالحة وتحتاج مراجعة",
   MEAL_BUILDER_VALIDATION_FAILED: "لا يمكن النشر قبل إصلاح الأخطاء",
   MEAL_BUILDER_CONFLICT: "حدث تعارض، أعد تحميل الصفحة",
   MEAL_BUILDER_INTERNAL_ERROR: "حدث خطأ غير متوقع",
@@ -255,6 +303,7 @@ const REASON_MESSAGES: Record<string, string> = {
   OPTION_HIDDEN: "الخيار مخفي",
   OPTION_UNAVAILABLE: "الخيار غير متاح",
   OPTION_UNPUBLISHED: "الخيار غير منشور",
+  OPTION_NOT_SUBSCRIPTION_ENABLED: "الخيار غير متاح للاشتراكات",
   CATALOG_ITEM_UNAVAILABLE: "عنصر الكتالوج غير متاح",
 };
 
