@@ -53,11 +53,25 @@ export function mergeMenuOptionsWithPicker(
       .filter(([id]) => Boolean(id))
   );
 
+  const pickerByKey = new Map<string, MealPlannerCatalogCandidate>();
+  for (const candidate of pickerCandidates) {
+    const key = String(candidate.key || "").trim();
+    if (key && !pickerByKey.has(key)) pickerByKey.set(key, candidate);
+  }
+
   const rows: MealPlannerCatalogCandidate[] = menuOptions.map((option) => {
-    const authoritative = pickerById.get(option.id);
+    const authoritative = pickerById.get(option.id) || pickerByKey.get(option.key);
+    const authoritativeId = authoritative
+      ? canonicalPickerOptionId(authoritative)
+      : option.id;
+    const selected =
+      selectedIds.includes(authoritativeId) ||
+      selectedIds.includes(option.id) ||
+      authoritative?.selected === true;
+
     return {
-      id: option.id,
-      optionId: option.id,
+      id: authoritativeId,
+      optionId: authoritativeId,
       key: option.key,
       type: "option",
       name: option.name,
@@ -66,17 +80,13 @@ export function mergeMenuOptionsWithPicker(
       displayCategoryKey: option.displayCategoryKey,
       proteinFamilyKey: option.proteinFamilyKey,
       familyKey: option.proteinFamilyKey || option.displayCategoryKey,
-      selected: selectedIds.includes(option.id) || authoritative?.selected === true,
+      selected,
       assigned: authoritative?.assigned,
       assignedSectionKey: authoritative?.assignedSectionKey,
-      assignable: authoritative?.assignable === true,
-      eligible: authoritative?.eligible,
-      state:
-        authoritative?.state ||
-        (authoritative ? undefined : "not_in_authoritative_picker"),
-      reasonCodes:
-        authoritative?.reasonCodes ||
-        (authoritative ? [] : ["NO_AUTHORITATIVE_CANDIDATE"]),
+      assignable: authoritative ? authoritative.assignable === true : true,
+      eligible: authoritative?.eligible ?? true,
+      state: authoritative?.state || "menu_catalog_fallback",
+      reasonCodes: authoritative?.reasonCodes || ["MENU_CATALOG_FALLBACK"],
       relationStatus: authoritative?.relationStatus,
       effectiveStatus: authoritative?.effectiveStatus,
       currency: authoritative?.currency,
@@ -84,7 +94,7 @@ export function mergeMenuOptionsWithPicker(
     };
   });
 
-  const menuIds = new Set(menuOptions.map((option) => option.id));
+  const menuIds = new Set(rows.map((option) => canonicalPickerOptionId(option)));
   for (const candidate of pickerCandidates) {
     const id = canonicalPickerOptionId(candidate);
     if (!id || menuIds.has(id) || !selectedIds.includes(id)) continue;
