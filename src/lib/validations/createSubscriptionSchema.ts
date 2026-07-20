@@ -1,8 +1,23 @@
 import { z } from "zod";
 
 const premiumItemSchema = z.object({
-  premiumKey: z.string().min(1, "معرف الوجبة المميزة مطلوب"),
-  qty: z.number().int("الكمية يجب أن تكون رقماً صحيحاً").min(1, "الكمية يجب أن تكون 1 على الأقل"),
+  premiumKey: z
+    .string()
+    .trim()
+    .min(1, "معرف الوجبة المميزة مطلوب"),
+  qty: z
+    .number()
+    .int("الكمية يجب أن تكون رقماً صحيحاً")
+    .min(1, "الكمية يجب أن تكون 1 على الأقل"),
+});
+
+const addonSelectionSchema = z.object({
+  addonPlanId: z.string().trim().min(1, "معرف الإضافة مطلوب"),
+  quantityPerDay: z
+    .number()
+    .int("الكمية اليومية يجب أن تكون رقماً صحيحاً")
+    .min(1, "الكمية اليومية يجب أن تكون 1 على الأقل")
+    .default(1),
 });
 
 const deliveryAddressSchema = z.object({
@@ -20,7 +35,7 @@ const deliverySlotSchema = z.object({
 });
 
 const deliverySchema = z.object({
-  type: z.string().min(1, "طريقة التوصيل مطلوبة"),
+  type: z.enum(["delivery", "pickup"]),
   zoneId: z.string(),
   pickupLocationId: z.string().optional(),
   address: deliveryAddressSchema,
@@ -35,9 +50,7 @@ const createSubscriptionSchema = z
     mealsPerDay: z.number().min(1, "عدد الوجبات في اليوم مطلوب"),
     startDate: z.string().min(1, "تاريخ البداية مطلوب"),
     premiumItems: z.array(premiumItemSchema),
-    addons: z.array(
-      z.object({ value: z.string().min(1, "معرف الإضافة مطلوب") })
-    ),
+    addons: z.array(addonSelectionSchema),
     delivery: deliverySchema,
   })
   .superRefine((data, ctx) => {
