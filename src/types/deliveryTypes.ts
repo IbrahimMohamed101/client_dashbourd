@@ -1,13 +1,15 @@
+export type DeliverySelectionType = "delivery" | "pickup";
+
 export interface DeliverySlotOption {
   id: string;
-  type: string;
+  type: DeliverySelectionType;
   window: string;
   label: string;
 }
 
 export interface DeliveryMethod {
-  id: string;
-  type: string;
+  id: DeliverySelectionType;
+  type: DeliverySelectionType;
   title: string;
   subtitle: string;
   pricingMode?: string;
@@ -53,7 +55,7 @@ export interface PickupLocation {
 }
 
 export interface DeliveryDefaults {
-  type: string;
+  type: DeliverySelectionType;
   slotId: string;
   window: string;
   zoneId: string;
