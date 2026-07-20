@@ -53,7 +53,7 @@ export function mergeMenuOptionsWithPicker(
       .filter(([id]) => Boolean(id))
   );
 
-  const rows = menuOptions.map((option) => {
+  const rows: MealPlannerCatalogCandidate[] = menuOptions.map((option) => {
     const authoritative = pickerById.get(option.id);
     return {
       id: option.id,
@@ -71,14 +71,17 @@ export function mergeMenuOptionsWithPicker(
       assignedSectionKey: authoritative?.assignedSectionKey,
       assignable: authoritative?.assignable === true,
       eligible: authoritative?.eligible,
-      state: authoritative?.state || (authoritative ? undefined : "not_in_authoritative_picker"),
-      reasonCodes: authoritative?.reasonCodes ||
+      state:
+        authoritative?.state ||
+        (authoritative ? undefined : "not_in_authoritative_picker"),
+      reasonCodes:
+        authoritative?.reasonCodes ||
         (authoritative ? [] : ["NO_AUTHORITATIVE_CANDIDATE"]),
       relationStatus: authoritative?.relationStatus,
       effectiveStatus: authoritative?.effectiveStatus,
       currency: authoritative?.currency,
       sortOrder: option.sortOrder,
-    } satisfies MealPlannerCatalogCandidate;
+    };
   });
 
   const menuIds = new Set(menuOptions.map((option) => option.id));
