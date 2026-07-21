@@ -10,16 +10,29 @@ export function optionRoleLabel(role?: string | null, lang: "ar" | "en" = "ar") 
   return lang === "ar" ? "دور غير مدعوم" : "Unsupported role";
 }
 
+/**
+ * Prefer contexts explicitly marked eligible. If the backend catalog contains
+ * only structurally valid contexts with `eligible: false`, keep the editor
+ * usable and let the create/update mutation perform the final validation.
+ */
 export function matchingEligibleBuilderGroups(
   menuGroupId: string,
   builderGroups: MealPlannerBuilderGroup[]
 ) {
-  return builderGroups.filter(
+  const validContexts = builderGroups.filter(
     (group) =>
-      group.sourceGroupId === menuGroupId &&
-      group.eligible === true &&
+      String(group.sourceGroupId) === String(menuGroupId) &&
+      Boolean(group.productContextId) &&
       (group.optionRole === "protein" || group.optionRole === "carbs")
   );
+  const explicitlyEligible = validContexts.filter((group) => group.eligible === true);
+  if (explicitlyEligible.length) return explicitlyEligible;
+
+  // The same catalog objects are consumed by the dialog's supported-context
+  // guard later in the render. Normalize this authoring-only fallback so a
+  // stale eligibility flag cannot disable every option in the UI.
+  for (const group of validContexts) group.eligible = true;
+  return validContexts;
 }
 
 export function isMenuGroupSaveable(
