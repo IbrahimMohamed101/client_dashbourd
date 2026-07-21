@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
 
 import {
@@ -21,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { MealPlannerSectionV2 } from "@/types/mealPlannerDashboardTypes";
+import { fetchMenuOptionGroupOptions } from "@/utils/fetchMenuOptionGroups";
 import { MealPlannerCandidatePickerV2 } from "./MealPlannerCandidatePickerV2";
 import { MealPlannerMenuProductPicker } from "./MealPlannerMenuProductPicker";
 import {
@@ -30,6 +32,8 @@ import {
   sectionTitle,
   selectedIdsForSection,
 } from "./mealPlannerV2Utils";
+
+const OPTION_PARAMS = { limit: 100 } as const;
 
 export function MealPlannerItemsDialogV2({
   section,
@@ -50,7 +54,18 @@ export function MealPlannerItemsDialogV2({
   const [emptyOpen, setEmptyOpen] = useState(false);
   const [error, setError] = useState("");
   const cardType = normalizeCardType(section);
+  const sourceGroupId = String(section.sourceGroupId || "");
   const dirty = JSON.stringify(selectedIds) !== JSON.stringify(initialIds);
+
+  const menuOptionsQuery = useQuery({
+    queryKey: ["menu.optionGroupOptions", sourceGroupId, OPTION_PARAMS],
+    queryFn: ({ signal }) =>
+      fetchMenuOptionGroupOptions(sourceGroupId, OPTION_PARAMS, signal),
+    enabled: cardType === "option_family" && Boolean(sourceGroupId),
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
+  });
+  const menuOptions = menuOptionsQuery.data?.data.items ?? [];
 
   function requestClose() {
     if (pending) return;
@@ -102,8 +117,12 @@ export function MealPlannerItemsDialogV2({
               targetSectionKey={section.key}
               selectedIds={selectedIds}
               seedCandidates={sectionItems(section)}
+              menuOptions={menuOptions}
+              menuOptionsLoading={menuOptionsQuery.isLoading}
+              menuOptionsError={Boolean(menuOptionsQuery.error)}
+              onRetryMenuOptions={() => void menuOptionsQuery.refetch()}
               productContextId={String(section.productContextId || "")}
-              sourceGroupId={String(section.sourceGroupId || "")}
+              sourceGroupId={sourceGroupId}
               optionRole={sectionOptionRole(section) || undefined}
               familyKey={String(
                 section.metadata?.familyKey ||
