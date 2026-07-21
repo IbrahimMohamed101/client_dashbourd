@@ -87,9 +87,10 @@ export function MealPlannerCardDialogV2({
     section && normalizeCardType(section) === "option_family"
       ? "option_family"
       : "direct_product";
-  const [value, setValue] = useState<MealPlannerCardFormValue>(() =>
+  const [initialValue] = useState<MealPlannerCardFormValue>(() =>
     buildInitialValue(section, catalog)
   );
+  const [value, setValue] = useState<MealPlannerCardFormValue>(initialValue);
   const [formError, setFormError] = useState("");
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -169,8 +170,7 @@ export function MealPlannerCardDialogV2({
   const menuOptions = menuOptionsQuery.data?.data.items || [];
   const families = selectedContext?.families || [];
 
-  const dirty =
-    JSON.stringify(value) !== JSON.stringify(buildInitialValue(section, catalog));
+  const dirty = JSON.stringify(value) !== JSON.stringify(initialValue);
   const supportedContext = Boolean(
     selectedContext &&
       (selectedContext.optionRole === "protein" ||
