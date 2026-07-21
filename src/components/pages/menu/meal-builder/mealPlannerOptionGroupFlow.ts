@@ -53,14 +53,19 @@ export function mergeMenuOptionsWithPicker(
       .filter(([id]) => Boolean(id))
   );
 
-  const pickerByKey = new Map<string, MealPlannerCatalogCandidate>();
+  const candidatesByKey = new Map<string, MealPlannerCatalogCandidate[]>();
   for (const candidate of pickerCandidates) {
     const key = String(candidate.key || "").trim();
-    if (key && !pickerByKey.has(key)) pickerByKey.set(key, candidate);
+    if (!key) continue;
+    const rows = candidatesByKey.get(key) || [];
+    rows.push(candidate);
+    candidatesByKey.set(key, rows);
   }
 
   const rows: MealPlannerCatalogCandidate[] = menuOptions.map((option) => {
-    const authoritative = pickerById.get(option.id) || pickerByKey.get(option.key);
+    const keyMatches = candidatesByKey.get(String(option.key || "").trim()) || [];
+    const authoritative =
+      pickerById.get(option.id) || (keyMatches.length === 1 ? keyMatches[0] : undefined);
     const authoritativeId = authoritative
       ? canonicalPickerOptionId(authoritative)
       : option.id;
@@ -83,10 +88,10 @@ export function mergeMenuOptionsWithPicker(
       selected,
       assigned: authoritative?.assigned,
       assignedSectionKey: authoritative?.assignedSectionKey,
-      assignable: authoritative ? authoritative.assignable === true : true,
-      eligible: authoritative?.eligible ?? true,
-      state: authoritative?.state || "menu_catalog_fallback",
-      reasonCodes: authoritative?.reasonCodes || ["MENU_CATALOG_FALLBACK"],
+      assignable: authoritative?.assignable === true,
+      eligible: authoritative?.eligible === true,
+      state: authoritative?.state || "not_in_authoritative_picker",
+      reasonCodes: authoritative?.reasonCodes || ["NO_AUTHORITATIVE_CANDIDATE"],
       relationStatus: authoritative?.relationStatus,
       effectiveStatus: authoritative?.effectiveStatus,
       currency: authoritative?.currency,

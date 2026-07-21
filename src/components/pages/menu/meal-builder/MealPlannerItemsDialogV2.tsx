@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
 
 import {
@@ -21,7 +22,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { MealPlannerSectionV2 } from "@/types/mealPlannerDashboardTypes";
+import { fetchMenuOptionGroupOptions } from "@/utils/fetchMenuOptionGroups";
 import { MealPlannerCandidatePickerV2 } from "./MealPlannerCandidatePickerV2";
+import { MealPlannerMenuProductPicker } from "./MealPlannerMenuProductPicker";
 import {
   normalizeCardType,
   sectionItems,
@@ -29,6 +32,8 @@ import {
   sectionTitle,
   selectedIdsForSection,
 } from "./mealPlannerV2Utils";
+
+const OPTION_PARAMS = { limit: 100 } as const;
 
 export function MealPlannerItemsDialogV2({
   section,
@@ -49,7 +54,18 @@ export function MealPlannerItemsDialogV2({
   const [emptyOpen, setEmptyOpen] = useState(false);
   const [error, setError] = useState("");
   const cardType = normalizeCardType(section);
+  const sourceGroupId = String(section.sourceGroupId || "");
   const dirty = JSON.stringify(selectedIds) !== JSON.stringify(initialIds);
+
+  const menuOptionsQuery = useQuery({
+    queryKey: ["menu.optionGroupOptions", sourceGroupId, OPTION_PARAMS],
+    queryFn: ({ signal }) =>
+      fetchMenuOptionGroupOptions(sourceGroupId, OPTION_PARAMS, signal),
+    enabled: cardType === "option_family" && Boolean(sourceGroupId),
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
+  });
+  const menuOptions = menuOptionsQuery.data?.data.items ?? [];
 
   function requestClose() {
     if (pending) return;
@@ -80,7 +96,7 @@ export function MealPlannerItemsDialogV2({
       <Dialog open onOpenChange={(open) => !open && requestClose()}>
         <DialogContent
           dir="rtl"
-          className="max-h-[94dvh] w-[calc(100vw-1rem)] overflow-y-auto sm:max-w-3xl"
+          className="max-h-[94dvh] w-[calc(100vw-1rem)] overflow-y-auto sm:max-w-4xl"
         >
           <DialogHeader className="text-right">
             <DialogTitle>إدارة عناصر «{sectionTitle(section)}»</DialogTitle>
@@ -89,21 +105,33 @@ export function MealPlannerItemsDialogV2({
             </DialogDescription>
           </DialogHeader>
 
-          <MealPlannerCandidatePickerV2
-            type={cardType === "direct_product" ? "product" : "option"}
-            targetSectionKey={section.key}
-            selectedIds={selectedIds}
-            seedCandidates={sectionItems(section)}
-            productContextId={String(section.productContextId || "")}
-            sourceGroupId={String(section.sourceGroupId || "")}
-            optionRole={sectionOptionRole(section) || undefined}
-            familyKey={String(
-              section.metadata?.familyKey ||
-                section.metadata?.proteinFamilyKey ||
-                ""
-            )}
-            onChange={setSelectedIds}
-          />
+          {cardType === "direct_product" ? (
+            <MealPlannerMenuProductPicker
+              selectedIds={selectedIds}
+              currentSectionKey={section.key}
+              onChange={setSelectedIds}
+            />
+          ) : (
+            <MealPlannerCandidatePickerV2
+              type="option"
+              targetSectionKey={section.key}
+              selectedIds={selectedIds}
+              seedCandidates={sectionItems(section)}
+              menuOptions={menuOptions}
+              menuOptionsLoading={menuOptionsQuery.isLoading}
+              menuOptionsError={Boolean(menuOptionsQuery.error)}
+              onRetryMenuOptions={() => void menuOptionsQuery.refetch()}
+              productContextId={String(section.productContextId || "")}
+              sourceGroupId={sourceGroupId}
+              optionRole={sectionOptionRole(section) || undefined}
+              familyKey={String(
+                section.metadata?.familyKey ||
+                  section.metadata?.proteinFamilyKey ||
+                  ""
+              )}
+              onChange={setSelectedIds}
+            />
+          )}
 
           {error ? (
             <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
