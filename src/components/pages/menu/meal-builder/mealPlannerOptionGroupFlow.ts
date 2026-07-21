@@ -10,14 +10,21 @@ export function optionRoleLabel(role?: string | null, lang: "ar" | "en" = "ar") 
   return lang === "ar" ? "دور غير مدعوم" : "Unsupported role";
 }
 
+/**
+ * A group is authorable when the backend catalog provides the canonical
+ * product/group context and a supported option role. The `eligible` flag is a
+ * current availability/validation signal; it must not disable the authoring UI
+ * before the user can choose options. The create/update mutation remains the
+ * final validation boundary.
+ */
 export function matchingEligibleBuilderGroups(
   menuGroupId: string,
   builderGroups: MealPlannerBuilderGroup[]
 ) {
   return builderGroups.filter(
     (group) =>
-      group.sourceGroupId === menuGroupId &&
-      group.eligible === true &&
+      String(group.sourceGroupId) === String(menuGroupId) &&
+      Boolean(group.productContextId) &&
       (group.optionRole === "protein" || group.optionRole === "carbs")
   );
 }
