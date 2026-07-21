@@ -1,17 +1,7 @@
 name: Sync from Basic-Diet organization
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/sync-upstream.yml
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
-  repository_dispatch:
-    types:
-      - sync-upstream
 
 permissions:
   contents: write
