@@ -42,6 +42,13 @@ export function canonicalPickerOptionId(candidate: MealPlannerCatalogCandidate) 
   return String(candidate.optionId || candidate.id || candidate._id || "");
 }
 
+/**
+ * MenuOptionGroup is the canonical visible option source for card authoring.
+ * When the optional Meal Builder picker returns a matching row we preserve its
+ * assignment/availability metadata. When it does not, the MenuOption itself is
+ * still a valid selectable ID and the create/update mutation remains the final
+ * backend validation boundary.
+ */
 export function mergeMenuOptionsWithPicker(
   menuOptions: MenuOption[],
   pickerCandidates: MealPlannerCatalogCandidate[],
@@ -57,26 +64,25 @@ export function mergeMenuOptionsWithPicker(
   for (const candidate of pickerCandidates) {
     const key = String(candidate.key || "").trim();
     if (!key) continue;
-    const rows = candidatesByKey.get(key) || [];
-    rows.push(candidate);
-    candidatesByKey.set(key, rows);
+    const matches = candidatesByKey.get(key) || [];
+    matches.push(candidate);
+    candidatesByKey.set(key, matches);
   }
 
   const rows: MealPlannerCatalogCandidate[] = menuOptions.map((option) => {
     const keyMatches = candidatesByKey.get(String(option.key || "").trim()) || [];
     const authoritative =
       pickerById.get(option.id) || (keyMatches.length === 1 ? keyMatches[0] : undefined);
-    const authoritativeId = authoritative
-      ? canonicalPickerOptionId(authoritative)
-      : option.id;
+    const id = authoritative ? canonicalPickerOptionId(authoritative) : option.id;
     const selected =
-      selectedIds.includes(authoritativeId) ||
+      selectedIds.includes(id) ||
       selectedIds.includes(option.id) ||
       authoritative?.selected === true;
+    const menuFallback = !authoritative;
 
     return {
-      id: authoritativeId,
-      optionId: authoritativeId,
+      id,
+      optionId: id,
       key: option.key,
       type: "option",
       name: option.name,
@@ -88,10 +94,10 @@ export function mergeMenuOptionsWithPicker(
       selected,
       assigned: authoritative?.assigned,
       assignedSectionKey: authoritative?.assignedSectionKey,
-      assignable: authoritative?.assignable === true,
-      eligible: authoritative?.eligible === true,
-      state: authoritative?.state || "not_in_authoritative_picker",
-      reasonCodes: authoritative?.reasonCodes || ["NO_AUTHORITATIVE_CANDIDATE"],
+      assignable: menuFallback ? true : authoritative.assignable === true,
+      eligible: menuFallback ? true : authoritative.eligible === true,
+      state: menuFallback ? "menu_option" : authoritative.state,
+      reasonCodes: menuFallback ? [] : authoritative.reasonCodes,
       relationStatus: authoritative?.relationStatus,
       effectiveStatus: authoritative?.effectiveStatus,
       currency: authoritative?.currency,
