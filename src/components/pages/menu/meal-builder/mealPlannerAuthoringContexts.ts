@@ -3,6 +3,7 @@ import type {
   MealPlannerBuilderOption,
   MealPlannerCatalogCandidate,
   MealPlannerCatalogV2,
+  MealPlannerEntityStatus,
   MealPlannerOptionRole,
   MealPlannerProductOptionGroup,
 } from "@/types/mealPlannerDashboardTypes";
@@ -59,7 +60,7 @@ function toBuilderOption(
     assignable,
     eligible: assignable,
     relationStatus: relationStatus || {},
-    effectiveStatus: optionStatus || {},
+    effectiveStatus: (optionStatus || {}) as MealPlannerEntityStatus,
   };
 }
 
@@ -101,7 +102,7 @@ function deriveFromProductRelations(catalog: MealPlannerCatalogV2) {
             ar: String(product.name?.ar || product.labelAr || product.label || product.key || ""),
             en: String(product.name?.en || product.labelEn || product.label || product.key || ""),
           },
-          status: product.status || {},
+          status: (product.status || {}) as MealPlannerEntityStatus,
         },
         group: {
           id: sourceGroupId,
@@ -111,8 +112,9 @@ function deriveFromProductRelations(catalog: MealPlannerCatalogV2) {
             ar: String(group.name?.ar || group.key || ""),
             en: String(group.name?.en || group.key || ""),
           },
-          status:
-            (group.status && typeof group.status === "object" ? group.status : {}) || {},
+          status: (
+            group.status && typeof group.status === "object" ? group.status : {}
+          ) as MealPlannerEntityStatus,
         },
         rules: {
           minSelections: Number((relationNode as any).rules?.minSelections ?? 0),
