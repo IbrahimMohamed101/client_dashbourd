@@ -22,7 +22,7 @@ async function loadState(): Promise<MealPlannerStateResponseV2> {
   if (!isRecord(response.data) || response.data.status !== true || !isRecord(response.data.data)) {
     throw new Error("تعذر تحميل مسودة منشئ الوجبات");
   }
-  return response.data as MealPlannerStateResponseV2;
+  return response.data as unknown as MealPlannerStateResponseV2;
 }
 
 function optionSection(payload: OptionPayload, current?: MealPlannerSectionV2): MealPlannerSectionV2 {
