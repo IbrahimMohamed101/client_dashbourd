@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import type { MealPlannerSectionV2 } from "@/types/mealPlannerDashboardTypes";
 import { MealPlannerCandidatePickerV2 } from "./MealPlannerCandidatePickerV2";
+import { MealPlannerMenuProductPicker } from "./MealPlannerMenuProductPicker";
 import {
   normalizeCardType,
   sectionItems,
@@ -80,7 +81,7 @@ export function MealPlannerItemsDialogV2({
       <Dialog open onOpenChange={(open) => !open && requestClose()}>
         <DialogContent
           dir="rtl"
-          className="max-h-[94dvh] w-[calc(100vw-1rem)] overflow-y-auto sm:max-w-3xl"
+          className="max-h-[94dvh] w-[calc(100vw-1rem)] overflow-y-auto sm:max-w-4xl"
         >
           <DialogHeader className="text-right">
             <DialogTitle>إدارة عناصر «{sectionTitle(section)}»</DialogTitle>
@@ -89,21 +90,29 @@ export function MealPlannerItemsDialogV2({
             </DialogDescription>
           </DialogHeader>
 
-          <MealPlannerCandidatePickerV2
-            type={cardType === "direct_product" ? "product" : "option"}
-            targetSectionKey={section.key}
-            selectedIds={selectedIds}
-            seedCandidates={sectionItems(section)}
-            productContextId={String(section.productContextId || "")}
-            sourceGroupId={String(section.sourceGroupId || "")}
-            optionRole={sectionOptionRole(section) || undefined}
-            familyKey={String(
-              section.metadata?.familyKey ||
-                section.metadata?.proteinFamilyKey ||
-                ""
-            )}
-            onChange={setSelectedIds}
-          />
+          {cardType === "direct_product" ? (
+            <MealPlannerMenuProductPicker
+              selectedIds={selectedIds}
+              currentSectionKey={section.key}
+              onChange={setSelectedIds}
+            />
+          ) : (
+            <MealPlannerCandidatePickerV2
+              type="option"
+              targetSectionKey={section.key}
+              selectedIds={selectedIds}
+              seedCandidates={sectionItems(section)}
+              productContextId={String(section.productContextId || "")}
+              sourceGroupId={String(section.sourceGroupId || "")}
+              optionRole={sectionOptionRole(section) || undefined}
+              familyKey={String(
+                section.metadata?.familyKey ||
+                  section.metadata?.proteinFamilyKey ||
+                  ""
+              )}
+              onChange={setSelectedIds}
+            />
+          )}
 
           {error ? (
             <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
