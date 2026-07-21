@@ -12,14 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  MealPlannerSectionV2,
-  MealPlannerStateResponseV2,
-} from "@/types/mealPlannerDashboardTypes";
-import type { MenuCategory, MenuProduct } from "@/types/menuTypes";
+import type { MealPlannerStateResponseV2 } from "@/types/mealPlannerDashboardTypes";
 import { fetchMenuCategories } from "@/utils/fetchMenuCategories";
 import { fetchMenuProducts } from "@/utils/fetchMenuProducts";
-import { normalizeCardType, selectedIdsForSection } from "./mealPlannerV2Utils";
+import {
+  buildMenuProductCandidates,
+  buildProductAssignments,
+  categoryLabel,
+  filterMenuProductCandidates,
+  UNCATEGORIZED_CATEGORY_ID,
+} from "./mealPlannerMenuProductFlow";
 
 export const MEAL_BUILDER_MENU_CATEGORY_PARAMS = {
   limit: 100,
@@ -32,24 +34,6 @@ export const MEAL_BUILDER_MENU_PRODUCT_PARAMS = {
 } as const;
 
 const STATE_KEY = ["dashboard.meal-planner.v2.state"] as const;
-const UNCATEGORIZED = "__uncategorized__";
-
-export type MealBuilderMenuProductCandidate = {
-  id: string;
-  key: string;
-  name: { ar?: string; en?: string };
-  imageUrl?: string;
-  categoryId?: string | null;
-  itemType?: string;
-  cardVariant?: string;
-  isActive?: boolean;
-  isVisible?: boolean;
-  isAvailable?: boolean;
-  selected: boolean;
-  assignedToCurrentCard: boolean;
-  assignedToAnotherCard: boolean;
-  assignedSectionKey?: string;
-};
 
 export function MealPlannerMenuProductPicker({
   selectedIds,
@@ -70,7 +54,6 @@ export function MealPlannerMenuProductPicker({
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
-
   const productsQuery = useQuery({
     queryKey: ["menu.products", MEAL_BUILDER_MENU_PRODUCT_PARAMS],
     queryFn: () => fetchMenuProducts(MEAL_BUILDER_MENU_PRODUCT_PARAMS),
@@ -82,93 +65,40 @@ export function MealPlannerMenuProductPicker({
   const products = productsQuery.data?.data.items ?? [];
   const state = queryClient.getQueryData<MealPlannerStateResponseV2>(STATE_KEY)?.data;
   const workingSections = state?.draft?.sections ?? state?.published?.sections ?? [];
-
-  const assignmentByProductId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const section of workingSections) {
-      if (normalizeCardType(section) !== "direct_product") continue;
-      for (const productId of selectedIdsForSection(section)) {
-        map.set(String(productId), section.key);
-      }
-    }
-    return map;
-  }, [workingSections]);
-
+  const assignments = useMemo(
+    () => buildProductAssignments(workingSections),
+    [workingSections]
+  );
+  const candidates = useMemo(
+    () =>
+      buildMenuProductCandidates({
+        products,
+        selectedIds,
+        currentSectionKey,
+        assignmentByProductId: assignments,
+      }),
+    [assignments, currentSectionKey, products, selectedIds]
+  );
+  const visibleCandidates = useMemo(
+    () =>
+      filterMenuProductCandidates({
+        candidates,
+        categories,
+        selectedCategoryId,
+        search,
+      }),
+    [candidates, categories, search, selectedCategoryId]
+  );
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [String(category.id), category])),
     [categories]
   );
-
-  const candidates = useMemo<MealBuilderMenuProductCandidate[]>(
-    () =>
-      products.map((product) => {
-        const id = String(product.id);
-        const assignedSectionKey = assignmentByProductId.get(id);
-        const assignedToCurrentCard = Boolean(
-          assignedSectionKey && currentSectionKey && assignedSectionKey === currentSectionKey
-        );
-        return {
-          id,
-          key: product.key,
-          name: product.name,
-          imageUrl: product.imageUrl,
-          categoryId: product.categoryId ? String(product.categoryId) : null,
-          itemType: product.itemType,
-          cardVariant: product.ui?.cardVariant,
-          isActive: product.isActive,
-          isVisible: product.isVisible,
-          isAvailable: product.isAvailable,
-          selected: selectedIds.includes(id),
-          assignedToCurrentCard,
-          assignedToAnotherCard: Boolean(assignedSectionKey && !assignedToCurrentCard),
-          assignedSectionKey,
-        };
-      }),
-    [assignmentByProductId, currentSectionKey, products, selectedIds]
-  );
-
   const hasUncategorized = candidates.some(
-    (candidate) => !candidate.categoryId || !categoryById.has(String(candidate.categoryId))
+    (candidate) =>
+      !candidate.categoryId || !categoryById.has(String(candidate.categoryId))
   );
 
-  const visibleCandidates = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return candidates.filter((candidate) => {
-      const category = candidate.categoryId
-        ? categoryById.get(String(candidate.categoryId))
-        : undefined;
-      const uncategorized = !category;
-      if (
-        selectedCategoryId !== "all" &&
-        !(
-          selectedCategoryId === UNCATEGORIZED
-            ? uncategorized
-            : String(candidate.categoryId || "") === selectedCategoryId
-        )
-      ) {
-        return false;
-      }
-      if (!query) return true;
-      return [
-        candidate.key,
-        candidate.name?.ar,
-        candidate.name?.en,
-        category?.name?.ar,
-        category?.name?.en,
-        category?.key,
-        uncategorized ? "غير مصنف" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(query);
-    });
-  }, [candidates, categoryById, search, selectedCategoryId]);
-
-  const loading = categoriesQuery.isLoading || productsQuery.isLoading;
-  const error = categoriesQuery.error || productsQuery.error;
-
-  if (loading) {
+  if (categoriesQuery.isLoading || productsQuery.isLoading) {
     return (
       <div className="grid min-h-44 place-items-center rounded-2xl border">
         <Loader2 className="size-6 animate-spin text-primary" />
@@ -176,15 +106,22 @@ export function MealPlannerMenuProductPicker({
     );
   }
 
-  if (error) {
+  if (categoriesQuery.error || productsQuery.error) {
     return (
       <div className="grid min-h-36 place-items-center rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-center">
         <div className="space-y-3">
-          <p className="text-sm text-destructive">تعذر تحميل منتجات أو تصنيفات المنيو.</p>
+          <p className="text-sm text-destructive">
+            تعذر تحميل منتجات أو تصنيفات المنيو.
+          </p>
           <Button
             type="button"
             variant="outline"
-            onClick={() => void Promise.all([categoriesQuery.refetch(), productsQuery.refetch()])}
+            onClick={() =>
+              void Promise.all([
+                categoriesQuery.refetch(),
+                productsQuery.refetch(),
+              ])
+            }
           >
             إعادة المحاولة
           </Button>
@@ -199,7 +136,7 @@ export function MealPlannerMenuProductPicker({
         <div>
           <p className="text-sm font-medium">منتجات المنيو داخل الكارت</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            جميع المنتجات الظاهرة في إدارة المنيو متاحة هنا، وحالة الإسناد مأخوذة من مسودة Meal Builder الحالية.
+            كل منتجات المنيو ظاهرة هنا، بما فيها غير النشط أو المخفي، مع توضيح حالتها بدل حذفها.
           </p>
         </div>
         <Badge variant="outline">{selectedIds.length} محدد</Badge>
@@ -227,7 +164,7 @@ export function MealPlannerMenuProductPicker({
               </SelectItem>
             ))}
             {hasUncategorized ? (
-              <SelectItem value={UNCATEGORIZED}>غير مصنف</SelectItem>
+              <SelectItem value={UNCATEGORIZED_CATEGORY_ID}>غير مصنف</SelectItem>
             ) : null}
           </SelectContent>
         </Select>
@@ -276,20 +213,33 @@ export function MealPlannerMenuProductPicker({
                     {candidate.name?.ar || candidate.name?.en || candidate.key}
                   </span>
                   {candidate.name?.en && candidate.name.en !== candidate.name?.ar ? (
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground" dir="ltr">
+                    <span
+                      className="mt-0.5 block truncate text-xs text-muted-foreground"
+                      dir="ltr"
+                    >
                       {candidate.name.en}
                     </span>
                   ) : null}
                   <span className="mt-1 block truncate text-xs text-muted-foreground">
-                    {candidate.key} • {category ? categoryLabel(category) : "غير مصنف"}
+                    {candidate.key} • {categoryLabel(category)}
                   </span>
                   <span className="mt-2 flex flex-wrap gap-1">
-                    {candidate.itemType ? <Badge variant="outline">{candidate.itemType}</Badge> : null}
-                    {candidate.isActive === false ? <Badge variant="destructive">غير نشط</Badge> : null}
-                    {candidate.isVisible === false ? <Badge variant="secondary">مخفي</Badge> : null}
-                    {candidate.isAvailable === false ? <Badge variant="secondary">غير متاح</Badge> : null}
+                    {candidate.itemType ? (
+                      <Badge variant="outline">{candidate.itemType}</Badge>
+                    ) : null}
+                    {candidate.isActive === false ? (
+                      <Badge variant="destructive">غير نشط</Badge>
+                    ) : null}
+                    {candidate.isVisible === false ? (
+                      <Badge variant="secondary">مخفي</Badge>
+                    ) : null}
+                    {candidate.isAvailable === false ? (
+                      <Badge variant="secondary">غير متاح</Badge>
+                    ) : null}
                     {candidate.assignedToAnotherCard ? (
-                      <Badge variant="destructive">مضاف إلى {candidate.assignedSectionKey}</Badge>
+                      <Badge variant="destructive">
+                        مضاف إلى {candidate.assignedSectionKey}
+                      </Badge>
                     ) : null}
                   </span>
                 </span>
@@ -316,15 +266,13 @@ export function MealPlannerMenuProductPicker({
         </div>
       )}
 
-      {selectedIds.some((id) => !visibleCandidates.some((candidate) => candidate.id === id)) ? (
+      {selectedIds.some(
+        (id) => !visibleCandidates.some((candidate) => candidate.id === id)
+      ) ? (
         <p className="rounded-xl border bg-muted/20 p-3 text-xs text-muted-foreground">
           بعض المنتجات المحددة غير ظاهرة بسبب البحث أو التصنيف الحالي، لكنها ستظل محفوظة ضمن الاختيارات.
         </p>
       ) : null}
     </section>
   );
-}
-
-function categoryLabel(category: MenuCategory) {
-  return category.name?.ar || category.name?.en || category.key || "غير مصنف";
 }
