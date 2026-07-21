@@ -87,9 +87,10 @@ export function MealPlannerCardDialogV2({
     section && normalizeCardType(section) === "option_family"
       ? "option_family"
       : "direct_product";
-  const [value, setValue] = useState<MealPlannerCardFormValue>(() =>
+  const [initialValue] = useState<MealPlannerCardFormValue>(() =>
     buildInitialValue(section, catalog)
   );
+  const [value, setValue] = useState<MealPlannerCardFormValue>(initialValue);
   const [formError, setFormError] = useState("");
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -169,8 +170,7 @@ export function MealPlannerCardDialogV2({
   const menuOptions = menuOptionsQuery.data?.data.items || [];
   const families = selectedContext?.families || [];
 
-  const dirty =
-    JSON.stringify(value) !== JSON.stringify(buildInitialValue(section, catalog));
+  const dirty = JSON.stringify(value) !== JSON.stringify(initialValue);
   const supportedContext = Boolean(
     selectedContext &&
       (selectedContext.optionRole === "protein" ||
@@ -216,6 +216,7 @@ export function MealPlannerCardDialogV2({
     setValue((current) => ({
       ...current,
       cardType,
+      key: createInternalCardKey(cardType),
       selectedIds: [],
       optionRole: undefined,
       familyKey: "",
@@ -334,7 +335,7 @@ export function MealPlannerCardDialogV2({
               </div>
             </section>
 
-            <section className="grid gap-4 sm:grid-cols-2">
+            <section className="grid gap-4 sm:grid-cols-3">
               <TextField
                 label="الاسم العربي"
                 value={value.titleAr}
@@ -348,17 +349,6 @@ export function MealPlannerCardDialogV2({
                 dir="ltr"
                 onChange={(titleEn) =>
                   setValue((current) => ({ ...current, titleEn }))
-                }
-              />
-              <TextField
-                label="مفتاح الكارت"
-                value={value.key}
-                dir="ltr"
-                onChange={(key) =>
-                  setValue((current) => ({
-                    ...current,
-                    key: key.toLowerCase().replace(/\s+/g, "_"),
-                  }))
                 }
               />
               <TextField
@@ -618,7 +608,7 @@ function buildInitialValue(
   const optionRole = section ? sectionOptionRole(section) || undefined : undefined;
   return {
     cardType,
-    key: section?.key || "",
+    key: section?.key || createInternalCardKey(cardType),
     titleAr: section?.titleOverride?.ar || "",
     titleEn: section?.titleOverride?.en || "",
     visible: section?.visible !== false,
@@ -638,6 +628,16 @@ function buildInitialValue(
         : Number(section?.maxSelections ?? (optionRole === "carbs" ? 2 : 1)),
     multiSelect: section?.multiSelect === true,
   };
+}
+
+export function createInternalCardKey(
+  cardType: "direct_product" | "option_family"
+) {
+  const token =
+    typeof globalThis.crypto?.randomUUID === "function"
+      ? globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 12)
+      : Math.random().toString(36).slice(2, 14);
+  return `${cardType}_${token}`.slice(0, 64);
 }
 
 function suggestedSortOrder(catalog: MealPlannerCatalogV2) {
