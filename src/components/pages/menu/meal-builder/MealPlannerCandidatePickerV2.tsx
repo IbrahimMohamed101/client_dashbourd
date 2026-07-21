@@ -65,7 +65,7 @@ export function MealPlannerCandidatePickerV2({
   const [category, setCategory] = useState("all");
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [search]);
 
@@ -78,7 +78,7 @@ export function MealPlannerCandidatePickerV2({
   const contextReady =
     type === "product" || Boolean(productContextId && sourceGroupId && optionRole);
 
-  const query = useInfiniteQuery({
+  const pickerQuery = useInfiniteQuery({
     queryKey: [
       "dashboard.meal-planner.v2.picker",
       type,
@@ -87,7 +87,7 @@ export function MealPlannerCandidatePickerV2({
       sourceGroupId,
       optionRole,
       familyKey,
-      debouncedSearch,
+      type === "product" ? debouncedSearch : "",
     ],
     initialPageParam: 1,
     queryFn: ({ pageParam, signal }) =>
@@ -127,11 +127,13 @@ export function MealPlannerCandidatePickerV2({
     },
     enabled: !disabled && contextReady,
     staleTime: 10_000,
+    refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const fetchedCandidates = useMemo(
-    () => query.data?.pages.flatMap((page) => page.data.candidates) ?? [],
-    [query.data?.pages]
+    () => pickerQuery.data?.pages.flatMap((page) => page.data.candidates) ?? [],
+    [pickerQuery.data?.pages]
   );
 
   const candidates = useMemo(() => {
@@ -140,19 +142,6 @@ export function MealPlannerCandidatePickerV2({
     }
     return mergeCandidates(seedCandidates, fetchedCandidates, selectedIds);
   }, [fetchedCandidates, menuOptions, seedCandidates, selectedIds, type]);
-
-  useEffect(() => {
-    if (type !== "option" || !query.data || !selectedIds.length) return;
-    const authoritativeIds = new Map(
-      fetchedCandidates.map((candidate) => [candidateId(candidate), candidate])
-    );
-    const reconciled = selectedIds.filter((id) => {
-      const candidate = authoritativeIds.get(id);
-      if (!candidate) return false;
-      return candidate.selected === true || candidate.assignable === true;
-    });
-    if (reconciled.length !== selectedIds.length) onChange(reconciled);
-  }, [fetchedCandidates, onChange, query.data, selectedIds, type]);
 
   const categories = useMemo(
     () =>
@@ -164,29 +153,27 @@ export function MealPlannerCandidatePickerV2({
 
   const visibleCandidates = useMemo(() => {
     const queryText = debouncedSearch.toLowerCase();
-    let rows = candidates;
-    if (type === "product" && category !== "all") {
-      rows = rows.filter(
-        (candidate) =>
-          selectedIds.includes(candidateId(candidate)) ||
-          candidate.categoryKey === category
-      );
-    }
-    if (type === "option" && queryText) {
-      rows = rows.filter((candidate) =>
-        [candidate.key, candidate.name?.ar, candidate.name?.en]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(queryText)
-      );
-    }
-    return rows;
+    return candidates.filter((candidate) => {
+      if (
+        type === "product" &&
+        category !== "all" &&
+        !selectedIds.includes(candidateId(candidate)) &&
+        candidate.categoryKey !== category
+      ) {
+        return false;
+      }
+      if (!queryText) return true;
+      return [candidate.key, candidate.name?.ar, candidate.name?.en]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(queryText);
+    });
   }, [candidates, category, debouncedSearch, selectedIds, type]);
 
   const initialLoading =
     (type === "option" && menuOptionsLoading) ||
-    (query.isLoading && !query.data && !candidates.length);
+    (type === "product" && pickerQuery.isLoading && !pickerQuery.data);
 
   return (
     <section className="space-y-3">
@@ -197,8 +184,8 @@ export function MealPlannerCandidatePickerV2({
           </p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             {type === "product"
-              ? "المنتجات الكاملة تأتي من Product Picker فقط."
-              : "القائمة من مجموعة المنيو، وحالة الاختيار من Meal Builder Picker."}
+              ? "اختر المنتجات المتاحة لهذا الكارت."
+              : "اختر من خيارات مجموعة المنيو. سيقوم الـBackend بالتحقق النهائي عند الحفظ."}
           </p>
         </div>
         <Badge variant="outline">{selectedIds.length} محدد</Badge>
@@ -245,30 +232,34 @@ export function MealPlannerCandidatePickerV2({
           <Loader2 className="size-6 animate-spin text-primary" />
         </div>
       ) : type === "option" && !contextReady ? (
-        <OptionRows
-          candidates={visibleCandidates}
-          selectedIds={selectedIds}
-          onChange={onChange}
-          publishingDisabled
-        />
-      ) : query.error ? (
-        <PickerMessage text="تعذر تحميل حالة الإتاحة من Meal Builder." destructive />
-      ) : visibleCandidates.length ? (
+        <PickerMessage text="اختر سياق المنتج المرتبط بالمجموعة أولًا." />
+      ) : (
         <>
-          <OptionRows
-            candidates={visibleCandidates}
-            selectedIds={selectedIds}
-            onChange={onChange}
-          />
-          {query.hasNextPage ? (
+          {type === "option" && pickerQuery.error ? (
+            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-5 text-amber-700 dark:text-amber-300">
+              تعذر تحميل بيانات الإتاحة الإضافية، لكن يمكنك اختيار خيارات المجموعة وسيتم التحقق منها عند الحفظ.
+            </p>
+          ) : null}
+
+          {visibleCandidates.length ? (
+            <OptionRows
+              candidates={visibleCandidates}
+              selectedIds={selectedIds}
+              onChange={onChange}
+            />
+          ) : (
+            <PickerMessage text="لا توجد خيارات مطابقة." />
+          )}
+
+          {pickerQuery.hasNextPage ? (
             <Button
               type="button"
               variant="outline"
               className="w-full"
-              disabled={query.isFetchingNextPage}
-              onClick={() => void query.fetchNextPage()}
+              disabled={pickerQuery.isFetchingNextPage}
+              onClick={() => void pickerQuery.fetchNextPage()}
             >
-              {query.isFetchingNextPage ? (
+              {pickerQuery.isFetchingNextPage ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <ChevronDown className="size-4" />
@@ -277,8 +268,6 @@ export function MealPlannerCandidatePickerV2({
             </Button>
           ) : null}
         </>
-      ) : (
-        <PickerMessage text="لا توجد خيارات داخل هذه المجموعة." />
       )}
     </section>
   );
@@ -288,20 +277,17 @@ function OptionRows({
   candidates,
   selectedIds,
   onChange,
-  publishingDisabled = false,
 }: {
   candidates: MealPlannerCatalogCandidate[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
-  publishingDisabled?: boolean;
 }) {
-  if (!candidates.length) return <PickerMessage text="لا توجد نتائج مطابقة." />;
   return (
     <div className="grid max-h-80 gap-2 overflow-y-auto rounded-2xl border bg-muted/15 p-2 sm:grid-cols-2">
       {candidates.map((candidate) => {
         const id = candidateId(candidate);
         const selected = selectedIds.includes(id);
-        const selectable = !publishingDisabled && candidateSelectable(candidate);
+        const selectable = candidateSelectable(candidate);
         return (
           <button
             key={id}
@@ -316,25 +302,46 @@ function OptionRows({
               )
             }
             className={`flex min-h-16 items-center gap-3 rounded-xl border p-3 text-right transition ${
-              selected ? "border-primary bg-primary/5" : "bg-background hover:border-primary/35"
+              selected
+                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                : "bg-background hover:border-primary/35 hover:bg-muted/20"
             } disabled:cursor-not-allowed disabled:opacity-60`}
           >
             {candidate.imageUrl ? (
-              <img src={candidate.imageUrl} alt="" className="size-11 rounded-lg object-cover" loading="lazy" />
+              <img
+                src={candidate.imageUrl}
+                alt=""
+                className="size-11 rounded-lg object-cover"
+                loading="lazy"
+              />
             ) : (
               <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-muted">
                 <UtensilsCrossed className="size-4 text-muted-foreground" />
               </span>
             )}
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{candidateName(candidate)}</span>
+              <span className="block truncate text-sm font-medium">
+                {candidateName(candidate)}
+              </span>
               <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                {selectable ? candidateMeta(candidate) : candidateReason(candidate)}
-                {candidate.assignedSectionKey ? ` • الكارت: ${candidate.assignedSectionKey}` : ""}
+                {selectable ? candidateMeta(candidate) : friendlyReason(candidate)}
+                {candidate.assignedSectionKey
+                  ? ` • مضاف إلى الكارت: ${candidate.assignedSectionKey}`
+                  : ""}
               </span>
             </span>
-            <span className={`grid size-6 shrink-0 place-items-center rounded-full border ${selected ? "border-primary bg-primary text-primary-foreground" : "bg-background"}`}>
-              {selected ? <Check className="size-3.5" /> : selectable ? null : <X className="size-3.5" />}
+            <span
+              className={`grid size-6 shrink-0 place-items-center rounded-full border ${
+                selected
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "bg-background"
+              }`}
+            >
+              {selected ? (
+                <Check className="size-3.5" />
+              ) : selectable ? null : (
+                <X className="size-3.5" />
+              )}
             </span>
           </button>
         );
@@ -353,10 +360,20 @@ function PickerMessage({
   action?: () => void;
 }) {
   return (
-    <div className={`grid min-h-32 place-items-center rounded-2xl border border-dashed p-4 text-center text-sm ${destructive ? "border-destructive/30 bg-destructive/5 text-destructive" : "text-muted-foreground"}`}>
+    <div
+      className={`grid min-h-32 place-items-center rounded-2xl border border-dashed p-4 text-center text-sm ${
+        destructive
+          ? "border-destructive/30 bg-destructive/5 text-destructive"
+          : "text-muted-foreground"
+      }`}
+    >
       <div className="space-y-2">
         <p>{text}</p>
-        {action ? <button type="button" className="underline" onClick={action}>إعادة المحاولة</button> : null}
+        {action ? (
+          <button type="button" className="underline" onClick={action}>
+            إعادة المحاولة
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -374,12 +391,20 @@ function mergeCandidates(
   }
   for (const id of selectedIds) {
     const candidate = map.get(id);
-    map.set(id, candidate ? { ...candidate, selected: true } : { id, label: id, selected: true, assignable: true });
+    map.set(
+      id,
+      candidate
+        ? { ...candidate, selected: true }
+        : { id, label: id, selected: true, assignable: true }
+    );
   }
   return [...map.values()].sort((left, right) => {
     const leftSelected = selectedIds.includes(candidateId(left)) ? 1 : 0;
     const rightSelected = selectedIds.includes(candidateId(right)) ? 1 : 0;
-    return rightSelected - leftSelected || candidateName(left).localeCompare(candidateName(right), "ar");
+    return (
+      rightSelected - leftSelected ||
+      candidateName(left).localeCompare(candidateName(right), "ar")
+    );
   });
 }
 
@@ -388,6 +413,16 @@ function candidateMeta(candidate: MealPlannerCatalogCandidate) {
   const family = candidate.familyKey || candidate.proteinFamilyKey;
   if (family) parts.push(`العائلة: ${family}`);
   const price = candidate.extraPriceHalala ?? candidate.priceHalala;
-  if (typeof price === "number") parts.push(`${(price / 100).toFixed(2)} ${candidate.currency || "SAR"}`);
-  return parts.filter(Boolean).join(" • ") || "جاهز للاختيار";
+  if (typeof price === "number") {
+    parts.push(`${(price / 100).toFixed(2)} ${candidate.currency || "SAR"}`);
+  }
+  return parts.filter(Boolean).join(" • ") || "متاح للاختيار";
+}
+
+function friendlyReason(candidate: MealPlannerCatalogCandidate) {
+  const reason = candidateReason(candidate);
+  if (!reason || reason === "MENU_CATALOG_FALLBACK" || reason === "NO_AUTHORITATIVE_CANDIDATE") {
+    return "غير متاح لهذا السياق";
+  }
+  return reason;
 }
