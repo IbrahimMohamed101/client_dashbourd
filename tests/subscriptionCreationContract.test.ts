@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import createSubscriptionSchema from "../src/lib/validations/createSubscriptionSchema";
 import { buildSubscriptionCreationPayload } from "../src/utils/buildSubscriptionCreationPayload";
-import { isSelectablePremiumMeal } from "../src/components/pages/subscriptions/create/PremiumMealsSection";
+import { isSelectablePremiumMeal } from "../src/components/pages/subscriptions/create/premiumMealSelection";
 
 const baseData = {
   userId: "USER_ID",
