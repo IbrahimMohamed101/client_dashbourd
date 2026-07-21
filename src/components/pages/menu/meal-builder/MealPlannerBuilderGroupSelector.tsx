@@ -52,7 +52,7 @@ export function MealPlannerBuilderGroupSelector({
             مجموعة الخيارات
           </p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            اختر مجموعة من كتالوج المنيو، ثم اعرض الخيارات الموجودة داخلها.
+            اختر مجموعة مدعومة لإنشاء الكارت. المجموعات غير المرتبطة بسياق Meal Builder تظهر للمعلومة فقط.
           </p>
         </div>
         <Badge variant="outline" className="w-fit">
@@ -86,21 +86,28 @@ export function MealPlannerBuilderGroupSelector({
       ) : visibleGroups.length ? (
         <div className="grid max-h-72 gap-2 overflow-y-auto rounded-2xl border bg-muted/10 p-2 sm:grid-cols-2">
           {visibleGroups.map((group) => {
-            const selected = group.id === selectedMenuGroupId;
             const matches = matchingEligibleBuilderGroups(group.id, builderGroups);
             const saveable = isMenuGroupSaveable(group, builderGroups);
+            const selected = saveable && group.id === selectedMenuGroupId;
             const role = matches.length === 1 ? matches[0].optionRole : null;
+            const groupDisabled = disabled || !saveable;
             return (
               <button
                 key={group.id}
                 type="button"
                 aria-pressed={selected}
-                disabled={disabled}
-                onClick={() => onSelect(group)}
+                aria-disabled={groupDisabled}
+                disabled={groupDisabled}
+                title={saveable ? undefined : "هذه المجموعة غير مرتبطة بسياق صالح في Meal Builder"}
+                onClick={() => {
+                  if (saveable) onSelect(group);
+                }}
                 className={`flex min-h-28 items-start gap-3 rounded-xl border p-3 text-right transition ${
                   selected
                     ? "border-primary bg-primary/5 ring-2 ring-primary/10"
-                    : "bg-background hover:border-primary/35"
+                    : saveable
+                      ? "bg-background hover:border-primary/35"
+                      : "border-dashed bg-muted/20"
                 } disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${selected ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
@@ -111,12 +118,14 @@ export function MealPlannerBuilderGroupSelector({
                     <span className="truncate text-sm font-semibold">{menuGroupLabel(group)}</span>
                     <Badge variant="outline">{group.key}</Badge>
                     <Badge variant={saveable ? "secondary" : "outline"}>
-                      {saveable ? "متاح للنشر" : "غير مدعوم للنشر حاليًا"}
+                      {saveable ? "متاح للاختيار" : "غير مدعوم حاليًا"}
                     </Badge>
                     {role ? <Badge variant="outline">{optionRoleLabel(role)}</Badge> : null}
                   </span>
                   <span className="mt-2 block text-xs leading-5 text-muted-foreground">
-                    {group.name?.en || group.key}
+                    {saveable
+                      ? group.name?.en || group.key
+                      : "لا يوجد سياق منتج مرتبط بهذه المجموعة في Meal Builder"}
                   </span>
                 </span>
                 <span className="grid size-6 shrink-0 place-items-center rounded-full border bg-background">
