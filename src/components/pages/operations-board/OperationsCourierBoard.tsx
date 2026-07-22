@@ -1,6 +1,6 @@
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import type { PendingOperationsActions } from "@/hooks/useOperationsBoard";
-import { getCourierItems } from "@/lib/operationsBoard";
+import { getAllDeliveryOperationItems } from "@/lib/deliveryOperations";
 import { OperationsQueueCharts } from "./OperationsQueueCharts";
 import { OperationsQueueTable } from "./OperationsQueueTable";
 
@@ -22,14 +22,14 @@ export function OperationsCourierBoard({
   pendingActions,
   onAction,
 }: OperationsCourierBoardProps) {
-  const courierItems = getCourierItems(items);
+  const courierItems = getAllDeliveryOperationItems(items);
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
       <OperationsQueueCharts
         items={courierItems}
         title="التوصيل من العمليات"
-        description="توزيع سريع لحالات التوصيل وما يحتاج إجراء قبل تسليم الطلبات."
+        description="توزيع سريع لتوصيلات الاشتراكات والطلبات الفردية وما يحتاج إجراء قبل التسليم."
       />
       <OperationsQueueTable
         items={courierItems}
