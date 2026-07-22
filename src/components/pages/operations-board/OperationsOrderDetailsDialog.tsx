@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
-  CreditCard,
   PackageCheck,
   Store,
   Truck,
@@ -18,15 +17,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { buildKitchenV2Presentation } from "@/lib/operationsKitchenV2Presentation";
-import { buildOperationsOrderPresentation } from "@/lib/operationsOrderPresentation";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrder, isPickupRequest } from "@/types/dashboardOpsTypes";
 import { OperationsKitchenAddonGroups } from "./OperationsKitchenAddonGroups";
 import { OperationsKitchenV2Card } from "./OperationsKitchenV2Card";
 import { OperationsKitchenWarnings } from "./OperationsKitchenWarnings";
-import { OperationsOrderItemSummary } from "./OperationsOrderItemSummary";
-import { OperationsPricingSummary } from "./OperationsPricingSummary";
-import { OperationsSelectionGroups } from "./OperationsSelectionGroups";
 
 interface OperationsOrderDetailsDialogProps {
   item: UnifiedQueueItem | null;
@@ -62,8 +57,8 @@ function customerName(item: UnifiedQueueItem) {
 
 function sourceLabel(item: UnifiedQueueItem) {
   if (isPickupRequest(item)) return "استلام من الفرع";
-  if (isOneTimeOrder(item)) return "طلب فردي";
-  return "اشتراك يومي";
+  if (isOneTimeOrder(item)) return "طلب مرة واحدة";
+  return item.mode === "delivery" ? "اشتراك توصيل" : "اشتراك استلام";
 }
 
 function modeLabel(mode: string) {
@@ -175,8 +170,8 @@ function KitchenDetails({ item }: { item: UnifiedQueueItem }) {
       <DetailGrid
         rows={[
           { label: "عدد الوجبات", value: kitchen.mealCount, important: true },
-          { label: "عدد الكروت", value: kitchen.cardCount },
-          { label: "الإضافات", value: kitchen.addonItemCount },
+          { label: "عدد كروت التحضير", value: kitchen.cardCount },
+          { label: "عدد الإضافات", value: kitchen.addonItemCount },
         ]}
       />
       {kitchen.cards.map((card) => (
@@ -188,30 +183,6 @@ function KitchenDetails({ item }: { item: UnifiedQueueItem }) {
   );
 }
 
-function OrderItemDetails({ item }: { item: UnifiedQueueItem }) {
-  if (!isOneTimeOrder(item)) return null;
-  const presentation = buildOperationsOrderPresentation(item);
-
-  return (
-    <Section title="تفاصيل عناصر الطلب" icon={<PackageCheck className="h-4 w-4" />}>
-      <div className="space-y-4">
-        {presentation.items.map((orderItem) => (
-          <div key={orderItem.key} className="space-y-3">
-            <OperationsOrderItemSummary item={orderItem} showPaidSelections={false} />
-            <OperationsSelectionGroups groups={orderItem.selectionGroups} />
-          </div>
-        ))}
-        {!presentation.items.length ? (
-          <p className="rounded-xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-            لا توجد أصناف واضحة في الطلب الحالي.
-          </p>
-        ) : null}
-        <OperationsPricingSummary pricing={presentation.pricing} />
-      </div>
-    </Section>
-  );
-}
-
 export function OperationsOrderDetailsDialog({
   item,
   open,
@@ -219,7 +190,6 @@ export function OperationsOrderDetailsDialog({
 }: OperationsOrderDetailsDialogProps) {
   if (!item) return null;
 
-  const orderPresentation = buildOperationsOrderPresentation(item);
   const pickup = pickupInfo(item);
   const delivery = deliveryInfo(item);
 
@@ -240,9 +210,9 @@ export function OperationsOrderDetailsDialog({
               </Badge>
               <Badge className="rounded-md">{item.statusLabel || item.status}</Badge>
             </div>
-            <DialogTitle className="text-xl font-bold">تفاصيل العملية</DialogTitle>
+            <DialogTitle className="text-xl font-bold">تفاصيل التحضير</DialogTitle>
             <DialogDescription className="text-right break-words">
-              بيانات التحضير تأتي من Kitchen v2، وتفاصيل عناصر الطلب منفصلة للتسعير فقط.
+              تعرض هذه الشاشة تعليمات المطبخ فقط: أسماء الأصناف، الأوزان، الجرامات، الكميات، والإضافات.
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -291,11 +261,11 @@ export function OperationsOrderDetailsDialog({
             </Section>
 
             <div className="space-y-4">
-              <Section title="التحذيرات" icon={<AlertTriangle className="h-4 w-4" />}>
+              <Section title="ملاحظات التحضير" icon={<AlertTriangle className="h-4 w-4" />}>
                 <DetailGrid
                   rows={[
-                    { label: "ملاحظات", value: item.orderSummary?.notes || item.fulfillment?.notes },
-                    { label: "حساسية", value: item.orderSummary?.allergies || item.fulfillment?.allergies },
+                    { label: "ملاحظات", value: item.fulfillment?.notes },
+                    { label: "حساسية", value: item.fulfillment?.allergies },
                   ]}
                 />
               </Section>
@@ -306,30 +276,15 @@ export function OperationsOrderDetailsDialog({
                   <ActionsSummary item={item} />
                 </div>
               </Section>
-
-              {isOneTimeOrder(item) ? (
-                <Section title="الدفع والتسعير" icon={<CreditCard className="h-4 w-4" />}>
-                  <DetailGrid
-                    rows={[
-                      { label: "حالة الدفع", value: orderPresentation.paymentLabel, important: true },
-                      { label: "الإجمالي", value: orderPresentation.totalLabel, important: true },
-                    ]}
-                  />
-                </Section>
-              ) : null}
             </div>
-          </div>
-
-          <div className="mt-4">
-            <OrderItemDetails item={item} />
           </div>
 
           <div className="mt-4 rounded-2xl border bg-muted/20 p-4 text-xs leading-6 text-muted-foreground">
             <div className="mb-2 flex items-center gap-2 font-bold text-foreground">
               <PackageCheck className="h-4 w-4 text-primary" />
-              ملاحظة تشغيلية
+              عقد لوحة العمليات
             </div>
-            كروت المطبخ من item.kitchen.cards فقط، والإضافات من item.kitchen.addonGroups فقط.
+            كروت التحضير من item.kitchen.cards فقط، والإضافات من item.kitchen.addonGroups فقط. لا تعرض لوحة العمليات أسعاراً أو خصومات أو ضريبة أو بيانات دفع.
           </div>
         </div>
       </DialogContent>
