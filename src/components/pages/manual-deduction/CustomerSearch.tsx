@@ -45,24 +45,24 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="min-w-0 overflow-hidden">
+      <CardHeader className="px-4 sm:px-6">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Search className="h-5 w-5" />
+          <Search className="h-5 w-5 shrink-0" />
           البحث بالهاتف
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0 px-4 sm:px-6">
         <Form {...searchForm}>
           <form
             onSubmit={searchForm.handleSubmit(onSubmit)}
-            className="flex items-start gap-3"
+            className="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:items-start"
           >
             <FormField
               control={searchForm.control}
               name="phone"
               render={({ field }) => (
-                <FormItem className="flex-1 space-y-0">
+                <FormItem className="min-w-0 flex-1 space-y-0">
                   <FormControl>
                     <Input
                       type="tel"
@@ -71,22 +71,27 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
                       placeholder="أدخل رقم الهاتف..."
                       {...field}
                       dir="ltr"
+                      className="min-w-0 w-full"
                     />
                   </FormControl>
                   <FormMessage className="pt-2" />
                 </FormItem>
               )}
             />
-            <Button type="submit" disabled={isSearching}>
+            <Button
+              type="submit"
+              disabled={isSearching}
+              className="w-full shrink-0 sm:w-auto"
+            >
               {isSearching ? "جاري البحث..." : "بحث"}
             </Button>
           </form>
         </Form>
 
         {!!error && (
-          <Alert variant="destructive" className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
+          <Alert variant="destructive" className="mt-4 min-w-0">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <AlertDescription className="break-words">
               {getApiErrorMessage(error) ||
                 "حدث خطأ أثناء البحث. تأكد من الرقم وأعد المحاولة."}
             </AlertDescription>
