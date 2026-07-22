@@ -70,7 +70,10 @@ export type KitchenCardType =
   | string;
 
 export interface KitchenComponentItem {
+  id?: string | null;
+  key?: string | null;
   name?: string | LocalizedText | null;
+  nameI18n?: LocalizedText | null;
   label?: string | LocalizedText | null;
   grams?: number | null;
   quantity?: number | null;
@@ -83,9 +86,9 @@ export interface KitchenSaladSummary {
 
 export interface KitchenComponents {
   protein?: KitchenComponentItem | null;
-  carbs?: KitchenComponentItem[] | KitchenComponentItem | null;
+  carbs?: KitchenComponentItem[] | null;
   product?: KitchenComponentItem | null;
-  salad?: KitchenSaladSummary | KitchenComponentItem | null;
+  salad?: KitchenSaladSummary | null;
 }
 
 export interface KitchenSectionItem {
@@ -95,8 +98,6 @@ export interface KitchenSectionItem {
   nameI18n?: LocalizedText | null;
   quantity?: number | null;
   grams?: number | null;
-  productUnitPriceHalala?: number | null;
-  payableTotalHalala?: number | null;
 }
 
 export interface KitchenSection {
@@ -131,8 +132,7 @@ export interface KitchenAddonItem {
   name?: string | LocalizedText | null;
   nameI18n?: LocalizedText | null;
   quantity?: number | null;
-  productUnitPriceHalala?: number | null;
-  payableTotalHalala?: number | null;
+  grams?: number | null;
 }
 
 export interface KitchenAddonGroup {
@@ -146,6 +146,8 @@ export interface KitchenAddonGroup {
 
 export interface KitchenV2 {
   version: "v2";
+  purpose?: "meal_preparation" | string;
+  financialDataIncluded?: false;
   mealCount: number;
   cards: KitchenCard[];
   addonGroups: KitchenAddonGroup[];

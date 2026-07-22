@@ -1,11 +1,11 @@
-import { safeText } from "@/lib/operationsBoard";
 import type {
   KitchenAddonGroup,
-  KitchenAddonItem,
   KitchenCard,
+  KitchenComponentItem,
   KitchenSection,
   KitchenSectionItem,
   KitchenV2,
+  LocalizedText,
   UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
 
@@ -20,81 +20,101 @@ export function formatOperationsSar(
   return `${(value / 100).toFixed(2)} ر.س`;
 }
 
-function text(value: unknown, fallback = "") {
-  return safeText(value, fallback);
-}
-
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
 }
 
-function warningText(value: unknown): string {
-  if (typeof value === "string" || typeof value === "number") {
-    return text(value, "");
-  }
+function scalar(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return null;
+}
 
+function localized(value: unknown): LocalizedText | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  return {
+    ar: scalar(record.ar),
+    en: scalar(record.en),
+  };
+}
+
+export function resolveOperationsLocalizedText(
+  value: {
+    nameI18n?: LocalizedText | null;
+    name?: string | LocalizedText | null;
+    titleI18n?: LocalizedText | null;
+    title?: string | LocalizedText | null;
+    labelI18n?: LocalizedText | null;
+    label?: string | LocalizedText | null;
+  },
+  fallback: string
+): string {
+  const nameI18n = localized(value.nameI18n);
+  const name = localized(value.name);
+  const titleI18n = localized(value.titleI18n);
+  const title = localized(value.title);
+  const labelI18n = localized(value.labelI18n);
+  const label = localized(value.label);
+
+  return (
+    nameI18n?.ar ||
+    name?.ar ||
+    titleI18n?.ar ||
+    title?.ar ||
+    labelI18n?.ar ||
+    label?.ar ||
+    scalar(value.name) ||
+    scalar(value.title) ||
+    scalar(value.label) ||
+    nameI18n?.en ||
+    name?.en ||
+    titleI18n?.en ||
+    title?.en ||
+    labelI18n?.en ||
+    label?.en ||
+    fallback
+  );
+}
+
+function positiveNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : null;
+}
+
+function quantity(value: unknown, fallback = 1): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : fallback;
+}
+
+function warningText(value: unknown): string {
+  const direct = scalar(value);
+  if (direct) return direct;
   const record = asRecord(value);
   if (!record) return "";
-
-  return text(
-    record.ar ??
-      record.messageAr ??
-      record.label ??
-      record.title ??
-      record.message ??
-      record.en ??
-      record.messageEn ??
-      record.code,
+  return (
+    scalar(record.ar) ||
+    scalar(record.messageAr) ||
+    scalar(record.label) ||
+    scalar(record.title) ||
+    scalar(record.message) ||
+    scalar(record.en) ||
+    scalar(record.messageEn) ||
+    scalar(record.code) ||
     ""
   );
 }
 
 function saladSummary(card: KitchenCard) {
-  const salad = card.components?.salad;
-  const record = asRecord(salad);
-  if (!record) return { sectionCount: null, itemCount: null };
-
+  const salad = asRecord(card.components?.salad);
   return {
-    sectionCount:
-      typeof record.sectionCount === "number" && Number.isFinite(record.sectionCount)
-        ? record.sectionCount
-        : null,
-    itemCount:
-      typeof record.itemCount === "number" && Number.isFinite(record.itemCount)
-        ? record.itemCount
-        : null,
+    sectionCount: positiveNumber(salad?.sectionCount),
+    itemCount: positiveNumber(salad?.itemCount),
   };
-}
-
-function countItems(sections: KitchenSection[] = []) {
-  return sections.reduce((sum, section) => sum + (section.items?.length ?? 0), 0);
-}
-
-function paidSectionItems(sections: KitchenSection[] = []) {
-  return sections.flatMap((section) =>
-    (section.items ?? [])
-      .filter((item) => (item.payableTotalHalala ?? 0) > 0)
-      .map((item) => ({
-        sectionLabel: text(section.label ?? section.labelI18n ?? section.title, "قسم"),
-        name: text(item.name ?? item.nameI18n, "مكون"),
-        amount: item.payableTotalHalala ?? 0,
-        grams: item.grams ?? null,
-      }))
-  );
-}
-
-function paidAddonItems(groups: KitchenAddonGroup[] = []) {
-  return groups.flatMap((group) =>
-    (group.items ?? [])
-      .filter((item) => (item.payableTotalHalala ?? 0) > 0)
-      .map((item) => ({
-        groupLabel: text(group.label ?? group.labelI18n ?? group.title, "إضافات"),
-        name: text(item.name ?? item.nameI18n, "إضافة"),
-        amount: item.payableTotalHalala ?? 0,
-      }))
-  );
 }
 
 export function isKitchenV2(kitchen: unknown): kitchen is KitchenV2 {
@@ -103,7 +123,8 @@ export function isKitchenV2(kitchen: unknown): kitchen is KitchenV2 {
       typeof kitchen === "object" &&
       (kitchen as KitchenV2).version === "v2" &&
       Array.isArray((kitchen as KitchenV2).cards) &&
-      Array.isArray((kitchen as KitchenV2).addonGroups)
+      Array.isArray((kitchen as KitchenV2).addonGroups) &&
+      Array.isArray((kitchen as KitchenV2).warnings)
   );
 }
 
@@ -111,15 +132,16 @@ export function getKitchenV2(item: UnifiedQueueItem): KitchenV2 | null {
   return isKitchenV2(item.kitchen) ? item.kitchen : null;
 }
 
-export interface PresentedKitchenSectionItem {
+export interface PresentedKitchenComponent {
   name: string;
-  quantity: number | null;
+  quantity: number;
   grams: number | null;
-  paidAmountHalala: number;
-  paidLabel: string;
 }
 
+export interface PresentedKitchenSectionItem extends PresentedKitchenComponent {}
+
 export interface PresentedKitchenSection {
+  key: string;
   label: string;
   items: PresentedKitchenSectionItem[];
 }
@@ -130,31 +152,20 @@ export interface PresentedKitchenCard {
   title: string;
   badge: string | null;
   quantity: number;
-  lines: string[];
   notes: string | null;
   warnings: string[];
   sectionCount: number;
   itemCount: number;
-  paidExtras: Array<{
-    sectionLabel: string;
-    name: string;
-    amount: number;
-    label: string;
-    grams: number | null;
-  }>;
+  product: PresentedKitchenComponent | null;
+  protein: PresentedKitchenComponent | null;
+  carbs: PresentedKitchenComponent[];
   sections: PresentedKitchenSection[];
-  componentLines: string[];
 }
 
 export interface PresentedKitchenAddonGroup {
   key: string;
   label: string;
-  items: Array<{
-    name: string;
-    quantity: number;
-    paidAmountHalala: number;
-    paidLabel: string;
-  }>;
+  items: PresentedKitchenComponent[];
 }
 
 export interface PresentedKitchenV2 {
@@ -167,101 +178,81 @@ export interface PresentedKitchenV2 {
   warningMessages: string[];
   cards: PresentedKitchenCard[];
   addonGroups: PresentedKitchenAddonGroup[];
-  paidAddonItems: Array<{
-    groupLabel: string;
-    name: string;
-    amount: number;
-    label: string;
-  }>;
   isEmptyKitchenDay: boolean;
   searchText: string;
 }
 
-function sectionItem(item: KitchenSectionItem): PresentedKitchenSectionItem {
-  const paidAmountHalala = item.payableTotalHalala ?? 0;
+function presentComponent(
+  item: KitchenComponentItem,
+  fallback: string
+): PresentedKitchenComponent {
   return {
-    name: text(item.name ?? item.nameI18n, "مكون"),
-    quantity: item.quantity ?? null,
-    grams: item.grams ?? null,
-    paidAmountHalala,
-    paidLabel: paidAmountHalala > 0 ? formatOperationsSar(paidAmountHalala) : "",
+    name: resolveOperationsLocalizedText(item, fallback),
+    quantity: quantity(item.quantity),
+    grams: positiveNumber(item.grams),
   };
 }
 
-function section(section: KitchenSection): PresentedKitchenSection {
+function presentSectionItem(item: KitchenSectionItem): PresentedKitchenSectionItem {
   return {
-    label: text(section.label ?? section.labelI18n ?? section.title, "قسم"),
-    items: (section.items ?? []).map(sectionItem),
+    name: resolveOperationsLocalizedText(item, "مكوّن غير محدد"),
+    quantity: quantity(item.quantity),
+    grams: positiveNumber(item.grams),
   };
 }
 
-function componentLines(card: KitchenCard): string[] {
-  const components = card.components ?? {};
-  const lines: string[] = [];
-  const protein = components.protein;
-  const product = components.product;
-  const carbs = Array.isArray(components.carbs)
-    ? components.carbs
-    : components.carbs
-      ? [components.carbs]
-      : [];
-
-  if (protein) {
-    const grams = protein.grams ? ` - ${protein.grams} جم` : "";
-    lines.push(`بروتين: ${text(protein.name ?? protein.label, "بروتين")}${grams}`);
-  }
-  if (carbs.length) {
-    lines.push(
-      `كارب: ${carbs.map((carb) => text(carb.name ?? carb.label, "كارب")).join("، ")}`
-    );
-  }
-  if (product) {
-    lines.push(`الصنف: ${text(product.name ?? product.label, "صنف")}`);
-  }
-  return lines;
+function presentSection(section: KitchenSection, index: number): PresentedKitchenSection {
+  return {
+    key: section.key || `section-${index}`,
+    label: resolveOperationsLocalizedText(section, "قسم غير محدد"),
+    items: (section.items ?? []).map(presentSectionItem),
+  };
 }
 
-function card(card: KitchenCard, index: number): PresentedKitchenCard {
-  const sections = (card.sections ?? []).map(section);
-  const paidExtras = paidSectionItems(card.sections ?? []).map((item) => ({
-    ...item,
-    label: formatOperationsSar(item.amount),
-  }));
-  const warnings = (card.warnings ?? [])
-    .map(warningText)
-    .filter(Boolean);
-  const counters = saladSummary(card);
+function presentCard(card: KitchenCard, index: number): PresentedKitchenCard {
+  const sections = (card.sections ?? []).map(presentSection);
+  const carbs = Array.isArray(card.components?.carbs)
+    ? card.components.carbs
+    : [];
+  const salad = saladSummary(card);
 
   return {
-    key: card.cardId ?? card.slotKey ?? `${card.type}-${index}`,
+    key: card.cardId || card.id || card.slotKey || `${card.type}-${index}`,
     type: card.type,
-    title: text(card.title ?? card.titleI18n, `بطاقة ${index + 1}`),
-    badge: text(card.badge, "") || null,
-    quantity: card.quantity ?? 1,
-    lines: (card.lines ?? []).map((line) => text(line, "")).filter(Boolean),
-    notes: text(card.notes, "") || null,
-    warnings,
-    sectionCount: counters.sectionCount ?? sections.length,
-    itemCount: counters.itemCount ?? countItems(card.sections ?? []),
-    paidExtras,
+    title: resolveOperationsLocalizedText(card, "وجبة غير محددة"),
+    badge: card.badge
+      ? resolveOperationsLocalizedText({ label: card.badge }, "") || null
+      : null,
+    quantity: quantity(card.quantity),
+    notes: scalar(card.notes),
+    warnings: (card.warnings ?? []).map(warningText).filter(Boolean),
+    sectionCount: salad.sectionCount ?? sections.length,
+    itemCount:
+      salad.itemCount ??
+      sections.reduce((sum, section) => sum + section.items.length, 0),
+    product: card.components?.product
+      ? presentComponent(card.components.product, "صنف غير محدد")
+      : null,
+    protein: card.components?.protein
+      ? presentComponent(card.components.protein, "بروتين غير محدد")
+      : null,
+    carbs: carbs.map((carb) => presentComponent(carb, "كارب غير محدد")),
     sections,
-    componentLines: componentLines(card),
   };
 }
 
-function addonGroup(group: KitchenAddonGroup, index: number): PresentedKitchenAddonGroup {
+function presentAddonGroup(
+  group: KitchenAddonGroup,
+  index: number
+): PresentedKitchenAddonGroup {
   return {
-    key: `${text(group.label ?? group.labelI18n ?? group.title, "addons")}-${index}`,
-    label: text(group.label ?? group.labelI18n ?? group.title, "إضافات"),
-    items: (group.items ?? []).map((item: KitchenAddonItem) => {
-      const paidAmountHalala = item.payableTotalHalala ?? 0;
-      return {
-        name: text(item.name ?? item.nameI18n, "إضافة"),
-        quantity: item.quantity ?? 1,
-        paidAmountHalala,
-        paidLabel: paidAmountHalala > 0 ? formatOperationsSar(paidAmountHalala) : "",
-      };
-    }),
+    key: `${group.addonPlanId || group.balanceBucketId || "addons"}-${index}`,
+    label: resolveOperationsLocalizedText(group, "إضافات"),
+    items: (group.items ?? []).map((item) => ({
+      name: resolveOperationsLocalizedText(item, "إضافة غير محددة"),
+      quantity: quantity(item.quantity),
+      grams: positiveNumber(item.grams),
+    })),
   };
 }
 
@@ -278,40 +269,35 @@ export function buildKitchenV2Presentation(item: UnifiedQueueItem): PresentedKit
       warningMessages: [],
       cards: [],
       addonGroups: [],
-      paidAddonItems: [],
       isEmptyKitchenDay: false,
       searchText: "",
     };
   }
 
-  const cards = kitchen.cards.map(card);
-  const addonGroups = kitchen.addonGroups.map(addonGroup);
-  const warningMessages = kitchen.warnings
-    .map(warningText)
-    .filter(Boolean);
-  const paidAddons = paidAddonItems(kitchen.addonGroups).map((item) => ({
-    ...item,
-    label: formatOperationsSar(item.amount),
-  }));
+  const cards = kitchen.cards.map(presentCard);
+  const addonGroups = kitchen.addonGroups.map(presentAddonGroup);
+  const warningMessages = kitchen.warnings.map(warningText).filter(Boolean);
   const addonItemCount = addonGroups.reduce(
-    (sum, group) => sum + group.items.reduce((inner, item) => inner + item.quantity, 0),
+    (sum, group) =>
+      sum + group.items.reduce((inner, addon) => inner + addon.quantity, 0),
     0
   );
   const searchText = [
     ...cards.flatMap((entry) => [
       entry.title,
       entry.badge,
-      ...entry.lines,
-      ...entry.componentLines,
+      entry.product?.name,
+      entry.protein?.name,
+      ...entry.carbs.map((carb) => carb.name),
       ...entry.sections.flatMap((section) => [
         section.label,
-        ...section.items.map((item) => item.name),
+        ...section.items.map((sectionItem) => sectionItem.name),
       ]),
       ...entry.warnings,
     ]),
     ...addonGroups.flatMap((group) => [
       group.label,
-      ...group.items.map((item) => item.name),
+      ...group.items.map((addon) => addon.name),
     ]),
     ...warningMessages,
   ]
@@ -328,7 +314,6 @@ export function buildKitchenV2Presentation(item: UnifiedQueueItem): PresentedKit
     warningMessages,
     cards,
     addonGroups,
-    paidAddonItems: paidAddons,
     isEmptyKitchenDay:
       kitchen.mealCount === 0 &&
       kitchen.cards.length === 0 &&
