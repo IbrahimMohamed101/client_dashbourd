@@ -15,20 +15,22 @@ interface DeliveryListProps {
     action: QueueAction,
     payload: DashboardOpsActionRequest
   ) => void;
-  isActionLoading: boolean;
+  pendingItemId?: string | null;
+  emptyMessage?: string;
 }
 
 export function DeliveryList({
   data,
   isLoading,
   onActionClick,
-  isActionLoading,
+  pendingItemId,
+  emptyMessage,
 }: DeliveryListProps) {
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-3">
-        {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="h-56 w-full rounded-xl" />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        {Array.from({ length: 6 }, (_, i) => (
+          <Skeleton key={i} className="h-80 w-full rounded-2xl" />
         ))}
       </div>
     );
@@ -36,14 +38,14 @@ export function DeliveryList({
 
   if (data.length === 0) {
     return (
-      <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed text-center">
+      <div className="flex min-h-[300px] flex-col items-center justify-center gap-4 rounded-xl border border-dashed p-6 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
           <PackageX className="h-8 w-8 text-muted-foreground" />
         </div>
         <div className="flex flex-col gap-1">
           <h3 className="text-base font-bold">لا توجد توصيلات</h3>
-          <p className="max-w-md text-sm text-muted-foreground">
-            لم يتم العثور على أي توصيلات مطابقة للبحث أو الفلتر المحدد.
+          <p className="max-w-md text-sm leading-6 text-muted-foreground">
+            {emptyMessage || "لا توجد توصيلات في يوم التشغيل الحالي."}
           </p>
         </div>
       </div>
@@ -52,10 +54,10 @@ export function DeliveryList({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between gap-3 px-1">
         <h2 className="text-sm font-semibold opacity-80">جميع التوصيلات</h2>
-        <span className="text-[10px] font-medium text-muted-foreground">
-          {data.length} توصيل متاح
+        <span className="text-xs font-medium text-muted-foreground">
+          {data.length} توصيل
         </span>
       </div>
 
@@ -65,7 +67,7 @@ export function DeliveryList({
             key={item.id}
             item={item}
             onActionClick={onActionClick}
-            isActionLoading={isActionLoading}
+            isActionLoading={pendingItemId === item.id}
           />
         ))}
       </div>

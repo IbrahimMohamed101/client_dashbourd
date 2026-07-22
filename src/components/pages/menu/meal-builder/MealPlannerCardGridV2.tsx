@@ -31,7 +31,7 @@ import {
 
 export function MealPlannerCardGridV2({
   premiumSection,
-  catalog = {},
+  catalog,
   sections,
   issues,
   pending,
@@ -42,7 +42,7 @@ export function MealPlannerCardGridV2({
   onDelete,
 }: {
   premiumSection?: MealPlannerPremiumSectionV2 | null;
-  catalog?: MealPlannerCatalogV2;
+  catalog: MealPlannerCatalogV2;
   sections: MealPlannerSectionV2[];
   issues: MealPlannerValidationIssue[];
   pending: boolean;

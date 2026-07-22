@@ -44,36 +44,6 @@ const emptyCatalog: MealPlannerCatalogV2 = {
   },
 };
 
-const proteinContext = {
-  id: "builder-basic-proteins",
-  cardType: "option_family" as const,
-  selectionType: "standard_meal" as const,
-  productContextId: "product-basic",
-  sourceGroupId: "group-proteins",
-  optionRole: "protein" as const,
-  product: {
-    id: "product-basic",
-    key: "basic_meal",
-    name: { ar: "المنتج الأساسي", en: "Basic Meal" },
-    status: {},
-  },
-  group: {
-    id: "group-proteins",
-    key: "proteins",
-    name: { ar: "مجموعة الخيارات", en: "Options" },
-    status: {},
-  },
-  rules: { minSelections: 1, maxSelections: 1, isRequired: true },
-  families: ["beef"],
-  options: [],
-  optionCount: 0,
-  assignableOptionCount: 0,
-  compatible: true,
-  eligible: true,
-  reasonCodes: [],
-  sortOrder: 1,
-};
-
 describe("Meal Planner V2 components", () => {
   it("shows exactly the two creatable card types and never exposes legacy sandwich or premium", () => {
     render(
@@ -95,16 +65,10 @@ describe("Meal Planner V2 components", () => {
     expect(screen.queryByText(/system_premium/i)).not.toBeInTheDocument();
   });
 
-  it("reads creatable card types and option roles from cardContract", async () => {
-    const user = userEvent.setup();
+  it("reads creatable card types and option roles from cardContract", () => {
     render(
       <MealPlannerCardDialogV2
-        catalog={{
-          ...emptyCatalog,
-          builderGroups: [
-            { ...proteinContext, optionRole: "carbs", families: [] },
-          ],
-        }}
+        catalog={emptyCatalog}
         cardContract={{
           dynamicCardTypes: [
             {
@@ -125,12 +89,9 @@ describe("Meal Planner V2 components", () => {
     expect(
       screen.getByRole("button", { name: /خيارات وجبة مركبة/ })
     ).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: /المنتج الأساسي ← مجموعة الخيارات/ })
-    );
     expect(
       screen.getByRole("combobox", { name: "نوع الخيارات" })
-    ).toHaveTextContent("كارب");
+    ).toHaveTextContent("خيارات كارب");
     expect(screen.queryByText("خيارات بروتين")).not.toBeInTheDocument();
   });
 
@@ -149,13 +110,14 @@ describe("Meal Planner V2 components", () => {
     );
 
     await user.type(
-      screen.getByLabelText("الاسم العربي"),
+      screen.getByPlaceholderText("مثال: وجبات جاهزة"),
       "ساندويتشات"
     );
     await user.type(
-      screen.getByLabelText("الاسم الإنجليزي"),
+      screen.getByPlaceholderText("Example: Ready Meals"),
       "Sandwiches"
     );
+    await user.type(screen.getByPlaceholderText("ready_meals"), "sandwiches");
     await user.click(
       screen.getByRole("button", { name: "اختيار عنصر تجريبي" })
     );
@@ -178,7 +140,7 @@ describe("Meal Planner V2 components", () => {
     const user = userEvent.setup();
     render(
       <MealPlannerCardDialogV2
-        catalog={{ ...emptyCatalog, builderGroups: [proteinContext] }}
+        catalog={emptyCatalog}
         pending={false}
         onClose={vi.fn()}
         onSubmit={vi.fn(async () => undefined)}
@@ -188,14 +150,10 @@ describe("Meal Planner V2 components", () => {
     await user.click(
       screen.getByRole("button", { name: /خيارات وجبة مركبة/ })
     );
-    await user.click(
-      screen.getByRole("button", { name: /المنتج الأساسي ← مجموعة الخيارات/ })
-    );
 
     expect(screen.getByText("نوع الخيارات")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /المنتج الأساسي ← مجموعة الخيارات/ })
-    ).toBeInTheDocument();
+    expect(screen.getByText("المنتج الأساسي")).toBeInTheDocument();
+    expect(screen.getByText("مجموعة الخيارات")).toBeInTheDocument();
     expect(screen.getByText("عائلة البروتين")).toBeInTheDocument();
   });
 

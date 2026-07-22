@@ -9,18 +9,18 @@ import {
   fetchCourierDeliveryList,
 } from "@/utils/fetchCourierDeliveries";
 
-const courierDeliveryKeys = {
-  list: (date: string) => ["courier-deliveries", date] as const,
+export const courierDeliveryKeys = {
+  all: ["courier-deliveries"] as const,
+  today: () => ["courier-deliveries", "today"] as const,
 };
 
-export const useCourierDeliveryListQuery = (date: string) =>
+export const useCourierDeliveryListQuery = () =>
   useQuery({
-    queryKey: courierDeliveryKeys.list(date),
-    queryFn: () => fetchCourierDeliveryList(date),
-    enabled: Boolean(date),
+    queryKey: courierDeliveryKeys.today(),
+    queryFn: fetchCourierDeliveryList,
     refetchInterval: 60_000,
     refetchIntervalInBackground: true,
-    placeholderData: (previous) => previous,
+    staleTime: 15_000,
   });
 
 export const useCourierDeliveryActionMutation = () => {
@@ -35,19 +35,29 @@ export const useCourierDeliveryActionMutation = () => {
       action: string;
       payload: DashboardOpsActionRequest;
       actionDef?: QueueAction;
+      itemId: string;
     }) => executeCourierDeliveryAction({ action, payload, actionDef }),
-    onSuccess: () => {
-      toast.success("Delivery status updated from the backend.");
-      queryClient.invalidateQueries({ queryKey: ["courier-deliveries"] });
-      queryClient.invalidateQueries({ queryKey: ["accounting-daily-report"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: courierDeliveryKeys.today(),
+        refetchType: "active",
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["accounting-daily-report"],
+        refetchType: "active",
+      });
+      toast.success("تم تحديث حالة التوصيل وعرض أحدث بيانات الخادم.");
     },
     onError: (
-      error: Error & { response?: { data?: { message?: string } } }
+      error: Error & {
+        response?: {
+          data?: { message?: string; error?: string; code?: string };
+        };
+      }
     ) => {
-      toast.error(
-        error?.response?.data?.message ||
-          "Unable to update delivery status from the backend."
-      );
+      const backendMessage =
+        error?.response?.data?.message || error?.response?.data?.error;
+      toast.error(backendMessage || "تعذر تحديث حالة التوصيل. حاول مرة أخرى.");
     },
   });
 };

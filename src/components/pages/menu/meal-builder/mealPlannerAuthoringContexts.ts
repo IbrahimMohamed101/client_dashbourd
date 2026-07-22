@@ -74,12 +74,6 @@ function deriveFromProductRelations(catalog: MealPlannerCatalogV2) {
       const relationNode = node as MealPlannerProductOptionGroup & {
         relation?: Record<string, unknown>;
         groupStatus?: Record<string, unknown>;
-        rules?: {
-          minSelections?: number;
-          maxSelections?: number | null;
-          isRequired?: boolean;
-        };
-        sortOrder?: number;
       };
       const group = relationNode.group || relationNode;
       const sourceGroupId = asId(group.id || group._id);
@@ -123,12 +117,12 @@ function deriveFromProductRelations(catalog: MealPlannerCatalogV2) {
           ) as MealPlannerEntityStatus,
         },
         rules: {
-          minSelections: Number(relationNode.rules?.minSelections ?? 0),
+          minSelections: Number((relationNode as any).rules?.minSelections ?? 0),
           maxSelections:
-            relationNode.rules?.maxSelections === null
+            (relationNode as any).rules?.maxSelections === null
               ? null
-              : Number(relationNode.rules?.maxSelections ?? 1),
-          isRequired: relationNode.rules?.isRequired === true,
+              : Number((relationNode as any).rules?.maxSelections ?? 1),
+          isRequired: (relationNode as any).rules?.isRequired === true,
         },
         families: Array.from(
           new Set(
@@ -143,7 +137,7 @@ function deriveFromProductRelations(catalog: MealPlannerCatalogV2) {
         compatible: true,
         eligible,
         reasonCodes: eligible ? [] : ["MEAL_BUILDER_RELATION_NOT_READY"],
-        sortOrder: Number(relationNode.sortOrder ?? 0),
+        sortOrder: Number((relationNode as any).sortOrder ?? 0),
       });
     }
   }

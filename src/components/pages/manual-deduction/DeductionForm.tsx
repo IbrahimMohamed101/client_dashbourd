@@ -24,7 +24,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import type { Subscription } from "@/types/subscriptionTypes";
-import { getAddonAvailableUnits } from "./manualDeductionValidation";
 
 const addonDeductionSchema = z.object({
   addonId: z.string(),
@@ -151,8 +150,10 @@ export function DeductionForm({
   const watched = form.watch();
   const selectedAddonTotal =
     watched.addons?.reduce((sum, addon) => sum + Number(addon.qty || 0), 0) ?? 0;
-  const selectedMealTotal =
-    Number(watched.regularMeals || 0) + Number(watched.premiumMeals || 0);
+  const selectedTotal =
+    Number(watched.regularMeals || 0) +
+    Number(watched.premiumMeals || 0) +
+    selectedAddonTotal;
 
   const handleSubmit = (values: DeductionFormValues) => {
     onSubmit(values, form);
@@ -170,7 +171,7 @@ export function DeductionForm({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <BalanceCard
             label="الرصيد الكلي"
             value={`${subscription.remainingMeals} وجبة`}
@@ -187,18 +188,19 @@ export function DeductionForm({
             value={`${premiumRemaining} متاح`}
             icon={<Package className="h-4 w-4" />}
           />
-          <BalanceCard
-            label="إضافات متاحة"
-            value={`${getAddonAvailableUnits(addonBalances)} وحدة`}
-            icon={<PlusCircle className="h-4 w-4" />}
-          />
           {subscription.endDate ? (
             <BalanceCard
               label="نهاية الاشتراك"
               value={new Date(subscription.endDate).toLocaleDateString("ar-EG")}
               icon={<Calendar className="h-4 w-4" />}
             />
-          ) : null}
+          ) : (
+            <BalanceCard
+              label="إضافات متاحة"
+              value={addonBalances.length}
+              icon={<PlusCircle className="h-4 w-4" />}
+            />
+          )}
         </div>
 
         <Separator />
@@ -217,7 +219,7 @@ export function DeductionForm({
                   </p>
                 </div>
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  الوجبات: {selectedMealTotal} • الإضافات: {selectedAddonTotal}
+                  الإجمالي: {selectedTotal}
                 </span>
               </div>
 
@@ -314,7 +316,7 @@ export function DeductionForm({
                         <FormItem className="rounded-xl border bg-card p-3">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <FormLabel>{addon.name || "إضافة"}</FormLabel>
+                              <FormLabel>{addon.name}</FormLabel>
                               <p className="text-xs text-muted-foreground">
                                 المتاح: {addon.remainingQty} من {addon.totalQty ?? addon.remainingQty}
                               </p>

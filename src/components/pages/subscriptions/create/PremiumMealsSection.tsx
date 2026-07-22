@@ -19,13 +19,30 @@ import { useQuery } from "@tanstack/react-query";
 import { Sparkles, Plus, Trash2 } from "lucide-react";
 import { useFieldArray, type UseFormReturn } from "react-hook-form";
 import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubscriptionSchema";
-import {
-  isSelectablePremiumMeal,
-  type BuilderPremiumMeal,
-} from "./premiumMealSelection";
 
 interface PremiumMealsSectionProps {
   form: UseFormReturn<CreateSubscriptionSchemaType>;
+}
+
+export interface BuilderPremiumMeal {
+  id: string;
+  configId?: string | null;
+  sourceId?: string | null;
+  premiumKey: string;
+  sourceModel?: string;
+  sourceType?: string;
+  kind?: string;
+  selectionType?: string;
+  name: { ar?: string; en?: string } | string;
+  imageUrl?: string;
+  extraFeeHalala?: number;
+  priceHalala?: number;
+  currency?: string;
+  isActive?: boolean;
+  availableForSubscription?: boolean;
+  health?: string;
+  issueCode?: string | null;
+  legacy?: boolean;
 }
 
 interface BuilderPremiumMealsResponse {
@@ -37,6 +54,16 @@ const fetchBuilderPremiumMeals = async (): Promise<BuilderPremiumMealsResponse> 
   const response = await api.get("/api/admin/builder-premium-meals");
   return response.data;
 };
+
+export function isSelectablePremiumMeal(meal: BuilderPremiumMeal): boolean {
+  return (
+    typeof meal.premiumKey === "string" &&
+    meal.premiumKey.trim().length > 0 &&
+    meal.isActive !== false &&
+    meal.availableForSubscription !== false &&
+    (!meal.health || meal.health === "ready")
+  );
+}
 
 const getMealName = (meal: BuilderPremiumMeal) =>
   typeof meal.name === "string" ? meal.name : meal.name.ar || meal.name.en || "";

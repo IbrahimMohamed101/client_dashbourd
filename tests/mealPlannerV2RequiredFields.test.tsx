@@ -31,7 +31,7 @@ import { MealPlannerCardDialogV2 } from "../src/components/pages/menu/meal-build
 afterEach(() => cleanup());
 
 describe("Meal Planner V2 required fields", () => {
-  it("keeps direct-card submit disabled until names and product are complete", async () => {
+  it("keeps direct-card submit disabled until names, key, and product are complete", async () => {
     const user = userEvent.setup();
     render(
       <MealPlannerCardDialogV2
@@ -46,13 +46,14 @@ describe("Meal Planner V2 required fields", () => {
     expect(submit).toBeDisabled();
 
     await user.type(
-      screen.getByLabelText("الاسم العربي"),
+      screen.getByPlaceholderText("مثال: وجبات جاهزة"),
       "وجبات جاهزة"
     );
     await user.type(
-      screen.getByLabelText("الاسم الإنجليزي"),
+      screen.getByPlaceholderText("Example: Ready Meals"),
       "Ready Meals"
     );
+    await user.type(screen.getByPlaceholderText("ready_meals"), "ready_meals");
     expect(submit).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: "اختيار عنصر" }));

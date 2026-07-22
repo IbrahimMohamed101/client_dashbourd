@@ -61,19 +61,10 @@ export function MealPlannerMenuProductPicker({
     refetchOnWindowFocus: false,
   });
 
-  const categories = useMemo(
-    () => categoriesQuery.data?.data.items ?? [],
-    [categoriesQuery.data]
-  );
-  const products = useMemo(
-    () => productsQuery.data?.data.items ?? [],
-    [productsQuery.data]
-  );
+  const categories = categoriesQuery.data?.data.items ?? [];
+  const products = productsQuery.data?.data.items ?? [];
   const state = queryClient.getQueryData<MealPlannerStateResponseV2>(STATE_KEY)?.data;
-  const workingSections = useMemo(
-    () => state?.draft?.sections ?? state?.published?.sections ?? [],
-    [state]
-  );
+  const workingSections = state?.draft?.sections ?? state?.published?.sections ?? [];
   const assignments = useMemo(
     () => buildProductAssignments(workingSections),
     [workingSections]

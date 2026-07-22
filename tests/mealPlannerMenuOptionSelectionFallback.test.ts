@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { it as test } from "vitest";
+import test from "node:test";
 
 import { mergeMenuOptionsWithPicker } from "../src/components/pages/menu/meal-builder/mealPlannerOptionGroupFlow";
 

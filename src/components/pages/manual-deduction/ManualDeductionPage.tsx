@@ -39,10 +39,6 @@ import { getApiErrorMessage } from "@/lib/apiErrors";
 import { CustomerSearch } from "./CustomerSearch";
 import { DeductionForm } from "./DeductionForm";
 import type { DeductionFormReturn, DeductionFormValues } from "./DeductionForm";
-import {
-  getAddonAvailableUnits,
-  validateManualDeductionSelection,
-} from "./manualDeductionValidation";
 
 const columnHelper = createColumnHelper<Subscription>();
 
@@ -51,6 +47,10 @@ type ManualDeductionSubscription = Subscription & {
   remainingRegularMeals?: number;
   fulfillmentMethod?: string;
 };
+
+function getAddonCount(subscription: Subscription) {
+  return subscription.addonBalances?.filter((addon) => addon.remainingQty > 0).length ?? 0;
+}
 
 export default function ManualDeductionPage() {
   const [searchPhone, setSearchPhone] = useState("");
@@ -127,53 +127,19 @@ export default function ManualDeductionPage() {
     form: DeductionFormReturn
   ) => {
     if (!selectedSubscription) return;
-    form.clearErrors();
 
-    const allAddons = values.addons.map((addon) => ({
-      addonId: addon.addonId,
-      qty: Number(addon.qty),
-    }));
-    const addons = allAddons.filter((addon) => addon.qty > 0);
-    const validation = validateManualDeductionSelection(
-      {
-        regularMeals: Number(values.regularMeals || 0),
-        premiumMeals: Number(values.premiumMeals || 0),
-        addons: allAddons,
-      },
-      {
-        regularMeals:
-          selectedSubscription.remainingRegularMeals ??
-          selectedSubscription.remainingMeals,
-        premiumMeals:
-          selectedSubscription.remainingPremiumMeals ??
-          selectedSubscription.premiumRemaining ??
-          0,
-        addons: selectedSubscription.addonBalances ?? [],
-      }
-    );
+    const addons = values.addons
+      .filter((addon) => Number(addon.qty) > 0)
+      .map((addon) => ({ addonId: addon.addonId, qty: Number(addon.qty) }));
+    const totalSelected =
+      Number(values.regularMeals || 0) +
+      Number(values.premiumMeals || 0) +
+      addons.reduce((sum, addon) => sum + addon.qty, 0);
 
-    if (validation.empty) {
+    if (totalSelected === 0) {
       form.setError("regularMeals", {
         type: "manual",
         message: "ادخل كمية واحدة على الأقل من الوجبات أو الإضافات",
-      });
-      return;
-    }
-    if (!validation.valid) {
-      if (validation.errors.regularMeals) {
-        form.setError("regularMeals", {
-          type: "manual",
-          message: validation.errors.regularMeals,
-        });
-      }
-      if (validation.errors.premiumMeals) {
-        form.setError("premiumMeals", {
-          type: "manual",
-          message: validation.errors.premiumMeals,
-        });
-      }
-      validation.errors.addons.forEach(({ index, message }) => {
-        form.setError(`addons.${index}.qty`, { type: "manual", message });
       });
       return;
     }
@@ -299,7 +265,7 @@ export default function ManualDeductionPage() {
       cell: ({ row }) => (
         <Badge variant="secondary" className="gap-1">
           <PlusCircle className="h-3 w-3" />
-          {getAddonAvailableUnits(row.original.addonBalances)} وحدة
+          {getAddonCount(row.original)} متاح
         </Badge>
       ),
     }),
