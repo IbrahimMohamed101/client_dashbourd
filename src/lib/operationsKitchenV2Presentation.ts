@@ -12,6 +12,14 @@ import type {
 export const UNSUPPORTED_KITCHEN_MESSAGE =
   "تعذر عرض تفاصيل التحضير: إصدار بيانات المطبخ غير مدعوم";
 
+export function formatOperationsSar(
+  value: number | null | undefined,
+  fallback = ""
+): string {
+  if (value === null || value === undefined) return fallback;
+  return `${(value / 100).toFixed(2)} ر.س`;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -204,10 +212,8 @@ function presentSection(section: KitchenSection, index: number): PresentedKitche
 function presentCard(card: KitchenCard, index: number): PresentedKitchenCard {
   const sections = (card.sections ?? []).map(presentSection);
   const carbs = Array.isArray(card.components?.carbs)
-    ? card.components?.carbs
-    : card.components?.carbs
-      ? [card.components.carbs]
-      : [];
+    ? card.components.carbs
+    : [];
   const salad = saladSummary(card);
 
   return {
