@@ -41,36 +41,39 @@ const isSafeCourierEndpoint = (endpoint: string) =>
   endpoint.startsWith("/api/courier/deliveries/") ||
   endpoint.startsWith("/api/courier/orders/");
 
-const normalizeCourierActions = (value: unknown): UnifiedQueueItem["allowedActions"] => {
+const normalizeCourierActions = (
+  value: unknown
+): UnifiedQueueItem["allowedActions"] => {
   if (!Array.isArray(value)) return [];
 
-  return value
-    .map((entry) => {
-      const action = asRecord(entry);
-      const id = asString(action?.id);
-      const label = asString(action?.label) || id;
-      const endpoint = asString(action?.endpoint);
-      const method = asString(action?.method)?.toUpperCase();
-      if (!id || !label || !endpoint || (method !== "PUT" && method !== "POST")) {
-        return null;
-      }
+  return value.reduce<QueueAction[]>((actions, entry) => {
+    const action = asRecord(entry);
+    const id = asString(action?.id);
+    const label = asString(action?.label) || id;
+    const endpoint = asString(action?.endpoint);
+    const method = asString(action?.method)?.toUpperCase();
 
-      const isSafe = isSafeCourierEndpoint(endpoint);
-      return {
-        id,
-        label,
-        endpoint,
-        method,
-        color: asString(action?.color) || undefined,
-        icon: asString(action?.icon) || undefined,
-        requiresReason: Boolean(action?.requiresReason) || id === "cancel",
-        disabled: Boolean(action?.disabled) || !isSafe,
-        disabledReason: !isSafe
-          ? "رابط الإجراء المرسل من الخادم غير مدعوم."
-          : asString(action?.disabledReason),
-      } satisfies QueueAction;
-    })
-    .filter((action): action is QueueAction => Boolean(action));
+    if (!id || !label || !endpoint || (method !== "PUT" && method !== "POST")) {
+      return actions;
+    }
+
+    const isSafe = isSafeCourierEndpoint(endpoint);
+    actions.push({
+      id,
+      label,
+      endpoint,
+      method,
+      color: asString(action?.color) || undefined,
+      icon: asString(action?.icon) || undefined,
+      requiresReason: Boolean(action?.requiresReason) || id === "cancel",
+      disabled: Boolean(action?.disabled) || !isSafe,
+      disabledReason: !isSafe
+        ? "رابط الإجراء المرسل من الخادم غير مدعوم."
+        : asString(action?.disabledReason),
+    });
+
+    return actions;
+  }, []);
 };
 
 const fallbackCourierActionsFor = (
