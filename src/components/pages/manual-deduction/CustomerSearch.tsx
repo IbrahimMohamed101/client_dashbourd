@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/form";
 import { getApiErrorMessage } from "@/lib/apiErrors";
 
+const DEFAULT_PHONE_PREFIX = "+966";
+
 const searchSchema = z.object({
   phone: z.string().min(8, "الرجاء إدخال رقم هاتف صحيح (8 أرقام على الأقل)"),
 });
@@ -35,7 +37,7 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
 }) => {
   const searchForm = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
-    defaultValues: { phone: "" },
+    defaultValues: { phone: DEFAULT_PHONE_PREFIX },
   });
 
   const onSubmit = (values: SearchFormValues) => {
@@ -64,6 +66,8 @@ export const CustomerSearch: React.FC<CustomerSearchProps> = ({
                   <FormControl>
                     <Input
                       type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       placeholder="أدخل رقم الهاتف..."
                       {...field}
                       dir="ltr"
