@@ -5,28 +5,12 @@ import { OperationsKitchenAddonGroups } from "./OperationsKitchenAddonGroups";
 import { OperationsKitchenV2Card } from "./OperationsKitchenV2Card";
 import { OperationsKitchenWarnings } from "./OperationsKitchenWarnings";
 
-type PaidExtra = PresentedKitchenV2["cards"][number]["paidExtras"][number];
-
 function dedupeValues(values: string[]) {
   const seen = new Set<string>();
   return values.filter((value) => {
     const normalized = value.trim();
     if (!normalized || seen.has(normalized)) return false;
     seen.add(normalized);
-    return true;
-  });
-}
-
-function paidExtraKey(extra: PaidExtra) {
-  return `${extra.sectionLabel}|${extra.name}|${extra.amount}|${extra.grams ?? ""}`;
-}
-
-function dedupePaidExtras(extras: PaidExtra[]) {
-  const seen = new Set<string>();
-  return extras.filter((extra) => {
-    const key = paidExtraKey(extra);
-    if (seen.has(key)) return false;
-    seen.add(key);
     return true;
   });
 }
@@ -47,9 +31,10 @@ export function OperationsKitchenV2Summary({
     );
   }
 
-  const visibleCards = compact ? presentation.cards.slice(0, 2) : presentation.cards;
+  const visibleCards = compact
+    ? presentation.cards.slice(0, 2)
+    : presentation.cards;
   const hiddenCards = compact ? presentation.cards.slice(2) : [];
-  const hiddenPaidExtras = dedupePaidExtras(hiddenCards.flatMap((card) => card.paidExtras));
   const compactWarnings = compact
     ? dedupeValues([
         ...visibleCards.flatMap((card) => card.warnings),
@@ -80,31 +65,24 @@ export function OperationsKitchenV2Summary({
       {presentation.cards.length ? (
         <div className="grid gap-2">
           {visibleCards.map((card) => (
-            <OperationsKitchenV2Card key={card.key} card={card} compact={compact} />
+            <OperationsKitchenV2Card
+              key={card.key}
+              card={card}
+              compact={compact}
+            />
           ))}
           {hiddenCards.length ? (
             <div className="rounded-lg border border-dashed bg-muted/30 px-3 py-2 text-xs font-semibold text-muted-foreground">
-              <p>+{hiddenCards.length} بطاقات تحضير أخرى</p>
-              {hiddenPaidExtras.length ? (
-                <p className="mt-1 text-emerald-700 dark:text-emerald-300">
-                  إضافات مدفوعة في البطاقات المخفية:{" "}
-                  {hiddenPaidExtras
-                    .slice(0, 2)
-                    .map((extra) => `${extra.name} - ${extra.label}`)
-                    .join("، ")}
-                </p>
-              ) : null}
-              {hiddenPaidExtras.length > 2 ? (
-                <p className="mt-1 text-emerald-700 dark:text-emerald-300">
-                  +{hiddenPaidExtras.length - 2} إضافات مدفوعة أخرى
-                </p>
-              ) : null}
+              +{hiddenCards.length} بطاقات تحضير أخرى
             </div>
           ) : null}
         </div>
       ) : null}
 
-      <OperationsKitchenAddonGroups groups={presentation.addonGroups} compact={compact} />
+      <OperationsKitchenAddonGroups
+        groups={presentation.addonGroups}
+        compact={compact}
+      />
       {compact && compactWarnings.length ? (
         <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-900 dark:text-amber-300">
           {compactWarnings.slice(0, 2).map((warning) => (
