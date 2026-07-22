@@ -5,8 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { getApiErrorMessage } from "@/lib/apiErrors";
 import api from "@/lib/apis";
 import {
+  enrichDeliveryOperationItem,
+  filterDeliveryOperationsByQuery,
+  getAllDeliveryOperationItems,
+} from "@/lib/deliveryOperations";
+import {
   buildOperationsActionPayload,
-  getCourierItems,
   getInvalidActionReason,
   getPickupItems,
   getScreensForRole,
@@ -17,10 +21,7 @@ import type {
   DashboardOpsActionResponse,
   UnifiedQueueItem,
 } from "@/types/dashboardOpsTypes";
-import {
-  fetchDashboardOpsList,
-  fetchDashboardOpsSearch,
-} from "@/utils/fetchDashboardOpsData";
+import { fetchDashboardOpsList } from "@/utils/fetchDashboardOpsData";
 
 export type PendingOperationsActions = Record<
   string,
@@ -91,6 +92,35 @@ function excludeItems(
   return items.filter((item) => !excludedIds.has(item.id));
 }
 
+function matchesGeneralOperationsSearch(
+  item: UnifiedQueueItem,
+  query?: string
+): boolean {
+  const search = query?.trim().toLowerCase() ?? "";
+  if (!search) return true;
+
+  const raw =
+    item.rawData && typeof item.rawData === "object"
+      ? (item.rawData as Record<string, unknown>)
+      : {};
+  const values = [
+    item.customer.name,
+    item.customer.phone,
+    item.reference,
+    item.orderNumber,
+    item.status,
+    item.context.branch,
+    item.context.pickupCode,
+    raw.subscriptionId,
+    raw.subscriptionDayId,
+    raw.orderId,
+  ];
+
+  return values.some((value) =>
+    String(value ?? "").toLowerCase().includes(search)
+  );
+}
+
 export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -106,18 +136,26 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
       "queue",
       visibleScreens,
       params.date,
-      params.q,
     ],
     queryFn: async () => {
+      const response = await fetchDashboardOpsList(params.date || "");
+      const normalizedItems = (response.data?.items ?? []).map(
+        enrichDeliveryOperationItem
+      );
       const search = params.q?.trim() || "";
-      const response =
-        search.length >= 3
-          ? await fetchDashboardOpsSearch(search)
-          : await fetchDashboardOpsList(params.date || "");
-      const items = response.data?.items ?? [];
-      const kitchenItems = getPreparationItems(items);
-      const pickupItems = excludeItems(getPickupItems(items), kitchenItems);
-      const courierItems = excludeItems(getCourierItems(items), kitchenItems);
+      const dateScopedItems = search
+        ? normalizedItems.filter((item) =>
+            item.mode === "delivery"
+              ? filterDeliveryOperationsByQuery([item], search).length > 0
+              : matchesGeneralOperationsSearch(item, search)
+          )
+        : normalizedItems;
+      const kitchenItems = getPreparationItems(dateScopedItems);
+      const pickupItems = excludeItems(getPickupItems(dateScopedItems), kitchenItems);
+      const courierItems = excludeItems(
+        getAllDeliveryOperationItems(dateScopedItems),
+        kitchenItems
+      );
 
       return [
         { screen: "kitchen" as const, items: newestFirst(kitchenItems) },
@@ -127,7 +165,6 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     },
     refetchInterval: 30_000,
     refetchIntervalInBackground: true,
-    placeholderData: (prev) => prev,
     enabled: visibleScreens.length > 0,
   });
 
@@ -191,11 +228,11 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
       return data;
     },
     onSuccess: async (_data, variables) => {
-      toast.success(`تم تنفيذ ${variables.actionLabel || variables.action} بنجاح`);
       await queryClient.refetchQueries({
         queryKey: ["operations-board", "queue"],
         type: "active",
       });
+      toast.success(`تم تنفيذ ${variables.actionLabel || variables.action} بنجاح`);
     },
     onError: (error: unknown) => {
       toast.error(getApiErrorMessage(error) || "تعذر تنفيذ الإجراء");
@@ -245,6 +282,7 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     allItems,
     itemsByScreen,
     isLoading: queueQuery.isLoading,
+    isFetching: queueQuery.isFetching,
     isPending: Object.keys(pendingActions).length > 0,
     pendingActions,
     requestAction,
