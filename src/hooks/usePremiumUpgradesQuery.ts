@@ -129,13 +129,7 @@ export function canonicalizePremiumUpgradeUpdatePayload(
   const isRelink = Boolean(payload.kind && payload.sourceId);
   if (!isRelink) return payload;
 
-  const {
-    relationId: _relationId,
-    sourceProductId: _sourceProductId,
-    sourceGroupId: _sourceGroupId,
-    ...canonicalPayload
-  } = payload;
-
+  const { relationId: _relationId, ...canonicalPayload } = payload;
   return canonicalPayload;
 }
 
