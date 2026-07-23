@@ -156,8 +156,16 @@ export function buildCreatePremiumUpgradePayload(form: {
     isVisible: Boolean(form.isVisible),
     sortOrder: Number(form.sortOrder),
   };
-  if (form.kind === "option" && form.selectedSource.relationId) {
-    payload.relationId = form.selectedSource.relationId;
+  if (form.kind === "option") {
+    if (form.selectedSource.relationId) {
+      payload.relationId = form.selectedSource.relationId;
+    }
+    if (form.selectedSource.sourceProductId) {
+      payload.sourceProductId = form.selectedSource.sourceProductId;
+    }
+    if (form.selectedSource.sourceGroupId) {
+      payload.sourceGroupId = form.selectedSource.sourceGroupId;
+    }
   }
   return payload;
 }
@@ -174,8 +182,16 @@ export function buildRelinkPremiumUpgradePayload({
     sourceId: selectedSource.sourceId,
   };
   if (row.revision !== undefined) payload.expectedRevision = row.revision;
-  if (selectedSource.kind === "option" && selectedSource.relationId) {
-    payload.relationId = selectedSource.relationId;
+  if (isOptionSourceKind(selectedSource.kind)) {
+    if (selectedSource.relationId) {
+      payload.relationId = selectedSource.relationId;
+    }
+    if (selectedSource.sourceProductId) {
+      payload.sourceProductId = selectedSource.sourceProductId;
+    }
+    if (selectedSource.sourceGroupId) {
+      payload.sourceGroupId = selectedSource.sourceGroupId;
+    }
   }
   return payload;
 }
@@ -455,8 +471,16 @@ export function getSourceRelationId(source: PremiumUpgradeSourceDto) {
 }
 
 export function sourceHasRequiredRelation(source: PremiumUpgradeSourceDto) {
-  if (source.kind !== "option") return true;
-  return Boolean(source.relationId);
+  if (!isOptionSourceKind(source.kind)) return true;
+  return Boolean(
+    source.relationId ||
+      (source.sourceId && source.sourceProductId && source.sourceGroupId) ||
+      (source.sourceId && source.sourceGroupId)
+  );
+}
+
+function isOptionSourceKind(kind?: string | null) {
+  return kind === "option" || kind === "menu_option";
 }
 
 export function isSourceCompatibleWithConfig(

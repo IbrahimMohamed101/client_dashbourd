@@ -179,6 +179,8 @@ export type PremiumUpgradeCreatePayload = {
   kind: PremiumUpgradeKind;
   sourceId: string;
   relationId?: string;
+  sourceProductId?: string;
+  sourceGroupId?: string;
   upgradeDeltaHalala: number;
   currency: "SAR";
   isActive: boolean;
@@ -191,6 +193,8 @@ export type PremiumUpgradeUpdatePayload = {
   kind?: PremiumUpgradeKind;
   sourceId?: string;
   relationId?: string;
+  sourceProductId?: string;
+  sourceGroupId?: string;
   upgradeDeltaHalala?: number;
   currency?: "SAR";
   isActive?: boolean;

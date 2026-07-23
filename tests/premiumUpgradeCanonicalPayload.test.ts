@@ -2,21 +2,29 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { canonicalizePremiumUpgradeUpdatePayload } from "../src/hooks/usePremiumUpgradesQuery";
+import {
+  buildCreatePremiumUpgradePayload,
+  sourceHasRequiredRelation,
+} from "../src/utils/fetchPremiumUpgrades";
 
-test("premium relink sends only backend-owned canonical source identity", () => {
+test("premium option relink keeps relation identity for backend resolution", () => {
   const payload = canonicalizePremiumUpgradeUpdatePayload({
     expectedRevision: 4,
     kind: "option",
     sourceId: "option-id",
-    relationId: "legacy-relation-id",
+    relationId: "menu_option:option-id:product-id:group-id",
+    sourceProductId: "product-id",
+    sourceGroupId: "group-id",
   });
 
   assert.deepEqual(payload, {
     expectedRevision: 4,
     kind: "option",
     sourceId: "option-id",
+    relationId: "menu_option:option-id:product-id:group-id",
+    sourceProductId: "product-id",
+    sourceGroupId: "group-id",
   });
-  assert.equal("relationId" in payload, false);
 });
 
 test("normal premium edits keep editable fields unchanged", () => {
@@ -30,4 +38,78 @@ test("normal premium edits keep editable fields unchanged", () => {
   };
 
   assert.deepEqual(canonicalizePremiumUpgradeUpdatePayload(payload), payload);
+});
+
+test("option create accepts product/group relation fields when relationId is absent", () => {
+  const selectedSource = {
+    id: "option-id",
+    sourceId: "option-id",
+    kind: "option" as const,
+    sourceProductId: "product-id",
+    sourceGroupId: "group-id",
+    sourceProductKey: "standard_meal",
+    sourceGroupKey: "proteins",
+    relationId: "",
+    key: "beef_steak",
+  };
+
+  assert.equal(sourceHasRequiredRelation(selectedSource), true);
+  assert.deepEqual(
+    buildCreatePremiumUpgradePayload({
+      kind: "option",
+      selectedSource,
+      upgradePriceSarInput: "12.5",
+      currency: "SAR",
+      isActive: true,
+      isVisible: true,
+      sortOrder: "10",
+    }),
+    {
+      kind: "option",
+      sourceId: "option-id",
+      sourceProductId: "product-id",
+      sourceGroupId: "group-id",
+      upgradeDeltaHalala: 1250,
+      currency: "SAR",
+      isActive: true,
+      isVisible: true,
+      sortOrder: 10,
+    }
+  );
+});
+
+test("option create can submit group-only relation for backend inference", () => {
+  const selectedSource = {
+    id: "option-id",
+    sourceId: "option-id",
+    kind: "option" as const,
+    sourceProductId: null,
+    sourceGroupId: "group-id",
+    sourceGroupKey: "beef",
+    relationId: "",
+    key: "steak",
+  };
+
+  assert.equal(sourceHasRequiredRelation(selectedSource), true);
+  assert.deepEqual(
+    buildCreatePremiumUpgradePayload({
+      kind: "option",
+      selectedSource,
+      upgradePriceSarInput: "0",
+      currency: "SAR",
+      isActive: true,
+      isVisible: true,
+      sortOrder: "10",
+    }),
+    {
+      kind: "option",
+      sourceId: "option-id",
+      sourceGroupId: "group-id",
+      upgradeDeltaHalala: 0,
+      currency: "SAR",
+      isActive: true,
+      isVisible: true,
+      sortOrder: 10,
+    }
+  );
 });
