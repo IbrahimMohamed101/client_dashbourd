@@ -63,19 +63,18 @@ export function OperationsBoard() {
     requestAction(item, action, actionLabel, isDangerous);
   };
 
-  const handleReasonConfirm = (reason?: string, notes?: string) => {
+  const handleReasonConfirm = async (reason?: string, notes?: string) => {
     if (dialogState.item && dialogState.action) {
-      requestAction(
+      const didSubmit = await requestAction(
         dialogState.item,
         dialogState.action,
         dialogState.actionLabel,
         dialogState.isDangerous,
-        reason,
-        notes
+        reason?.trim(),
+        notes?.trim()
       );
+      if (didSubmit) closeDialog();
     }
-
-    closeDialog();
   };
 
   const handleDirectFulfill = (item: UnifiedQueueItem) => {

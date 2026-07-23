@@ -138,7 +138,9 @@ export interface PresentedKitchenComponent {
   grams: number | null;
 }
 
-export interface PresentedKitchenSectionItem extends PresentedKitchenComponent {}
+export interface PresentedKitchenSectionItem extends PresentedKitchenComponent {
+  paidAmountHalala: number | null;
+}
 
 export interface PresentedKitchenSection {
   key: string;
@@ -156,9 +158,11 @@ export interface PresentedKitchenCard {
   warnings: string[];
   sectionCount: number;
   itemCount: number;
+  lines: string[];
   product: PresentedKitchenComponent | null;
   protein: PresentedKitchenComponent | null;
   carbs: PresentedKitchenComponent[];
+  salad: PresentedKitchenComponent | null;
   sections: PresentedKitchenSection[];
 }
 
@@ -193,11 +197,33 @@ function presentComponent(
   };
 }
 
+function normalizeDisplayTitle(card: KitchenCard, title: string): string {
+  const productKey = scalar(card.components?.product?.key);
+  const proteinKey = scalar(card.components?.protein?.key);
+  const removableKeys = [productKey, proteinKey]
+    .filter((key): key is string => Boolean(key))
+    .sort((a, b) => b.length - a.length);
+
+  for (const key of removableKeys) {
+    const prefix = `${key} + `;
+    if (title.startsWith(prefix)) {
+      const rest = title.slice(prefix.length).trim();
+      if (rest && /[\u0600-\u06ff]/.test(rest)) return rest;
+    }
+  }
+
+  return title;
+}
 function presentSectionItem(item: KitchenSectionItem): PresentedKitchenSectionItem {
+  const raw = asRecord(item);
   return {
     name: resolveOperationsLocalizedText(item, "مكوّن غير محدد"),
     quantity: quantity(item.quantity),
     grams: positiveNumber(item.grams),
+    paidAmountHalala:
+      positiveNumber(raw?.payableTotalHalala) ||
+      positiveNumber(raw?.paidAmountHalala) ||
+      positiveNumber(raw?.productUnitPriceHalala),
   };
 }
 
@@ -215,17 +241,22 @@ function presentCard(card: KitchenCard, index: number): PresentedKitchenCard {
     ? card.components.carbs
     : [];
   const salad = saladSummary(card);
+  const saladRecord = asRecord(card.components?.salad);
+  const rawTitle = resolveOperationsLocalizedText(card, "وجبة غير محددة");
 
   return {
     key: card.cardId || card.id || card.slotKey || `${card.type}-${index}`,
     type: card.type,
-    title: resolveOperationsLocalizedText(card, "وجبة غير محددة"),
+    title: normalizeDisplayTitle(card, rawTitle),
     badge: card.badge
       ? resolveOperationsLocalizedText({ label: card.badge }, "") || null
       : null,
     quantity: quantity(card.quantity),
     notes: scalar(card.notes),
     warnings: (card.warnings ?? []).map(warningText).filter(Boolean),
+    lines: (card.lines ?? [])
+      .map(scalar)
+      .filter((line): line is string => Boolean(line)),
     sectionCount: salad.sectionCount ?? sections.length,
     itemCount:
       salad.itemCount ??
@@ -237,6 +268,14 @@ function presentCard(card: KitchenCard, index: number): PresentedKitchenCard {
       ? presentComponent(card.components.protein, "بروتين غير محدد")
       : null,
     carbs: carbs.map((carb) => presentComponent(carb, "كارب غير محدد")),
+    salad:
+      saladRecord &&
+      (saladRecord.name || saladRecord.nameI18n || saladRecord.label)
+        ? presentComponent(
+            saladRecord as KitchenComponentItem,
+            "سلطة غير محددة"
+          )
+        : null,
     sections,
   };
 }
@@ -256,6 +295,35 @@ function presentAddonGroup(
   };
 }
 
+function addonKey(item: PresentedKitchenComponent) {
+  return `${item.name.trim()}|${item.grams ?? ""}`;
+}
+
+function mergeAddonGroups(groups: PresentedKitchenAddonGroup[]) {
+  const byLabel = new Map<string, PresentedKitchenAddonGroup>();
+
+  for (const group of groups) {
+    if (!group.items.length) continue;
+    const label = group.label.trim() || "إضافات";
+    const existing = byLabel.get(label);
+    if (!existing) {
+      byLabel.set(label, { ...group, label, items: [...group.items] });
+      continue;
+    }
+
+    for (const item of group.items) {
+      const key = addonKey(item);
+      const existingItem = existing.items.find((entry) => addonKey(entry) === key);
+      if (existingItem) {
+        existingItem.quantity += item.quantity;
+      } else {
+        existing.items.push({ ...item });
+      }
+    }
+  }
+
+  return [...byLabel.values()];
+}
 export function buildKitchenV2Presentation(item: UnifiedQueueItem): PresentedKitchenV2 {
   const kitchen = getKitchenV2(item);
   if (!kitchen) {
@@ -275,7 +343,7 @@ export function buildKitchenV2Presentation(item: UnifiedQueueItem): PresentedKit
   }
 
   const cards = kitchen.cards.map(presentCard);
-  const addonGroups = kitchen.addonGroups.map(presentAddonGroup);
+  const addonGroups = mergeAddonGroups(kitchen.addonGroups.map(presentAddonGroup));
   const warningMessages = kitchen.warnings.map(warningText).filter(Boolean);
   const addonItemCount = addonGroups.reduce(
     (sum, group) =>

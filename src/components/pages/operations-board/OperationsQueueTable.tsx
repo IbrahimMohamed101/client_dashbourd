@@ -24,6 +24,7 @@ import type { QueueAction, UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrder, isPickupRequest } from "@/types/dashboardOpsTypes";
 import { OperationsKitchenV2Summary } from "./OperationsKitchenV2Summary";
 import { OperationsOrderDetailsDialog } from "./OperationsOrderDetailsDialog";
+import { OperationsOrderItemSummary } from "./OperationsOrderItemSummary";
 
 interface OperationsQueueTableProps {
   items: UnifiedQueueItem[];
@@ -56,6 +57,10 @@ const actionIcons: Record<string, ReactNode> = {
 };
 
 const badgeClasses: Record<string, string> = {
+  warning: "border-amber-500/20 bg-amber-500/10 text-amber-800 dark:text-amber-300",
+  success: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  danger: "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300",
+  info: "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-300",
   green: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   blue: "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-300",
@@ -64,6 +69,27 @@ const badgeClasses: Record<string, string> = {
   red: "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300",
   gray: "border-muted bg-muted/40 text-muted-foreground",
 };
+
+const pickupCodeStateLabels: Record<string, string> = {
+  not_issued: "لم يصدر بعد",
+  issued: "تم الإصدار",
+  active: "تم الإصدار",
+  verified: "تم التحقق",
+  used: "تم الاستخدام",
+  expired: "منتهي",
+};
+
+const primaryActionIds = new Set([
+  "prepare",
+  "start_preparation",
+  "ready_for_pickup",
+  "ready_for_delivery",
+  "fulfill",
+  "dispatch",
+  "pickup",
+]);
+
+const destructiveActionIds = new Set(["cancel", "no_show"]);
 
 function getStatusClasses(item: UnifiedQueueItem) {
   const badge = item.ui?.badge || item.ui?.color || "";
@@ -87,7 +113,7 @@ function getSourceLabel(item: UnifiedQueueItem) {
 }
 
 function getModeLabel(mode: string) {
-  return mode === "delivery" ? "توصيل" : "استلام";
+  return mode === "delivery" ? "توصيل" : "استلام من الفرع";
 }
 
 function getCustomerName(item: UnifiedQueueItem) {
@@ -99,12 +125,15 @@ function getPickupInfo(item: UnifiedQueueItem) {
   const branch =
     typeof pickup.branchName === "string"
       ? pickup.branchName
-      : pickup.branchName?.ar || pickup.branchName?.en || pickup.branchId || pickup.locationId || "-";
+      : pickup.branchName?.ar || pickup.branchName?.en || pickup.branchId || pickup.locationId || "";
+  const codeState = pickup.pickupCodeState
+    ? pickupCodeStateLabels[pickup.pickupCodeState] || "حالة غير محددة"
+    : null;
   return {
-    branch,
-    window: pickup.pickupWindow || item.fulfillment?.deliverySlot || "-",
+    branch: branch || "الفرع غير محدد",
+    window: pickup.pickupWindow || item.fulfillment?.deliverySlot || "غير محدد",
     code: pickup.pickupCode,
-    codeState: pickup.pickupCodeState,
+    codeState,
   };
 }
 
@@ -131,6 +160,18 @@ function getVisibleActions(item: UnifiedQueueItem) {
   return (item.allowedActions || [])
     .map(normalizeAction)
     .filter((action): action is VisibleAction => action !== null);
+}
+
+function splitActions(actions: VisibleAction[]) {
+  const primary = actions.filter(
+    (action) =>
+      !destructiveActionIds.has(action.id) && primaryActionIds.has(action.id)
+  );
+  const secondary = actions.filter(
+    (action) =>
+      destructiveActionIds.has(action.id) || !primaryActionIds.has(action.id)
+  );
+  return { primary, secondary };
 }
 
 function isActionDisabled(
@@ -180,38 +221,61 @@ function ActionButtons({
   onDetails: (item: UnifiedQueueItem) => void;
 }) {
   const actions = getVisibleActions(item);
+  const { primary, secondary } = splitActions(actions);
   const pending = pendingActions?.[item.id];
 
-  return (
-    <div className="flex flex-wrap gap-2">
-      {actions.map((action) => {
-        const disabled = isActionDisabled(item, action, pendingActions);
-        const label =
-          pending?.actionId === action.id ? `جار ${pending.label}...` : action.label;
-        const handleClick = () => {
-          if (disabled) return;
-          if (action.id === "fulfill" && onFulfill) {
-            onFulfill(item);
-            return;
-          }
-          onAction(item, action.id, action.label, action.color === "red");
-        };
+  const renderAction = (action: VisibleAction, isPrimary = false) => {
+    const disabled = isActionDisabled(item, action, pendingActions);
+    const label = pending?.actionId === action.id ? `جار ${pending.label}...` : action.label;
+    const handleClick = () => {
+      if (disabled) return;
+      if (action.id === "fulfill" && onFulfill) {
+        onFulfill(item);
+        return;
+      }
+      onAction(
+        item,
+        action.id,
+        action.label,
+        action.color === "red" || destructiveActionIds.has(action.id)
+      );
+    };
 
-        return (
-          <Button
-            key={action.id}
-            size="sm"
-            variant={getActionVariant(action.color)}
-            disabled={disabled}
-            title={action.disabledReason || undefined}
-            onClick={handleClick}
-          >
-            {actionIcons[action.id] ?? null}
-            {label}
-          </Button>
-        );
-      })}
-      <Button size="sm" variant="outline" onClick={() => onDetails(item)}>
+    return (
+      <Button
+        key={action.id}
+        size="sm"
+        variant={isPrimary ? "default" : getActionVariant(action.color)}
+        disabled={disabled}
+        title={action.disabledReason || undefined}
+        onClick={handleClick}
+        className={isPrimary ? "min-h-10 flex-1 font-bold sm:flex-none" : "min-h-10"}
+      >
+        {actionIcons[action.id] ?? null}
+        {label}
+      </Button>
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      {primary.length ? (
+        <div>
+          <p className="mb-1 text-xs font-bold text-muted-foreground">الإجراء التالي</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {primary.map((action) => renderAction(action, true))}
+          </div>
+        </div>
+      ) : null}
+      {secondary.length ? (
+        <div>
+          <p className="mb-1 text-xs font-bold text-muted-foreground">إجراءات أخرى</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {secondary.map((action) => renderAction(action))}
+          </div>
+        </div>
+      ) : null}
+      <Button size="sm" variant="outline" onClick={() => onDetails(item)} className="min-h-10">
         <Eye className="ml-1.5 h-3.5 w-3.5" />
         عرض التفاصيل الكاملة
       </Button>
@@ -277,55 +341,66 @@ function OperationsQueueCard({
   const customerName = getCustomerName(item);
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+    <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
       <div className="border-b bg-muted/15 p-3.5">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/10 bg-primary/10 text-sm font-bold text-primary uppercase">
-              {customerName.charAt(0)}
-            </div>
-            <div className="min-w-0">
-              <p className="break-words text-base font-bold">{customerName}</p>
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground" dir="ltr">
-                <Phone className="h-3 w-3" />
-                {item.customer?.phone || "-"}
-              </p>
+          <div className="min-w-0">
+            <p className="break-words text-lg font-black tracking-normal" dir="ltr">
+              {item.reference}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground">
+              <span>{getModeLabel(item.mode)}</span>
+              <span aria-hidden="true">•</span>
+              <span>{getSourceLabel(item)}</span>
             </div>
           </div>
           <Badge
             variant="outline"
-            className={`shrink-0 rounded-md ${getStatusClasses(item)}`}
+            className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-bold ${getStatusClasses(item)}`}
           >
             {item.statusLabel || item.status}
           </Badge>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Badge variant="secondary" className="rounded-lg px-2.5 py-1">
-            {getSourceLabel(item)}
-          </Badge>
-          <Badge variant="outline" className="rounded-lg px-2.5 py-1" dir="ltr">
-            {item.reference}
-          </Badge>
-          {item.orderNumber ? (
+        <div className="mt-3 grid gap-2 rounded-lg bg-background/70 p-2.5 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-muted-foreground">العميل</p>
+            <p className="break-words text-sm font-bold">{customerName || "عميل غير معروف"}</p>
+          </div>
+          <a
+            href={item.customer?.phone ? `tel:${item.customer.phone}` : undefined}
+            className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-muted-foreground"
+            dir="ltr"
+          >
+            <Phone className="h-3.5 w-3.5 shrink-0" />
+            <span className="break-all">{item.customer?.phone || "رقم الهاتف غير متاح"}</span>
+          </a>
+        </div>
+
+        {item.orderNumber ? (
+          <div className="mt-2 flex flex-wrap gap-2">
             <Badge variant="outline" className="rounded-lg px-2.5 py-1" dir="ltr">
               {item.orderNumber}
             </Badge>
-          ) : null}
-          <Badge variant="outline" className="rounded-lg px-2.5 py-1">
-            {getModeLabel(item.mode)}
-          </Badge>
-          {isOneTimeOrder(item) ? (
-            <Badge variant="outline" className="rounded-lg px-2.5 py-1" dir="ltr">
-              {order.totalLabel}
-            </Badge>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-3.5">
         <FulfillmentSummary item={item} />
         <OperationsKitchenV2Summary presentation={kitchen} compact />
+        {isOneTimeOrder(item) && order.items.length ? (
+          <div className="grid gap-2">
+            {order.items.slice(0, 2).map((orderItem) => (
+              <OperationsOrderItemSummary
+                key={orderItem.key}
+                item={orderItem}
+                compact
+                showPaidSelections
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="border-t bg-muted/15 p-3.5">

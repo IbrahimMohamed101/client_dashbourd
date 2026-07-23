@@ -17,11 +17,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { buildKitchenV2Presentation } from "@/lib/operationsKitchenV2Presentation";
+import { buildOperationsOrderPresentation } from "@/lib/operationsOrderPresentation";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrder, isPickupRequest } from "@/types/dashboardOpsTypes";
 import { OperationsKitchenAddonGroups } from "./OperationsKitchenAddonGroups";
 import { OperationsKitchenV2Card } from "./OperationsKitchenV2Card";
 import { OperationsKitchenWarnings } from "./OperationsKitchenWarnings";
+import { OperationsOrderItemSummary } from "./OperationsOrderItemSummary";
+import { OperationsPricingSummary } from "./OperationsPricingSummary";
 
 interface OperationsOrderDetailsDialogProps {
   item: UnifiedQueueItem | null;
@@ -175,6 +178,9 @@ function ActionsSummary({ item }: { item: UnifiedQueueItem }) {
 
 function KitchenDetails({ item }: { item: UnifiedQueueItem }) {
   const kitchen = buildKitchenV2Presentation(item);
+  const orderPresentation = isOneTimeOrder(item)
+    ? buildOperationsOrderPresentation(item)
+    : null;
 
   if (!kitchen.supported) {
     return (
@@ -202,6 +208,17 @@ function KitchenDetails({ item }: { item: UnifiedQueueItem }) {
           { label: "عدد الإضافات", value: kitchen.addonItemCount },
         ]}
       />
+      {orderPresentation?.items.length ? (
+        <div className="grid gap-2">
+          {orderPresentation.items.map((orderItem) => (
+            <OperationsOrderItemSummary
+              key={orderItem.key}
+              item={orderItem}
+              showPaidSelections
+            />
+          ))}
+        </div>
+      ) : null}
       {kitchen.cards.map((card) => (
         <OperationsKitchenV2Card key={card.key} card={card} />
       ))}
@@ -220,6 +237,9 @@ export function OperationsOrderDetailsDialog({
 
   const pickup = pickupInfo(item);
   const delivery = deliveryInfo(item);
+  const orderPresentation = isOneTimeOrder(item)
+    ? buildOperationsOrderPresentation(item)
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -239,6 +259,11 @@ export function OperationsOrderDetailsDialog({
               <Badge className="rounded-md">
                 {item.statusLabel || item.status}
               </Badge>
+              {orderPresentation?.paymentLabel ? (
+                <Badge variant="outline" className="rounded-md">
+                  {orderPresentation.paymentLabel}
+                </Badge>
+              ) : null}
             </div>
             <DialogTitle className="text-xl font-bold">تفاصيل العملية</DialogTitle>
             <DialogDescription className="break-words text-right">
@@ -325,6 +350,11 @@ export function OperationsOrderDetailsDialog({
                   <ActionsSummary item={item} />
                 </div>
               </Section>
+              {orderPresentation ? (
+                <Section title="التسعير" icon={<PackageCheck className="h-4 w-4" />}>
+                  <OperationsPricingSummary pricing={orderPresentation.pricing} />
+                </Section>
+              ) : null}
             </div>
           </div>
 
