@@ -4,12 +4,14 @@ export const ADDON_QUERY_KEYS = {
   categoryPicker: ["addons", "category-picker"],
 } satisfies Record<string, string[]>;
 
+// Add-on authoring is an admin workflow. It must show the complete catalog,
+// including draft, hidden, unavailable, and channel-specific products, so the
+// administrator can repair or prepare an item instead of it silently vanishing.
 export const ADDON_PICKER_PARAMS = {
-  view: "picker",
+  view: "addon_plan_picker",
   context: "addon_plan",
   linkableFor: "addon_plan",
-  isVisible: "true",
-  isAvailable: "true",
+  includeInactive: "true",
 } as const;
 
 export const addonPickerQueryKey = {
