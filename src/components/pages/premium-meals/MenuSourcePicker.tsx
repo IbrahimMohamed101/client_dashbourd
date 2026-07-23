@@ -93,7 +93,7 @@ export function MenuSourcePicker({
         align="start"
         side="bottom"
         sideOffset={8}
-        className="z-[70] max-h-[min(78vh,660px)] w-[min(44rem,calc(100vw-2rem))] overflow-hidden p-0"
+        className="z-[70] max-h-[min(45vh,660px)] w-[min(44rem,calc(100vw-2rem))] overflow-hidden p-0"
         dir="rtl"
       >
         <div className="flex max-h-[min(78vh,660px)] min-h-0 flex-col">

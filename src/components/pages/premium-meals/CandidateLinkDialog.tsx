@@ -162,7 +162,7 @@ function CandidateLinkDialogContent({
         </DialogDescription>
       </DialogHeader>
 
-      <form className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5" onSubmit={submit}>
+      <form className="min-h-0 overflow-y-auto px-4 pt-4 sm:px-5" onSubmit={submit}>
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
           <section className="space-y-4 rounded-lg border p-4">
             <SelectField
@@ -250,7 +250,7 @@ function CandidateLinkDialogContent({
           </section>
         </div>
 
-        <DialogFooter className="sticky bottom-0 -mx-4 mt-5 border-t bg-background px-4 pt-4 sm:-mx-5 sm:px-5 sm:justify-start">
+        <DialogFooter className="sticky bottom-0 -mx-4 mt-5 border-t bg-background px-4 py-4 sm:-mx-5 sm:px-5 sm:justify-start">
           <Button
             type="submit"
             disabled={createMutation.isPending || !form.selectedSource}
