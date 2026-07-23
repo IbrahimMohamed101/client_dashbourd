@@ -89,16 +89,32 @@ export type PremiumUpgradeSourceDto = {
   sourceGroupId?: string | null;
   sourceProductKey?: string | null;
   sourceGroupKey?: string | null;
-  relationId: string;
+  relationId?: string | null;
+  relationRequired?: boolean;
   key?: string | null;
   name?: string | PremiumUpgradeLocalizedName | null;
   imageUrl?: string | null;
-  group?: string | PremiumUpgradeLocalizedName | { key?: string | null; name?: string | PremiumUpgradeLocalizedName | null } | null;
-  product?: string | PremiumUpgradeLocalizedName | { key?: string | null; name?: string | PremiumUpgradeLocalizedName | null } | null;
+  group?:
+    | string
+    | PremiumUpgradeLocalizedName
+    | {
+        id?: string | null;
+        key?: string | null;
+        name?: string | PremiumUpgradeLocalizedName | null;
+      }
+    | null;
+  product?:
+    | string
+    | PremiumUpgradeLocalizedName
+    | { key?: string | null; name?: string | PremiumUpgradeLocalizedName | null }
+    | null;
   supportedSelectionType?: "premium_meal" | "premium_large_salad" | string | null;
   premiumCompatibilityKeys?: string[];
   compatibilityKeys?: string[];
   selectable?: boolean;
+  reasonCodes?: string[];
+  issueCode?: string | null;
+  sourceLifecycleStatus?: "active" | "inactive" | string | null;
   linked?: boolean;
   linkedConfigId?: string | null;
   conflictReason?: string | null;
@@ -128,6 +144,7 @@ export type PremiumUpgradeReadinessResponse = {
     missingSources?: number;
     invalidRelations?: number;
     duplicateKeys?: number;
+    invalidConfigs?: number;
     priceMismatches?: unknown[];
     legacyChecks?: {
       builderProteinsCount?: number;
@@ -153,6 +170,13 @@ export type PremiumUpgradeReadinessResponse = {
       issues?: string[];
     }>;
     unresolvedSourceKeys?: string[];
+    brokenConfigs?: Array<{
+      id?: string;
+      currentPremiumKey?: string;
+      blockingIssueCode?: string | null;
+      reasonCodes?: string[];
+      canRelink?: boolean;
+    }>;
   };
   status?: boolean;
 };
