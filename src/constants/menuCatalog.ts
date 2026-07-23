@@ -63,9 +63,74 @@ export const isCanonicalSubscriptionPlanKey = (
   !!key &&
   (CANONICAL_SUBSCRIPTION_PLAN_KEYS as readonly string[]).includes(key);
 
-export const filterCanonicalSubscriptionPlans = <T extends { key?: string }>(
+type EditableSubscriptionPlanCandidate = {
+  key?: string | null;
+  daysCount?: unknown;
+  durationDays?: unknown;
+  gramsOptions?: unknown;
+  grams?: unknown;
+};
+
+const hasEditablePackagePricing = (plan: EditableSubscriptionPlanCandidate) => {
+  const gramsOptions = Array.isArray(plan.gramsOptions)
+    ? plan.gramsOptions
+    : Array.isArray(plan.grams)
+      ? plan.grams
+      : [];
+
+  return gramsOptions.some((rawGramsOption) => {
+    if (!rawGramsOption || typeof rawGramsOption !== "object") return false;
+
+    const gramsOption = rawGramsOption as {
+      grams?: unknown;
+      mealsOptions?: unknown;
+    };
+    const grams = Number(gramsOption.grams);
+    if (!Number.isFinite(grams) || grams <= 0) return false;
+
+    const mealsOptions = Array.isArray(gramsOption.mealsOptions)
+      ? gramsOption.mealsOptions
+      : [];
+
+    return mealsOptions.some((rawMealOption) => {
+      if (!rawMealOption || typeof rawMealOption !== "object") return false;
+
+      const mealOption = rawMealOption as {
+        mealsPerDay?: unknown;
+        priceHalala?: unknown;
+        priceSar?: unknown;
+        price?: unknown;
+      };
+      const mealsPerDay = Number(mealOption.mealsPerDay);
+      const price = Number(
+        mealOption.priceHalala ?? mealOption.priceSar ?? mealOption.price
+      );
+
+      return (
+        Number.isFinite(mealsPerDay) &&
+        mealsPerDay > 0 &&
+        Number.isFinite(price) &&
+        price > 0
+      );
+    });
+  });
+};
+
+export const isEditableSubscriptionPlan = (
+  plan?: EditableSubscriptionPlanCandidate | null
+): boolean => {
+  if (!plan || typeof plan !== "object") return false;
+  if (isCanonicalSubscriptionPlanKey(plan.key)) return true;
+
+  const daysCount = Number(plan.daysCount ?? plan.durationDays);
+  return Number.isFinite(daysCount) && daysCount > 0 && hasEditablePackagePricing(plan);
+};
+
+export const filterCanonicalSubscriptionPlans = <
+  T extends EditableSubscriptionPlanCandidate,
+>(
   plans: T[]
 ): T[] => {
   if (!Array.isArray(plans)) return [];
-  return plans.filter((plan) => isCanonicalSubscriptionPlanKey(plan.key));
+  return plans.filter(isEditableSubscriptionPlan);
 };

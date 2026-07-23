@@ -6,6 +6,7 @@ import type {
   PackagesResponse,
   PackageSummary,
 } from "@/types/packageTypes";
+import { isEditableSubscriptionPlan } from "@/constants/menuCatalog";
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value)
@@ -112,7 +113,7 @@ export function normalizePackage(value: unknown): Package {
     category: asString(record.category) ?? null,
     image: asString(record.image) ?? null,
     imageUrl: asString(record.imageUrl) ?? asString(record.image) ?? null,
-    daysCount: asNumber(record.daysCount) ?? 0,
+    daysCount: asNumber(record.daysCount) ?? asNumber(record.durationDays) ?? 0,
     currency: asString(record.currency) ?? "SAR",
     grams: gramsOptions,
     gramsOptions,
@@ -125,7 +126,7 @@ export function normalizePackage(value: unknown): Package {
       maxDays: asNumber(freezePolicy.maxDays) ?? 0,
       maxTimes: asNumber(freezePolicy.maxTimes) ?? 0,
     },
-    isActive: asBoolean(record.isActive),
+    isActive: asBoolean(record.isActive, asBoolean(record.active, true)),
     sortOrder: asNumber(record.sortOrder) ?? 0,
     createdAt: asString(record.createdAt) ?? "",
     updatedAt: asString(record.updatedAt) ?? "",
@@ -165,7 +166,9 @@ export function normalizePackagesResponse(value: unknown): PackagesResponse {
     throw new Error("استجابة الباقات من الخادم غير صالحة.");
   }
 
-  const data = record.data.map(normalizePackage);
+  const data = record.data
+    .filter(isEditableSubscriptionPlan)
+    .map(normalizePackage);
   return {
     status: typeof record.status === "boolean" ? record.status : true,
     data,

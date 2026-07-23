@@ -19,6 +19,13 @@ import { useState } from "react";
 import { BasicInfoSection } from "@/components/pages/packages/BasicInfoSection";
 import { FreezePolicySection } from "@/components/pages/packages/FreezePolicySection";
 import { GramOptionsSection } from "@/components/pages/packages/GramOptionsSection";
+import type { GramsOption, Package as PackagePlan } from "@/types/packageTypes";
+
+type PackageFormSource = PackagePlan & {
+  durationDays?: number;
+  active?: boolean;
+  grams?: GramsOption[];
+};
 
 const planQueryOptions = (planId: string) =>
   queryOptions({
@@ -42,14 +49,19 @@ function UpdatePackagePage() {
   const queryClient = useQueryClient();
 
   const { data: planResponse } = useSuspenseQuery(planQueryOptions(planId));
-  const planData = planResponse.data;
+  const planData = planResponse.data as PackageFormSource;
+  const gramsOptions = Array.isArray(planData.gramsOptions)
+    ? planData.gramsOptions
+    : Array.isArray(planData.grams)
+      ? planData.grams
+      : [];
 
   const initialData: CreatePackageSchemaType = {
     name: planData.name,
-    daysCount: planData.daysCount,
+    daysCount: planData.daysCount ?? planData.durationDays ?? 1,
     currency: planData.currency || "SAR",
     sortOrder: planData.sortOrder,
-    isActive: planData.isActive,
+    isActive: planData.isActive ?? planData.active ?? true,
     skipPolicy: {
       enabled: planData.skipPolicy?.enabled ?? false,
       maxDays: planData.skipPolicy?.maxDays ?? 3,
@@ -59,14 +71,14 @@ function UpdatePackagePage() {
       maxDays: planData.freezePolicy?.maxDays ?? 1,
       maxTimes: planData.freezePolicy?.maxTimes ?? 1,
     },
-    gramsOptions: planData.gramsOptions.map((gram) => ({
-      grams: gram.grams,
-      sortOrder: gram.sortOrder,
-      isActive: gram.isActive,
+    gramsOptions: gramsOptions.map((gram) => ({
+      grams: Number(gram.grams),
+      sortOrder: gram.sortOrder ?? 0,
+      isActive: gram.isActive ?? true,
       mealsOptions: gram.mealsOptions.map((meal) => ({
         mealsPerDay: meal.mealsPerDay,
-        sortOrder: meal.sortOrder,
-        isActive: meal.isActive,
+        sortOrder: meal.sortOrder ?? 0,
+        isActive: meal.isActive ?? true,
         priceSar: halalaToRiyal(meal.priceHalala),
         compareAtSar:
           meal.compareAtHalala === undefined || meal.compareAtHalala === null

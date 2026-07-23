@@ -1,6 +1,7 @@
 import api from "@/lib/apis";
 import type { Package } from "@/types/packageTypes";
-import { isCanonicalSubscriptionPlanKey } from "@/constants/menuCatalog";
+import { isEditableSubscriptionPlan } from "@/constants/menuCatalog";
+import { normalizePackage } from "@/utils/packageAdapter";
 
 export const fetchGetPlanById = async (
   id: string
@@ -8,9 +9,12 @@ export const fetchGetPlanById = async (
   const response = await api.get(`/api/dashboard/plans/${id}`);
   const plan = response.data?.data;
 
-  if (plan && !isCanonicalSubscriptionPlanKey(plan.key)) {
+  if (plan && !isEditableSubscriptionPlan(plan)) {
     throw new Error("Legacy subscription plan is not editable from the dashboard.");
   }
 
-  return response.data;
+  return {
+    ...response.data,
+    data: normalizePackage(plan),
+  };
 };
