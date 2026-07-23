@@ -34,17 +34,70 @@ export function OperationsKitchenV2Summary({
     );
   }
 
-  const visibleCards = compact
-    ? presentation.cards.slice(0, 2)
-    : presentation.cards;
-  const hiddenCards = compact ? presentation.cards.slice(2) : [];
-  const compactWarnings = compact
-    ? dedupeValues([
-        ...visibleCards.flatMap((card) => card.warnings),
-        ...hiddenCards.flatMap((card) => card.warnings),
-        ...presentation.warningMessages,
-      ])
-    : presentation.warningMessages;
+  const compactWarnings = dedupeValues([
+    ...presentation.cards.flatMap((card) => card.warnings),
+    ...presentation.warningMessages,
+  ]);
+
+  if (compact) {
+    const visibleTitles = presentation.cards
+      .map((card) => card.title.trim())
+      .filter(Boolean)
+      .slice(0, 2);
+    const hiddenTitleCount = Math.max(presentation.cards.length - visibleTitles.length, 0);
+
+    return (
+      <div className="rounded-xl border border-primary/10 bg-primary/5 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="flex items-center gap-1.5 text-sm font-black">
+            <ChefHat className="h-4 w-4 text-primary" />
+            {presentation.mealCount} وجبة
+          </p>
+          <Badge variant="outline">{presentation.cardCount} كروت تحضير</Badge>
+          {presentation.addonItemCount > 0 ? (
+            <Badge variant="outline" className="gap-1">
+              <PlusCircle className="h-3 w-3" />
+              {presentation.addonItemCount} إضافات
+            </Badge>
+          ) : null}
+          {compactWarnings.length ? (
+            <Badge className="border-amber-500/25 bg-amber-500/10 text-amber-800 hover:bg-amber-500/10 dark:text-amber-300">
+              {compactWarnings.length} تنبيه
+            </Badge>
+          ) : null}
+          {presentation.isEmptyKitchenDay ? (
+            <Badge variant="secondary">بدون تحضير مطبخ</Badge>
+          ) : null}
+        </div>
+
+        {visibleTitles.length ? (
+          <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold text-foreground/80">
+            {visibleTitles.map((title) => (
+              <span
+                key={title}
+                className="max-w-full truncate rounded-md bg-background/80 px-2 py-1"
+                title={title}
+              >
+                {title}
+              </span>
+            ))}
+            {hiddenTitleCount > 0 ? (
+              <span className="rounded-md bg-background/80 px-2 py-1 text-muted-foreground">
+                +{hiddenTitleCount} أخرى
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        <p className="mt-2 text-xs font-medium text-muted-foreground">
+          افتح التفاصيل لمعرفة المكونات، الأوزان، الإضافات وتعليمات التحضير كاملة.
+        </p>
+      </div>
+    );
+  }
+
+  const visibleCards = presentation.cards;
+  const hiddenCards: typeof presentation.cards = [];
   const hiddenPaidSelections = hiddenCards.flatMap((card) =>
     card.sections.flatMap((section) =>
       section.items
@@ -81,7 +134,7 @@ export function OperationsKitchenV2Summary({
             <OperationsKitchenV2Card
               key={card.key}
               card={card}
-              compact={compact}
+              compact={false}
             />
           ))}
           {hiddenCards.length ? (
@@ -100,20 +153,9 @@ export function OperationsKitchenV2Summary({
 
       <OperationsKitchenAddonGroups
         groups={presentation.addonGroups}
-        compact={compact}
+        compact={false}
       />
-      {compact && compactWarnings.length ? (
-        <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-900 dark:text-amber-300">
-          {compactWarnings.slice(0, 2).map((warning) => (
-            <p key={warning}>{warning}</p>
-          ))}
-          {compactWarnings.length > 2 ? (
-            <p>+{compactWarnings.length - 2} تنبيهات أخرى</p>
-          ) : null}
-        </div>
-      ) : (
-        <OperationsKitchenWarnings warnings={presentation.warningMessages} />
-      )}
+      <OperationsKitchenWarnings warnings={presentation.warningMessages} />
     </div>
   );
 }
