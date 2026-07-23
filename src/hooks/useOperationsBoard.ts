@@ -228,9 +228,9 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
       return data;
     },
     onSuccess: async (_data, variables) => {
-      await queryClient.refetchQueries({
+      await queryClient.invalidateQueries({
         queryKey: ["operations-board", "queue"],
-        type: "active",
+        refetchType: "active",
       });
       toast.success(`تم تنفيذ ${variables.actionLabel || variables.action} بنجاح`);
     },
@@ -256,7 +256,7 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     pickupCode?: string
   ) => {
     const orderId = item.id;
-    if (pendingActionsRef.current[orderId]) return;
+    if (pendingActionsRef.current[orderId]) return Promise.resolve(false);
 
     const next = {
       ...pendingActionsRef.current,
@@ -264,15 +264,18 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     };
     pendingActionsRef.current = next;
     setPendingActions(next);
-    actionMutation.mutate({
-      item,
-      action,
-      orderId,
-      actionLabel,
-      reason,
-      notes,
-      pickupCode,
-    });
+    return actionMutation
+      .mutateAsync({
+        item,
+        action,
+        orderId,
+        actionLabel,
+        reason,
+        notes,
+        pickupCode,
+      })
+      .then(() => true)
+      .catch(() => false);
   };
 
   return {

@@ -25,8 +25,8 @@ import { Input } from "@/components/ui/input";
 import type { UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 
 const reasonSchema = z.object({
-  reason: z.string().min(1, "السبب مطلوب"),
-  notes: z.string().optional(),
+  reason: z.string().trim().min(1, "السبب مطلوب"),
+  notes: z.string().trim().optional(),
 });
 
 type ReasonFormValues = z.infer<typeof reasonSchema>;
@@ -42,7 +42,7 @@ export interface ReasonDialogState {
 interface ReasonActionDialogProps {
   dialogState: ReasonDialogState;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: ReasonFormValues) => void;
+  onSubmit: (values: ReasonFormValues) => void | Promise<void>;
   isPending: boolean;
 }
 

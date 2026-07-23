@@ -50,6 +50,7 @@ export function PremiumUpgradesTable({
   onRelink,
   onArchive,
   onDetails,
+  canWrite = true,
 }: {
   rows: PremiumUpgradeConfigDto[];
   loading: boolean;
@@ -64,6 +65,7 @@ export function PremiumUpgradesTable({
   onRelink: (row: PremiumUpgradeConfigDto) => void;
   onArchive: (row: PremiumUpgradeConfigDto) => void;
   onDetails: (row: PremiumUpgradeConfigDto) => void;
+  canWrite?: boolean;
 }) {
   return (
     <Card className="shadow-none">
@@ -87,6 +89,7 @@ export function PremiumUpgradesTable({
           onRelink={onRelink}
           onArchive={onArchive}
           onDetails={onDetails}
+          canWrite={canWrite}
         />
         <DesktopRows
           rows={rows}
@@ -98,6 +101,7 @@ export function PremiumUpgradesTable({
           onRelink={onRelink}
           onArchive={onArchive}
           onDetails={onDetails}
+          canWrite={canWrite}
         />
 
         <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -138,6 +142,7 @@ function MobileRows({
   onRelink,
   onArchive,
   onDetails,
+  canWrite,
 }: {
   rows: PremiumUpgradeConfigDto[];
   loading: boolean;
@@ -148,6 +153,7 @@ function MobileRows({
   onRelink: (row: PremiumUpgradeConfigDto) => void;
   onArchive: (row: PremiumUpgradeConfigDto) => void;
   onDetails: (row: PremiumUpgradeConfigDto) => void;
+  canWrite: boolean;
 }) {
   if (loading) {
     return (
@@ -181,6 +187,7 @@ function MobileRows({
           onRelink={() => onRelink(row)}
           onArchive={() => onArchive(row)}
           onDetails={() => onDetails(row)}
+          canWrite={canWrite}
         />
       ))}
     </div>
@@ -197,6 +204,7 @@ function DesktopRows({
   onRelink,
   onArchive,
   onDetails,
+  canWrite,
 }: {
   rows: PremiumUpgradeConfigDto[];
   loading: boolean;
@@ -207,6 +215,7 @@ function DesktopRows({
   onRelink: (row: PremiumUpgradeConfigDto) => void;
   onArchive: (row: PremiumUpgradeConfigDto) => void;
   onDetails: (row: PremiumUpgradeConfigDto) => void;
+  canWrite: boolean;
 }) {
   return (
     <div className="hidden overflow-x-auto md:block">
@@ -253,6 +262,7 @@ function DesktopRows({
                 onRelink={() => onRelink(row)}
                 onArchive={() => onArchive(row)}
                 onDetails={() => onDetails(row)}
+                canWrite={canWrite}
               />
             ))
           )}
@@ -268,12 +278,14 @@ function PremiumUpgradeRow({
   onRelink,
   onArchive,
   onDetails,
+  canWrite,
 }: {
   row: PremiumUpgradeConfigDto;
   onEdit: () => void;
   onRelink: () => void;
   onArchive: () => void;
   onDetails: () => void;
+  canWrite: boolean;
 }) {
   return (
     <TableRow>
@@ -310,6 +322,7 @@ function PremiumUpgradeRow({
           onRelink={onRelink}
           onArchive={onArchive}
           onDetails={onDetails}
+          canWrite={canWrite}
         />
       </TableCell>
     </TableRow>
@@ -322,12 +335,14 @@ function PremiumUpgradeMobileCard({
   onRelink,
   onArchive,
   onDetails,
+  canWrite,
 }: {
   row: PremiumUpgradeConfigDto;
   onEdit: () => void;
   onRelink: () => void;
   onArchive: () => void;
   onDetails: () => void;
+  canWrite: boolean;
 }) {
   return (
     <article className="space-y-4 rounded-lg border p-4">
@@ -357,6 +372,7 @@ function PremiumUpgradeMobileCard({
         onRelink={onRelink}
         onArchive={onArchive}
         onDetails={onDetails}
+        canWrite={canWrite}
         mobile
       />
     </article>
@@ -376,6 +392,7 @@ function Actions({
   onRelink,
   onArchive,
   onDetails,
+  canWrite,
   mobile,
 }: {
   row: PremiumUpgradeConfigDto;
@@ -383,12 +400,13 @@ function Actions({
   onRelink: () => void;
   onArchive: () => void;
   onDetails: () => void;
+  canWrite: boolean;
   mobile?: boolean;
 }) {
   const archived = premiumRowStatus(row) === "archived";
   const broken = premiumRowHealth(row) === "broken";
 
-  if (archived) {
+  if (archived || !canWrite) {
     return (
       <div className={mobile ? "grid grid-cols-1 gap-2" : "flex flex-wrap gap-2"}>
         <Button type="button" size="sm" variant="outline" onClick={onDetails}>

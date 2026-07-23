@@ -23,8 +23,12 @@ export const UserRoles = {
   KITCHEN: "kitchen",
   COURIER: "courier",
   CASHIER: "cashier",
+  RESTAURANT: "restaurant",
 } as const;
 
 export type UserRole = (typeof UserRoles)[keyof typeof UserRoles];
+
+export const isUserRole = (role: unknown): role is UserRole =>
+  Object.values(UserRoles).includes(role as UserRole);
 
 export type LoginCredentials = LoginSchemaType;

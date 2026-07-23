@@ -5,6 +5,7 @@ import type {
   DashboardStaffUserDto,
   UpdateDashboardStaffUserPayload,
 } from "@/types/dashboardAdminTypes";
+import { getDashboardStaffRoleLabel } from "@/lib/roleLabels";
 import {
   SUPPORTED_DASHBOARD_STAFF_ROLES,
   isDashboardStaffRole,
@@ -15,10 +16,22 @@ export const DASHBOARD_STAFF_ROLE_LABELS: Record<
   DashboardStaffRole,
   string
 > = {
-  admin: "مدير",
-  kitchen: "المطبخ",
-  courier: "مندوب التوصيل",
-  cashier: "الكاشير",
+  admin: getDashboardStaffRoleLabel("admin"),
+  restaurant: getDashboardStaffRoleLabel("restaurant"),
+  kitchen: getDashboardStaffRoleLabel("kitchen"),
+  courier: getDashboardStaffRoleLabel("courier"),
+  cashier: getDashboardStaffRoleLabel("cashier"),
+};
+
+export const DASHBOARD_STAFF_ROLE_LABELS_EN: Record<
+  DashboardStaffRole,
+  string
+> = {
+  admin: getDashboardStaffRoleLabel("admin", "en"),
+  restaurant: getDashboardStaffRoleLabel("restaurant", "en"),
+  kitchen: getDashboardStaffRoleLabel("kitchen", "en"),
+  courier: getDashboardStaffRoleLabel("courier", "en"),
+  cashier: getDashboardStaffRoleLabel("cashier", "en"),
 };
 
 export const DASHBOARD_STAFF_STATUS_LABELS = {
@@ -130,7 +143,11 @@ export const getAssignableDashboardStaffRoles = normalizeDashboardStaffRoles;
 export const getDefaultDashboardStaffRole = (
   assignableRoles: DashboardStaffRole[]
 ): DashboardStaffRole =>
-  assignableRoles.includes("admin") ? "admin" : assignableRoles[0] ?? "admin";
+  assignableRoles.includes("restaurant")
+    ? "restaurant"
+    : assignableRoles.includes("admin")
+      ? "admin"
+      : assignableRoles[0] ?? "restaurant";
 
 export const isAssignableDashboardStaffRole = (
   role: DashboardStaffRole,

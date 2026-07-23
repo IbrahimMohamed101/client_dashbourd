@@ -3,10 +3,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useOperationsBoard } from "../src/hooks/useOperationsBoard";
 import { OperationsQueueTable } from "../src/components/pages/operations-board/OperationsQueueTable";
+import { ReasonActionDialog } from "../src/components/pages/pickup-board/ReasonActionDialog";
 import type { QueueAction, UnifiedQueueItem } from "../src/types/dashboardOpsTypes";
 import { makeNormalizedProductionOrder } from "./operationsOneTimeOrderFixtures";
 
@@ -274,6 +275,73 @@ describe("useOperationsBoard one-time action pending state", () => {
     await waitFor(() => expect(result.current.pendingActions[orderB.id]).toBeUndefined());
   });
 
+  it("invalidates the active operations key and renders refreshed backend data after a successful action", async () => {
+    const initial = {
+      ...orderWith({
+        id: "refresh-order",
+        status: "confirmed",
+        actions: [action("prepare", "Start prep")],
+      }),
+      statusLabel: "Confirmed card",
+    };
+    const updated = {
+      ...initial,
+      status: "in_preparation",
+      statusLabel: "Preparing card",
+      allowedActions: [action("ready_for_pickup", "Ready for pickup")],
+      timestamps: {
+        ...initial.timestamps,
+        updatedAt: "2026-07-23T14:00:00.000Z",
+      },
+    };
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    mocks.fetchDashboardOpsList
+      .mockResolvedValueOnce({ status: true, data: { date: "", items: [initial] } })
+      .mockResolvedValueOnce({ status: true, data: { date: "", items: [updated] } });
+    mocks.request.mockResolvedValueOnce({ data: { status: true, data: updated } });
+
+    function BoardPreview() {
+      const board = useOperationsBoard();
+      return (
+        <OperationsQueueTable
+          items={board.itemsByScreen.kitchen}
+          isPending={board.isPending}
+          pendingActions={board.pendingActions}
+          onAction={(item, actionId, label, isDangerous) => {
+            void board.requestAction(item, actionId, label, isDangerous);
+          }}
+        />
+      );
+    }
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BoardPreview />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Confirmed card")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Start prep" }));
+
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["operations-board", "queue"],
+        refetchType: "active",
+      })
+    );
+    expect(await screen.findByText("Preparing card")).toBeInTheDocument();
+    expect(screen.queryByText("Confirmed card")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready for pickup" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start prep" })).not.toBeInTheDocument();
+  });
+
   it("keeps table-level duplicate clicks to one request after pending state renders", async () => {
     const onAction = vi.fn();
     const item = orderWith({
@@ -302,5 +370,85 @@ describe("useOperationsBoard one-time action pending state", () => {
     await user.click(screen.getByRole("button", { name: "جار بدء التحضير..." }));
 
     expect(onAction).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("reason-required operation dialog", () => {
+  function ReasonHarness({
+    onSubmit,
+  }: {
+    onSubmit: (values: { reason: string; notes?: string }) => Promise<boolean>;
+  }) {
+    const [open, setOpen] = useState(true);
+    return (
+      <ReasonActionDialog
+        dialogState={{
+          open,
+          item: orderWith({
+            id: "reason-order",
+            actions: [
+              {
+                ...action("cancel", "Cancel order", "/api/dashboard/ops/actions/cancel", "POST", "red"),
+                requiresReason: true,
+              },
+            ],
+          }),
+          action: "cancel",
+          actionLabel: "Cancel order",
+          isDangerous: true,
+        }}
+        onOpenChange={setOpen}
+        onSubmit={async (values) => {
+          const shouldClose = await onSubmit(values);
+          if (shouldClose) setOpen(false);
+        }}
+        isPending={false}
+      />
+    );
+  }
+
+  it("rejects whitespace-only reasons before submitting", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(<ReasonHarness onSubmit={onSubmit} />);
+    const [reasonInput] = screen.getAllByRole("textbox");
+
+    await user.type(reasonInput, "   ");
+    await user.click(screen.getByRole("button", { name: /Cancel order/ }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+
+  it("keeps the dialog open when a reason mutation fails", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(false);
+    const user = userEvent.setup();
+    render(<ReasonHarness onSubmit={onSubmit} />);
+    const [reasonInput] = screen.getAllByRole("textbox");
+
+    await user.type(reasonInput, "Customer requested cancel");
+    await user.click(screen.getByRole("button", { name: /Cancel order/ }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+
+  it("trims reason and notes then closes after a successful reason mutation", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(true);
+    const user = userEvent.setup();
+    render(<ReasonHarness onSubmit={onSubmit} />);
+    const [reasonInput, notesInput] = screen.getAllByRole("textbox");
+
+    await user.type(reasonInput, "  Customer no-show  ");
+    await user.type(notesInput, "  Called twice  ");
+    await user.click(screen.getByRole("button", { name: /Cancel order/ }));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith({
+        reason: "Customer no-show",
+        notes: "Called twice",
+      })
+    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
   });
 });

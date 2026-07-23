@@ -27,6 +27,22 @@ test("navPermissions.test", () => {
   assert.equal(cashierUrls.includes("/menu"), false);
   assert.equal(cashierUrls.includes("/packages"), false);
 
+  const restaurantUrls = navMainUrlsForRole("restaurant");
+  assert.deepEqual(restaurantUrls, [
+    "/addons",
+    "/operations",
+    "/manual-deduction",
+    "/menu",
+    "/premium-meals",
+    "/users",
+  ]);
+  assert.equal(restaurantUrls.includes("/dashboard"), false);
+  assert.equal(restaurantUrls.includes("/dashboard-users"), false);
+  assert.equal(restaurantUrls.includes("/accounting"), false);
+  assert.equal(restaurantUrls.includes("/payments"), false);
+  assert.equal(restaurantUrls.includes("/delivery"), false);
+  assert.equal(restaurantUrls.includes("/zones"), false);
+
   const kitchenUrls = filterNavItemsForRole(
     NavLinksData.navMain,
     "kitchen"
@@ -71,6 +87,7 @@ test("navPermissions.test", () => {
   assert.equal(navMainUrlsForRole("kitchen").includes("/dashboard-users"), false);
   assert.equal(navMainUrlsForRole("courier").includes("/dashboard-users"), false);
   assert.equal(navMainUrlsForRole("cashier").includes("/dashboard-users"), false);
+  assert.equal(navMainUrlsForRole("restaurant").includes("/dashboard-users"), false);
   assert.equal(navMainUrlsForRole("superadmin").includes("/dashboard-users"), true);
 
   assert.deepEqual(secondaryUrlsForRole("admin"), [
@@ -83,4 +100,5 @@ test("navPermissions.test", () => {
   assert.deepEqual(secondaryUrlsForRole("kitchen"), []);
   assert.deepEqual(secondaryUrlsForRole("courier"), []);
   assert.deepEqual(secondaryUrlsForRole("cashier"), []);
+  assert.deepEqual(secondaryUrlsForRole("restaurant"), []);
 });

@@ -73,7 +73,7 @@ import {
 } from "@/hooks/useDashboardAdminQuery";
 import { useDebounce } from "@/hooks/useDebounce";
 import { canManageDashboardStaffUsers } from "@/lib/dashboardStaffPermissions";
-import type { UserRole } from "@/types/auth";
+import { isUserRole } from "@/types/auth";
 import type {
   DashboardStaffRole,
   DashboardStaffStatusFilter,
@@ -199,7 +199,7 @@ export function DashboardStaffUsersWorkspace() {
   React.useEffect(() => {
     if (!user || isVerifiedSuperadmin) return;
     navigate({
-      to: ROLE_DEFAULTS[user.role as UserRole] ?? "/",
+      to: isUserRole(user.role) ? ROLE_DEFAULTS[user.role] : "/",
       replace: true,
     });
   }, [isVerifiedSuperadmin, navigate, user]);

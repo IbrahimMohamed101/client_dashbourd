@@ -38,6 +38,7 @@ export function UserActionsCell({ user }: UserActionsCellProps) {
   const canUpdateAccount = canManagePasswords;
   const canResetPassword =
     canManagePasswords && user.isActive && user.canResetPassword !== false;
+  const canCreateSubscription = sessionUser?.role !== UserRoles.RESTAURANT;
 
   const handleToggleActive = () => {
     updateUser(
@@ -83,6 +84,7 @@ export function UserActionsCell({ user }: UserActionsCellProps) {
             </Link>
           </DropdownMenuItem>
 
+          {canCreateSubscription ? (
           <DropdownMenuItem asChild>
             <Link
               to="/users/$userId/create-subscription"
@@ -93,6 +95,7 @@ export function UserActionsCell({ user }: UserActionsCellProps) {
               إنشاء اشتراك
             </Link>
           </DropdownMenuItem>
+          ) : null}
 
           {canResetPassword ? (
             <DropdownMenuItem

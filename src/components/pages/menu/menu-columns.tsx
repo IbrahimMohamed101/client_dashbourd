@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
 import { Copy, Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
 
@@ -44,10 +44,12 @@ const formatPrice = (halala: number) => (Number(halala || 0) / 100).toFixed(2);
 
 interface CategoryActions {
   onDelete: (id: string) => void;
+  canWrite?: boolean;
 }
 
 export const getCategoryColumns = ({
   onDelete,
+  canWrite = true,
 }: CategoryActions): ColumnDef<MenuCategory>[] => [
   {
     id: "index",
@@ -130,10 +132,10 @@ export const getCategoryColumns = ({
       </div>
     ),
   },
-  {
+  ...(canWrite ? [{
     id: "actions",
     header: () => <div className="text-center">الإجراءات</div>,
-    cell: ({ row }) => {
+    cell: ({ row }: CellContext<MenuCategory, unknown>) => {
       const category = row.original;
       return (
         <div className="flex items-center justify-center gap-1">
@@ -158,19 +160,21 @@ export const getCategoryColumns = ({
       );
     },
     size: 150,
-  },
+  }] : []),
 ];
 
 interface ProductActions {
   onToggleAvailability: (id: string, isAvailable: boolean) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  canWrite?: boolean;
 }
 
 export const getProductColumns = ({
   onToggleAvailability,
   onDuplicate,
   onDelete,
+  canWrite = true,
 }: ProductActions): ColumnDef<MenuProduct>[] => [
   {
     id: "index",
@@ -190,7 +194,7 @@ export const getProductColumns = ({
   {
     id: "product",
     header: "المنتج",
-    cell: ({ row }) => {
+    cell: ({ row }: CellContext<MenuProduct, unknown>) => {
       const product = row.original;
       return (
         <div className="flex min-w-44 flex-col gap-1">
@@ -205,7 +209,7 @@ export const getProductColumns = ({
   {
     id: "image",
     header: "الصورة",
-    cell: ({ row }) => {
+    cell: ({ row }: CellContext<MenuProduct, unknown>) => {
       const product = row.original;
       return product.imageUrl ? (
         <img
@@ -221,7 +225,7 @@ export const getProductColumns = ({
   {
     accessorKey: "pricingModel",
     header: "التسعير",
-    cell: ({ row }) => {
+    cell: ({ row }: CellContext<MenuProduct, unknown>) => {
       const isFixed = row.original.pricingModel === "fixed";
       return (
         <Badge variant={isFixed ? "secondary" : "default"}>
@@ -233,7 +237,7 @@ export const getProductColumns = ({
   {
     accessorKey: "priceHalala",
     header: () => <div className="text-center">السعر</div>,
-    cell: ({ row }) => {
+    cell: ({ row }: CellContext<MenuProduct, unknown>) => {
       const product = row.original;
       return (
         <div className="text-center font-medium">
@@ -250,33 +254,41 @@ export const getProductColumns = ({
   {
     accessorKey: "isAvailable",
     header: () => <div className="text-center">التوفر</div>,
-    cell: ({ row }) => {
+    cell: ({ row }: { row: { original: MenuProduct } }) => {
       const product = row.original;
       return (
         <div className="flex justify-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="cursor-pointer"
-            onClick={() =>
-              onToggleAvailability(product.id, !product.isAvailable)
-            }
-          >
-            {product.isAvailable ? (
-              <Eye data-icon="inline-start" />
-            ) : (
-              <EyeOff data-icon="inline-start" />
-            )}
-            {product.isAvailable ? "متوفر" : "مخفي"}
-          </Button>
+          {canWrite ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="cursor-pointer"
+              onClick={() =>
+                onToggleAvailability(product.id, !product.isAvailable)
+              }
+            >
+              {product.isAvailable ? (
+                <Eye data-icon="inline-start" />
+              ) : (
+                <EyeOff data-icon="inline-start" />
+              )}
+              {product.isAvailable ? "متوفر" : "مخفي"}
+            </Button>
+          ) : (
+            <MenuStatusBadge
+              active={product.isAvailable}
+              activeLabel="متوفر"
+              inactiveLabel="مخفي"
+            />
+          )}
         </div>
       );
     },
   },
-  {
+  ...(canWrite ? [{
     id: "actions",
     header: () => <div className="text-center">الإجراءات</div>,
-    cell: ({ row }) => {
+    cell: ({ row }: { row: { original: MenuProduct } }) => {
       const product = row.original;
       return (
         <div className="flex items-center justify-center gap-1">
@@ -308,15 +320,17 @@ export const getProductColumns = ({
       );
     },
     size: 150,
-  },
+  }] : []),
 ];
 
 interface OptionGroupActions {
   onDelete: (id: string) => void;
+  canWrite?: boolean;
 }
 
 export const getOptionGroupColumns = ({
   onDelete,
+  canWrite = true,
 }: OptionGroupActions): ColumnDef<MenuOptionGroup>[] => [
   {
     id: "index",
@@ -384,10 +398,10 @@ export const getOptionGroupColumns = ({
       </div>
     ),
   },
-  {
+  ...(canWrite ? [{
     id: "actions",
     header: () => <div className="text-center">الإجراءات</div>,
-    cell: ({ row }) => {
+    cell: ({ row }: CellContext<MenuOptionGroup, unknown>) => {
       const group = row.original;
       return (
         <div className="flex items-center justify-center gap-1">
@@ -412,15 +426,17 @@ export const getOptionGroupColumns = ({
       );
     },
     size: 150,
-  },
+  }] : []),
 ];
 
 interface OptionActions {
   onDelete: (id: string) => void;
+  canWrite?: boolean;
 }
 
 export const getOptionColumns = ({
   onDelete,
+  canWrite = true,
 }: OptionActions): ColumnDef<MenuOption>[] => [
   {
     id: "index",
@@ -440,7 +456,7 @@ export const getOptionColumns = ({
   {
     id: "option",
     header: "الخيار",
-    cell: ({ row }) => {
+    cell: ({ row }: CellContext<MenuOption, unknown>) => {
       const option = row.original;
       return (
         <div className="flex min-w-44 flex-col gap-1">
@@ -455,7 +471,7 @@ export const getOptionColumns = ({
   {
     accessorKey: "extraPriceHalala",
     header: () => <div className="text-center">السعر الإضافي</div>,
-    cell: ({ row }) => {
+    cell: ({ row }: CellContext<MenuOption, unknown>) => {
       const value = row.original.extraPriceHalala;
       return (
         <div className="text-center font-medium">
@@ -486,10 +502,10 @@ export const getOptionColumns = ({
       </div>
     ),
   },
-  {
+  ...(canWrite ? [{
     id: "actions",
     header: () => <div className="text-center">الإجراءات</div>,
-    cell: ({ row }) => {
+    cell: ({ row }: CellContext<MenuOption, unknown>) => {
       const option = row.original;
       return (
         <div className="flex items-center justify-center gap-1">
@@ -513,7 +529,7 @@ export const getOptionColumns = ({
         </div>
       );
     },
-  },
+  }] : []),
 ];
 
 export const getAuditLogColumns = (): ColumnDef<MenuAuditLog>[] => [

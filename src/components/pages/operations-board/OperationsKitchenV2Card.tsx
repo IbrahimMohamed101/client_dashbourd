@@ -58,7 +58,7 @@ export function OperationsKitchenV2Card({
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {card.product ? (
+        {card.product && !compact ? (
           <ComponentRow label="الصنف المطلوب" component={card.product} />
         ) : null}
         {card.protein ? (
@@ -71,7 +71,23 @@ export function OperationsKitchenV2Card({
             component={carb}
           />
         ))}
+        {card.salad ? (
+          <ComponentRow label="السلطة" component={card.salad} />
+        ) : null}
       </div>
+
+      {!card.protein && !card.carbs.length && !card.salad && card.lines.length ? (
+        <div className="mt-3 grid gap-1.5">
+          {card.lines.slice(0, compact ? 3 : undefined).map((line, index) => (
+            <p
+              key={`${card.key}-line-${index}`}
+              className="break-words rounded-lg bg-muted/35 px-3 py-2 text-sm font-medium"
+            >
+              {line}
+            </p>
+          ))}
+        </div>
+      ) : null}
 
       {compact && card.carbs.length > 2 ? (
         <p className="mt-2 text-xs font-semibold text-muted-foreground">

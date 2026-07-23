@@ -6,7 +6,11 @@ import {
 import type { MenuOptionGroup } from "@/types/menuTypes";
 import { getOptionGroupColumns } from "../menu-columns";
 
-export function MenuOptionGroupsTab() {
+export function MenuOptionGroupsTab({
+  canWrite = true,
+}: {
+  canWrite?: boolean;
+}) {
   return (
     <MenuEntityTableTab<MenuOptionGroup>
       title="مجموعات الخيارات"
@@ -18,9 +22,10 @@ export function MenuOptionGroupsTab() {
       emptyMessage="لا توجد مجموعات خيارات. أنشئ مجموعة مثل اختيار الحجم أو الصوص."
       deleteTitle="حذف المجموعة"
       deleteDescription="هل أنت متأكد من حذف هذه المجموعة؟ لا يمكن التراجع عن هذا الإجراء."
-      columns={(onDelete) => getOptionGroupColumns({ onDelete })}
+      columns={(onDelete) => getOptionGroupColumns({ onDelete, canWrite })}
       useQuery={useMenuOptionGroupsQuery}
       useDeleteMutation={useDeleteMenuOptionGroupMutation}
+      canWrite={canWrite}
     />
   );
 }

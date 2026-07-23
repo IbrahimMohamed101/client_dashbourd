@@ -23,7 +23,7 @@ import { getProductColumns } from "../menu-columns";
 
 type CategoryFilter = string | "all";
 
-export function MenuProductsTab() {
+export function MenuProductsTab({ canWrite = true }: { canWrite?: boolean }) {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const { data: categoriesData } = useMenuCategoriesQuery({ limit: 100 });
   const toggleAvailability = useToggleMenuProductAvailabilityMutation();
@@ -47,10 +47,12 @@ export function MenuProductsTab() {
             toggleAvailability.mutate({ id, isAvailable }),
           onDuplicate: (id) => duplicateProduct.mutate(id),
           onDelete,
+          canWrite,
         })
       }
       useQuery={useMenuProductsQuery}
       useDeleteMutation={useDeleteMenuProductMutation}
+      canWrite={canWrite}
       buildQueryParams={(params) => ({
         ...params,
         categoryId: categoryFilter !== "all" ? categoryFilter : undefined,

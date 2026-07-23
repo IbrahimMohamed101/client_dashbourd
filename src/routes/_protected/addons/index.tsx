@@ -88,6 +88,8 @@ import {
 import { createAddonPlan, updateAddonPlan } from "@/utils/fetchAddons";
 import { fetchDeleteAddon } from "@/utils/fetchDeleteAddon";
 import { toggleAddonItem } from "@/utils/fetchUpdateAddon";
+import { useAuth } from "@/hooks/useAuth";
+import { UserRoles } from "@/types/auth";
 
 const chartConfig = {
   active: {
@@ -135,6 +137,7 @@ export const Route = createFileRoute("/_protected/addons/")({
 });
 
 function RouteComponent() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: addonsResponse } = useSuspenseQuery(addonsQueryOptions());
   const { data: productPicker } = useSuspenseQuery(
@@ -200,6 +203,8 @@ function RouteComponent() {
     searchTerm.trim() !== "" ||
     statusFilter !== "all" ||
     categoryFilter !== "all";
+  const canWrite =
+    user?.role === UserRoles.ADMIN || user?.role === UserRoles.SUPERADMIN;
 
   const invalidateAddons = async () => {
     await queryClient.invalidateQueries({ queryKey: ["addons"] });
@@ -291,10 +296,12 @@ function RouteComponent() {
                 </p>
               </div>
             </div>
+            {canWrite ? (
             <Button onClick={openCreate} className="w-full gap-2 sm:w-auto">
               <Plus className="size-4" />
               باقة جديدة
             </Button>
+            ) : null}
           </div>
         </section>
 
@@ -381,6 +388,7 @@ function RouteComponent() {
             categories={categories}
             matrixRowsCount={matrixRowsCount}
             plansCount={summaryPlansCount}
+            canWrite={canWrite}
             onCreate={openCreate}
           />
         ) : filteredPlans.length === 0 ? (
@@ -396,6 +404,7 @@ function RouteComponent() {
                 key={addonId(plan)}
                 plan={plan}
                 isMutating={isMutating}
+                canWrite={canWrite}
                 onEdit={() => openEdit(plan)}
                 onToggle={() => toggleMutation.mutate(addonId(plan))}
                 onArchive={() => setArchivePlan(plan)}
@@ -405,7 +414,7 @@ function RouteComponent() {
         )}
       </div>
 
-      {dialogOpen ? (
+      {canWrite && dialogOpen ? (
         <AddonPlanDialog
           open={dialogOpen}
           onOpenChange={(open) => {
@@ -433,6 +442,7 @@ function RouteComponent() {
         />
       ) : null}
 
+      {canWrite ? (
       <AlertDialog
         open={!!archivePlan}
         onOpenChange={(open) => {
@@ -463,6 +473,7 @@ function RouteComponent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      ) : null}
     </>
   );
 }
@@ -750,11 +761,13 @@ function EmptyState({
   categories,
   matrixRowsCount,
   plansCount,
+  canWrite,
   onCreate,
 }: {
   categories: AddonCategoryOption[];
   matrixRowsCount: number;
   plansCount: number;
+  canWrite: boolean;
   onCreate: () => void;
 }) {
   return (
@@ -797,10 +810,12 @@ function EmptyState({
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-56 lg:grid-cols-1">
           <SummaryTile label="الباقات" value={plansCount} />
           <SummaryTile label="صفوف الأسعار" value={matrixRowsCount} />
+          {canWrite ? (
           <Button onClick={onCreate} className="gap-2">
             <Plus className="size-4" />
             إنشاء باقة
           </Button>
+          ) : null}
         </div>
       </div>
     </section>
@@ -919,12 +934,14 @@ function NoFilterResults({ onReset }: { onReset: () => void }) {
 function AddonPlanCard({
   plan,
   isMutating,
+  canWrite,
   onEdit,
   onToggle,
   onArchive,
 }: {
   plan: Addon;
   isMutating: boolean;
+  canWrite: boolean;
   onEdit: () => void;
   onToggle: () => void;
   onArchive: () => void;
@@ -945,6 +962,7 @@ function AddonPlanCard({
               {plan.name.en || plan.name.ar}
             </p>
           </div>
+          {canWrite ? (
           <div className="flex shrink-0 items-center gap-1">
             <Button
               variant="outline"
@@ -974,6 +992,7 @@ function AddonPlanCard({
               <Archive className="size-4" />
             </Button>
           </div>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-5 p-4">
