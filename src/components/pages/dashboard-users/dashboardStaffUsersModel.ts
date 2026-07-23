@@ -6,7 +6,7 @@ import type {
   UpdateDashboardStaffUserPayload,
 } from "@/types/dashboardAdminTypes";
 import {
-  SUPPORTED_DASHBOARD_STAFF_ROLES,
+  DEFAULT_ASSIGNABLE_DASHBOARD_STAFF_ROLES,
   isDashboardStaffRole,
   normalizeDashboardStaffRoles,
 } from "@/utils/fetchDashboardUsers";
@@ -16,9 +16,10 @@ export const DASHBOARD_STAFF_ROLE_LABELS: Record<
   string
 > = {
   admin: "مدير",
-  kitchen: "المطبخ",
+  restaurant: "المطعم",
+  kitchen: "المطبخ (قديم)",
   courier: "مندوب التوصيل",
-  cashier: "الكاشير",
+  cashier: "الكاشير (قديم)",
 };
 
 export const DASHBOARD_STAFF_STATUS_LABELS = {
@@ -122,7 +123,7 @@ export type ResetDashboardStaffPasswordFormValues = z.input<
 >;
 
 export const defaultAssignableRoles = (): DashboardStaffRole[] => [
-  ...SUPPORTED_DASHBOARD_STAFF_ROLES,
+  ...DEFAULT_ASSIGNABLE_DASHBOARD_STAFF_ROLES,
 ];
 
 export const getAssignableDashboardStaffRoles = normalizeDashboardStaffRoles;
@@ -130,7 +131,11 @@ export const getAssignableDashboardStaffRoles = normalizeDashboardStaffRoles;
 export const getDefaultDashboardStaffRole = (
   assignableRoles: DashboardStaffRole[]
 ): DashboardStaffRole =>
-  assignableRoles.includes("admin") ? "admin" : assignableRoles[0] ?? "admin";
+  assignableRoles.includes("restaurant")
+    ? "restaurant"
+    : assignableRoles.includes("admin")
+      ? "admin"
+      : assignableRoles[0] ?? "restaurant";
 
 export const isAssignableDashboardStaffRole = (
   role: DashboardStaffRole,
