@@ -17,9 +17,16 @@ import {
 
 export const SUPPORTED_DASHBOARD_STAFF_ROLES = [
   "admin",
-  "kitchen",
+  "restaurant",
   "courier",
+  "kitchen",
   "cashier",
+] as const satisfies readonly DashboardStaffRole[];
+
+export const DEFAULT_ASSIGNABLE_DASHBOARD_STAFF_ROLES = [
+  "admin",
+  "restaurant",
+  "courier",
 ] as const satisfies readonly DashboardStaffRole[];
 
 const dashboardStaffErrorMessages: Record<string, string> = {
@@ -48,10 +55,14 @@ export const isDashboardStaffRole = (
 export const normalizeDashboardStaffRoles = (
   roles: unknown
 ): DashboardStaffRole[] => {
-  if (!Array.isArray(roles)) return [...SUPPORTED_DASHBOARD_STAFF_ROLES];
+  if (!Array.isArray(roles)) {
+    return [...DEFAULT_ASSIGNABLE_DASHBOARD_STAFF_ROLES];
+  }
 
   const normalized = roles.filter(isDashboardStaffRole);
-  return normalized.length ? normalized : [...SUPPORTED_DASHBOARD_STAFF_ROLES];
+  return normalized.length
+    ? normalized
+    : [...DEFAULT_ASSIGNABLE_DASHBOARD_STAFF_ROLES];
 };
 
 const normalizeStaffUsersListResponse = (

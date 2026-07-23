@@ -20,6 +20,7 @@ export interface AuthResponse {
 export const UserRoles = {
   SUPERADMIN: "superadmin",
   ADMIN: "admin",
+  RESTAURANT: "restaurant",
   KITCHEN: "kitchen",
   COURIER: "courier",
   CASHIER: "cashier",
