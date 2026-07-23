@@ -8,9 +8,12 @@ export interface MealOption {
 
 export interface GramsOption {
   grams: number;
+  gramsLabel?: string;
   mealsOptions: MealOption[];
   isActive: boolean;
   sortOrder: number;
+  proteinGrams?: number;
+  carbGrams?: number;
 }
 
 export interface FreezePolicy {
@@ -20,14 +23,23 @@ export interface FreezePolicy {
 }
 
 export interface Package {
+  id?: string;
   _id: string;
   key?: string;
   name: {
     ar: string;
     en: string;
   };
+  description?: {
+    ar: string;
+    en: string;
+  };
+  category?: string | null;
+  image?: string | null;
+  imageUrl?: string | null;
   daysCount: number;
   currency: string;
+  grams?: GramsOption[];
   gramsOptions: GramsOption[];
   skipPolicy: {
     enabled: boolean;
@@ -39,6 +51,7 @@ export interface Package {
   createdAt: string;
   updatedAt: string;
   __v: number;
+  [key: string]: unknown;
 }
 
 export interface PackageSummary {
