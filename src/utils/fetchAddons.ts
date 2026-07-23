@@ -268,7 +268,7 @@ const normalizeCategories = (payload: unknown): AddonCategoryOption[] => {
   return categories.length > 0 ? categories : FALLBACK_CATEGORIES;
 };
 
-const normalizeAddonsResponse = (payload: unknown): AddonsResponse => {
+export const normalizeAddonsResponse = (payload: unknown): AddonsResponse => {
   const record = asRecord(payload);
   const data = asRecord(record.data);
   const plans = extractCollection(payload, "plans").map(normalizeAddon);

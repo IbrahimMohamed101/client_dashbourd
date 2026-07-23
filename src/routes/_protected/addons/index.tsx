@@ -155,8 +155,9 @@ function RouteComponent() {
   const products = productPicker.data;
   const basePlans = basePlanPicker.data;
   const categories = addonsResponse.meta.addonPlanCategories;
+  const summaryPlansCount = addonsResponse.summary.plansCount ?? plans.length;
   const activePlans = plans.filter((plan) => plan.isActive).length;
-  const inactivePlans = Math.max(0, plans.length - activePlans);
+  const inactivePlans = Math.max(0, summaryPlansCount - activePlans);
   const linkedProductsCount = new Set(
     plans.flatMap((plan) => plan.menuProductIds)
   ).size;
@@ -164,7 +165,10 @@ function RouteComponent() {
     addonsResponse.summary.matrixRowsCount ||
     plans.reduce((total, plan) => total + plan.planPrices.length, 0);
 
-  const categoryRows = useMemo(() => toCategoryRows(plans), [plans]);
+  const categoryRows = useMemo(
+    () => toCategoryRows(plans, categories),
+    [categories, plans]
+  );
   const planRows = useMemo(() => toPlanRows(plans), [plans]);
   const filteredPlans = useMemo(
     () =>
@@ -310,14 +314,14 @@ function RouteComponent() {
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <MetricRadial
                     label="كل الباقات"
-                    value={plans.length}
-                    total={Math.max(plans.length, 1)}
+                    value={summaryPlansCount}
+                    total={Math.max(summaryPlansCount, 1)}
                     colorKey="value"
                   />
                   <MetricRadial
                     label="نشطة"
                     value={activePlans}
-                    total={Math.max(plans.length, 1)}
+                    total={Math.max(summaryPlansCount, 1)}
                     colorKey="active"
                   />
                   <MetricRadial
@@ -360,7 +364,7 @@ function RouteComponent() {
           categoryFilter={categoryFilter}
           categories={categories}
           resultCount={filteredPlans.length}
-          totalCount={plans.length}
+          totalCount={summaryPlansCount}
           hasActiveFilters={hasActiveFilters}
           onSearchChange={setSearchTerm}
           onStatusChange={setStatusFilter}
@@ -373,7 +377,12 @@ function RouteComponent() {
         />
 
         {plans.length === 0 ? (
-          <EmptyState onCreate={openCreate} />
+          <EmptyState
+            categories={categories}
+            matrixRowsCount={matrixRowsCount}
+            plansCount={summaryPlansCount}
+            onCreate={openCreate}
+          />
         ) : filteredPlans.length === 0 ? (
           <NoFilterResults onReset={() => {
             setSearchTerm("");
@@ -726,22 +735,75 @@ function ChartEmpty({ title }: { title: string }) {
   );
 }
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
+function SummaryTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 p-8 text-center">
-      <div className="flex size-12 items-center justify-center rounded-lg bg-background text-muted-foreground ring-1 ring-border">
-        <Utensils className="size-5" />
-      </div>
-      <h2 className="mt-4 text-base font-semibold">لا توجد باقات إضافات بعد</h2>
-      <p className="mt-1 max-w-md text-sm leading-6 text-muted-foreground">
-        أنشئ أول باقة، اربطها بمنتجات المنيو، ثم أضف أسعارها حسب الباقات
-        الأساسية.
+    <div className="rounded-lg border bg-background p-4">
+      <p className="text-2xl font-semibold tabular-nums">
+        {formatNumber(value)}
       </p>
-      <Button onClick={onCreate} className="mt-5 gap-2">
-        <Plus className="size-4" />
-        إنشاء باقة
-      </Button>
+      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
     </div>
+  );
+}
+
+function EmptyState({
+  categories,
+  matrixRowsCount,
+  plansCount,
+  onCreate,
+}: {
+  categories: AddonCategoryOption[];
+  matrixRowsCount: number;
+  plansCount: number;
+  onCreate: () => void;
+}) {
+  return (
+    <section className="rounded-lg border border-dashed bg-muted/20 p-5">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="min-w-0">
+          <div className="flex items-start gap-3">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-background text-muted-foreground ring-1 ring-border">
+              <Utensils className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold">لا توجد باقات إضافات منشأة</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                استجاب الخادم بنجاح ولا توجد باقات إضافات محفوظة حاليا. التصنيفات
+                المتاحة من الخادم ظاهرة بالأسفل ويمكن استخدامها عند إنشاء أول باقة.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {categories.map((category) => (
+              <div
+                key={category.key}
+                className="rounded-lg border bg-background p-4"
+              >
+                <p className="font-medium">{localizedName(category.label)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {String(category.key)}
+                </p>
+              </div>
+            ))}
+            {categories.length === 0 ? (
+              <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
+                لا توجد تصنيفات إضافات في استجابة الخادم.
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-56 lg:grid-cols-1">
+          <SummaryTile label="الباقات" value={plansCount} />
+          <SummaryTile label="صفوف الأسعار" value={matrixRowsCount} />
+          <Button onClick={onCreate} className="gap-2">
+            <Plus className="size-4" />
+            إنشاء باقة
+          </Button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1012,16 +1074,28 @@ type PlanChartRow = {
   prices: number;
 };
 
-function toCategoryRows(plans: Addon[]): ChartRow[] {
-  const counts = new Map<string, number>();
+function toCategoryRows(
+  plans: Addon[],
+  categoryOptions: AddonCategoryOption[] = []
+): ChartRow[] {
+  const labels = new Map(
+    categoryOptions.map((category) => [
+      String(category.key),
+      localizedName(category.label),
+    ])
+  );
+  const counts = new Map<string, number>(
+    categoryOptions.map((category) => [String(category.key), 0])
+  );
+
   plans.forEach((plan) => {
     counts.set(plan.category, (counts.get(plan.category) ?? 0) + 1);
   });
 
   return Array.from(counts.entries()).map(([key, value]) => ({
     key,
-    label: categoryLabel(key),
-    shortLabel: compactLabel(categoryLabel(key), 9),
+    label: labels.get(key) || categoryLabel(key),
+    shortLabel: compactLabel(labels.get(key) || categoryLabel(key), 9),
     value,
   }));
 }
