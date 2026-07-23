@@ -21,11 +21,12 @@ test("addonPickerContract.test", () => {
   const productParams = new URLSearchParams(productUrl.split("?")[1]);
 
   assert.equal(productUrl.startsWith("/api/dashboard/menu/products?"), true);
-  assert.equal(productParams.get("view"), "picker");
+  assert.equal(productParams.get("view"), "addon_plan_picker");
   assert.equal(productParams.get("context"), "addon_plan");
   assert.equal(productParams.get("linkableFor"), "addon_plan");
-  assert.equal(productParams.get("isVisible"), "true");
-  assert.equal(productParams.get("isAvailable"), "true");
+  assert.equal(productParams.get("includeInactive"), "true");
+  assert.equal(productParams.has("isVisible"), false);
+  assert.equal(productParams.has("isAvailable"), false);
   assert.equal(productParams.has("availableFor"), false);
 
   const categoryUrl = addonCategoryPickerUrl();
@@ -36,6 +37,8 @@ test("addonPickerContract.test", () => {
     assert.equal(categoryParams.get(key), value);
     assert.equal(productParams.get(key), value);
   }
+  assert.equal(categoryParams.has("isVisible"), false);
+  assert.equal(categoryParams.has("isAvailable"), false);
   assert.equal(categoryParams.has("availableFor"), false);
 
   assert.equal(addonPickerSearchParams(100).get("limit"), "100");
