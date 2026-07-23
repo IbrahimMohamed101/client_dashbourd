@@ -30,9 +30,9 @@ import {
 
 const PREMIUM_LIST_STALE_TIME = 2 * 60 * 1000;
 const PREMIUM_READINESS_STALE_TIME = 2 * 60 * 1000;
-const PREMIUM_SOURCES_STALE_TIME = 5 * 60 * 1000;
+const PREMIUM_SOURCES_STALE_TIME = 0;
 const PREMIUM_CACHE_GC_TIME = 15 * 60 * 1000;
-const PREMIUM_UPGRADES_SOURCES_QUERY_VERSION = "v3";
+const PREMIUM_UPGRADES_SOURCES_QUERY_VERSION = "v4-independent";
 
 export function usePremiumUpgradesQuery(filters: PremiumUpgradeListFilters) {
   return useQuery({
@@ -72,7 +72,7 @@ export function usePremiumUpgradeSourcesQuery(
     staleTime: PREMIUM_SOURCES_STALE_TIME,
     gcTime: PREMIUM_CACHE_GC_TIME,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnMount: "always",
     placeholderData: keepPreviousData,
   });
 }
@@ -126,11 +126,7 @@ async function invalidatePremiumQueries(queryClient: QueryClient) {
 export function canonicalizePremiumUpgradeUpdatePayload(
   payload: PremiumUpgradeUpdatePayload
 ): PremiumUpgradeUpdatePayload {
-  const isRelink = Boolean(payload.kind && payload.sourceId);
-  if (!isRelink) return payload;
-
-  const { relationId: _relationId, ...canonicalPayload } = payload;
-  return canonicalPayload;
+  return payload;
 }
 
 function patchPremiumUpgradeInListCaches(
