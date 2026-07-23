@@ -83,7 +83,10 @@ function CandidateLinkDialogContent({
 }) {
   const [form, setForm] = useState<LinkFormState>(defaultLinkForm);
   const [sourceFilters, setSourceFilters] =
-    useState<PremiumUpgradeSourceFilters>(defaultPremiumUpgradeSourceFilters);
+    useState<PremiumUpgradeSourceFilters>({
+      ...defaultPremiumUpgradeSourceFilters,
+      status: "all",
+    });
   const [sourceSearch, setSourceSearch] = useState("");
   const debouncedSourceSearch = useDebounce(sourceSearch, 350);
 
@@ -125,7 +128,7 @@ function CandidateLinkDialogContent({
       return;
     }
     if (selectedSource.selectable === false) {
-      toast.error("المصدر المحدد غير متاح للاشتراكات.");
+      toast.error("المصدر المحدد غير جاهز للاشتراكات. راجع حالته أو علاقاته من المنيو.");
       return;
     }
     if (!sourceHasRequiredRelation(selectedSource)) {
@@ -158,7 +161,8 @@ function CandidateLinkDialogContent({
       <DialogHeader className="border-b px-5 py-4 text-right">
         <DialogTitle>إضافة ترقية مميزة</DialogTitle>
         <DialogDescription>
-          اختر نوع الترقية ثم حدد العنصر المطلوب من المنيو.
+          كل منتجات وخيارات المنيو ظاهرة هنا. العناصر غير الجاهزة تظهر للتشخيص،
+          ولا يمكن تفعيلها قبل استكمال النشر وقناة الاشتراك والعلاقات المطلوبة.
         </DialogDescription>
       </DialogHeader>
 
@@ -253,7 +257,11 @@ function CandidateLinkDialogContent({
         <DialogFooter className="sticky bottom-0 -mx-4 mt-5 border-t bg-background px-4 pt-4 sm:-mx-5 sm:px-5 sm:justify-start">
           <Button
             type="submit"
-            disabled={createMutation.isPending || !form.selectedSource}
+            disabled={
+              createMutation.isPending ||
+              !form.selectedSource ||
+              form.selectedSource.selectable === false
+            }
           >
             <Link2 data-icon="inline-start" />
             إضافة
