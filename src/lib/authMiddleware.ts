@@ -1,5 +1,5 @@
 import { redirect } from "@tanstack/react-router";
-import type { AuthResponse, UserRole } from "@/types/auth";
+import { isUserRole, type AuthResponse } from "@/types/auth";
 import {
   AUTH_ROUTES,
   ROLE_DEFAULTS,
@@ -20,7 +20,9 @@ export const authMiddleware = (
     throw redirect({ to: "/", search: { redirect: pathName } });
   }
 
-  const role = session.user.role as UserRole;
+  const role = session.user.role;
+  if (!isUserRole(role)) throw redirect({ to: "/" });
+
   const allowedRoutes = ROLE_ROUTES[role];
   const defaultRoute = ROLE_DEFAULTS[role];
 

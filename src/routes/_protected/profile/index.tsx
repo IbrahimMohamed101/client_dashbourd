@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useResetDashboardStaffUserPasswordMutation } from "@/hooks/useDashboardAdminQuery";
 import { UserRoles } from "@/types/auth";
+import { getRoleLabel } from "@/lib/roleLabels";
 
 export const Route = createFileRoute("/_protected/profile/")({
   component: ProfilePage,
@@ -122,11 +123,5 @@ function formatDate(value: unknown) {
 
 function translateRole(value: unknown) {
   const role = String(value ?? "");
-  const labels: Record<string, string> = {
-    admin: "مدير",
-    superadmin: "مدير عام",
-    kitchen: "المطبخ",
-    courier: "مندوب",
-  };
-  return labels[role] ?? role;
+  return getRoleLabel(role) || role;
 }

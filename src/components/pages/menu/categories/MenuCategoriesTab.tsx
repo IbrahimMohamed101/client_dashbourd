@@ -6,7 +6,7 @@ import {
 } from "@/hooks/useMenuQuery";
 import type { MenuCategory } from "@/types/menuTypes";
 
-export function MenuCategoriesTab() {
+export function MenuCategoriesTab({ canWrite = true }: { canWrite?: boolean }) {
   return (
     <MenuEntityTableTab<MenuCategory>
       title="التصنيفات"
@@ -18,9 +18,10 @@ export function MenuCategoriesTab() {
       emptyMessage="لا توجد تصنيفات بعد. ابدأ بإضافة تصنيف."
       deleteTitle="حذف التصنيف"
       deleteDescription="هل أنت متأكد من حذف هذا التصنيف؟ لا يمكن التراجع عن هذا الإجراء."
-      columns={(onDelete) => getCategoryColumns({ onDelete })}
+      columns={(onDelete) => getCategoryColumns({ onDelete, canWrite })}
       useQuery={useMenuCategoriesQuery}
       useDeleteMutation={useDeleteMenuCategoryMutation}
+      canWrite={canWrite}
     />
   );
 }

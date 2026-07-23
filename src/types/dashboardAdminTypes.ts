@@ -17,7 +17,12 @@ export interface DashboardStatusResponse<T> {
   data: T;
 }
 
-export type DashboardStaffRole = "admin" | "kitchen" | "courier" | "cashier";
+export type DashboardStaffRole =
+  | "admin"
+  | "restaurant"
+  | "kitchen"
+  | "courier"
+  | "cashier";
 
 export type DashboardStaffStatusFilter = "active" | "inactive";
 

@@ -29,6 +29,7 @@ const ALL_OPERATIONS_SCREENS: OperationsScreen[] = [
 const ROLE_SCREEN_MAP: Record<string, OperationsScreenConfig> = {
   kitchen: { label: "المطبخ والاستلام", screens: ["kitchen", "pickup"] },
   cashier: { label: "العمليات", screens: ALL_OPERATIONS_SCREENS },
+  restaurant: { label: "المطعم", screens: ["kitchen", "pickup"] },
   courier: { label: "التوصيل", screens: ["courier"] },
   admin: { label: "جميع العمليات", screens: ALL_OPERATIONS_SCREENS },
   superadmin: { label: "جميع العمليات", screens: ALL_OPERATIONS_SCREENS },

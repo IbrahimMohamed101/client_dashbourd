@@ -21,8 +21,13 @@ import { CandidateLinkDialog } from "./CandidateLinkDialog";
 import { EditPremiumUpgradeDialog } from "./EditPremiumUpgradeDialog";
 import { ArchivePremiumUpgradeDialog } from "./ArchivePremiumUpgradeDialog";
 import { PremiumUpgradeDetailDrawer } from "./PremiumUpgradeDetailDrawer";
+import { useAuth } from "@/hooks/useAuth";
+import { UserRoles } from "@/types/auth";
 
 export function PremiumMealsPage() {
+  const { user } = useAuth();
+  const canWrite =
+    user?.role === UserRoles.ADMIN || user?.role === UserRoles.SUPERADMIN;
   const [filters, setFilters] = useState<PremiumUpgradeListFilters>(
     defaultPremiumUpgradeListFilters
   );
@@ -91,10 +96,12 @@ export function PremiumMealsPage() {
               />
               {refreshing ? "جاري التحديث" : "تحديث"}
             </Button>
+            {canWrite ? (
             <Button type="button" onClick={() => setCandidateOpen(true)}>
               <Link2 data-icon="inline-start" />
               إضافة ترقية مميزة
             </Button>
+            ) : null}
           </div>
         </div>
       </header>
@@ -158,33 +165,42 @@ export function PremiumMealsPage() {
         onRelink={setRelinkRow}
         onArchive={setArchiveRow}
         onDetails={setDetailRow}
+        canWrite={canWrite}
       />
 
+      {canWrite ? (
       <CandidateLinkDialog
         open={candidateOpen}
         onClose={() => setCandidateOpen(false)}
         onCreated={() => setCandidateOpen(false)}
       />
+      ) : null}
 
+      {canWrite ? (
       <EditPremiumUpgradeDialog
         row={editingRow}
         mode="edit"
         onClose={() => setEditingRow(null)}
         onSaved={() => setEditingRow(null)}
       />
+      ) : null}
 
+      {canWrite ? (
       <EditPremiumUpgradeDialog
         row={relinkRow}
         mode="relink"
         onClose={() => setRelinkRow(null)}
         onSaved={() => setRelinkRow(null)}
       />
+      ) : null}
 
+      {canWrite ? (
       <ArchivePremiumUpgradeDialog
         row={archiveRow}
         onClose={() => setArchiveRow(null)}
         onArchived={() => setArchiveRow(null)}
       />
+      ) : null}
 
       <PremiumUpgradeDetailDrawer
         row={detailRow}

@@ -17,7 +17,10 @@ import {
   buildUpdateDashboardStaffUserPatch,
   createDashboardStaffUserSchema,
   createDashboardStaffUserSchemaForRoles,
+  DASHBOARD_STAFF_ROLE_LABELS,
+  DASHBOARD_STAFF_ROLE_LABELS_EN,
   getAssignableDashboardStaffRoles,
+  getDefaultDashboardStaffRole,
   resetDashboardStaffPasswordSchema,
 } from "../src/components/pages/dashboard-users/dashboardStaffUsersModel";
 import { canRoleAccessRoute } from "../src/constants/routes";
@@ -809,6 +812,31 @@ describe("dashboard staff users workspace interactions", () => {
         isActive: true,
       }).success
     ).toBe(false);
+  });
+
+  it("restaurant is the preferred operational staff role while legacy roles remain valid", () => {
+    assert.equal(getDefaultDashboardStaffRole(["admin", "restaurant", "cashier"]), "restaurant");
+    assert.equal(DASHBOARD_STAFF_ROLE_LABELS.restaurant, "المطعم");
+    assert.equal(DASHBOARD_STAFF_ROLE_LABELS_EN.restaurant, "Restaurant");
+    assert.equal(DASHBOARD_STAFF_ROLE_LABELS.kitchen, "المطبخ — قديم");
+    assert.equal(DASHBOARD_STAFF_ROLE_LABELS.cashier, "الكاشير — قديم");
+    assert.equal(DASHBOARD_STAFF_ROLE_LABELS_EN.kitchen, "Kitchen — Legacy");
+    assert.equal(DASHBOARD_STAFF_ROLE_LABELS_EN.cashier, "Cashier — Legacy");
+    assert.equal(
+      createDashboardStaffUserSchemaForRoles(["restaurant"]).safeParse({
+        email: "restaurant@example.com",
+        password: "StrongPass9!",
+        confirmPassword: "StrongPass9!",
+        role: "restaurant",
+        isActive: true,
+      }).success,
+      true
+    );
+    assert.deepEqual(getAssignableDashboardStaffRoles(["restaurant", "kitchen", "cashier"]), [
+      "restaurant",
+      "kitchen",
+      "cashier",
+    ]);
   });
 });
 

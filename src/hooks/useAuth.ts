@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { login, logout, sessionQueryOptions } from "@/lib/authApi";
-import type { LoginCredentials, AuthResponse } from "@/types/auth";
+import { isUserRole, type LoginCredentials, type AuthResponse } from "@/types/auth";
 import { useRouter } from "@tanstack/react-router";
 import { ROLE_DEFAULTS } from "@/constants/routes";
-import type { UserRole } from "@/types/auth";
 import { ToastMessage } from "@/components/global/ToastMessage";
 import Cookies from "js-cookie";
 
@@ -28,8 +27,11 @@ export const useAuth = () => {
 
       // Read ?redirect= param, fall back to role's default route
       const search = router.state.location.search as { redirect?: string };
+      const defaultRoute = isUserRole(data.user?.role)
+        ? ROLE_DEFAULTS[data.user.role]
+        : "/";
       const returnTo =
-        search.redirect ?? ROLE_DEFAULTS[data?.user?.role as UserRole];
+        search.redirect ?? defaultRoute;
 
       router.navigate({ to: returnTo });
     },

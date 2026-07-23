@@ -71,6 +71,7 @@ interface MenuEntityTableTabProps<
   columns: (onDelete: (id: string) => void) => ColumnDef<TData>[];
   useQuery: (params: TParams) => QueryResult<TData>;
   useDeleteMutation: () => DeleteMutation;
+  canWrite?: boolean;
   buildQueryParams?: (params: MenuListParams) => TParams;
   renderToolbarFilters?: (resetPagination: () => void) => ReactNode;
 }
@@ -91,6 +92,7 @@ export function MenuEntityTableTab<
   columns: getColumns,
   useQuery,
   useDeleteMutation,
+  canWrite = true,
   buildQueryParams,
   renderToolbarFilters,
 }: MenuEntityTableTabProps<TData, TParams>) {
@@ -151,12 +153,14 @@ export function MenuEntityTableTab<
       title={title}
       description={description}
       action={
+        canWrite ? (
         <Button asChild>
           <Link to={createTo}>
             <Plus data-icon="inline-start" />
             {createLabel}
           </Link>
         </Button>
+        ) : null
       }
     >
       <div className="flex flex-col gap-4">
@@ -255,6 +259,7 @@ export function MenuEntityTableTab<
         </div>
       </div>
 
+      {canWrite ? (
       <AlertDialog
         open={Boolean(deleteId)}
         onOpenChange={(open) => !open && setDeleteId(null)}
@@ -282,6 +287,7 @@ export function MenuEntityTableTab<
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      ) : null}
     </MenuSectionCard>
   );
 }

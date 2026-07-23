@@ -54,6 +54,7 @@ export function MenuPage() {
   const navigate = useNavigate({ from: Route.fullPath });
   const { user, isLoading: authLoading } = useAuth();
   const canAccessMealBuilder = canAccessMealBuilderRole(user?.role);
+  const canManageMenu = canManageMenuRole(user?.role);
   const mealBuilderAccessPending = authLoading && activeTab === "meal-builder";
   const allowedWorkflowSteps = useMemo(
     () =>
@@ -133,7 +134,7 @@ export function MenuPage() {
               </p>
             </div>
           </div>
-          {!isMealBuilderTab ? (
+          {!isMealBuilderTab && canManageMenu ? (
             <div className="flex flex-wrap items-center gap-2">
               <MenuValidationDialog />
               <MenuPublishDialog />
@@ -202,14 +203,14 @@ export function MenuPage() {
 
         <TabsContent value="catalog" className="mt-5">
           <div className="grid gap-5">
-            <MenuCategoriesTab />
-            <MenuProductsTab />
+            <MenuCategoriesTab canWrite={canManageMenu} />
+            <MenuProductsTab canWrite={canManageMenu} />
           </div>
         </TabsContent>
         <TabsContent value="builder" className="mt-5">
           <div className="grid gap-5">
-            <MenuOptionGroupsTab />
-            <MenuOptionsTab />
+            <MenuOptionGroupsTab canWrite={canManageMenu} />
+            <MenuOptionsTab canWrite={canManageMenu} />
           </div>
         </TabsContent>
         <TabsContent value="meal-builder" className="mt-5">
@@ -245,6 +246,10 @@ export function MenuPage() {
 }
 
 function canAccessMealBuilderRole(role: unknown) {
+  return role === UserRoles.ADMIN || role === UserRoles.SUPERADMIN;
+}
+
+function canManageMenuRole(role: unknown) {
   return role === UserRoles.ADMIN || role === UserRoles.SUPERADMIN;
 }
 

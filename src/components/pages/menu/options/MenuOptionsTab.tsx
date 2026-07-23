@@ -16,7 +16,7 @@ import {
 import type { MenuOption, MenuOptionListParams } from "@/types/menuTypes";
 import { getOptionColumns } from "../menu-columns";
 
-export function MenuOptionsTab() {
+export function MenuOptionsTab({ canWrite = true }: { canWrite?: boolean }) {
   const [groupFilter, setGroupFilter] = useState("all");
   const { data: groupsData } = useMenuOptionGroupsQuery({ limit: 100 });
   const groups = groupsData?.data.items ?? [];
@@ -32,9 +32,10 @@ export function MenuOptionsTab() {
       emptyMessage="لا توجد خيارات بعد. أضف الخيارات داخل المجموعات المتاحة."
       deleteTitle="حذف الخيار"
       deleteDescription="هل أنت متأكد من حذف هذا الخيار؟ لا يمكن التراجع عن هذا الإجراء."
-      columns={(onDelete) => getOptionColumns({ onDelete })}
+      columns={(onDelete) => getOptionColumns({ onDelete, canWrite })}
       useQuery={useMenuOptionsQuery}
       useDeleteMutation={useDeleteMenuOptionMutation}
+      canWrite={canWrite}
       buildQueryParams={(params) => ({
         ...params,
         groupId: groupFilter !== "all" ? groupFilter : undefined,

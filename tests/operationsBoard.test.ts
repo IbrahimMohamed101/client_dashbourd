@@ -41,6 +41,11 @@ test("operations screens and canonical queue helpers", () => {
     "pickup",
     "courier",
   ]);
+  assert.deepEqual(getScreensForRole("restaurant").screens, [
+    "kitchen",
+    "pickup",
+  ]);
+  assert.equal(getScreensForRole("restaurant").screens.includes("courier"), false);
   assert.equal(getSafeOperationsTab("pickup", ["kitchen", "pickup"]), "pickup");
   assert.equal(getSafeOperationsTab("courier", ["kitchen", "pickup"]), "kitchen");
 

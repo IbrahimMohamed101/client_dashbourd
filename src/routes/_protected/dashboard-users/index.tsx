@@ -3,7 +3,7 @@ import { DashboardStaffUsersWorkspace } from "@/components/pages/dashboard-users
 import { ROLE_DEFAULTS } from "@/constants/routes";
 import { sessionQueryOptions } from "@/lib/authApi";
 import { canManageDashboardStaffUsers } from "@/lib/dashboardStaffPermissions";
-import type { AuthResponse, UserRole } from "@/types/auth";
+import { isUserRole, type AuthResponse } from "@/types/auth";
 
 export const Route = createFileRoute("/_protected/dashboard-users/")({
   beforeLoad: async ({ context }) => {
@@ -12,8 +12,11 @@ export const Route = createFileRoute("/_protected/dashboard-users/")({
     )) as AuthResponse;
 
     if (!session.user || !canManageDashboardStaffUsers(session.user)) {
+      const fallback = isUserRole(session.user?.role)
+        ? ROLE_DEFAULTS[session.user.role]
+        : "/";
       throw redirect({
-        to: session.user ? ROLE_DEFAULTS[session.user.role as UserRole] : "/",
+        to: session.user ? fallback : "/",
       });
     }
   },

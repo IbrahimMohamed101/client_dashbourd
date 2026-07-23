@@ -17,6 +17,7 @@ import {
 
 export const SUPPORTED_DASHBOARD_STAFF_ROLES = [
   "admin",
+  "restaurant",
   "kitchen",
   "courier",
   "cashier",

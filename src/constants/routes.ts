@@ -67,6 +67,32 @@ const CASHIER_ROUTES = [
   "/profile",
 ];
 
+const RESTAURANT_ROUTES = [
+  "/operations",
+  "/one-time-orders",
+  "/manual-deduction",
+  "/users",
+  "/addons",
+  "/menu",
+  "/premium-meals",
+  "/profile",
+];
+
+const RESTAURANT_DENIED_ROUTES = [
+  "/addons/create",
+  "/addons/$addonId/update",
+  "/menu/categories/create",
+  "/menu/categories/$categoryId/update",
+  "/menu/products/create",
+  "/menu/products/$productId/update",
+  "/menu/option-groups/create",
+  "/menu/option-groups/$groupId/update",
+  "/menu/options/create",
+  "/menu/options/$optionId/update",
+  "/users/create",
+  "/users/$userId/create-subscription",
+];
+
 const AUTH_ROUTES = ["/"];
 
 const ROLE_DEFAULTS: Record<UserRole, string> = {
@@ -75,6 +101,7 @@ const ROLE_DEFAULTS: Record<UserRole, string> = {
   [UserRoles.KITCHEN]: "/operations",
   [UserRoles.COURIER]: "/delivery",
   [UserRoles.CASHIER]: "/operations",
+  [UserRoles.RESTAURANT]: "/operations",
 };
 
 const ROLE_ROUTES: Record<UserRole, string[]> = {
@@ -83,15 +110,34 @@ const ROLE_ROUTES: Record<UserRole, string[]> = {
   [UserRoles.KITCHEN]: KITCHEN_ROUTES,
   [UserRoles.COURIER]: COURIER_ROUTES,
   [UserRoles.CASHIER]: CASHIER_ROUTES,
+  [UserRoles.RESTAURANT]: RESTAURANT_ROUTES,
 };
 
+const ROLE_DENIED_ROUTES: Partial<Record<UserRole, string[]>> = {
+  [UserRoles.RESTAURANT]: RESTAURANT_DENIED_ROUTES,
+};
+
+const escapeRegex = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const isRouteMatch = (routes: string[], pathName: string) =>
-  routes.some(
-    (route) => pathName === route || pathName.startsWith(`${route}/`)
-  );
+  routes.some((route) => {
+    if (!route.includes("$")) {
+      return pathName === route || pathName.startsWith(`${route}/`);
+    }
+
+    const pattern = route
+      .split("/")
+      .map((segment) =>
+        segment.startsWith("$") ? "[^/]+" : escapeRegex(segment)
+      )
+      .join("/");
+    return new RegExp(`^${pattern}/?$`).test(pathName);
+  });
 
 const canRoleAccessRoute = (role: UserRole | undefined, pathName: string) => {
   if (!role) return false;
+  if (isRouteMatch(ROLE_DENIED_ROUTES[role] ?? [], pathName)) return false;
   return isRouteMatch(ROLE_ROUTES[role] ?? [], pathName);
 };
 
@@ -101,9 +147,12 @@ export {
   KITCHEN_ROUTES,
   COURIER_ROUTES,
   CASHIER_ROUTES,
+  RESTAURANT_ROUTES,
+  RESTAURANT_DENIED_ROUTES,
   AUTH_ROUTES,
   ROLE_DEFAULTS,
   ROLE_ROUTES,
+  ROLE_DENIED_ROUTES,
   canRoleAccessRoute,
   isRouteMatch,
 };
