@@ -126,7 +126,9 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
   const queryClient = useQueryClient();
   const pendingActionsRef = useRef<PendingOperationsActions>({});
   const [pendingActions, setPendingActions] = useState<PendingOperationsActions>({});
-  const role = user?.role;
+  // Restaurant uses the kitchen/pickup operational screens while retaining the
+  // cashier routes granted by the main dashboard permission map.
+  const role = user?.role === "restaurant" ? "kitchen" : user?.role;
   const { label: screenLabel, screens: visibleScreens } =
     getScreensForRole(role);
 
