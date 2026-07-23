@@ -228,9 +228,9 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
       return data;
     },
     onSuccess: async (_data, variables) => {
-      await queryClient.refetchQueries({
+      await queryClient.invalidateQueries({
         queryKey: ["operations-board", "queue"],
-        type: "active",
+        refetchType: "active",
       });
       toast.success(`تم تنفيذ ${variables.actionLabel || variables.action} بنجاح`);
     },

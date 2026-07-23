@@ -3,7 +3,7 @@ import { isUserRole, type AuthResponse } from "@/types/auth";
 import {
   AUTH_ROUTES,
   ROLE_DEFAULTS,
-  ROLE_ROUTES,
+  canRoleAccessRoute,
   isRouteMatch,
 } from "@/constants/routes";
 
@@ -23,11 +23,10 @@ export const authMiddleware = (
   const role = session.user.role;
   if (!isUserRole(role)) throw redirect({ to: "/" });
 
-  const allowedRoutes = ROLE_ROUTES[role];
   const defaultRoute = ROLE_DEFAULTS[role];
 
   // Unknown role → kick to login
-  if (!allowedRoutes || !defaultRoute) throw redirect({ to: "/" });
+  if (!defaultRoute) throw redirect({ to: "/" });
 
   // Logged-in user on auth route → send back or to default
   if (isAuthRoute) {
@@ -36,7 +35,7 @@ export const authMiddleware = (
   }
 
   // Not allowed for this role → send to their default
-  if (!isRouteMatch(allowedRoutes, pathName)) {
+  if (!canRoleAccessRoute(role, pathName)) {
     throw redirect({ to: defaultRoute });
   }
 };
