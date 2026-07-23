@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link2, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Link2, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type {
@@ -12,6 +12,7 @@ import {
 } from "@/utils/fetchPremiumUpgrades";
 import {
   usePremiumUpgradeInvalidation,
+  usePremiumUpgradeReadinessQuery,
   usePremiumUpgradesQuery,
 } from "@/hooks/usePremiumUpgradesQuery";
 import { PremiumUpgradeFilters } from "./PremiumUpgradeFilters";
@@ -36,6 +37,7 @@ export function PremiumMealsPage() {
     useState<PremiumUpgradeConfigDto | null>(null);
 
   const listQuery = usePremiumUpgradesQuery(filters);
+  const readinessQuery = usePremiumUpgradeReadinessQuery();
   const { invalidatePremiumUpgrades } = usePremiumUpgradeInvalidation();
 
   const rows = useMemo(
@@ -44,16 +46,27 @@ export function PremiumMealsPage() {
   );
   const total = listQuery.data?.meta?.total ?? rows.length;
   const totalPages = Math.max(1, Math.ceil(total / filters.limit));
+  const refreshing = listQuery.isFetching || readinessQuery.isFetching;
+  const readiness = readinessQuery.data;
+  const diagnostics = readiness?.diagnostics;
+  const readinessIssues =
+    (diagnostics?.missingSources ?? 0) +
+    (diagnostics?.invalidRelations ?? 0) +
+    (diagnostics?.duplicateKeys ?? 0);
+
+  async function refreshPage() {
+    await invalidatePremiumUpgrades();
+  }
 
   return (
     <div
-      className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-4 py-6 lg:px-6"
+      className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
       dir="rtl"
     >
-      <header className="rounded-lg border bg-card p-5 shadow-xs lg:p-6">
+      <header className="rounded-xl border bg-card p-4 shadow-xs sm:p-5 lg:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex gap-4">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="flex min-w-0 gap-3 sm:gap-4">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground sm:size-11">
               <Link2 className="size-5" />
             </div>
             <div className="min-w-0 space-y-2">
@@ -65,17 +78,18 @@ export function PremiumMealsPage() {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <Button
               type="button"
               variant="outline"
-              onClick={invalidatePremiumUpgrades}
+              disabled={refreshing}
+              onClick={() => void refreshPage()}
             >
               <RefreshCw
                 data-icon="inline-start"
-                className={listQuery.isFetching ? "animate-spin" : undefined}
+                className={refreshing ? "animate-spin" : undefined}
               />
-              تحديث
+              {refreshing ? "جاري التحديث" : "تحديث"}
             </Button>
             <Button type="button" onClick={() => setCandidateOpen(true)}>
               <Link2 data-icon="inline-start" />
@@ -84,6 +98,49 @@ export function PremiumMealsPage() {
           </div>
         </div>
       </header>
+
+      {readinessQuery.isError ? (
+        <section className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <p>تعذر التحقق من جاهزية ترقيات الوجبات من الخادم.</p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void readinessQuery.refetch()}
+          >
+            إعادة المحاولة
+          </Button>
+        </section>
+      ) : readiness ? (
+        <section
+          className={`flex items-start gap-3 rounded-xl border p-4 text-sm ${
+            readiness.isReady
+              ? "border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200"
+              : "border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
+          }`}
+        >
+          {readiness.isReady ? (
+            <CheckCircle2 className="mt-0.5 size-5 shrink-0" />
+          ) : (
+            <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+          )}
+          <div className="min-w-0 space-y-1">
+            <p className="font-semibold">
+              {readiness.isReady
+                ? "ربط الوجبات المميزة جاهز ويعمل بصورة سليمة"
+                : "توجد عناصر تحتاج مراجعة في ربط الوجبات المميزة"}
+            </p>
+            <p className="leading-6 opacity-90">
+              {readiness.isReady
+                ? `${diagnostics?.activeConfigs ?? total} ترقية نشطة ومتاحة للاستخدام.`
+                : `${readinessIssues} مشكلة ربط مسجلة من الخادم. استخدم فلتر «يحتاج إصلاح» لإعادة الربط.`}
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       <PremiumUpgradeFilters filters={filters} onChange={setFilters} />
 
@@ -96,7 +153,7 @@ export function PremiumMealsPage() {
         total={total}
         totalPages={totalPages}
         onPageChange={(page) => setFilters((current) => ({ ...current, page }))}
-        onRetry={() => listQuery.refetch()}
+        onRetry={() => void listQuery.refetch()}
         onEdit={setEditingRow}
         onRelink={setRelinkRow}
         onArchive={setArchiveRow}
