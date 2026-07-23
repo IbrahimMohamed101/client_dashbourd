@@ -11,11 +11,6 @@ import type {
   MealBuilderSectionType,
 } from "@/types/mealBuilderTypes";
 import {
-  REQUIRED_SECTION_ORDER,
-  SECTION_RULE_BADGES,
-  VISUAL_SECTION_LABELS,
-} from "./mealBuilderConstants";
-import {
   isFullMealSelectionType,
   isPremiumManagedSection,
   nameOf,
@@ -98,37 +93,6 @@ export interface MealBuilderVisualCard {
   backendIssues: MealBuilderCheck[];
 }
 
-const CHICKEN_KEYS = [
-  "chicken",
-  "chicken_fajita",
-  "spicy_chicken",
-  "italian_spiced_chicken",
-  "chicken_tikka",
-  "asian_chicken",
-  "chicken_strips",
-  "grilled_chicken",
-  "mexican_chicken",
-];
-
-const BEEF_KEYS = ["beef", "meatballs", "beef_stroganoff"];
-const FISH_KEYS = ["fish", "tuna", "fish_fillet"];
-const EGG_KEYS = ["eggs", "boiled_eggs"];
-const CARB_KEYS = [
-  "white_rice",
-  "turmeric_rice",
-  "alfredo_pasta",
-  "red_sauce_pasta",
-  "roasted_potato",
-  "sweet_potato",
-  "grilled_mixed_vegetables",
-];
-
-const CHICKEN_MATCHERS = ["chicken", "دجاج"];
-const BEEF_MATCHERS = ["beef", "meat", "stroganoff", "steak", "لحم"];
-const FISH_MATCHERS = ["fish", "tuna", "salmon", "shrimp", "سمك", "تونا"];
-const EGG_MATCHERS = ["egg", "بيض"];
-const CARB_MATCHERS = ["rice", "pasta", "potato", "carb", "نشو", "رز", "بطاط"];
-
 export function buildMealBuilderVisualCards({
   sections,
   products,
@@ -144,180 +108,177 @@ export function buildMealBuilderVisualCards({
   issues: MealBuilderCheck[];
   premiumSection?: MealBuilderPremiumSection | null;
 }) {
-  const cards = createEmptyCards();
-  const optionsById = new Map(options.map((option) => [option.id, option]));
   const productsById = new Map(products.map((product) => [product.id, product]));
+  const optionsById = new Map(options.map((option) => [option.id, option]));
+  const categoriesById = new Map(
+    categories.map((category) => [category.id, category])
+  );
+  const cards: MealBuilderVisualCard[] = [];
+  const usedKeys = new Set<string>();
 
   sections.forEach((section, index) => {
     if (isPremiumManagedSection(section)) return;
 
-    if (
-      section.key &&
-      Array.isArray(section.items) &&
-      (REQUIRED_SECTION_ORDER.includes(section.key) ||
-        section.sectionType === "product_list" ||
-        (section.sectionType !== "option_group" && sectionTreatsAsFullMeal(section)))
-    ) {
-      hydrateVisualCardFromBackend(
-        ensureCard(cards, section.key, section, index),
-        section,
-        index
-      );
-      return;
+    const key = uniqueSectionKey(section, index, usedKeys);
+    const category = section.sourceCategoryId
+      ? categoriesById.get(section.sourceCategoryId) ?? null
+      : null;
+    const card = createSectionCard(section, key, index, category);
+
+    if (Array.isArray(section.items)) {
+      hydrateVisualCardFromBackend(card, section, index);
+    } else {
+      if (section.sectionType === "option_group") {
+        for (const optionId of section.selectedOptionIds ?? []) {
+          const option = optionsById.get(optionId);
+          if (option) addOption(card, option, section, index);
+        }
+      } else {
+        const selectedProducts = productsForSection(
+          section,
+          products,
+          productsById
+        );
+        for (const product of selectedProducts) {
+          const treatsAsFullMeal = sectionTreatsAsFullMeal(section);
+          addProduct(card, product, section, index, {
+            requiresBuilder: !treatsAsFullMeal,
+            treatAsFullMeal: treatsAsFullMeal,
+          });
+        }
+      }
     }
 
     const sectionIssues = issues.filter(
-      (issue) => Number(issue.sectionIndex) === index || issue.sectionType === section.sectionType
+      (issue) =>
+        Number(issue.sectionIndex) === index ||
+        (issue.sectionIndex === undefined &&
+          issue.sectionType === section.sectionType)
     );
-    const selectedOptions = section.selectedOptionIds
-      .map((id) => optionsById.get(id))
-      .filter(Boolean) as MenuOption[];
-    const selectedProducts = section.selectedProductIds
-      .map((id) => productsById.get(id))
-      .filter(Boolean) as MenuProduct[];
-
-    if (section.sectionType === "option_group") {
-      selectedOptions.forEach((option) => {
-        const family = optionFamily(option, section);
-        addOption(cards[family], option, section, index);
-      });
-    }
-
-    if (section.sectionType === "product_category") {
-      const category = categories.find((item) => item.id === section.sourceCategoryId);
-      const productsInCategory =
-        section.includeMode === "all"
-          ? products.filter((product) => product.categoryId === section.sourceCategoryId)
-          : selectedProducts;
-      const target = productSectionTarget(section, productsInCategory, category);
-      const treatsAsFullMeal = sectionTreatsAsFullMeal(section);
-      productsInCategory.forEach((product) => {
-        addProduct(ensureCard(cards, target, section, index), product, section, index, {
-          requiresBuilder: !treatsAsFullMeal,
-          treatAsFullMeal: treatsAsFullMeal,
-        });
-      });
-    }
-
-    if (section.sectionType === "product_list") {
-      selectedProducts.forEach((product) => {
-        const target = productSectionTarget(section, [product], null);
-        const treatsAsFullMeal = sectionTreatsAsFullMeal(section);
-        addProduct(ensureCard(cards, target, section, index), product, section, index, {
-          requiresBuilder: !treatsAsFullMeal,
-          treatAsFullMeal: treatsAsFullMeal,
-        });
-      });
-    }
-
-    sectionIssues.forEach((issue) => {
-      const target = sectionTarget(section, selectedOptions, selectedProducts);
-      cards[target].backendIssues.push(issue);
-    });
+    card.backendIssues.push(...sectionIssues);
+    card.errors.push(
+      ...sectionIssues
+        .filter((issue) => issue.level === "error")
+        .map((issue) => issue.message || issue.code)
+    );
+    card.warnings.push(
+      ...sectionIssues
+        .filter((issue) => issue.level !== "error")
+        .map((issue) => issue.message || issue.code)
+    );
+    card.items = uniqueItems(card.items);
+    card.sourceKinds = [...new Set(card.sourceKinds)];
+    cards.push(card);
   });
 
-  if (premiumSection?.automatic && Array.isArray(premiumSection.items)) {
-    cards.premium.items = premiumSection.items.map((item, index) =>
-      premiumItemToVisualItem(item, index)
-    );
-    cards.premium.backendIssues.push(...(premiumSection.diagnostics ?? []));
+  const premiumItems = premiumSection?.items ?? [];
+  const premiumIssues = [
+    ...(premiumSection?.diagnostics ?? []),
+    ...(premiumSection?.excluded ?? []),
+    ...(premiumSection?.broken ?? []),
+  ];
+  if (premiumItems.length || premiumIssues.length) {
+    cards.push({
+      key: "premium",
+      labelAr: "الترقيات المميزة",
+      labelEn: "Premium Upgrades",
+      sortOrder: -1,
+      sourceKinds: ["premium_upgrade_configs"],
+      rules: ["تُدار من صفحة الترقيات المميزة"],
+      items: premiumItems.map((item, index) =>
+        premiumItemToVisualItem(item, index)
+      ),
+      warnings: [],
+      errors: [],
+      backendIssues: premiumIssues,
+    });
   }
 
-  if (!cards.carbs.items.length) {
-    cards.carbs.warnings.push("قسم النشويات لا يحتوي خيارات ظاهرة حاليا.");
-  }
-
-  const requiredCards = REQUIRED_SECTION_ORDER.map((key, index) =>
-    finalizeCard(cards[key], index + 1)
+  return cards.sort(
+    (left, right) =>
+      Number(left.sortOrder || 0) - Number(right.sortOrder || 0) ||
+      left.key.localeCompare(right.key)
   );
-  const extraCards = Object.values(cards)
-    .filter((card) => !REQUIRED_SECTION_ORDER.includes(card.key))
-    .filter((card) => card.items.length || card.warnings.length || card.errors.length || card.backendIssues.length)
-    .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
-    .map((card) => finalizeCard(card));
-
-  return [...requiredCards, ...extraCards];
 }
 
-function createEmptyCards(): Record<string, MealBuilderVisualCard> {
-  return Object.fromEntries(
-    REQUIRED_SECTION_ORDER.map((key, index) => {
-      const label = VISUAL_SECTION_LABELS[key];
-      return [
-        key,
-        {
-          key,
-          labelAr: label.ar,
-          labelEn: label.en,
-          sortOrder: index + 1,
-          sourceKinds: [],
-          rules: SECTION_RULE_BADGES[key] ?? [],
-          items: [],
-          warnings: [],
-          errors: [],
-          backendIssues: [],
-        },
-      ];
-    })
-  ) as Record<string, MealBuilderVisualCard>;
-}
-
-function ensureCard(
-  cards: Record<string, MealBuilderVisualCard>,
-  key: string,
-  section?: MealBuilderSection,
-  sourceSectionIndex = 0
+function uniqueSectionKey(
+  section: MealBuilderSection,
+  index: number,
+  used: Set<string>
 ) {
-  if (cards[key]) return cards[key];
-  const label = sectionLabelForCard(key, section);
-  cards[key] = {
+  const base =
+    String(section.key || "").trim() ||
+    `section_${String(index + 1).padStart(2, "0")}`;
+  let key = base;
+  let suffix = 2;
+  while (used.has(key)) {
+    key = `${base}_${suffix}`;
+    suffix += 1;
+  }
+  used.add(key);
+  return key;
+}
+
+function createSectionCard(
+  section: MealBuilderSection,
+  key: string,
+  index: number,
+  category: MenuCategory | null
+): MealBuilderVisualCard {
+  const fallback = humanizeKey(key);
+  return {
     key,
-    labelAr: label.ar,
-    labelEn: label.en,
-    sortOrder: Number(section?.sortOrder || sourceSectionIndex + 1),
-    sourceKinds: [],
-    rules: SECTION_RULE_BADGES[key] ?? SECTION_RULE_BADGES.full_meal_product ?? [],
+    labelAr:
+      section.titleOverride?.ar ||
+      category?.name?.ar ||
+      section.titleOverride?.en ||
+      category?.name?.en ||
+      fallback,
+    labelEn:
+      section.titleOverride?.en ||
+      category?.name?.en ||
+      section.titleOverride?.ar ||
+      category?.name?.ar ||
+      fallback,
+    sortOrder: Number(section.sortOrder ?? index + 1),
+    sourceKinds: [section.sourceKind || section.sectionType],
+    rules: sectionRuleLabels(section),
     items: [],
     warnings: [],
     errors: [],
     backendIssues: [],
   };
-  return cards[key];
 }
 
-function sectionLabelForCard(key: string, section?: MealBuilderSection) {
-  const fallback = VISUAL_SECTION_LABELS[key] ?? VISUAL_SECTION_LABELS.full_meal_product;
-  return {
-    ar: section?.titleOverride?.ar || fallback?.ar || key,
-    en: section?.titleOverride?.en || fallback?.en || key,
-  };
+function sectionRuleLabels(section: MealBuilderSection) {
+  const labels: string[] = [];
+  if (section.required) labels.push("إجباري");
+  if (section.multiSelect) labels.push("اختيار متعدد");
+  if (section.minSelections) labels.push(`الحد الأدنى ${section.minSelections}`);
+  if (section.maxSelections !== null && section.maxSelections !== undefined) {
+    labels.push(`الحد الأقصى ${section.maxSelections}`);
+  }
+  if (section.visible === false) labels.push("مخفي");
+  return labels;
 }
 
-function finalizeCard(card: MealBuilderVisualCard, sortOrder = card.sortOrder) {
-  return {
-    ...card,
-    sortOrder,
-    sourceKinds: [...new Set(card.sourceKinds)],
-    items: uniqueItems(card.items),
-  };
-}
-
-function productSectionTarget(
+function productsForSection(
   section: MealBuilderSection,
   products: MenuProduct[],
-  category: MenuCategory | null | undefined
+  productsById: Map<string, MenuProduct>
 ) {
   if (
-    section.selectionType === "sandwich" ||
-    category?.key === "cold_sandwiches" ||
-    products.some((product) => product.itemType?.includes("sandwich") || product.key.includes("sandwich"))
+    section.sectionType === "product_category" &&
+    section.includeMode === "all" &&
+    section.sourceCategoryId
   ) {
-    return "sandwich";
+    return products.filter(
+      (product) => product.categoryId === section.sourceCategoryId
+    );
   }
-  if (sectionTreatsAsFullMeal(section)) {
-    return section.key || section.selectionType || "full_meal_product";
-  }
-  return section.key || section.selectionType || "full_meal_product";
+  return (section.selectedProductIds ?? [])
+    .map((productId) => productsById.get(productId))
+    .filter(Boolean) as MenuProduct[];
 }
 
 function addOption(
@@ -326,19 +287,25 @@ function addOption(
   section: MealBuilderSection,
   sourceSectionIndex: number
 ) {
-  card.sourceKinds.push(section.sectionType);
   card.items.push({
     id: option.id,
     key: option.key,
     kind: "option",
     name: nameOf(option),
-    active: option.isActive !== false && option.isVisible !== false && option.isAvailable !== false,
+    active:
+      option.isActive !== false &&
+      option.isVisible !== false &&
+      option.isAvailable !== false,
     selected: true,
     eligible: true,
     linked: true,
     available: option.isAvailable !== false,
-    published: true,
-    subscriptionEnabled: option.availableForSubscription !== false,
+    published: Boolean(option.publishedAt ?? true),
+    subscriptionEnabled:
+      option.availableForSubscription !== false &&
+      (!Array.isArray(option.availableFor) ||
+        option.availableFor.length === 0 ||
+        option.availableFor.includes("subscription")),
     relationExists: true,
     catalogItemAvailable: true,
     state: "selected",
@@ -357,19 +324,24 @@ function addProduct(
   sourceSectionIndex: number,
   meta: { requiresBuilder: boolean; treatAsFullMeal: boolean }
 ) {
-  card.sourceKinds.push(section.sectionType);
   card.items.push({
     id: product.id,
     key: product.key,
     kind: "product",
     name: nameOf(product),
-    active: product.isActive !== false && product.isVisible !== false && product.isAvailable !== false,
+    active:
+      product.isActive !== false &&
+      product.isVisible !== false &&
+      product.isAvailable !== false,
     selected: true,
     eligible: true,
     linked: true,
     available: product.isAvailable !== false,
-    published: true,
-    subscriptionEnabled: product.availableFor?.includes("subscription") !== false,
+    published: Boolean(product.publishedAt ?? true),
+    subscriptionEnabled:
+      !Array.isArray(product.availableFor) ||
+      product.availableFor.length === 0 ||
+      product.availableFor.includes("subscription"),
     relationExists: true,
     catalogItemAvailable: true,
     state: "selected",
@@ -389,11 +361,14 @@ function hydrateVisualCardFromBackend(
   section: MealBuilderSection,
   sourceSectionIndex: number
 ) {
-  card.sourceKinds.push(section.sourceKind || section.sectionType);
-  (section.items ?? []).forEach((item) => {
+  for (const item of section.items ?? []) {
     const kind = item.type?.includes("product") ? "product" : "option";
     const base = {
-      id: item.id || item.optionId || item.productId || `${section.key}:${item.key}`,
+      id:
+        item.id ||
+        item.optionId ||
+        item.productId ||
+        `${card.key}:${item.key}`,
       key: item.key || "",
       name: hydratedName(item),
       active: item.active !== false && item.visible !== false,
@@ -422,7 +397,7 @@ function hydrateVisualCardFromBackend(
       sortOrder: item.sortOrder ?? null,
       health: item.health ?? null,
       status: item.status ?? null,
-      automatic: section.key === "premium",
+      automatic: item.automatic === true,
     };
 
     if (kind === "product") {
@@ -433,28 +408,29 @@ function hydrateVisualCardFromBackend(
         requiresBuilder: hydratedRequiresBuilder(item, section),
         treatAsFullMeal: hydratedTreatsAsFullMeal(item, section),
       });
-      return;
+    } else {
+      card.items.push({ ...base, kind: "option" });
     }
+  }
 
-    card.items.push({
-      ...base,
-      kind: "option",
-    });
-  });
-  card.backendIssues.push(...(section.items ?? []).flatMap((item) => [
-    ...(item.errors ?? []),
-    ...(item.warnings ?? []),
-  ]));
+  card.backendIssues.push(
+    ...(section.items ?? []).flatMap((item) => [
+      ...(item.errors ?? []),
+      ...(item.warnings ?? []),
+    ])
+  );
 }
 
 function hydratedRequiresBuilder(
   item: MealBuilderHydratedItem,
   section: MealBuilderSection
 ) {
-  const action = (item as MealBuilderHydratedItem & {
-    action?: { requiresBuilder?: boolean };
-    requiresBuilder?: boolean;
-  }).action;
+  const action = (
+    item as MealBuilderHydratedItem & {
+      action?: { requiresBuilder?: boolean };
+      requiresBuilder?: boolean;
+    }
+  ).action;
   if (typeof action?.requiresBuilder === "boolean") return action.requiresBuilder;
   if (typeof (item as { requiresBuilder?: boolean }).requiresBuilder === "boolean") {
     return Boolean((item as { requiresBuilder?: boolean }).requiresBuilder);
@@ -466,10 +442,12 @@ function hydratedTreatsAsFullMeal(
   item: MealBuilderHydratedItem,
   section: MealBuilderSection
 ) {
-  const action = (item as MealBuilderHydratedItem & {
-    action?: { treatAsFullMeal?: boolean };
-    treatAsFullMeal?: boolean;
-  }).action;
+  const action = (
+    item as MealBuilderHydratedItem & {
+      action?: { treatAsFullMeal?: boolean };
+      treatAsFullMeal?: boolean;
+    }
+  ).action;
   if (typeof action?.treatAsFullMeal === "boolean") return action.treatAsFullMeal;
   if (typeof (item as { treatAsFullMeal?: boolean }).treatAsFullMeal === "boolean") {
     return Boolean((item as { treatAsFullMeal?: boolean }).treatAsFullMeal);
@@ -522,37 +500,39 @@ function premiumItemToVisualItem(
     automatic: true,
   };
 
-  if (kind === "product") {
-    return {
-      ...base,
-      kind: "product",
-      selectionType: item.selectionType || "premium",
-      requiresBuilder: false,
-      treatAsFullMeal: true,
-    };
-  }
-
-  return {
-    ...base,
-    kind: "option",
-  };
+  return kind === "product"
+    ? {
+        ...base,
+        kind: "product",
+        selectionType: item.selectionType || "premium_meal",
+        requiresBuilder: false,
+        treatAsFullMeal: true,
+      }
+    : { ...base, kind: "option" };
 }
 
-export function optionFamily(option: MenuOption, section?: Pick<MealBuilderSection, "selectionType">) {
-  void section;
-  if (matchesOption(option, CARB_KEYS, CARB_MATCHERS)) return "carbs";
-  if (matchesOption(option, BEEF_KEYS, BEEF_MATCHERS)) return "beef";
-  if (matchesOption(option, FISH_KEYS, FISH_MATCHERS)) return "fish";
-  if (matchesOption(option, EGG_KEYS, EGG_MATCHERS)) return "eggs";
-  if (matchesOption(option, CHICKEN_KEYS, CHICKEN_MATCHERS)) return "chicken";
-  return "chicken";
+export function optionFamily(
+  option: MenuOption,
+  section?: Pick<MealBuilderSection, "key" | "selectionType" | "metadata">
+) {
+  return (
+    String(section?.key || "").trim() ||
+    String(section?.metadata?.proteinFamilyKey || "").trim() ||
+    String(option.proteinFamilyKey || "").trim() ||
+    String(option.displayCategoryKey || "").trim() ||
+    "options"
+  );
 }
 
 export function optionMatchesVisualCard(option: MenuOption, cardKey: string) {
-  if (cardKey === "premium") {
-    return false;
-  }
-  return optionFamily(option, { selectionType: "standard_meal" }) === cardKey;
+  const values = [
+    option.key,
+    option.proteinFamilyKey,
+    option.displayCategoryKey,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  return values.includes(cardKey);
 }
 
 export function productMatchesVisualCard(
@@ -561,41 +541,10 @@ export function productMatchesVisualCard(
   categories: MenuCategory[]
 ) {
   const category = categories.find((item) => item.id === product.categoryId);
-  if (cardKey === "premium") {
-    return false;
-  }
-  if (cardKey === "sandwich") {
-    return (
-      product.itemType?.includes("sandwich") ||
-      product.key.includes("sandwich") ||
-      category?.key === "cold_sandwiches"
-    );
-  }
-  if (isFullMealSelectionType(cardKey)) {
-    const productSelectionType = (product as MenuProduct & { selectionType?: string })
-      .selectionType;
-    return productSelectionType === cardKey || product.itemType === cardKey;
-  }
-  return false;
-}
-
-function matchesOption(option: MenuOption, keys: string[], matchers: string[]) {
-  const key = option.key.toLowerCase();
-  if (keys.includes(key)) return true;
-  const text = `${option.key} ${option.proteinFamilyKey ?? ""} ${option.displayCategoryKey ?? ""} ${option.name.ar} ${option.name.en}`.toLowerCase();
-  return matchers.some((matcher) => text.includes(matcher));
-}
-
-function sectionTarget(
-  section: MealBuilderSection,
-  selectedOptions: MenuOption[],
-  selectedProducts: MenuProduct[]
-) {
-  if (section.selectionType === "sandwich") return "sandwich";
-  if (sectionTreatsAsFullMeal(section)) return section.key || section.selectionType || "full_meal_product";
-  void selectedProducts;
-  if (selectedOptions.some((option) => optionFamily(option, section) === "carbs")) return "carbs";
-  return "chicken";
+  return [product.key, product.itemType, category?.key]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .includes(cardKey);
 }
 
 function uniqueItems(items: MealBuilderVisualItem[]) {
@@ -606,4 +555,8 @@ function uniqueItems(items: MealBuilderVisualItem[]) {
     seen.add(key);
     return true;
   });
+}
+
+function humanizeKey(value: string) {
+  return value.replace(/[_-]+/g, " ").trim() || "قسم";
 }
