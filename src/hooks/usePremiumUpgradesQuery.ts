@@ -11,6 +11,7 @@ import type {
   PremiumUpgradeConfigDto,
   PremiumUpgradeListFilters,
   PremiumUpgradeSourceFilters,
+  PremiumUpgradeUpdatePayload,
 } from "@/types/premiumUpgradeTypes";
 import {
   PREMIUM_UPGRADES_DETAIL_QUERY_KEY,
@@ -91,45 +92,45 @@ export function usePremiumUpgradeInvalidation() {
   const queryClient = useQueryClient();
 
   return {
-    invalidatePremiumUpgrades() {
-      queryClient.invalidateQueries({
-        queryKey: [PREMIUM_UPGRADES_LIST_QUERY_KEY],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [PREMIUM_UPGRADES_READINESS_QUERY_KEY],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [PREMIUM_UPGRADES_SOURCES_QUERY_KEY],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [PREMIUM_UPGRADES_DETAIL_QUERY_KEY],
-      });
-      queryClient.invalidateQueries({ queryKey: ["builder-premium-meals"] });
+    async invalidatePremiumUpgrades() {
+      await invalidatePremiumQueries(queryClient);
     },
   };
 }
 
-function invalidatePremiumQueries(queryClient: QueryClient) {
-  queryClient.invalidateQueries({
-    queryKey: [PREMIUM_UPGRADES_LIST_QUERY_KEY],
-    refetchType: "active",
-  });
-  queryClient.invalidateQueries({
-    queryKey: [PREMIUM_UPGRADES_READINESS_QUERY_KEY],
-    refetchType: "active",
-  });
-  queryClient.invalidateQueries({
-    queryKey: [PREMIUM_UPGRADES_SOURCES_QUERY_KEY],
-    refetchType: "active",
-  });
-  queryClient.invalidateQueries({
-    queryKey: [PREMIUM_UPGRADES_DETAIL_QUERY_KEY],
-    refetchType: "active",
-  });
-  queryClient.invalidateQueries({
-    queryKey: ["builder-premium-meals"],
-    refetchType: "active",
-  });
+async function invalidatePremiumQueries(queryClient: QueryClient) {
+  await Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: [PREMIUM_UPGRADES_LIST_QUERY_KEY],
+      refetchType: "active",
+    }),
+    queryClient.invalidateQueries({
+      queryKey: [PREMIUM_UPGRADES_READINESS_QUERY_KEY],
+      refetchType: "active",
+    }),
+    queryClient.invalidateQueries({
+      queryKey: [PREMIUM_UPGRADES_SOURCES_QUERY_KEY],
+      refetchType: "active",
+    }),
+    queryClient.invalidateQueries({
+      queryKey: [PREMIUM_UPGRADES_DETAIL_QUERY_KEY],
+      refetchType: "active",
+    }),
+    queryClient.invalidateQueries({
+      queryKey: ["builder-premium-meals"],
+      refetchType: "active",
+    }),
+  ]);
+}
+
+export function canonicalizePremiumUpgradeUpdatePayload(
+  payload: PremiumUpgradeUpdatePayload
+): PremiumUpgradeUpdatePayload {
+  const isRelink = Boolean(payload.kind && payload.sourceId);
+  if (!isRelink) return payload;
+
+  const { relationId: _relationId, ...canonicalPayload } = payload;
+  return canonicalPayload;
 }
 
 function patchPremiumUpgradeInListCaches(
@@ -164,9 +165,9 @@ export function useCreatePremiumUpgradeMutation(onSuccess?: () => void) {
 
   return useMutation({
     mutationFn: createPremiumUpgrade,
-    onSuccess: () => {
+    onSuccess: async () => {
+      await invalidatePremiumQueries(queryClient);
       toast.success("تم ربط المصدر كترقية مميزة.");
-      invalidatePremiumQueries(queryClient);
       onSuccess?.();
     },
     onError: showPremiumUpgradeError,
@@ -177,11 +178,15 @@ export function useUpdatePremiumUpgradeMutation(onSuccess?: () => void) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: updatePremiumUpgrade,
-    onSuccess: (response) => {
-      toast.success("تم حفظ إعداد الترقية.");
+    mutationFn: ({ id, payload }: { id: string; payload: PremiumUpgradeUpdatePayload }) =>
+      updatePremiumUpgrade({
+        id,
+        payload: canonicalizePremiumUpgradeUpdatePayload(payload),
+      }),
+    onSuccess: async (response) => {
       patchPremiumUpgradeInListCaches(queryClient, response.data);
-      invalidatePremiumQueries(queryClient);
+      await invalidatePremiumQueries(queryClient);
+      toast.success("تم حفظ إعداد الترقية.");
       onSuccess?.();
     },
     onError: showPremiumUpgradeError,
@@ -193,10 +198,10 @@ export function useArchivePremiumUpgradeMutation(onSuccess?: () => void) {
 
   return useMutation({
     mutationFn: archivePremiumUpgrade,
-    onSuccess: (response) => {
-      toast.success("تمت أرشفة الترقية المميزة.");
+    onSuccess: async (response) => {
       patchPremiumUpgradeInListCaches(queryClient, response.data);
-      invalidatePremiumQueries(queryClient);
+      await invalidatePremiumQueries(queryClient);
+      toast.success("تمت أرشفة الترقية المميزة.");
       onSuccess?.();
     },
     onError: showPremiumUpgradeError,
