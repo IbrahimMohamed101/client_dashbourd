@@ -67,11 +67,16 @@ const CASHIER_ROUTES = [
   "/profile",
 ];
 
+const RESTAURANT_ROUTES = Array.from(
+  new Set([...KITCHEN_ROUTES, ...CASHIER_ROUTES])
+);
+
 const AUTH_ROUTES = ["/"];
 
 const ROLE_DEFAULTS: Record<UserRole, string> = {
   [UserRoles.SUPERADMIN]: "/dashboard",
   [UserRoles.ADMIN]: "/dashboard",
+  [UserRoles.RESTAURANT]: "/operations",
   [UserRoles.KITCHEN]: "/operations",
   [UserRoles.COURIER]: "/delivery",
   [UserRoles.CASHIER]: "/operations",
@@ -80,6 +85,7 @@ const ROLE_DEFAULTS: Record<UserRole, string> = {
 const ROLE_ROUTES: Record<UserRole, string[]> = {
   [UserRoles.SUPERADMIN]: SUPERADMIN_ROUTES,
   [UserRoles.ADMIN]: ADMIN_ROUTES,
+  [UserRoles.RESTAURANT]: RESTAURANT_ROUTES,
   [UserRoles.KITCHEN]: KITCHEN_ROUTES,
   [UserRoles.COURIER]: COURIER_ROUTES,
   [UserRoles.CASHIER]: CASHIER_ROUTES,
@@ -98,6 +104,7 @@ const canRoleAccessRoute = (role: UserRole | undefined, pathName: string) => {
 export {
   SUPERADMIN_ROUTES,
   ADMIN_ROUTES,
+  RESTAURANT_ROUTES,
   KITCHEN_ROUTES,
   COURIER_ROUTES,
   CASHIER_ROUTES,
