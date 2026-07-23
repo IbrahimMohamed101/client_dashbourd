@@ -55,7 +55,7 @@ export function MenuSourcePicker({
     sources.find((source) => getSourceRelationId(source) === selectedRelationId);
 
   function choose(source: PremiumUpgradeSourceDto) {
-    if (sourceConflictMessage(source, currentConfigId)) return;
+    if (sourceBlockingMessage(source, currentConfigId)) return;
     onSelect(source);
   }
 
@@ -100,6 +100,9 @@ export function MenuSourcePicker({
           <div className="border-b p-3">
             <div>
               <h3 className="font-semibold">اختر مصدر الترقية</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                القائمة تعرض الكتالوج بالكامل. العناصر غير الجاهزة تبقى ظاهرة مع سبب المنع.
+              </p>
             </div>
             <div className="relative mt-3">
               <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -197,7 +200,7 @@ function SourceList({
     return (
       <div className="p-3">
         <div className="rounded-lg border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
-          لا توجد مصادر متاحة
+          لا توجد مصادر في الكتالوج
         </div>
       </div>
     );
@@ -212,7 +215,7 @@ function SourceList({
       {sources.map((source) => {
         const relationId = getSourceRelationId(source);
         const selected = relationId === selectedRelationId;
-        const reason = sourceConflictMessage(source, currentConfigId);
+        const reason = sourceBlockingMessage(source, currentConfigId);
         const disabled = Boolean(reason);
 
         return (
@@ -225,7 +228,7 @@ function SourceList({
               "w-full rounded-lg border bg-card p-3 text-right transition",
               "hover:border-primary/60 hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               selected && "border-primary bg-primary/5 ring-1 ring-primary",
-              disabled && "cursor-not-allowed opacity-60 hover:border-border"
+              disabled && "cursor-not-allowed opacity-70 hover:border-border"
             )}
           >
             <div className="flex items-start gap-3">
@@ -266,6 +269,13 @@ function SourceList({
                   <Badge variant="secondary">
                     {premiumKindLabel(source.kind)}
                   </Badge>
+                  {source.selectable === true ? (
+                    <Badge variant="outline">جاهز</Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-amber-200 text-amber-800">
+                      يحتاج تجهيز
+                    </Badge>
+                  )}
                   {source.linked ? (
                     <Badge variant="outline">مرتبط</Badge>
                   ) : null}
@@ -282,4 +292,32 @@ function SourceList({
       })}
     </div>
   );
+}
+
+function sourceBlockingMessage(
+  source: PremiumUpgradeSourceDto,
+  currentConfigId?: string
+) {
+  const conflict = sourceConflictMessage(source, currentConfigId);
+  if (conflict) return conflict;
+  if (source.selectable !== false) return null;
+
+  switch (source.issueCode || source.reasonCodes?.[0]) {
+    case "SOURCE_NOT_SUBSCRIPTION_ENABLED":
+      return "غير مفعّل للاشتراكات";
+    case "SOURCE_RELATION_MISSING":
+      return "يحتاج ربطًا بمنتج ومجموعة";
+    case "SOURCE_PRODUCT_NOT_READY":
+      return "منتج السياق غير جاهز";
+    case "SOURCE_GROUP_NOT_READY":
+      return "مجموعة الخيارات غير جاهزة";
+    case "SOURCE_RELATION_UNAVAILABLE":
+      return "العلاقة غير متاحة";
+    case "ADDON_PRODUCT_NOT_PREMIUM_SOURCE":
+      return "منتج إضافة وليس ترقية وجبة";
+    case "SOURCE_NOT_ACTIVE_PUBLISHED_AVAILABLE":
+      return "غير منشور أو غير متاح";
+    default:
+      return "المصدر غير جاهز للاشتراكات";
+  }
 }
