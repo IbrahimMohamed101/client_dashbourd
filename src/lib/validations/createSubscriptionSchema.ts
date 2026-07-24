@@ -61,6 +61,13 @@ const createSubscriptionSchema = z
           path: ["delivery", "zoneId"],
         });
       }
+      if (!data.delivery.slot.slotId.trim() || !data.delivery.slot.window.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "فترة التوصيل مطلوبة",
+          path: ["delivery", "slot", "window"],
+        });
+      }
       if (!data.delivery.address.label) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
