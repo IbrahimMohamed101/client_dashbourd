@@ -102,6 +102,51 @@ describe("subscription creation contract", () => {
     expect(payload.delivery).not.toHaveProperty("pickupLocationId");
   });
 
+  it("rejects delivery subscriptions until a delivery period is selected", () => {
+    const result = createSubscriptionSchema.safeParse({
+      ...baseData,
+      delivery: {
+        ...baseData.delivery,
+        type: "delivery" as const,
+        zoneId: "ZONE_ID",
+        slot: {
+          type: "delivery",
+          window: "",
+          slotId: "",
+        },
+      },
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some(
+          (issue) =>
+            issue.path.join(".") === "delivery.slot.window" &&
+            issue.message === "فترة التوصيل مطلوبة"
+        )
+      ).toBe(true);
+    }
+  });
+
+  it("rejects partial delivery slot data", () => {
+    expect(
+      createSubscriptionSchema.safeParse({
+        ...baseData,
+        delivery: {
+          ...baseData.delivery,
+          type: "delivery" as const,
+          zoneId: "ZONE_ID",
+          slot: {
+            type: "delivery",
+            window: "12:00-14:00",
+            slotId: "",
+          },
+        },
+      }).success
+    ).toBe(false);
+  });
+
   it("allows empty optional sections", () => {
     const payload = buildSubscriptionCreationPayload(
       createSubscriptionSchema.parse(baseData)
