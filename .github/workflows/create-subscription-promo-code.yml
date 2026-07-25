@@ -10,6 +10,7 @@ on:
       - "src/lib/validations/createSubscriptionSchema.ts"
       - "src/utils/buildSubscriptionCreationPayload.ts"
       - "tests/subscriptionPromoCodePayload.test.ts"
+      - "tests/promoSectionVisibility.test.ts"
       - ".github/workflows/create-subscription-promo-code.yml"
   push:
     branches: [main]
@@ -21,6 +22,7 @@ on:
       - "src/lib/validations/createSubscriptionSchema.ts"
       - "src/utils/buildSubscriptionCreationPayload.ts"
       - "tests/subscriptionPromoCodePayload.test.ts"
+      - "tests/promoSectionVisibility.test.ts"
       - ".github/workflows/create-subscription-promo-code.yml"
 
 jobs:
@@ -33,6 +35,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx vitest run tests/subscriptionPromoCodePayload.test.ts
+      - run: npx vitest run tests/subscriptionPromoCodePayload.test.ts tests/promoSectionVisibility.test.ts
       - run: npm run typecheck
       - run: npm run build
