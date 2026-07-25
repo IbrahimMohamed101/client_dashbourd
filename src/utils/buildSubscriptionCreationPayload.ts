@@ -6,6 +6,7 @@ export interface SubscriptionCreationPayload extends Record<string, unknown> {
   grams: number;
   mealsPerDay: number;
   startDate: string;
+  promoCode?: string;
   premiumItems: Array<{
     premiumKey: string;
     qty: number;
@@ -66,12 +67,15 @@ export function buildSubscriptionCreationPayload(
           slot,
         };
 
+  const promoCode = String(data.promoCode || "").trim().toUpperCase();
+
   return {
     userId: data.userId,
     planId: data.planId,
     grams: data.grams,
     mealsPerDay: data.mealsPerDay,
     startDate: data.startDate,
+    ...(promoCode ? { promoCode } : {}),
     premiumItems: data.premiumItems.map((item) => ({
       premiumKey: item.premiumKey.trim(),
       qty: item.qty,
