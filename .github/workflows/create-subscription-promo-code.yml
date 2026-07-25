@@ -1,0 +1,34 @@
+name: Create subscription promo code
+
+on:
+  pull_request:
+    paths:
+      - "src/components/pages/subscriptions/create/PlanSelectionSection.tsx"
+      - "src/hooks/useCreateSubscriptionForm.ts"
+      - "src/lib/validations/createSubscriptionSchema.ts"
+      - "src/utils/buildSubscriptionCreationPayload.ts"
+      - "tests/subscriptionPromoCodePayload.test.ts"
+      - ".github/workflows/create-subscription-promo-code.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/components/pages/subscriptions/create/PlanSelectionSection.tsx"
+      - "src/hooks/useCreateSubscriptionForm.ts"
+      - "src/lib/validations/createSubscriptionSchema.ts"
+      - "src/utils/buildSubscriptionCreationPayload.ts"
+      - "tests/subscriptionPromoCodePayload.test.ts"
+      - ".github/workflows/create-subscription-promo-code.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run tests/subscriptionPromoCodePayload.test.ts
+      - run: npm run typecheck
+      - run: npm run build
