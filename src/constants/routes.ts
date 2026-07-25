@@ -75,6 +75,7 @@ const RESTAURANT_ROUTES = [
   "/users",
   "/addons",
   "/delivery",
+  "/promo-codes",
   "/menu",
   "/premium-meals",
   "/profile",
