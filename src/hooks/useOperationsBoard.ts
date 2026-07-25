@@ -7,16 +7,15 @@ import api from "@/lib/apis";
 import {
   enrichDeliveryOperationItem,
   filterDeliveryOperationsByQuery,
-  getAllDeliveryOperationItems,
 } from "@/lib/deliveryOperations";
 import {
   buildOperationsActionPayload,
   getInvalidActionReason,
-  getPickupItems,
   getScreensForRole,
   OPERATIONS_SCREENS,
   type OperationsScreen,
 } from "@/lib/operationsBoard";
+import { partitionOperationsFulfillmentTabs } from "@/lib/operationsFulfillmentTabs";
 import type {
   DashboardOpsActionResponse,
   UnifiedQueueItem,
@@ -84,14 +83,6 @@ function getPreparationItems(items: UnifiedQueueItem[] = []): UnifiedQueueItem[]
   return items.filter(isPreparationQueueItem);
 }
 
-function excludeItems(
-  items: UnifiedQueueItem[],
-  excludedItems: UnifiedQueueItem[]
-): UnifiedQueueItem[] {
-  const excludedIds = new Set(excludedItems.map((item) => item.id));
-  return items.filter((item) => !excludedIds.has(item.id));
-}
-
 function matchesGeneralOperationsSearch(
   item: UnifiedQueueItem,
   query?: string
@@ -151,16 +142,12 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
           )
         : normalizedItems;
       const kitchenItems = getPreparationItems(dateScopedItems);
-      const pickupItems = excludeItems(getPickupItems(dateScopedItems), kitchenItems);
-      const courierItems = excludeItems(
-        getAllDeliveryOperationItems(dateScopedItems),
-        kitchenItems
-      );
+      const fulfillmentTabs = partitionOperationsFulfillmentTabs(dateScopedItems);
 
       return [
         { screen: "kitchen" as const, items: newestFirst(kitchenItems) },
-        { screen: "pickup" as const, items: newestFirst(pickupItems) },
-        { screen: "courier" as const, items: newestFirst(courierItems) },
+        { screen: "pickup" as const, items: newestFirst(fulfillmentTabs.pickup) },
+        { screen: "courier" as const, items: newestFirst(fulfillmentTabs.courier) },
       ].filter((result) => visibleScreens.includes(result.screen));
     },
     refetchInterval: 30_000,
