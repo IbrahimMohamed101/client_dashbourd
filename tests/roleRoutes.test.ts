@@ -81,6 +81,7 @@ test("roleRoutes.test", () => {
     "/users",
     "/addons",
     "/delivery",
+    "/promo-codes",
     "/menu",
     "/premium-meals",
     "/profile",
@@ -140,6 +141,7 @@ test("roleRoutes.test", () => {
   );
   assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/premium-meals"), true);
   assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/delivery"), true);
+  assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/promo-codes"), true);
   assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/profile"), true);
   assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/dashboard"), false);
   assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/dashboard-users"), false);
