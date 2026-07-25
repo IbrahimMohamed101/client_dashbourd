@@ -25,6 +25,10 @@ import { PlanSelectionSection } from "./PlanSelectionSection";
 import { PremiumMealsSection } from "./PremiumMealsSection";
 import { AddonsSection } from "./AddonsSection";
 import { DeliverySection } from "./DeliverySection";
+import {
+  PromoCodeSection,
+  type PromoQuoteResult,
+} from "./PromoCodeSection";
 
 interface CreateSubscriptionFormContentProps {
   /** Pre-set userId (when creating from user page). If provided, user selection is hidden. */
@@ -134,6 +138,7 @@ export function CreateSubscriptionFormContent({
   const [planPrice, setPlanPrice] = useState<PricePart>({ halala: 0 });
   const [premiumPrice, setPremiumPrice] = useState<PricePart>({ halala: 0 });
   const [addonsPrice, setAddonsPrice] = useState<PricePart>({ halala: 0 });
+  const [promoQuote, setPromoQuote] = useState<PromoQuoteResult | null>(null);
   const { mutateAsync, isPending } = useCreateSubscriptionMutation();
   const isSubmitting = isPending || isValidatingPrice;
   const selectedPaymentMethod = form.watch("paymentMethod");
@@ -156,6 +161,10 @@ export function CreateSubscriptionFormContent({
   );
   const hasSelectedPrice =
     planPrice.halala > 0 || premiumPrice.halala > 0 || addonsPrice.halala > 0;
+  const summaryCurrency = promoQuote?.currency || currency;
+  const summaryBeforeDiscountHalala =
+    promoQuote?.beforeDiscountHalala ?? totalHalala;
+  const summaryAfterDiscountHalala = promoQuote?.totalHalala ?? totalHalala;
 
   const onSubmit = async (data: CreateSubscriptionSchemaType) => {
     const quotePayload = buildSubscriptionQuotePayload(data);
@@ -223,6 +232,8 @@ export function CreateSubscriptionFormContent({
         />
         <DeliverySection form={form} />
 
+        <PromoCodeSection form={form} onQuoteChange={setPromoQuote} />
+
         <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
           <div className="flex items-start gap-3 border-b px-4 py-4 sm:px-6">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -231,20 +242,56 @@ export function CreateSubscriptionFormContent({
             <div>
               <h2 className="font-semibold">إجمالي الاشتراك</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                إجمالي أسعار الخيارات المحددة في النموذج.
+                ملخص السعر النهائي وطريقة الدفع قبل إنشاء الاشتراك.
               </p>
             </div>
           </div>
 
           <div className="space-y-5 p-4 sm:p-6">
-            <div className="flex flex-col gap-2 rounded-xl bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                الإجمالي الحالي
-              </span>
-              <strong className="text-2xl font-bold text-primary" aria-live="polite">
-                {formatMoney(totalHalala, currency)}
-              </strong>
-            </div>
+            {promoQuote ? (
+              <div
+                className="grid gap-3 sm:grid-cols-3"
+                data-testid="promo-payment-summary"
+              >
+                <PriceLine
+                  label="السعر قبل الخصم"
+                  value={formatMoney(
+                    summaryBeforeDiscountHalala,
+                    summaryCurrency
+                  )}
+                />
+                <PriceLine
+                  label={`قيمة الخصم — ${promoQuote.code}`}
+                  value={`- ${formatMoney(
+                    promoQuote.discountHalala,
+                    summaryCurrency
+                  )}`}
+                />
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                    السعر بعد الخصم
+                  </p>
+                  <p
+                    className="mt-1 text-xl font-bold text-emerald-700 dark:text-emerald-300"
+                    aria-live="polite"
+                  >
+                    {formatMoney(summaryAfterDiscountHalala, summaryCurrency)}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 rounded-xl bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm font-medium text-muted-foreground">
+                  الإجمالي الحالي
+                </span>
+                <strong
+                  className="text-2xl font-bold text-primary"
+                  aria-live="polite"
+                >
+                  {formatMoney(totalHalala, currency)}
+                </strong>
+              </div>
+            )}
 
             <div className="grid gap-2 text-sm sm:grid-cols-3">
               <PriceLine
@@ -264,6 +311,11 @@ export function CreateSubscriptionFormContent({
             {!hasSelectedPrice ? (
               <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
                 اختر الباقة والخيارات ليظهر الإجمالي تلقائياً هنا.
+              </p>
+            ) : promoQuote ? (
+              <p className="text-xs text-muted-foreground">
+                السعر قبل الخصم وبعده صادران من مراجعة الباك إند بعد تطبيق كود
+                الخصم.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
