@@ -41,6 +41,10 @@ function values(promoCode: string): CreateSubscriptionSchemaType {
   };
 }
 
+function read(relativePath: string) {
+  return fs.readFileSync(path.join(process.cwd(), relativePath), "utf8");
+}
+
 test("subscription promo code is sent in quote and create payloads", () => {
   const quote = buildSubscriptionQuotePayload(values(" welcome20 "));
   const create = buildSubscriptionCreationPayload(values(" welcome20 "));
@@ -59,17 +63,37 @@ test("empty promo code is omitted", () => {
   assert.equal("promoCode" in create, false);
 });
 
-test("restaurant create-subscription screen contains promo application UI", () => {
-  const source = fs.readFileSync(
-    path.join(
-      process.cwd(),
-      "src/components/pages/subscriptions/create/PlanSelectionSection.tsx"
-    ),
-    "utf8"
+test("restaurant create-subscription screen applies promo before payment summary", () => {
+  const formSource = read(
+    "src/components/pages/subscriptions/create/CreateSubscriptionFormContent.tsx"
+  );
+  const promoSource = read(
+    "src/components/pages/subscriptions/create/PromoCodeSection.tsx"
+  );
+  const planSource = read(
+    "src/components/pages/subscriptions/create/PlanSelectionSection.tsx"
   );
 
-  assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/users/user-1/create-subscription"), true);
-  assert.match(source, /كود الخصم/);
-  assert.match(source, /تطبيق الكود/);
-  assert.match(source, /fetchSubscriptionQuote/);
+  assert.equal(
+    canRoleAccessRoute(UserRoles.RESTAURANT, "/users/user-1/create-subscription"),
+    true
+  );
+  assert.match(promoSource, /كود الخصم/);
+  assert.match(promoSource, /تطبيق الكود/);
+  assert.match(promoSource, /fetchSubscriptionQuote/);
+  assert.doesNotMatch(planSource, /تطبيق الكود/);
+
+  const promoPosition = formSource.indexOf("<PromoCodeSection");
+  const summaryPosition = formSource.indexOf("إجمالي الاشتراك");
+  assert.ok(promoPosition >= 0, "promo section must be rendered");
+  assert.ok(summaryPosition >= 0, "payment summary must be rendered");
+  assert.ok(
+    promoPosition < summaryPosition,
+    "promo section must appear immediately before the payment summary"
+  );
+
+  assert.match(formSource, /السعر قبل الخصم/);
+  assert.match(formSource, /قيمة الخصم/);
+  assert.match(formSource, /السعر بعد الخصم/);
+  assert.match(formSource, /promoQuote \?/);
 });
