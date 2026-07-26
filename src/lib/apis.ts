@@ -2,6 +2,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { toast } from "sonner";
 import { parseApiError } from "./apiErrors";
+import { assertSubscriptionQuoteFulfillmentComplete } from "@/utils/validateSubscriptionQuoteRequest";
 
 declare module "axios" {
   interface AxiosRequestConfig {
@@ -25,6 +26,16 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    const method = String(config.method || "get").toLowerCase();
+    const requestPath = String(config.url || "").split("?")[0];
+    if (
+      method === "post" &&
+      requestPath === "/api/dashboard/subscriptions/quote"
+    ) {
+      assertSubscriptionQuoteFulfillmentComplete(config.data);
+    }
+
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
       const headers = config.headers as
         | (Record<string, unknown> & { delete?: (header: string) => void })
