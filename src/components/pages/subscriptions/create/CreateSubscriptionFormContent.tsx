@@ -25,6 +25,11 @@ import { PlanSelectionSection } from "./PlanSelectionSection";
 import { PremiumMealsSection } from "./PremiumMealsSection";
 import { AddonsSection } from "./AddonsSection";
 import { DeliverySection } from "./DeliverySection";
+import {
+  PromoCodeSection,
+  readPromoQuoteResult,
+  type PromoQuoteResult,
+} from "./PromoCodeSection";
 
 interface CreateSubscriptionFormContentProps {
   /** Pre-set userId (when creating from user page). If provided, user selection is hidden. */
@@ -134,6 +139,7 @@ export function CreateSubscriptionFormContent({
   const [planPrice, setPlanPrice] = useState<PricePart>({ halala: 0 });
   const [premiumPrice, setPremiumPrice] = useState<PricePart>({ halala: 0 });
   const [addonsPrice, setAddonsPrice] = useState<PricePart>({ halala: 0 });
+  const [promoQuote, setPromoQuote] = useState<PromoQuoteResult | null>(null);
   const { mutateAsync, isPending } = useCreateSubscriptionMutation();
   const isSubmitting = isPending || isValidatingPrice;
   const selectedPaymentMethod = form.watch("paymentMethod");
@@ -156,6 +162,8 @@ export function CreateSubscriptionFormContent({
   );
   const hasSelectedPrice =
     planPrice.halala > 0 || premiumPrice.halala > 0 || addonsPrice.halala > 0;
+  const finalCurrency = promoQuote?.currency || currency;
+  const finalTotalHalala = promoQuote?.totalHalala ?? totalHalala;
 
   const onSubmit = async (data: CreateSubscriptionSchemaType) => {
     const quotePayload = buildSubscriptionQuotePayload(data);
@@ -165,8 +173,18 @@ export function CreateSubscriptionFormContent({
       setIsValidatingPrice(true);
       const quoteResponse = await fetchSubscriptionQuote(quotePayload);
       setPaymentOptions(readPaymentMethodOptions(quoteResponse));
+
+      const normalizedPromoCode = String(data.promoCode || "").trim().toUpperCase();
+      if (normalizedPromoCode) {
+        setPromoQuote(readPromoQuoteResult(quoteResponse, normalizedPromoCode));
+      } else {
+        setPromoQuote(null);
+      }
+
       setIsValidatingPrice(false);
 
+      // Do not send a client-computed total. The Backend recalculates the quote,
+      // applies the promo code, and stores the authoritative final amount.
       const response = await mutateAsync(createPayload);
       const subscriptionId = readSubscriptionId(response);
       const subscriptionLabel = readSubscriptionLabel(response);
@@ -223,6 +241,8 @@ export function CreateSubscriptionFormContent({
         />
         <DeliverySection form={form} />
 
+        <PromoCodeSection form={form} onQuoteChange={setPromoQuote} />
+
         <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
           <div className="flex items-start gap-3 border-b px-4 py-4 sm:px-6">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -231,34 +251,48 @@ export function CreateSubscriptionFormContent({
             <div>
               <h2 className="font-semibold">إجمالي الاشتراك</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                إجمالي أسعار الخيارات المحددة في النموذج.
+                السعر النهائي الذي سيُراجع ويُحفظ بواسطة الباك إند.
               </p>
             </div>
           </div>
 
           <div className="space-y-5 p-4 sm:p-6">
-            <div className="flex flex-col gap-2 rounded-xl bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                الإجمالي الحالي
-              </span>
-              <strong className="text-2xl font-bold text-primary" aria-live="polite">
-                {formatMoney(totalHalala, currency)}
+            <div
+              className={`flex flex-col gap-2 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between ${
+                promoQuote
+                  ? "border border-emerald-500/30 bg-emerald-500/10"
+                  : "bg-primary/5"
+              }`}
+              data-testid="final-subscription-total"
+            >
+              <div>
+                <span
+                  className={`text-sm font-medium ${
+                    promoQuote
+                      ? "text-emerald-700 dark:text-emerald-300"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {promoQuote
+                    ? `الإجمالي النهائي بعد خصم ${promoQuote.code}`
+                    : "الإجمالي النهائي"}
+                </span>
+                {promoQuote ? (
+                  <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                    تم احتساب هذا السعر من الباك إند بعد تطبيق كود الخصم.
+                  </p>
+                ) : null}
+              </div>
+              <strong
+                className={`text-2xl font-bold ${
+                  promoQuote
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : "text-primary"
+                }`}
+                aria-live="polite"
+              >
+                {formatMoney(finalTotalHalala, finalCurrency)}
               </strong>
-            </div>
-
-            <div className="grid gap-2 text-sm sm:grid-cols-3">
-              <PriceLine
-                label="سعر الباقة"
-                value={formatMoney(planPrice.halala, currency)}
-              />
-              <PriceLine
-                label="الوجبات المميزة"
-                value={formatMoney(premiumPrice.halala, currency)}
-              />
-              <PriceLine
-                label="الإضافات"
-                value={formatMoney(addonsPrice.halala, currency)}
-              />
             </div>
 
             {!hasSelectedPrice ? (
@@ -267,8 +301,8 @@ export function CreateSubscriptionFormContent({
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                هذا ملخص مباشر للأسعار الظاهرة في الخيارات المحددة. يقوم الخادم
-                بمراجعة السعر والبيانات مرة أخيرة عند إنشاء الاشتراك.
+                لا يتم إرسال سعر محسوب من الداشبورد. الباك إند يعيد حساب الاشتراك
+                ويطبق كود الخصم ويحفظ الإجمالي النهائي المعتمد.
               </p>
             )}
 
@@ -360,15 +394,6 @@ export function CreateSubscriptionFormContent({
 
         <div className="pb-8" />
       </form>
-    </div>
-  );
-}
-
-function PriceLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
     </div>
   );
 }
