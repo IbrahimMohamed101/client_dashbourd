@@ -63,12 +63,15 @@ test("restaurant create-subscription screen contains promo application UI", () =
   const source = fs.readFileSync(
     path.join(
       process.cwd(),
-      "src/components/pages/subscriptions/create/PlanSelectionSection.tsx"
+      "src/components/pages/subscriptions/create/PromoCodeSection.tsx"
     ),
     "utf8"
   );
 
-  assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/users/user-1/create-subscription"), true);
+  assert.equal(
+    canRoleAccessRoute(UserRoles.RESTAURANT, "/users/user-1/create-subscription"),
+    true
+  );
   assert.match(source, /كود الخصم/);
   assert.match(source, /تطبيق الكود/);
   assert.match(source, /fetchSubscriptionQuote/);
