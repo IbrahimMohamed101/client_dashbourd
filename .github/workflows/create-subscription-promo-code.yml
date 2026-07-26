@@ -3,20 +3,26 @@ name: Create subscription promo code
 on:
   pull_request:
     paths:
+      - "src/components/pages/subscriptions/create/CreateSubscriptionFormContent.tsx"
       - "src/components/pages/subscriptions/create/PlanSelectionSection.tsx"
+      - "src/components/pages/subscriptions/create/PromoCodeSection.tsx"
       - "src/hooks/useCreateSubscriptionForm.ts"
       - "src/lib/validations/createSubscriptionSchema.ts"
       - "src/utils/buildSubscriptionCreationPayload.ts"
       - "tests/subscriptionPromoCodePayload.test.ts"
+      - "tests/promoFinalTotalLayout.test.ts"
       - ".github/workflows/create-subscription-promo-code.yml"
   push:
     branches: [main]
     paths:
+      - "src/components/pages/subscriptions/create/CreateSubscriptionFormContent.tsx"
       - "src/components/pages/subscriptions/create/PlanSelectionSection.tsx"
+      - "src/components/pages/subscriptions/create/PromoCodeSection.tsx"
       - "src/hooks/useCreateSubscriptionForm.ts"
       - "src/lib/validations/createSubscriptionSchema.ts"
       - "src/utils/buildSubscriptionCreationPayload.ts"
       - "tests/subscriptionPromoCodePayload.test.ts"
+      - "tests/promoFinalTotalLayout.test.ts"
       - ".github/workflows/create-subscription-promo-code.yml"
 
 jobs:
@@ -29,6 +35,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx vitest run tests/subscriptionPromoCodePayload.test.ts
+      - run: npx vitest run tests/subscriptionPromoCodePayload.test.ts tests/promoFinalTotalLayout.test.ts
       - run: npm run typecheck
       - run: npm run build
