@@ -1,0 +1,30 @@
+name: Subscription quote fulfillment guard
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/apis.ts"
+      - "src/utils/validateSubscriptionQuoteRequest.ts"
+      - "tests/subscriptionQuoteFulfillmentGuard.test.ts"
+      - ".github/workflows/subscription-quote-fulfillment-guard.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/lib/apis.ts"
+      - "src/utils/validateSubscriptionQuoteRequest.ts"
+      - "tests/subscriptionQuoteFulfillmentGuard.test.ts"
+      - ".github/workflows/subscription-quote-fulfillment-guard.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run tests/subscriptionQuoteFulfillmentGuard.test.ts
+      - run: npm run typecheck
+      - run: npm run build
