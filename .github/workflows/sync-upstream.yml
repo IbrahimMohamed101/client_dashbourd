@@ -1,0 +1,80 @@
+name: Sync from Basic-Diet organization
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/sync-upstream.yml
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types:
+      - sync-upstream
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-basic-diet-client-dashboard
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout personal repository
+        uses: actions/checkout@v4
+        with:
+          path: target
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Merge organization main with personal promo overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd target
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream https://github.com/Basic-Diet/client_dashbourd.git
+          git fetch --no-tags upstream main
+          git fetch --no-tags origin \
+            refs/heads/overlay-promo-code-subscription:refs/remotes/origin/overlay-promo-code-subscription
+
+          UPSTREAM_SHA="$(git rev-parse upstream/main)"
+          OVERLAY_SHA="$(git rev-parse origin/overlay-promo-code-subscription)"
+          CURRENT_SHA="$(git rev-parse origin/main)"
+
+          cp .github/workflows/sync-upstream.yml /tmp/sync-upstream.yml
+
+          git checkout --detach "${UPSTREAM_SHA}"
+          git merge --no-ff \
+            -m "chore(sync): merge Basic-Diet/client_dashbourd@${UPSTREAM_SHA} with promo overlay@${OVERLAY_SHA}" \
+            "${OVERLAY_SHA}"
+
+          mkdir -p .github/workflows
+          cp /tmp/sync-upstream.yml .github/workflows/sync-upstream.yml
+          git add .github/workflows/sync-upstream.yml
+
+          if ! git diff --cached --quiet; then
+            git commit --amend --no-edit
+          fi
+
+          CANDIDATE_SHA="$(git rev-parse HEAD)"
+          CURRENT_TREE="$(git rev-parse "${CURRENT_SHA}^{tree}")"
+          CANDIDATE_TREE="$(git rev-parse "${CANDIDATE_SHA}^{tree}")"
+          CURRENT_PARENTS="$(git show -s --format=%P "${CURRENT_SHA}")"
+          EXPECTED_PARENTS="${UPSTREAM_SHA} ${OVERLAY_SHA}"
+
+          if [[ "${CURRENT_TREE}" == "${CANDIDATE_TREE}" && "${CURRENT_PARENTS}" == "${EXPECTED_PARENTS}" ]]; then
+            echo "Already synchronized with upstream ${UPSTREAM_SHA} and overlay ${OVERLAY_SHA}."
+            exit 0
+          fi
+
+          git push --force origin HEAD:main
