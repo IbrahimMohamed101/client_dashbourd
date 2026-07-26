@@ -47,6 +47,11 @@ const createSubscriptionSchema = z
     grams: z.number().min(1, "الجرامات مطلوبة"),
     mealsPerDay: z.number().min(1, "عدد الوجبات في اليوم مطلوب"),
     startDate: z.string().min(1, "تاريخ البداية مطلوب"),
+    promoCode: z
+      .string()
+      .trim()
+      .max(64, "كود الخصم طويل جدًا")
+      .optional(),
     premiumItems: z.array(premiumItemSchema),
     addons: z.array(addonSelectionSchema),
     delivery: deliverySchema,
