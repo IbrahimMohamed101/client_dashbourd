@@ -2,7 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { Payment } from "@/types/paymentTypes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CreditCard, EyeIcon } from "lucide-react";
+import { Banknote, CreditCard, EyeIcon } from "lucide-react";
 
 const statusLabels: Record<string, { label: string; variant: React.ComponentProps<typeof Badge>["variant"] }> = {
   paid: { label: "مدفوع", variant: "default" },
@@ -12,12 +12,9 @@ const statusLabels: Record<string, { label: string; variant: React.ComponentProp
   refunded: { label: "مسترد", variant: "secondary" },
 };
 
-const methodLabels: Record<string, string> = {
-  credit_card: "بطاقة ائتمان",
-  apple_pay: "Apple Pay",
-  google_pay: "Google Pay",
-  wallet: "المحفظة",
-  moyasar: "Moyasar",
+const methodLabels: Record<Payment["method"], string> = {
+  electronic_gateway: "بوابة دفع إلكتروني",
+  cash: "كاش",
 };
 
 const typeLabels: Record<string, string> = {
@@ -77,14 +74,17 @@ export const paymentsColumns: ColumnDef<Payment>[] = [
   {
     accessorKey: "method",
     header: "طريقة الدفع",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <CreditCard className="size-4 text-muted-foreground" />
-        <span className="text-muted-foreground">
-          {methodLabels[row.original.method] || row.original.method}
-        </span>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const method = row.original.method;
+      const MethodIcon = method === "cash" ? Banknote : CreditCard;
+
+      return (
+        <div className="flex items-center gap-2">
+          <MethodIcon className="size-4 text-muted-foreground" />
+          <span className="text-muted-foreground">{methodLabels[method]}</span>
+        </div>
+      );
+    },
   },
   {
     accessorKey: "type",
