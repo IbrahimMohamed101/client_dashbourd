@@ -1,3 +1,5 @@
+export type PaymentChannel = "electronic_gateway" | "cash";
+
 export interface Payment {
   id: string;
   reference: string;
@@ -8,8 +10,11 @@ export interface Payment {
   vatHalala?: number;
   totalHalala?: number;
   status: "pending" | "paid" | "completed" | "failed" | "refunded";
-  method: "credit_card" | "apple_pay" | "google_pay" | "wallet" | "moyasar";
+  method: PaymentChannel;
+  paymentMethod?: PaymentChannel;
+  paymentChannel?: PaymentChannel;
   provider?: string;
+  paymentProvider?: string;
   type:
     | "subscription_activation"
     | "addon_purchase"
