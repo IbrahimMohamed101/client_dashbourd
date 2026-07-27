@@ -1,4 +1,5 @@
 import api from "@/lib/apis";
+import { normalizePaymentsPayload } from "@/utils/normalizePaymentData";
 
 export const fetchPaymentsList = async ({
   page = 1,
@@ -22,7 +23,7 @@ export const fetchPaymentsList = async ({
     if (q) params.append("q", q);
 
     const response = await api.get(`/api/dashboard/payments?${params.toString()}`);
-    return response.data;
+    return normalizePaymentsPayload(response.data);
   } catch (error) {
     console.error("Error fetching payments list:", error);
     throw error;
@@ -32,7 +33,7 @@ export const fetchPaymentsList = async ({
 export const fetchPaymentDetails = async (id: string) => {
   try {
     const response = await api.get(`/api/dashboard/payments/${id}`);
-    return response.data;
+    return normalizePaymentsPayload(response.data);
   } catch (error) {
     console.error(`Error fetching payment details for ID ${id}:`, error);
     throw error;
@@ -42,7 +43,7 @@ export const fetchPaymentDetails = async (id: string) => {
 export const fetchPaymentBreakdown = async (id: string) => {
   try {
     const response = await api.get(`/api/dashboard/payments/${id}/breakdown`);
-    return response.data;
+    return normalizePaymentsPayload(response.data);
   } catch (error) {
     console.error(`Error fetching payment breakdown for ID ${id}:`, error);
     throw error;
