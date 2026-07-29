@@ -20,59 +20,34 @@ import { useQuery } from "@tanstack/react-query";
 import { Sparkles, Plus, Trash2 } from "lucide-react";
 import { useFieldArray, type UseFormReturn } from "react-hook-form";
 import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubscriptionSchema";
+import {
+  isSelectablePremiumMeal,
+  normalizeBuilderPremiumMealsResponse,
+  type BuilderPremiumMeal,
+  type BuilderPremiumMealsResponse,
+} from "@/utils/builderPremiumMeals";
 
 interface PremiumMealsSectionProps {
   form: UseFormReturn<CreateSubscriptionSchemaType>;
   onPriceChange?: (price: { halala: number; currency?: string }) => void;
 }
 
-export interface BuilderPremiumMeal {
-  id: string;
-  configId?: string | null;
-  sourceId?: string | null;
-  premiumKey: string;
-  sourceModel?: string;
-  sourceType?: string;
-  kind?: string;
-  selectionType?: string;
-  name: { ar?: string; en?: string } | string;
-  imageUrl?: string;
-  extraFeeHalala?: number;
-  priceHalala?: number;
-  currency?: string;
-  isActive?: boolean;
-  availableForSubscription?: boolean;
-  health?: string;
-  issueCode?: string | null;
-  legacy?: boolean;
-}
-
-interface BuilderPremiumMealsResponse {
-  status: boolean;
-  data: BuilderPremiumMeal[];
-}
-
-const fetchBuilderPremiumMeals = async (): Promise<BuilderPremiumMealsResponse> => {
-  const response = await api.get("/api/admin/builder-premium-meals");
-  return response.data;
-};
-
-export function isSelectablePremiumMeal(meal: BuilderPremiumMeal): boolean {
-  return (
-    typeof meal.premiumKey === "string" &&
-    meal.premiumKey.trim().length > 0 &&
-    meal.isActive !== false &&
-    meal.availableForSubscription !== false &&
-    (!meal.health || meal.health === "ready")
-  );
-}
+const fetchBuilderPremiumMeals =
+  async (): Promise<BuilderPremiumMealsResponse> => {
+    const response = await api.get("/api/admin/builder-premium-meals");
+    return normalizeBuilderPremiumMealsResponse(response.data);
+  };
 
 const getMealName = (meal: BuilderPremiumMeal) =>
-  typeof meal.name === "string" ? meal.name : meal.name.ar || meal.name.en || "";
+  typeof meal.name === "string"
+    ? meal.name
+    : meal.name?.ar || meal.name?.en || "";
 
 const formatSar = (halala: number) => {
   const sar = halala / 100;
-  return Number.isInteger(sar) ? String(sar) : sar.toFixed(2).replace(/\.?0+$/, "");
+  return Number.isInteger(sar)
+    ? String(sar)
+    : sar.toFixed(2).replace(/\.?0+$/, "");
 };
 
 export function PremiumMealsSection({
@@ -84,7 +59,8 @@ export function PremiumMealsSection({
     queryFn: fetchBuilderPremiumMeals,
     staleTime: 1000 * 60 * 2,
   });
-  const premiumMeals = premiumResponse?.data.filter(isSelectablePremiumMeal) || [];
+  const premiumMeals =
+    premiumResponse?.data.filter(isSelectablePremiumMeal) || [];
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -94,7 +70,9 @@ export function PremiumMealsSection({
   const premiumItems = form.watch("premiumItems") || [];
   const selectedKeys = premiumItems.map((item) => item.premiumKey);
 
-  const getSelectedMeal = (premiumKey: string): BuilderPremiumMeal | undefined =>
+  const getSelectedMeal = (
+    premiumKey: string
+  ): BuilderPremiumMeal | undefined =>
     premiumMeals.find((meal) => meal.premiumKey === premiumKey);
 
   const premiumTotalHalala = premiumItems.reduce((total, item) => {
@@ -137,7 +115,9 @@ export function PremiumMealsSection({
             إضافة وجبة
           </Button>
         </div>
-        <CardDescription>أضف وجبات مميزة إلى الاشتراك (اختياري)</CardDescription>
+        <CardDescription>
+          أضف وجبات مميزة إلى الاشتراك (اختياري)
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -179,14 +159,20 @@ export function PremiumMealsSection({
 
                   <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
                     <div className="flex-1 space-y-1.5">
-                      <label className="text-xs text-muted-foreground">الوجبة المميزة</label>
+                      <label className="text-xs text-muted-foreground">
+                        الوجبة المميزة
+                      </label>
                       <Select
                         value={premiumKey}
                         onValueChange={(value) =>
-                          form.setValue(`premiumItems.${index}.premiumKey`, value, {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          })
+                          form.setValue(
+                            `premiumItems.${index}.premiumKey`,
+                            value,
+                            {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            }
+                          )
                         }
                       >
                         <SelectTrigger>
@@ -205,22 +191,32 @@ export function PremiumMealsSection({
                               <span className="flex items-center gap-2">
                                 {getMealName(meal)}
                                 <span className="text-xs text-muted-foreground">
-                                  ({formatSar(meal.extraFeeHalala ?? meal.priceHalala ?? 0)} ريال)
+                                  (
+                                  {formatSar(
+                                    meal.extraFeeHalala ?? meal.priceHalala ?? 0
+                                  )}{" "}
+                                  ريال)
                                 </span>
                               </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      {form.formState.errors.premiumItems?.[index]?.premiumKey && (
+                      {form.formState.errors.premiumItems?.[index]
+                        ?.premiumKey && (
                         <p className="text-xs text-destructive">
-                          {form.formState.errors.premiumItems[index].premiumKey?.message}
+                          {
+                            form.formState.errors.premiumItems[index].premiumKey
+                              ?.message
+                          }
                         </p>
                       )}
                     </div>
 
                     <div className="w-24 space-y-1.5">
-                      <label className="text-xs text-muted-foreground">الكمية</label>
+                      <label className="text-xs text-muted-foreground">
+                        الكمية
+                      </label>
                       <Input
                         type="number"
                         min={1}
@@ -232,7 +228,10 @@ export function PremiumMealsSection({
                       />
                       {form.formState.errors.premiumItems?.[index]?.qty && (
                         <p className="text-xs text-destructive">
-                          {form.formState.errors.premiumItems[index].qty?.message}
+                          {
+                            form.formState.errors.premiumItems[index].qty
+                              ?.message
+                          }
                         </p>
                       )}
                     </div>
