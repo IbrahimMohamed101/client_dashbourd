@@ -53,6 +53,7 @@ export function DeliverySection({ form }: DeliverySectionProps) {
 
   const isDelivery = selectedMethodId === "delivery";
   const isPickup = selectedMethodId === "pickup";
+  const pickupLocation = deliveryData?.pickupLocations?.[0];
   const slots = selectedMethod?.slots || [];
   const deliverySlotError =
     form.formState.errors.delivery?.slot?.slotId?.message ||
@@ -390,24 +391,34 @@ export function DeliverySection({ form }: DeliverySectionProps) {
             )}
 
             {/* Pickup info */}
-            {isPickup && deliveryData?.pickupLocations?.[0] && (
+            {isPickup && (
               <div className="rounded-xl border border-dashed border-border/50 bg-muted/20 p-4">
-                <div className="flex items-start gap-3">
-                  <Store className="mt-0.5 size-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {deliveryData.pickupLocations[0].name}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {deliveryData.pickupLocations[0].address.line1}
-                    </p>
-                    {deliveryData.pickupLocations[0].address.notes && (
-                      <p className="mt-1 text-xs text-muted-foreground/70">
-                        {deliveryData.pickupLocations[0].address.notes}
+                {pickupLocation ? (
+                  <div className="flex items-start gap-3">
+                    <Store className="mt-0.5 size-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {pickupLocation.name}
                       </p>
-                    )}
+                      <p className="mt-1 text-xs text-muted-foreground/70">
+                        {pickupLocation.address.line1}
+                      </p>
+                      {pickupLocation.address.notes && (
+                        <p className="mt-1 text-xs text-muted-foreground/70">
+                          {pickupLocation.address.notes}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <p
+                    className="text-sm font-medium text-destructive"
+                    role="alert"
+                  >
+                    لا يوجد فرع استلام نشط. أضف فرعًا من صفحة فروع الاستلام ثم
+                    حاول مرة أخرى.
+                  </p>
+                )}
                 {form.formState.errors.delivery?.pickupLocationId && (
                   <p className="mt-3 text-xs text-destructive">
                     {form.formState.errors.delivery.pickupLocationId.message}

@@ -12,6 +12,7 @@ import {
   getDeliverySlotSelectionValues,
   getSubscriptionFulfillmentResetValues,
 } from "../src/utils/subscriptionFulfillmentState";
+import { getFirstSubscriptionFormErrorMessage } from "../src/utils/subscriptionFormErrors";
 
 const baseData = {
   userId: "USER_ID",
@@ -67,8 +68,25 @@ function issuePaths(
 }
 
 describe("subscription creation contract", () => {
+  it("surfaces the first nested client validation error instead of failing silently", () => {
+    expect(
+      getFirstSubscriptionFormErrorMessage({
+        delivery: {
+          pickupLocationId: {
+            type: "custom",
+            message: "فرع الاستلام مطلوب",
+            ref: { focus: () => undefined },
+          },
+        },
+      })
+    ).toBe("فرع الاستلام مطلوب");
+    expect(getFirstSubscriptionFormErrorMessage({})).toBeNull();
+  });
+
   it("requires an explicit payment method", () => {
-    const { paymentMethod: _paymentMethod, ...withoutPayment } = baseData;
+    const withoutPayment = Object.fromEntries(
+      Object.entries(baseData).filter(([key]) => key !== "paymentMethod")
+    );
     const result = createSubscriptionSchema.safeParse(withoutPayment);
 
     expect(result.success).toBe(false);

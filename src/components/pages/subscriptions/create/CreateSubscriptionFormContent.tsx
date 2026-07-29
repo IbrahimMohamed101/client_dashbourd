@@ -16,7 +16,9 @@ import {
   shouldClearAppliedPromo,
   type AppliedPromoQuote,
 } from "@/utils/subscriptionPromoQuote";
+import { getFirstSubscriptionFormErrorMessage } from "@/utils/subscriptionFormErrors";
 import { useNavigate } from "@tanstack/react-router";
+import type { FieldErrors } from "react-hook-form";
 import {
   Banknote,
   CheckCircle2,
@@ -152,6 +154,9 @@ export function CreateSubscriptionFormContent({
   );
   const [promoError, setPromoError] = useState<string | null>(null);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [submitValidationError, setSubmitValidationError] = useState<
+    string | null
+  >(null);
   const { mutateAsync, isPending } = useCreateSubscriptionMutation();
   const isSubmitting = isPending || isValidatingPrice;
   const selectedPaymentMethod = form.watch("paymentMethod");
@@ -231,6 +236,7 @@ export function CreateSubscriptionFormContent({
   };
 
   const onSubmit = async (data: CreateSubscriptionSchemaType) => {
+    setSubmitValidationError(null);
     const quotePayload = buildSubscriptionQuotePayload(data);
     const createPayload = buildSubscriptionCreationPayload(data);
 
@@ -278,9 +284,27 @@ export function CreateSubscriptionFormContent({
     }
   };
 
+  const onInvalid = (errors: FieldErrors<CreateSubscriptionSchemaType>) => {
+    const message =
+      getFirstSubscriptionFormErrorMessage(errors) ||
+      "راجع الحقول المطلوبة ثم حاول مرة أخرى.";
+    setSubmitValidationError(message);
+    ToastMessage(`تعذر إنشاء الاشتراك: ${message}`, "error");
+
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById("subscription-submit-validation-error")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
   return (
     <div className="mx-auto w-full max-w-4xl" dir="rtl">
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, onInvalid)}
+        className="space-y-6"
+        noValidate
+      >
         {!userId && <UserSelectionSection form={form} />}
         <PlanSelectionSection
           form={form}
@@ -451,26 +475,37 @@ export function CreateSubscriptionFormContent({
             </div>
 
             <div className="flex justify-end border-t pt-5">
-              <Button
-                type="submit"
-                disabled={isSubmitting || !selectedPaymentMethod}
-                size="lg"
-                className="w-full gap-2 sm:w-auto sm:min-w-52"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    {isValidatingPrice
-                      ? "جاري مراجعة البيانات..."
-                      : "جاري إنشاء الاشتراك..."}
-                  </>
-                ) : (
-                  <>
-                    <FileCheck2 className="size-4" />
-                    إنشاء الاشتراك
-                  </>
-                )}
-              </Button>
+              <div className="w-full space-y-3 sm:w-auto sm:min-w-52">
+                {submitValidationError ? (
+                  <p
+                    id="subscription-submit-validation-error"
+                    className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive"
+                    role="alert"
+                  >
+                    {submitValidationError}
+                  </p>
+                ) : null}
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !selectedPaymentMethod}
+                  size="lg"
+                  className="w-full gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      {isValidatingPrice
+                        ? "جاري مراجعة البيانات..."
+                        : "جاري إنشاء الاشتراك..."}
+                    </>
+                  ) : (
+                    <>
+                      <FileCheck2 className="size-4" />
+                      إنشاء الاشتراك
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </section>
