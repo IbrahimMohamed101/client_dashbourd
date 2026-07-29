@@ -7,7 +7,10 @@ import {
   buildSubscriptionCreationPayload,
   buildSubscriptionQuotePayload,
 } from "../src/utils/buildSubscriptionCreationPayload";
-import { isSelectablePremiumMeal } from "../src/components/pages/subscriptions/create/PremiumMealsSection";
+import {
+  isSelectablePremiumMeal,
+  normalizeBuilderPremiumMealsResponse,
+} from "../src/utils/builderPremiumMeals";
 import {
   getDeliverySlotSelectionValues,
   getSubscriptionFulfillmentResetValues,
@@ -67,8 +70,42 @@ function issuePaths(
 }
 
 describe("subscription creation contract", () => {
+  it("keeps the create page safe when premium meals use a nested or malformed response", () => {
+    const meal = {
+      id: "PREMIUM_ID",
+      premiumKey: "beef_steak",
+      name: { ar: "ستيك", en: "Steak" },
+    };
+
+    expect(
+      normalizeBuilderPremiumMealsResponse({
+        status: true,
+        data: [meal],
+      }).data
+    ).toEqual([meal]);
+    expect(
+      normalizeBuilderPremiumMealsResponse({
+        status: true,
+        data: { items: [meal] },
+      }).data
+    ).toEqual([meal]);
+    expect(
+      normalizeBuilderPremiumMealsResponse({
+        status: true,
+        data: { premiumMeals: [meal] },
+      }).data
+    ).toEqual([meal]);
+    expect(
+      normalizeBuilderPremiumMealsResponse({
+        status: true,
+        data: null,
+      }).data
+    ).toEqual([]);
+  });
+
   it("requires an explicit payment method", () => {
-    const { paymentMethod: _paymentMethod, ...withoutPayment } = baseData;
+    const withoutPayment: Partial<typeof baseData> = { ...baseData };
+    delete withoutPayment.paymentMethod;
     const result = createSubscriptionSchema.safeParse(withoutPayment);
 
     expect(result.success).toBe(false);
