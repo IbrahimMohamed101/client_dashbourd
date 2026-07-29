@@ -2,29 +2,22 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CreateSubscriptionFormContent } from "@/components/pages/subscriptions/create/CreateSubscriptionFormContent";
 import { Button } from "@/components/ui/button";
 import { ArrowRightIcon } from "lucide-react";
-import { userDetailsQueryOptions } from "@/hooks/useUsersQuery";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Loader } from "@/components/global/loader";
+import { useUserDetailsQuery } from "@/hooks/useUsersQuery";
 
 export const Route = createFileRoute(
   "/_protected/users/$userId/create-subscription"
 )({
-  loader: ({ context, params }) => {
-    context.queryClient.ensureQueryData(
-      userDetailsQueryOptions(params.userId)
-    );
-  },
-  pendingComponent: Loader,
   component: CreateSubscriptionPage,
 });
 
 function CreateSubscriptionPage() {
   const { userId } = Route.useParams();
-  const { data: response } = useSuspenseQuery(
-    userDetailsQueryOptions(userId)
-  );
+  const { data: response, isLoading: isUserLoading } =
+    useUserDetailsQuery(userId);
 
-  const userName = response?.data?.fullName || "";
+  const userName =
+    response?.data?.fullName ||
+    (isUserLoading ? "جاري تحميل بيانات المستخدم..." : "المستخدم المحدد");
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6" dir="rtl">
