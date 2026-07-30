@@ -130,7 +130,7 @@ export function adaptRangeReportForDisplay(
   return {
     ...report,
     reportType: "monthly",
-    businessMonth: `${report.range.from}:${report.range.to}`,
+    businessMonth: `${report.range.from}-to-${report.range.to}`,
     businessMonthLabelAr:
       report.range.labelAr ?? formatAccountingRangeLabel(report.range),
     statistics: {
