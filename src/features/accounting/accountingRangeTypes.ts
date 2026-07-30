@@ -59,14 +59,25 @@ export interface SubscriptionPaymentRangeStatistics
   lowestDay?: SubscriptionPaymentDailyBreakdownItem | null;
 }
 
-export interface SubscriptionPaymentRangeReportData
-  extends Omit<SubscriptionPaymentMonthlyReportData, "reportType" | "statistics"> {
-  reportType: "range";
+interface SubscriptionPaymentRangeFields {
   range: SubscriptionPaymentRange;
   comparison?: SubscriptionPaymentRangeComparison | null;
   statistics?: SubscriptionPaymentRangeStatistics | null;
   bySourceChannel?: SubscriptionPaymentBucket[] | null;
   byPaymentProvider?: SubscriptionPaymentBucket[] | null;
+}
+
+export interface SubscriptionPaymentRangeApiReportData
+  extends Omit<SubscriptionPaymentMonthlyReportData, "reportType" | "statistics">,
+    SubscriptionPaymentRangeFields {
+  reportType: "range";
+}
+
+export interface SubscriptionPaymentRangeReportData
+  extends Omit<SubscriptionPaymentMonthlyReportData, "statistics">,
+    SubscriptionPaymentRangeFields {
+  reportType: "monthly";
+  sourceReportType: "range";
 }
 
 export type SubscriptionPaymentRangeReportResponse =
