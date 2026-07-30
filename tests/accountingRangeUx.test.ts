@@ -42,7 +42,8 @@ test("accounting range presets and validation", () => {
 
 test("range reports adapt to the existing monthly presentation contract", () => {
   const report: SubscriptionPaymentRangeReportData = {
-    reportType: "range",
+    reportType: "monthly",
+    sourceReportType: "range",
     range: {
       from: "2026-07-01",
       to: "2026-07-30",
