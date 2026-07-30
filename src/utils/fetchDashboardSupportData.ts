@@ -1,5 +1,6 @@
 import api from "@/lib/apis";
 import type {
+  SubscriptionPaymentRangeApiReportData,
   SubscriptionPaymentRangeParams,
   SubscriptionPaymentRangeReportResponse,
 } from "@/features/accounting/accountingRangeTypes";
@@ -15,6 +16,7 @@ import type {
   DashboardNotificationLogFilters,
   DashboardNotificationLogsResponse,
   DashboardNotificationSummaryResponse,
+  DashboardStatusResponse,
   DashboardTodayReportResponse,
   SubscriptionPaymentDailyParams,
   SubscriptionPaymentDailyReportResponse,
@@ -146,10 +148,17 @@ export const fetchSubscriptionPaymentRangeReport = async (
   params: SubscriptionPaymentRangeParams = {}
 ): Promise<SubscriptionPaymentRangeReportResponse> => {
   const resolved = resolveSubscriptionPaymentRangeParams(params);
-  const response = await api.get<SubscriptionPaymentRangeReportResponse>(
-    subscriptionPaymentRangeReportUrl(toQueryParams(resolved))
-  );
-  return response.data;
+  const response = await api.get<
+    DashboardStatusResponse<SubscriptionPaymentRangeApiReportData>
+  >(subscriptionPaymentRangeReportUrl(toQueryParams(resolved)));
+  return {
+    ...response.data,
+    data: {
+      ...response.data.data,
+      reportType: "monthly",
+      sourceReportType: "range",
+    },
+  };
 };
 
 export const fetchAccountingDailyReportExport = async (
