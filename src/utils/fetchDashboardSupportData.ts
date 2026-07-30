@@ -1,5 +1,12 @@
 import api from "@/lib/apis";
 import type {
+  SubscriptionPaymentRangeParams,
+  SubscriptionPaymentRangeReportResponse,
+} from "@/features/accounting/accountingRangeTypes";
+import {
+  resolveAccountingRangePreset,
+} from "@/features/accounting/accountingRange";
+import type {
   AccountingDailyReportParams,
   AccountingDailyReportResponse,
   DashboardHealthReportResponse,
@@ -28,6 +35,7 @@ import {
   notificationLogsUrl,
   subscriptionPaymentDailyReportUrl,
   subscriptionPaymentMonthlyReportUrl,
+  subscriptionPaymentRangeReportUrl,
   subscriptionTermsUrl,
   type DashboardHealthKey,
 } from "@/utils/dashboardApiContract";
@@ -64,6 +72,19 @@ export const resolveSubscriptionPaymentMonthlyParams = (
   fulfillmentMethod: params.fulfillmentMethod ?? "all",
   includeDetails: params.includeDetails ?? true,
 });
+
+export const resolveSubscriptionPaymentRangeParams = (
+  params: SubscriptionPaymentRangeParams = {}
+): Required<SubscriptionPaymentRangeParams> => {
+  const defaultRange = resolveAccountingRangePreset("last30", getTodayKSADate());
+  return {
+    from: params.from ?? defaultRange.from,
+    to: params.to ?? defaultRange.to,
+    fulfillmentMethod: params.fulfillmentMethod ?? "all",
+    includeDetails: params.includeDetails ?? true,
+    comparePrevious: params.comparePrevious ?? true,
+  };
+};
 
 export const fetchDashboardSearch = async (q: string): Promise<unknown> => {
   const response = await api.get(dashboardSearchUrl(q));
@@ -117,6 +138,16 @@ export const fetchSubscriptionPaymentMonthlyReport = async (
   const resolved = resolveSubscriptionPaymentMonthlyParams(params);
   const response = await api.get<SubscriptionPaymentMonthlyReportResponse>(
     subscriptionPaymentMonthlyReportUrl(toQueryParams(resolved))
+  );
+  return response.data;
+};
+
+export const fetchSubscriptionPaymentRangeReport = async (
+  params: SubscriptionPaymentRangeParams = {}
+): Promise<SubscriptionPaymentRangeReportResponse> => {
+  const resolved = resolveSubscriptionPaymentRangeParams(params);
+  const response = await api.get<SubscriptionPaymentRangeReportResponse>(
+    subscriptionPaymentRangeReportUrl(toQueryParams(resolved))
   );
   return response.data;
 };
