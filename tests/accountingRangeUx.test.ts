@@ -42,8 +42,7 @@ test("accounting range presets and validation", () => {
 
 test("range reports adapt to the existing monthly presentation contract", () => {
   const report: SubscriptionPaymentRangeReportData = {
-    reportType: "monthly",
-    sourceReportType: "range",
+    reportType: "range",
     range: {
       from: "2026-07-01",
       to: "2026-07-30",
@@ -68,7 +67,7 @@ test("range reports adapt to the existing monthly presentation contract", () => 
 
   const adapted = adaptRangeReportForDisplay(report);
   assert.equal(adapted.reportType, "monthly");
-  assert.equal(adapted.businessMonth, "2026-07-01:2026-07-30");
+  assert.equal(adapted.businessMonth, "2026-07-01-to-2026-07-30");
   assert.equal(adapted.businessMonthLabelAr, "من 1 يوليو إلى 30 يوليو");
   assert.equal(adapted.statistics?.daysWithPayments, 14);
   assert.equal(adapted.statistics?.averageDailyHalala, 45458);
