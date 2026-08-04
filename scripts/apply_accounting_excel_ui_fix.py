@@ -2,6 +2,8 @@ from pathlib import Path
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
+    if new in text:
+        return text
     count = text.count(old)
     if count != 1:
         raise SystemExit(f"{label}: expected exactly one match, found {count}")
@@ -187,6 +189,14 @@ component_text = replace_once(
 )
 component_text = replace_once(
     component_text,
+    '''          <Metric label="إجمالي التحصيل" value={formatMoney(summary?.grossCollectionFormattedAr ?? summary?.totalFormattedAr, summary?.grossCollectionHalala ?? summary?.totalHalala, currency)} />
+''',
+    '''          <Metric label="إجمالي تحصيل الاشتراكات" value={formatMoney(summary?.grossCollectionFormattedAr ?? summary?.totalFormattedAr, summary?.grossCollectionHalala ?? summary?.totalHalala, currency)} />
+''',
+    "summary gross title",
+)
+component_text = replace_once(
+    component_text,
     '''          <BucketList title="حسب حالة الاشتراك" buckets={report.bySubscriptionStatus} currency={currency} />
           <BucketList title="حسب نوع الدفعة" buckets={report.byPaymentType} currency={currency} />
 ''',
@@ -198,62 +208,3 @@ component_text = replace_once(
     "source/provider breakdowns",
 )
 component_path.write_text(component_text, encoding="utf-8")
-
-# Focused tests now validate SpreadsheetML and the .xls download contract.
-test_path = Path("tests/accountingReports.test.ts")
-test_text = test_path.read_text(encoding="utf-8")
-test_text = replace_once(
-    test_text,
-    '''  buildSubscriptionPaymentsCsv,
-  subscriptionPaymentsCsvFileName,
-''',
-    '''  buildSubscriptionPaymentsExcel,
-  subscriptionPaymentsExcelFileName,
-''',
-    "test imports",
-)
-test_text = replace_once(
-    test_text,
-    '''test("accounting subscription report formatters and csv", () => {
-''',
-    '''test("accounting subscription report formatters and Excel workbook", () => {
-''',
-    "test title",
-)
-test_text = replace_once(
-    test_text,
-    '''  const csv = buildSubscriptionPaymentsCsv(report);
-  assert.ok(csv.startsWith("\\ufeff"));
-  assert.ok(csv.includes("مرجع الدفعة"));
-  assert.ok(csv.includes("PAY-1"));
-  assert.ok(csv.includes("REF-1"));
-  assert.ok(csv.includes("مرتجع"));
-  assert.ok(csv.includes("التطبيق"));
-  assert.ok(csv.includes("ميسر"));
-  assert.ok(csv.includes("صافي الحركة"));
-  assert.ok(csv.includes("اشتراك ملغي"));
-  assert.equal(csv.includes("[object Object]"), false);
-  assert.equal(subscriptionPaymentsCsvFileName(report), "تقرير-تحصيل-الاشتراكات-2026-07-25.csv");
-''',
-    '''  const excel = buildSubscriptionPaymentsExcel(report);
-  assert.ok(excel.startsWith("<?xml version=\\"1.0\\""));
-  assert.ok(excel.includes("Excel.Sheet"));
-  assert.ok(excel.includes("Worksheet ss:Name=\\"الملخص\\""));
-  assert.ok(excel.includes("Worksheet ss:Name=\\"المدفوعات\\""));
-  assert.ok(excel.includes("Worksheet ss:Name=\\"التصنيفات\\""));
-  assert.ok(excel.includes("مرجع الدفعة"));
-  assert.ok(excel.includes("PAY-1"));
-  assert.ok(excel.includes("REF-1"));
-  assert.ok(excel.includes("مرتجع"));
-  assert.ok(excel.includes("التطبيق"));
-  assert.ok(excel.includes("ميسر"));
-  assert.ok(excel.includes("صافي الحركة"));
-  assert.ok(excel.includes("اشتراك ملغي"));
-  assert.ok(excel.includes('ss:StyleID="Money"'));
-  assert.ok(excel.includes("DisplayRightToLeft"));
-  assert.equal(excel.includes("[object Object]"), false);
-  assert.equal(subscriptionPaymentsExcelFileName(report), "تقرير-تحصيل-الاشتراكات-2026-07-25.xls");
-''',
-    "Excel assertions",
-)
-test_path.write_text(test_text, encoding="utf-8")
