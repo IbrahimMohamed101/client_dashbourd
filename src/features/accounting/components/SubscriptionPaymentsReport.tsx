@@ -51,9 +51,9 @@ import type {
   SubscriptionPaymentReportItem,
 } from "@/features/accounting/accountingTypes";
 import {
-  buildSubscriptionPaymentsExcel,
-  downloadExcelFile,
-  subscriptionPaymentsExcelFileName,
+  buildSubscriptionPaymentsCsv,
+  downloadTextFile,
+  subscriptionPaymentsCsvFileName,
 } from "@/features/accounting/accountingCsv";
 import {
   formatBooleanAr,
@@ -93,7 +93,6 @@ export function SubscriptionPaymentsReport({
 }: SubscriptionPaymentsReportProps) {
   const [search, setSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
-  const [providerFilter, setProviderFilter] = useState("all");
   const [reviewFilter, setReviewFilter] = useState("all");
   const [pageSize, setPageSize] = useState("10");
   const [page, setPage] = useState(1);
@@ -118,16 +117,13 @@ export function SubscriptionPaymentsReport({
           .some((value) => String(value).toLowerCase().includes(query));
       const matchesMethod =
         methodFilter === "all" || item.paymentMethod === methodFilter;
-      const matchesProvider =
-        providerFilter === "all" ||
-        (item.paymentProvider ?? item.provider) === providerFilter;
       const matchesReview =
         reviewFilter === "all" ||
         (reviewFilter === "needs-review" && item.needsReview === true) ||
         (reviewFilter === "clean" && item.needsReview !== true);
-      return matchesSearch && matchesMethod && matchesProvider && matchesReview;
+      return matchesSearch && matchesMethod && matchesReview;
     });
-  }, [methodFilter, providerFilter, report?.items, reviewFilter, search]);
+  }, [methodFilter, report?.items, reviewFilter, search]);
 
   const numericPageSize = Number(pageSize);
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / numericPageSize));
@@ -137,11 +133,11 @@ export function SubscriptionPaymentsReport({
     safePage * numericPageSize
   );
 
-  const exportExcel = () => {
+  const exportCsv = () => {
     if (!report) return;
-    downloadExcelFile(
-      buildSubscriptionPaymentsExcel(report, filteredItems),
-      subscriptionPaymentsExcelFileName(report)
+    downloadTextFile(
+      buildSubscriptionPaymentsCsv(report, filteredItems),
+      subscriptionPaymentsCsvFileName(report)
     );
   };
 
@@ -182,24 +178,26 @@ export function SubscriptionPaymentsReport({
     >
       <Card className={PANEL_CLASS}>
         <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 id="subscription-payments-title" className="text-xl font-semibold tracking-normal">
-              {report.titleAr || "تحصيل الاشتراكات"}
-            </h2>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {report.reportType === "monthly"
-                ? report.businessMonthLabelAr || report.businessMonth
-                : report.businessDateLabelAr || report.businessDate}
-              {report.generatedAtLabelAr ? ` · ${report.generatedAtLabelAr}` : ""}
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-start gap-2 md:justify-end">
-            <Button variant="outline" onClick={onRetry} disabled={isFetching}>
-              <RefreshCwIcon className={isFetching ? "size-4 animate-spin" : "size-4"} />
-              تحديث التقرير
-            </Button>
-            <Button onClick={exportExcel}>تصدير Excel منسق</Button>
-          </div>
+        <div>
+          <h2 id="subscription-payments-title" className="text-xl font-semibold tracking-normal">
+            {report.titleAr || "تحصيل الاشتراكات"}
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {report.reportType === "monthly"
+              ? report.businessMonthLabelAr || report.businessMonth
+              : report.businessDateLabelAr || report.businessDate}
+            {report.generatedAtLabelAr ? ` · ${report.generatedAtLabelAr}` : ""}
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-start gap-2 md:justify-end">
+          <Button variant="outline" onClick={onRetry} disabled={isFetching}>
+            <RefreshCwIcon className={isFetching ? "size-4 animate-spin" : "size-4"} />
+            تحديث التقرير
+          </Button>
+          <Button onClick={exportCsv}>
+            تصدير CSV
+          </Button>
+        </div>
         </CardContent>
       </Card>
 
@@ -217,7 +215,7 @@ export function SubscriptionPaymentsReport({
               ابحث وراجع الدفعات بدون تغيير الفلاتر القادمة من التقرير.
             </p>
           </div>
-          <div className="grid gap-3 lg:grid-cols-[1fr_170px_170px_170px_120px]">
+          <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px_120px]">
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -230,13 +228,10 @@ export function SubscriptionPaymentsReport({
                 placeholder="ابحث بالعميل أو الهاتف أو رقم الدفعة أو الاشتراك"
               />
             </div>
-            <Select
-              value={methodFilter}
-              onValueChange={(value) => {
-                setMethodFilter(value);
-                setPage(1);
-              }}
-            >
+            <Select value={methodFilter} onValueChange={(value) => {
+              setMethodFilter(value);
+              setPage(1);
+            }}>
               <SelectTrigger className="h-11">
                 <SelectValue />
               </SelectTrigger>
@@ -248,31 +243,10 @@ export function SubscriptionPaymentsReport({
                 <SelectItem value="unknown">غير مصنف</SelectItem>
               </SelectContent>
             </Select>
-            <Select
-              value={providerFilter}
-              onValueChange={(value) => {
-                setProviderFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">كل مزودي الدفع</SelectItem>
-                <SelectItem value="moyasar">ميسر</SelectItem>
-                <SelectItem value="manual_gateway">بوابة مسجلة يدويًا</SelectItem>
-                <SelectItem value="none">نقدي / بدون مزود</SelectItem>
-                <SelectItem value="unknown">مزود غير محدد</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={reviewFilter}
-              onValueChange={(value) => {
-                setReviewFilter(value);
-                setPage(1);
-              }}
-            >
+            <Select value={reviewFilter} onValueChange={(value) => {
+              setReviewFilter(value);
+              setPage(1);
+            }}>
               <SelectTrigger className="h-11">
                 <SelectValue />
               </SelectTrigger>
@@ -282,13 +256,10 @@ export function SubscriptionPaymentsReport({
                 <SelectItem value="clean">لا تحتاج مراجعة</SelectItem>
               </SelectContent>
             </Select>
-            <Select
-              value={pageSize}
-              onValueChange={(value) => {
-                setPageSize(value);
-                setPage(1);
-              }}
-            >
+            <Select value={pageSize} onValueChange={(value) => {
+              setPageSize(value);
+              setPage(1);
+            }}>
               <SelectTrigger className="h-11">
                 <SelectValue />
               </SelectTrigger>
@@ -397,7 +368,7 @@ function fallbackCards(
   return [
     {
       key: "gross",
-      titleAr: "إجمالي تحصيل الاشتراكات",
+      titleAr: "إجمالي التحصيل",
       amountHalala: summary?.grossCollectionHalala ?? summary?.totalHalala,
       amountFormattedAr: summary?.grossCollectionFormattedAr ?? summary?.totalFormattedAr,
       count: summary?.totalPaymentsCount,
@@ -424,7 +395,7 @@ function fallbackCards(
     },
     {
       key: "card",
-      titleAr: "تحصيل البطاقات (يشمل ميسر)",
+      titleAr: "تحصيل البطاقات",
       amountHalala: summary?.cardTotalHalala ?? summary?.visaTotalHalala,
       amountFormattedAr: summary?.cardTotalFormattedAr ?? summary?.visaTotalFormattedAr,
       count: summary?.cardCount ?? summary?.visaCount,
@@ -450,7 +421,7 @@ function SummaryBreakdown({ report }: { report: SubscriptionPaymentReportData })
           <CardTitle>الضريبة وصافي التحصيل</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
-          <Metric label="إجمالي تحصيل الاشتراكات" value={formatMoney(summary?.grossCollectionFormattedAr ?? summary?.totalFormattedAr, summary?.grossCollectionHalala ?? summary?.totalHalala, currency)} />
+          <Metric label="إجمالي التحصيل" value={formatMoney(summary?.grossCollectionFormattedAr ?? summary?.totalFormattedAr, summary?.grossCollectionHalala ?? summary?.totalHalala, currency)} />
           <Metric label="المرتجعات" value={formatMoney(summary?.refundsFormattedAr, summary?.refundsHalala, currency)} />
           <Metric label="صافي الحركة" value={formatMoney(summary?.netCollectionFormattedAr, summary?.netCollectionHalala, currency)} />
           <Metric label="الصافي قبل الضريبة" value={formatMoney(summary?.netBeforeVatFormattedAr, summary?.netBeforeVatHalala, currency)} />
@@ -470,8 +441,6 @@ function SummaryBreakdown({ report }: { report: SubscriptionPaymentReportData })
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <BucketList title="حسب طريقة الدفع" buckets={report.byPaymentMethod} currency={currency} />
-          <BucketList title="حسب مزود الدفع" buckets={report.byPaymentProvider} currency={currency} />
-          <BucketList title="حسب قناة المصدر" buckets={report.bySourceChannel} currency={currency} />
           <BucketList title="حسب طريقة التنفيذ" buckets={report.byFulfillmentMethod} currency={currency} />
           <BucketList title="حسب حالة الاشتراك" buckets={report.bySubscriptionStatus} currency={currency} />
           <BucketList title="حسب نوع الدفعة" buckets={report.byPaymentType} currency={currency} />
