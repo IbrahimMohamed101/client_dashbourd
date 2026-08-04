@@ -49,3 +49,5 @@ jobs:
           git add src/routes/_protected/accounting/index.tsx
           git commit -m "fix(accounting): default to today's report"
           git push origin HEAD:fix/accounting-reports-final
+
+# Trigger after workflow registration.
