@@ -474,44 +474,47 @@ const buildWarningsRows = (report: SubscriptionPaymentReportData): ExcelRow[] =>
   ];
 };
 
-const buildDailyRows = (report: SubscriptionPaymentReportData): ExcelRow[] => [
-  row(
-    [
-      "اليوم",
-      "العمليات",
-      "إجمالي التحصيل (ر.س)",
-      "المرتجعات (ر.س)",
-      "الصافي (ر.س)",
-      "نقدي (ر.س)",
-      "بطاقات (ر.س)",
-    ].map((header) => stringCell(header, "Header")),
-    38
-  ),
-  ...(report.dailyBreakdown ?? []).map((daily, index) => {
-    const alternate = index % 2 === 1;
-    return row(
+const buildDailyRows = (report: SubscriptionPaymentReportData): ExcelRow[] => {
+  if (report.reportType !== "monthly") return [];
+  return [
+    row(
       [
-        stringCell(
-          textOrDash(daily.businessDateLabelAr, daily.businessDate),
-          alternatingStyle("Text", alternate)
-        ),
-        numberCell(
-          daily.paymentsCount ?? daily.totalPaymentsCount,
-          alternatingStyle("Integer", alternate)
-        ),
-        moneyCell(
-          daily.grossCollectionHalala ?? daily.totalHalala,
-          alternatingStyle("Money", alternate)
-        ),
-        moneyCell(daily.refundsHalala, alternatingStyle("Money", alternate)),
-        moneyCell(daily.netCollectionHalala, alternatingStyle("Money", alternate)),
-        moneyCell(daily.cashTotalHalala, alternatingStyle("Money", alternate)),
-        moneyCell(daily.visaTotalHalala, alternatingStyle("Money", alternate)),
-      ],
-      28
-    );
-  }),
-];
+        "اليوم",
+        "العمليات",
+        "إجمالي التحصيل (ر.س)",
+        "المرتجعات (ر.س)",
+        "الصافي (ر.س)",
+        "نقدي (ر.س)",
+        "بطاقات (ر.س)",
+      ].map((header) => stringCell(header, "Header")),
+      38
+    ),
+    ...(report.dailyBreakdown ?? []).map((daily, index) => {
+      const alternate = index % 2 === 1;
+      return row(
+        [
+          stringCell(
+            textOrDash(daily.businessDateLabelAr, daily.businessDate),
+            alternatingStyle("Text", alternate)
+          ),
+          numberCell(
+            daily.paymentsCount ?? daily.totalPaymentsCount,
+            alternatingStyle("Integer", alternate)
+          ),
+          moneyCell(
+            daily.grossCollectionHalala ?? daily.totalHalala,
+            alternatingStyle("Money", alternate)
+          ),
+          moneyCell(daily.refundsHalala, alternatingStyle("Money", alternate)),
+          moneyCell(daily.netCollectionHalala, alternatingStyle("Money", alternate)),
+          moneyCell(daily.cashTotalHalala, alternatingStyle("Money", alternate)),
+          moneyCell(daily.visaTotalHalala, alternatingStyle("Money", alternate)),
+        ],
+        28
+      );
+    }),
+  ];
+};
 
 export const buildSubscriptionPaymentsExcel = (
   report: SubscriptionPaymentReportData,
@@ -555,7 +558,7 @@ export const buildSubscriptionPaymentsExcel = (
     },
   ];
 
-  if ((report.dailyBreakdown ?? []).length > 0) {
+  if (report.reportType === "monthly" && (report.dailyBreakdown ?? []).length > 0) {
     worksheets.push({
       name: "الحركة اليومية",
       rows: buildDailyRows(report),
