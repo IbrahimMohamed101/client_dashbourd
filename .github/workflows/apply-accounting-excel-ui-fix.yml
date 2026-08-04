@@ -51,3 +51,5 @@ jobs:
           git add src/features/accounting/accountingTypes.ts src/routes/_protected/accounting/index.tsx src/features/accounting/components/SubscriptionPaymentsReport.tsx tests/accountingReports.test.ts
           git commit -m "fix(accounting): clarify Moyasar and export formatted Excel [accounting-fix-applied]"
           git push origin HEAD:agent/fix-accounting-reports-excel
+
+# Trigger commit after workflow registration.
