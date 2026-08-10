@@ -26,6 +26,11 @@ import {
   User,
   Utensils,
 } from "lucide-react";
+import { SubscriptionStackingOverview } from "./SubscriptionStackingOverview";
+import {
+  isCombinedSubscription,
+  subscriptionPlanLabel,
+} from "@/lib/subscriptionStackingPresentation";
 
 interface SubscriptionQuickViewDialogProps {
   subscription: Subscription | null;
@@ -174,6 +179,7 @@ export function SubscriptionQuickViewDialog({
   const { data: detailResponse, isLoading, isError } =
     useSubscriptionDetailsQuery(subscriptionId);
   const details = detailResponse?.data ?? subscription;
+  const isCombined = details ? isCombinedSubscription(details) : false;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -201,6 +207,7 @@ export function SubscriptionQuickViewDialog({
                   <Badge variant="secondary">
                     {details.displayId || details.id || details._id}
                   </Badge>
+                  {isCombined ? <Badge variant="outline">متعدد الباقات</Badge> : null}
                 </div>
               )}
             </div>
@@ -226,7 +233,7 @@ export function SubscriptionQuickViewDialog({
             <div className="space-y-5">
               <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
                 <DetailRow label="المرجع" value={details.displayId || details.id} dir="ltr" />
-                <DetailRow label="الباقة" value={details.planName || details.plan?.name} />
+                <DetailRow label="الباقة" value={subscriptionPlanLabel(details)} />
                 <DetailRow label="بداية الاشتراك" value={formatDate(details.startDate)} />
                 <DetailRow label="نهاية الاشتراك" value={formatDate(details.endDate)} />
               </div>
@@ -257,9 +264,9 @@ export function SubscriptionQuickViewDialog({
                     title="الخطة"
                     icon={<Package className="h-4 w-4 text-primary" />}
                   >
-                    <DetailRow label="الباقة" value={details.planName || details.plan?.name} />
-                    <DetailRow label="الجرامات" value={details.selectedGrams ? `${details.selectedGrams}g` : ""} />
-                    <DetailRow label="وجبات في اليوم" value={details.selectedMealsPerDay} />
+                    <DetailRow label={isCombined ? "الهوية" : "الباقة"} value={isCombined ? "حاوية تشغيلية متعددة الباقات" : subscriptionPlanLabel(details)} />
+                    {!isCombined ? <DetailRow label="الجرامات" value={details.selectedGrams ? `${details.selectedGrams}g` : ""} /> : null}
+                    {!isCombined ? <DetailRow label="وجبات في اليوم" value={details.selectedMealsPerDay} /> : null}
                     <DetailRow label="نهاية الصلاحية" value={formatDate(details.validityEndDate)} />
                   </Section>
 
@@ -355,6 +362,7 @@ export function SubscriptionQuickViewDialog({
                   </div>
                 </div>
               </div>
+              <SubscriptionStackingOverview subscription={details} compact />
             </div>
           )}
         </div>

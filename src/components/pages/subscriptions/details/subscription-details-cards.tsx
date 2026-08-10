@@ -11,6 +11,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  isCombinedSubscription,
+  subscriptionPlanLabel,
+} from "@/lib/subscriptionStackingPresentation";
 
 interface CardProps {
   subscription: Subscription;
@@ -54,22 +58,27 @@ export function CustomerInfoCard({ subscription }: CardProps) {
 }
 
 export function SubscriptionContractCard({ subscription }: CardProps) {
+  const isCombined = isCombinedSubscription(subscription);
   return (
     <Card className="border shadow-none">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">عقد الاشتراك</CardTitle>
+        <CardTitle className="text-base font-semibold">
+          {isCombined ? "ملخص الحاوية التشغيلية" : "عقد الاشتراك"}
+        </CardTitle>
       </CardHeader>
       <CardContent className="grid gap-6 sm:grid-cols-2">
-        <InfoItem label="الباقة" value={subscription.planName || "بدون باقة"} />
+        <InfoItem label="الباقة" value={subscriptionPlanLabel(subscription)} />
         <InfoItem
-          label="الأيام"
-          value={`${subscription.plan?.name || ""} (${subscription.totalMeals} يوم)`}
+          label={isCombined ? "إجمالي استحقاقات الوجبات" : "إجمالي الوجبات"}
+          value={`${subscription.totalMeals} وجبة`}
         />
-        <InfoItem label="الجرامات" value={`${subscription.selectedGrams}g`} />
-        <InfoItem
-          label="وجبات في اليوم"
-          value={subscription.selectedMealsPerDay}
-        />
+        {!isCombined ? <InfoItem label="الجرامات" value={`${subscription.selectedGrams}g`} /> : null}
+        {!isCombined ? (
+          <InfoItem
+            label="وجبات في اليوم"
+            value={subscription.selectedMealsPerDay}
+          />
+        ) : null}
         <InfoItem
           label="تاريخ البدء"
           value={
