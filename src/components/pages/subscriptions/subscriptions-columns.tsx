@@ -4,6 +4,7 @@ import type { Subscription } from "@/types/subscriptionTypes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EyeIcon } from "lucide-react";
+import { subscriptionPlanLabel } from "@/lib/subscriptionStackingPresentation";
 
 interface SubscriptionsColumnsOptions {
   onView: (subscription: Subscription) => void;
@@ -43,7 +44,7 @@ export function getSubscriptionsColumns({
       header: "اسم الباقة",
       cell: ({ row }) => (
         <span className="text-muted-foreground">
-          {row.original.planName || "بدون باقة"}
+          {subscriptionPlanLabel(row.original)}
         </span>
       ),
     },
