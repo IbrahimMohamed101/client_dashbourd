@@ -10,6 +10,7 @@ import {
   PlayIcon
 } from "lucide-react";
 import type { Subscription } from "@/types/subscriptionTypes";
+import { hasEntitlementBatches } from "@/lib/subscriptionStackingPresentation";
 
 interface SubscriptionHeaderProps {
   subscription: Subscription;
@@ -28,6 +29,7 @@ export function SubscriptionHeader({
 }: SubscriptionHeaderProps) {
   const isCanceled = subscription.status === "canceled";
   const isExpired = subscription.status === "expired" || subscription.status === "ended";
+  const hasBatches = hasEntitlementBatches(subscription);
 
   let statusLabel = subscription.status;
   let variant: "default" | "secondary" | "destructive" | "outline" = "default";
@@ -68,6 +70,7 @@ export function SubscriptionHeader({
             <Badge variant={badgeVariant} className={variant === 'default' ? 'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 border-emerald-500/20 shadow-none' : ''}>
               {statusLabel}
             </Badge>
+            {hasBatches ? <Badge variant="outline">حاوية متعددة الباقات</Badge> : null}
           </div>
         </div>
       </div>
@@ -78,7 +81,7 @@ export function SubscriptionHeader({
           الجدول الزمني
         </Button>
         
-        {!isCanceled && !isExpired && (
+        {!isCanceled && !isExpired && !hasBatches && (
           <>
             <Button variant="outline" size="sm" className="bg-background" onClick={onExtend}>
               <PlusIcon className="mr-2 ml-1 size-4" />
