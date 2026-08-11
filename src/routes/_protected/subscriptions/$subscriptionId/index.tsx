@@ -22,6 +22,7 @@ import { FreezeModal } from "@/components/pages/subscriptions/details/modals/fre
 import { ExtendModal } from "@/components/pages/subscriptions/details/modals/extend-modal";
 import { CancelModal } from "@/components/pages/subscriptions/details/modals/cancel-modal";
 import { ToastMessage } from "@/components/global/ToastMessage";
+import { SubscriptionStackingOverview } from "@/components/pages/subscriptions/SubscriptionStackingOverview";
 
 export const Route = createFileRoute(
   "/_protected/subscriptions/$subscriptionId/"
@@ -69,6 +70,8 @@ function SubscriptionDetailsPage() {
         onCancel={() => setIsCancelModalOpen(true)}
         onUnfreeze={handleUnfreeze}
       />
+
+      <SubscriptionStackingOverview subscription={subscription} />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="flex flex-col gap-6">

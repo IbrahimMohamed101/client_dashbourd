@@ -35,6 +35,10 @@ import {
   createColumnHelper,
 } from "@tanstack/react-table";
 import { getApiErrorMessage } from "@/lib/apiErrors";
+import {
+  isManualDeductionAllowed,
+  subscriptionPlanLabel,
+} from "@/lib/subscriptionStackingPresentation";
 
 import { CustomerSearch } from "./CustomerSearch";
 import { DeductionForm } from "./DeductionForm";
@@ -137,6 +141,10 @@ export default function ManualDeductionPage() {
   };
 
   const handleSelectSubscription = (sub: Subscription) => {
+    if (!isManualDeductionAllowed(sub)) {
+      toast.error("الخصم اليدوي غير متاح للاشتراكات متعددة الباقات");
+      return;
+    }
     if (sub.balance?.balanced === false) {
       toast.error("رصيد الاشتراك غير متوازن ويحتاج مراجعة قبل تنفيذ أي خصم");
       return;
@@ -153,6 +161,10 @@ export default function ManualDeductionPage() {
     form: DeductionFormReturn
   ) => {
     if (!selectedSubscription) return;
+    if (!isManualDeductionAllowed(selectedSubscription)) {
+      toast.error("تم إيقاف الخصم لحماية أرصدة الحزم");
+      return;
+    }
 
     const addons = values.addons
       .filter((addon) => Number(addon.qty) > 0)
@@ -269,7 +281,7 @@ export default function ManualDeductionPage() {
         </div>
       ),
     }),
-    columnHelper.accessor((row) => row.planName || row.plan?.name || "—", {
+    columnHelper.accessor((row) => subscriptionPlanLabel(row), {
       id: "planName",
       header: "الخطة",
       cell: (info) => (
@@ -357,6 +369,7 @@ export default function ManualDeductionPage() {
         const alreadyDeductedToday =
           row.deliveryMode === "delivery" && row.hasDeliveryDeductionToday;
         const balanceNeedsReview = row.balance?.balanced === false;
+        const manualDeductionAllowed = isManualDeductionAllowed(row);
 
         return (
           <div className="flex flex-col gap-2">
@@ -370,13 +383,18 @@ export default function ManualDeductionPage() {
                 الرصيد يحتاج مراجعة
               </Badge>
             ) : null}
+            {!manualDeductionAllowed ? (
+              <Badge variant="outline" className="w-fit border-blue-500/30 bg-blue-500/10 text-blue-700">
+                متعدد الباقات — عرض فقط
+              </Badge>
+            ) : null}
             <Button
               variant="outline"
               size="sm"
-              disabled={balanceNeedsReview}
+              disabled={balanceNeedsReview || !manualDeductionAllowed}
               onClick={() => handleSelectSubscription(row)}
             >
-              اختيار
+              {manualDeductionAllowed ? "اختيار" : "الخصم متوقف"}
             </Button>
           </div>
         );
