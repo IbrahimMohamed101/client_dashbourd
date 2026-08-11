@@ -1,10 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Subscription } from "@/types/subscriptionTypes";
 import type {
-  Subscription,
   SubscriptionStackingPackage,
   SubscriptionStackingPayment,
-} from "@/types/subscriptionTypes";
+} from "@/types/subscriptionStackingTypes";
 import { CreditCard, Layers3 } from "lucide-react";
 
 function formatDate(value?: string | null) {
