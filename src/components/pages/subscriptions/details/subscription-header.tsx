@@ -7,7 +7,8 @@ import {
   BanIcon,
   PlusIcon,
   PauseIcon,
-  PlayIcon
+  PlayIcon,
+  PrinterIcon,
 } from "lucide-react";
 import type { Subscription } from "@/types/subscriptionTypes";
 import { hasEntitlementBatches } from "@/lib/subscriptionStackingPresentation";
@@ -18,6 +19,7 @@ interface SubscriptionHeaderProps {
   onExtend: () => void;
   onCancel: () => void;
   onUnfreeze: () => void;
+  onInvoice: () => void;
 }
 
 export function SubscriptionHeader({
@@ -25,7 +27,8 @@ export function SubscriptionHeader({
   onFreeze,
   onExtend,
   onCancel,
-  onUnfreeze
+  onUnfreeze,
+  onInvoice,
 }: SubscriptionHeaderProps) {
   const isCanceled = subscription.status === "canceled";
   const isExpired = subscription.status === "expired" || subscription.status === "ended";
@@ -76,6 +79,11 @@ export function SubscriptionHeader({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <Button variant="default" size="sm" onClick={onInvoice} className="gap-2">
+          <PrinterIcon className="size-4" />
+          طباعة الفاتورة
+        </Button>
+
         <Button variant="outline" size="sm" className="bg-background">
           <CalendarIcon className="mr-2 ml-1 size-4" />
           الجدول الزمني
