@@ -23,6 +23,7 @@ import { ExtendModal } from "@/components/pages/subscriptions/details/modals/ext
 import { CancelModal } from "@/components/pages/subscriptions/details/modals/cancel-modal";
 import { ToastMessage } from "@/components/global/ToastMessage";
 import { SubscriptionStackingOverview } from "@/components/pages/subscriptions/SubscriptionStackingOverview";
+import { SubscriptionInvoiceDialog } from "@/components/pages/subscriptions/invoice/SubscriptionInvoiceDialog";
 
 export const Route = createFileRoute(
   "/_protected/subscriptions/$subscriptionId/"
@@ -50,6 +51,7 @@ function SubscriptionDetailsPage() {
   const [isFreezeModalOpen, setIsFreezeModalOpen] = useState(false);
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
   const handleUnfreeze = async () => {
     try {
@@ -69,6 +71,7 @@ function SubscriptionDetailsPage() {
         onExtend={() => setIsExtendModalOpen(true)}
         onCancel={() => setIsCancelModalOpen(true)}
         onUnfreeze={handleUnfreeze}
+        onInvoice={() => setIsInvoiceOpen(true)}
       />
 
       <SubscriptionStackingOverview subscription={subscription} />
@@ -101,6 +104,11 @@ function SubscriptionDetailsPage() {
         subscriptionId={subscription._id}
         isOpen={isCancelModalOpen}
         onClose={() => setIsCancelModalOpen(false)}
+      />
+      <SubscriptionInvoiceDialog
+        subscriptionId={subscription._id}
+        open={isInvoiceOpen}
+        onOpenChange={setIsInvoiceOpen}
       />
     </div>
   );
