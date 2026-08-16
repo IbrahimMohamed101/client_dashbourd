@@ -1,0 +1,57 @@
+name: Apply tax invoice title update
+
+on:
+  push:
+    paths:
+      - .github/workflows/update-invoice-tax-title.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Update printed tax invoice title
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/components/pages/subscriptions/invoice/SubscriptionInvoiceDialog.tsx')
+          text = path.read_text()
+          old = '''              <p className="mt-2 text-[12px] font-black">
+                {isTaxInvoice ? "فاتورة ضريبية مبسطة" : "فاتورة اشتراك"}
+              </p>
+              {invoice.seller.vatRegistrationNumber ? ('''
+          new = '''              <p className="mt-2 text-[12px] font-black">
+                {isTaxInvoice ? "فاتورة ضريبية" : "فاتورة اشتراك"}
+              </p>
+              {isTaxInvoice ? (
+                <p className="text-[9px] font-semibold" dir="ltr">
+                  Tax Invoice
+                </p>
+              ) : null}
+              {invoice.seller.vatRegistrationNumber ? ('''
+          if old not in text:
+              raise SystemExit('Expected invoice title block not found; refusing unsafe edit')
+          updated = text.replace(old, new, 1)
+          if 'فاتورة ضريبية مبسطة' in updated:
+              raise SystemExit('Old simplified title still present')
+          path.write_text(updated)
+          PY
+
+          git diff --check
+          git diff -- src/components/pages/subscriptions/invoice/SubscriptionInvoiceDialog.tsx
+
+      - name: Commit to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/pages/subscriptions/invoice/SubscriptionInvoiceDialog.tsx
+          git commit -m "ux: simplify printed tax invoice title"
+          git push origin HEAD:main
