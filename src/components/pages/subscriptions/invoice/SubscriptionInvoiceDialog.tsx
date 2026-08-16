@@ -243,6 +243,8 @@ export function SubscriptionInvoiceDialog({
   const financial = invoice?.financial;
   const tax = invoice?.tax;
   const lineItems = financial?.lineItems || [];
+  const hasDeliveryLineItem = lineItems.some((item) => item.kind === "delivery");
+  const hasDiscountLineItem = lineItems.some((item) => item.kind === "discount");
   const isTaxInvoice = Boolean(invoice?.tax.taxInvoiceEligible);
   const hasInternalMismatch =
     financial?.reconciliationStatus === "payment_authoritative_mismatch";
@@ -432,7 +434,7 @@ export function SubscriptionInvoiceDialog({
                 />
               ) : null}
 
-              {financial && financial.discountHalala > 0 ? (
+              {financial && financial.discountHalala > 0 && !hasDiscountLineItem ? (
                 <ReceiptRow
                   label="الخصم"
                   value={formatMoney(financial.discountHalala, currency)}
@@ -440,7 +442,7 @@ export function SubscriptionInvoiceDialog({
                 />
               ) : null}
 
-              {financial && financial.deliveryFeeHalala > 0 ? (
+              {financial && financial.deliveryFeeHalala > 0 && !hasDeliveryLineItem ? (
                 <ReceiptRow
                   label="رسوم التوصيل"
                   value={formatMoney(financial.deliveryFeeHalala, currency)}
