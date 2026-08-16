@@ -1,8 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AlertTriangle, Loader2, Printer, X } from "lucide-react";
 import api from "@/lib/apis";
 import { Button } from "@/components/ui/button";
 import { getApiErrorMessage } from "@/lib/apiErrors";
+
+type InvoiceLineItem = {
+  kind: string;
+  labelAr: string;
+  amountHalala: number;
+};
 
 type InvoiceData = {
   invoiceNumber: string;
@@ -31,11 +37,8 @@ type InvoiceData = {
     source: "payment" | "subscription_snapshot" | "unavailable";
     financialDataComplete: boolean;
     reconciliationStatus: string;
-    basePlanGrossHalala: number | null;
-    basePlanNetHalala: number | null;
+    lineItems: InvoiceLineItem[];
     discountHalala: number;
-    subtotalHalala: number | null;
-    subtotalBeforeVatHalala: number | null;
     deliveryFeeHalala: number;
     vatPercentage: number | null;
     vatHalala: number;
@@ -102,9 +105,9 @@ function formatMoney(halala: number | null, currency: string) {
       currency: currency || "SAR",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(halala / 100);
+    }).format(Math.abs(halala) / 100);
   } catch {
-    return `${(halala / 100).toFixed(2)} ${currency || "SAR"}`;
+    return `${(Math.abs(halala) / 100).toFixed(2)} ${currency || "SAR"}`;
   }
 }
 
@@ -138,7 +141,7 @@ function statusLabel(status: string) {
   return status || "—";
 }
 
-function InfoItem({ label, value }: { label: string; value: React.ReactNode }) {
+function InfoItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-2.5 last:border-0">
       <span className="shrink-0 text-xs font-medium text-slate-500">{label}</span>
@@ -220,12 +223,9 @@ export function SubscriptionInvoiceDialog({ subscriptionId, open, onOpenChange }
 
   const currency = invoice?.financial.currency || "SAR";
   const financial = invoice?.financial;
-  const showVat = Boolean(financial && (financial.vatHalala > 0 || Number(financial.vatPercentage || 0) > 0));
-  const showDiscount = Boolean(financial && financial.discountHalala > 0);
-  const showDeliveryFee = Boolean(financial && financial.deliveryFeeHalala > 0);
-  const preVat = financial?.subtotalBeforeVatHalala ?? financial?.subtotalHalala ?? financial?.basePlanGrossHalala ?? null;
   const printedTotal = financial?.totalHalala ?? null;
   const hasInternalMismatch = financial?.reconciliationStatus === "payment_authoritative_mismatch";
+  const lineItems = financial?.lineItems || [];
 
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" dir="rtl">
@@ -349,23 +349,28 @@ export function SubscriptionInvoiceDialog({ subscriptionId, open, onOpenChange }
               <section className="overflow-hidden rounded-xl border border-slate-200">
                 <div className="flex items-center justify-between bg-emerald-900 px-4 py-3 text-white">
                   <h2 className="font-black">التفاصيل المالية</h2>
-                  <span className="text-xs text-emerald-100">جميع القيم بالعملة {currency}</span>
+                  <span className="text-xs text-emerald-100">العملة: {currency}</span>
                 </div>
                 <div>
-                  <AmountRow label="قيمة الاشتراك قبل الضريبة" value={formatMoney(preVat, currency)} />
-                  {showDiscount ? (
-                    <AmountRow label="الخصم" value={formatMoney(financial.discountHalala, currency)} negative />
-                  ) : null}
-                  {showDeliveryFee ? (
-                    <AmountRow label="رسوم التوصيل" value={formatMoney(financial.deliveryFeeHalala, currency)} />
-                  ) : null}
-                  {showVat ? (
+                  {lineItems.map((item, index) => (
                     <AmountRow
-                      label={`ضريبة القيمة المضافة${financial.vatPercentage !== null ? ` (${financial.vatPercentage}%)` : ""}`}
-                      value={formatMoney(financial.vatHalala, currency)}
+                      key={`${item.kind}-${index}`}
+                      label={
+                        item.kind === "vat" && financial?.vatPercentage !== null
+                          ? `${item.labelAr} (${financial?.vatPercentage}%) — ضمن الإجمالي`
+                          : item.kind === "vat"
+                            ? `${item.labelAr} — ضمن الإجمالي`
+                            : item.labelAr
+                      }
+                      value={formatMoney(item.amountHalala, currency)}
+                      negative={item.amountHalala < 0}
                     />
-                  ) : null}
-                  <AmountRow label="الإجمالي النهائي" value={formatMoney(printedTotal, currency)} strong />
+                  ))}
+                  <AmountRow
+                    label={invoice.payment ? "الإجمالي المدفوع" : "الإجمالي النهائي"}
+                    value={formatMoney(printedTotal, currency)}
+                    strong
+                  />
                 </div>
               </section>
             </div>
