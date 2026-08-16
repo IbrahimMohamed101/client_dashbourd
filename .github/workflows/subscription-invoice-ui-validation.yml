@@ -46,29 +46,48 @@ jobs:
             echo "Expected the deployed invoice route to reject an unauthenticated request with 401/403."
             exit 1
           fi
-      - name: Verify production dashboard bundle contains invoice UI
+      - name: Verify production dashboard lazy chunks contain invoice UI
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
           base="https://clientdashbourd-production.up.railway.app"
-          curl --silent --show-error --location --max-time 20 "$base/" -o /tmp/dashboard-index.html
+          work=/tmp/dashboard-crawl
+          mkdir -p "$work"
+          curl --silent --show-error --location --max-time 20 "$base/" -o "$work/index.html"
           python - <<'PY'
-          import re, pathlib, urllib.parse
-          html = pathlib.Path('/tmp/dashboard-index.html').read_text(errors='ignore')
-          assets = re.findall(r'(?:src|href)=["\']([^"\']+\.(?:js|css))(?:\?[^"\']*)?["\']', html)
-          print('\n'.join(assets))
-          pathlib.Path('/tmp/assets.txt').write_text('\n'.join(assets))
+          import pathlib, re, urllib.parse, urllib.request
+
+          base = 'https://clientdashbourd-production.up.railway.app/'
+          root = pathlib.Path('/tmp/dashboard-crawl')
+          queue = []
+          seen = set()
+          blobs = []
+
+          html = (root / 'index.html').read_text(errors='ignore')
+          for value in re.findall(r'(?:src|href)=["\']([^"\']+\.(?:js|css))(?:\?[^"\']*)?["\']', html):
+              queue.append(urllib.parse.urljoin(base, value))
+
+          asset_re = re.compile(r'(?:/|\./)?assets/[A-Za-z0-9_.-]+\.(?:js|css)')
+          while queue and len(seen) < 400:
+              url = queue.pop(0)
+              if url in seen:
+                  continue
+              seen.add(url)
+              try:
+                  with urllib.request.urlopen(url, timeout=20) as r:
+                      data = r.read().decode('utf-8', errors='ignore')
+              except Exception as exc:
+                  print('fetch failed', url, exc)
+                  continue
+              blobs.append(data)
+              for ref in asset_re.findall(data):
+                  queue.append(urllib.parse.urljoin(base, ref))
+
+          combined = '\n'.join(blobs)
+          present = ('طباعة الفاتورة' in combined) or ('SubscriptionInvoiceDialog' in combined) or ('معاينة فاتورة الاشتراك' in combined)
+          print(f'crawled_assets={len(seen)}')
+          print(f'invoice_ui_present={1 if present else 0}')
+          if not present:
+              raise SystemExit(1)
           PY
-          found=0
-          while IFS= read -r asset; do
-            [ -z "$asset" ] && continue
-            if [[ "$asset" == http* ]]; then url="$asset"; else url="$base/${asset#/}"; fi
-            curl --silent --show-error --location --max-time 20 "$url" >> /tmp/dashboard-bundle.txt
-            printf '\n' >> /tmp/dashboard-bundle.txt
-          done < /tmp/assets.txt
-          if grep -Fq "طباعة الفاتورة" /tmp/dashboard-bundle.txt || grep -Fq "SubscriptionInvoiceDialog" /tmp/dashboard-bundle.txt; then
-            found=1
-          fi
-          echo "invoice_ui_present=$found"
-          test "$found" = "1"
