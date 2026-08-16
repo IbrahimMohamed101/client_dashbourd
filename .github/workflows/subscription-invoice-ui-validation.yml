@@ -1,0 +1,35 @@
+name: Subscription invoice UI validation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/components/pages/subscriptions/invoice/**"
+      - "src/components/pages/subscriptions/details/subscription-header.tsx"
+      - "src/routes/_protected/subscriptions/$subscriptionId/index.tsx"
+      - ".github/workflows/subscription-invoice-ui-validation.yml"
+  pull_request:
+    paths:
+      - "src/components/pages/subscriptions/invoice/**"
+      - "src/components/pages/subscriptions/details/subscription-header.tsx"
+      - "src/routes/_protected/subscriptions/$subscriptionId/index.tsx"
+      - ".github/workflows/subscription-invoice-ui-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Typecheck and build dashboard
+        run: npm run build
