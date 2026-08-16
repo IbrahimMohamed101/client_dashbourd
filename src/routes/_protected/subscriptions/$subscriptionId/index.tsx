@@ -6,6 +6,8 @@ import {
 } from "@/hooks/useSubscriptionsQuery";
 import { Loader } from "@/components/global/loader";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { ReceiptText, ShieldCheck } from "lucide-react";
 
 import { SubscriptionHeader } from "@/components/pages/subscriptions/details/subscription-header";
 import {
@@ -73,6 +75,34 @@ function SubscriptionDetailsPage() {
         onUnfreeze={handleUnfreeze}
         onInvoice={() => setIsInvoiceOpen(true)}
       />
+
+      <section className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-gradient-to-l from-primary/10 via-primary/5 to-background p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <ReceiptText className="size-6" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-bold">فاتورة الاشتراك</h2>
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                <ShieldCheck className="size-3.5" />
+                فاتورة ضريبية + QR
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              اعرض الفاتورة المرتبطة بهذا الاشتراك وراجع بياناتها ثم اطبعها مباشرة.
+            </p>
+          </div>
+        </div>
+        <Button
+          size="lg"
+          onClick={() => setIsInvoiceOpen(true)}
+          className="w-full gap-2 px-6 font-bold shadow-sm sm:w-auto"
+        >
+          <ReceiptText className="size-5" />
+          عرض وطباعة الفاتورة
+        </Button>
+      </section>
 
       <SubscriptionStackingOverview subscription={subscription} />
 
