@@ -361,8 +361,13 @@ export function SubscriptionInvoiceDialog({
                 </p>
               ) : null}
               <p className="mt-2 text-[12px] font-black">
-                {isTaxInvoice ? "فاتورة ضريبية مبسطة" : "فاتورة اشتراك"}
+                {isTaxInvoice ? "فاتورة ضريبية" : "فاتورة اشتراك"}
               </p>
+              {isTaxInvoice ? (
+                <p className="text-[9px] font-semibold" dir="ltr">
+                  Tax Invoice
+                </p>
+              ) : null}
               {invoice.seller.vatRegistrationNumber ? (
                 <p className="mt-1 text-[10px]">
                   الرقم الضريبي: <span dir="ltr">{invoice.seller.vatRegistrationNumber}</span>
