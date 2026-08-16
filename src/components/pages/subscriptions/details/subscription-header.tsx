@@ -19,7 +19,7 @@ interface SubscriptionHeaderProps {
   onExtend: () => void;
   onCancel: () => void;
   onUnfreeze: () => void;
-  onInvoice: () => void;
+  onInvoice?: () => void;
 }
 
 export function SubscriptionHeader({
@@ -79,10 +79,12 @@ export function SubscriptionHeader({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="default" size="sm" onClick={onInvoice} className="gap-2">
-          <PrinterIcon className="size-4" />
-          طباعة الفاتورة
-        </Button>
+        {onInvoice ? (
+          <Button variant="default" size="sm" onClick={onInvoice} className="gap-2">
+            <PrinterIcon className="size-4" />
+            طباعة الفاتورة
+          </Button>
+        ) : null}
 
         <Button variant="outline" size="sm" className="bg-background">
           <CalendarIcon className="mr-2 ml-1 size-4" />
