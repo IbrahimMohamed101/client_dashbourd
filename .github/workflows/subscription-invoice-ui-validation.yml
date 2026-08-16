@@ -7,12 +7,18 @@ on:
     paths:
       - "src/components/pages/subscriptions/invoice/**"
       - "src/components/pages/subscriptions/details/subscription-header.tsx"
+      - "src/components/pages/subscriptions/subscriptions-table.tsx"
+      - "src/components/pages/subscriptions/subscriptions-columns.tsx"
+      - "src/components/pages/subscriptions/create/CreateSubscriptionFormContent.tsx"
       - "src/routes/_protected/subscriptions/$subscriptionId/index.tsx"
       - ".github/workflows/subscription-invoice-ui-validation.yml"
   pull_request:
     paths:
       - "src/components/pages/subscriptions/invoice/**"
       - "src/components/pages/subscriptions/details/subscription-header.tsx"
+      - "src/components/pages/subscriptions/subscriptions-table.tsx"
+      - "src/components/pages/subscriptions/subscriptions-columns.tsx"
+      - "src/components/pages/subscriptions/create/CreateSubscriptionFormContent.tsx"
       - "src/routes/_protected/subscriptions/$subscriptionId/index.tsx"
       - ".github/workflows/subscription-invoice-ui-validation.yml"
   workflow_dispatch:
@@ -46,7 +52,7 @@ jobs:
             echo "Expected the deployed invoice route to reject an unauthenticated request with 401/403."
             exit 1
           fi
-      - name: Verify production dashboard lazy chunks contain tax invoice UI
+      - name: Verify production dashboard exposes prominent invoice actions
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
@@ -56,10 +62,9 @@ jobs:
           mkdir -p "$work"
           curl --silent --show-error --location --max-time 20 "$base/" -o "$work/index.html"
           python - <<'PY'
-          import pathlib, re, urllib.parse, urllib.request, time
+          import re, urllib.parse, urllib.request, time
 
           base = 'https://clientdashbourd-production.up.railway.app/'
-          root = pathlib.Path('/tmp/dashboard-crawl')
           asset_re = re.compile(r'(?:/|\./)?assets/[A-Za-z0-9_.-]+\.(?:js|css)')
 
           def crawl():
@@ -86,15 +91,22 @@ jobs:
                       queue.append(urllib.parse.urljoin(base, ref))
               return len(seen), '\n'.join(blobs)
 
-          for attempt in range(1, 7):
+          for attempt in range(1, 8):
               count, combined = crawl()
-              invoice_present = ('طباعة الفاتورة' in combined) or ('SubscriptionInvoiceDialog' in combined)
+              invoice_present = ('عرض وطباعة الفاتورة' in combined) and ('SubscriptionInvoiceDialog' in combined)
               tax_present = ('فاتورة ضريبية مبسطة' in combined) or ('SIMPLIFIED TAX INVOICE' in combined)
               qr_present = ('QR الفاتورة الضريبية' in combined) or ('Tax invoice QR code' in combined)
-              print(f'attempt={attempt} crawled_assets={count} invoice={int(invoice_present)} tax={int(tax_present)} qr={int(qr_present)}')
-              if invoice_present and tax_present and qr_present:
+              list_action_present = ('فواتير الاشتراكات' in combined) and ('بدون الدخول للتفاصيل' in combined)
+              create_action_present = ('الفاتورة جاهزة للطباعة' in combined)
+              details_action_present = ('فاتورة الاشتراك' in combined) and ('فاتورة ضريبية + QR' in combined)
+              print(
+                  f'attempt={attempt} crawled_assets={count} '
+                  f'invoice={int(invoice_present)} tax={int(tax_present)} qr={int(qr_present)} '
+                  f'list={int(list_action_present)} create={int(create_action_present)} details={int(details_action_present)}'
+              )
+              if all((invoice_present, tax_present, qr_present, list_action_present, create_action_present, details_action_present)):
                   raise SystemExit(0)
-              if attempt < 6:
+              if attempt < 7:
                   time.sleep(10)
           raise SystemExit(1)
           PY
