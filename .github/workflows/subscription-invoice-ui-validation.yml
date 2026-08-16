@@ -33,3 +33,16 @@ jobs:
       - run: npm ci
       - name: Typecheck and build dashboard
         run: npm run build
+      - name: Smoke production backend invoice route
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://basicdiet145-production-51e9.up.railway.app/api/dashboard/subscriptions/000000000000000000000000/invoice"
+          status="$(curl --silent --show-error --location --output /tmp/invoice-smoke.json --write-out '%{http_code}' --max-time 20 "$url")"
+          echo "invoice route unauthenticated status=$status"
+          if [[ "$status" != "401" && "$status" != "403" ]]; then
+            cat /tmp/invoice-smoke.json || true
+            echo "Expected the deployed invoice route to reject an unauthenticated request with 401/403."
+            exit 1
+          fi
