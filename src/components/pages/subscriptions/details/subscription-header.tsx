@@ -8,7 +8,7 @@ import {
   PlusIcon,
   PauseIcon,
   PlayIcon,
-  PrinterIcon,
+  ReceiptText,
 } from "lucide-react";
 import type { Subscription } from "@/types/subscriptionTypes";
 import { hasEntitlementBatches } from "@/lib/subscriptionStackingPresentation";
@@ -36,7 +36,7 @@ export function SubscriptionHeader({
 
   let statusLabel = subscription.status;
   let variant: "default" | "secondary" | "destructive" | "outline" = "default";
-  
+
   switch (subscription.status) {
     case "active":
       statusLabel = "نشط";
@@ -59,63 +59,79 @@ export function SubscriptionHeader({
   const badgeVariant = variant;
 
   return (
-    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-      <div className="flex items-center gap-4">
+    <div className="mb-6 flex flex-col gap-5 rounded-2xl border bg-card p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between lg:p-5">
+      <div className="flex min-w-0 items-center gap-4">
         <Button variant="ghost" size="icon" asChild className="shrink-0 rounded-full">
           <Link to="/subscriptions">
             <ArrowRightIcon className="size-5" />
           </Link>
         </Button>
-        <div className="flex flex-col">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">الاشتراكات</h1>
-            <h2 className="text-xl font-semibold text-muted-foreground mr-2">{subscription.displayId}</h2>
-            <Badge variant={badgeVariant} className={variant === 'default' ? 'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 border-emerald-500/20 shadow-none' : ''}>
+        <div className="min-w-0">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">تفاصيل الاشتراك</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">{subscription.displayId}</h1>
+            <Badge
+              variant={badgeVariant}
+              className={
+                variant === "default"
+                  ? "border-emerald-500/20 bg-emerald-500/15 text-emerald-700 shadow-none hover:bg-emerald-500/25"
+                  : ""
+              }
+            >
               {statusLabel}
             </Badge>
             {hasBatches ? <Badge variant="outline">حاوية متعددة الباقات</Badge> : null}
           </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {subscription.userName || subscription.user?.fullName || "المشترك"}
+          </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex w-full flex-col gap-3 lg:w-auto">
         {onInvoice ? (
-          <Button variant="default" size="sm" onClick={onInvoice} className="gap-2">
-            <PrinterIcon className="size-4" />
-            طباعة الفاتورة
+          <Button
+            size="lg"
+            onClick={onInvoice}
+            className="w-full gap-2 px-6 font-bold shadow-sm lg:w-auto"
+          >
+            <ReceiptText className="size-5" />
+            عرض وطباعة الفاتورة
           </Button>
         ) : null}
 
-        <Button variant="outline" size="sm" className="bg-background">
-          <CalendarIcon className="mr-2 ml-1 size-4" />
-          الجدول الزمني
-        </Button>
-        
-        {!isCanceled && !isExpired && !hasBatches && (
-          <>
-            <Button variant="outline" size="sm" className="bg-background" onClick={onExtend}>
-              <PlusIcon className="mr-2 ml-1 size-4" />
-              تمديد
-            </Button>
-            
-            {subscription.status === "frozen" ? (
-              <Button variant="outline" size="sm" className="bg-background" onClick={onUnfreeze}>
-                <PlayIcon className="mr-2 ml-1 size-4" />
-                إلغاء التجميد
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" className="bg-background" onClick={onFreeze}>
-                <PauseIcon className="mr-2 ml-1 size-4" />
-                تجميد
-              </Button>
-            )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" className="bg-background">
+            <CalendarIcon className="mr-2 ml-1 size-4" />
+            الجدول الزمني
+          </Button>
 
-            <Button variant="destructive" size="sm" onClick={onCancel}>
-              <BanIcon className="mr-2 ml-1 size-4" />
-              إلغاء الاشتراك
-            </Button>
-          </>
-        )}
+          {!isCanceled && !isExpired && !hasBatches && (
+            <>
+              <Button variant="outline" size="sm" className="bg-background" onClick={onExtend}>
+                <PlusIcon className="mr-2 ml-1 size-4" />
+                تمديد
+              </Button>
+
+              {subscription.status === "frozen" ? (
+                <Button variant="outline" size="sm" className="bg-background" onClick={onUnfreeze}>
+                  <PlayIcon className="mr-2 ml-1 size-4" />
+                  إلغاء التجميد
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" className="bg-background" onClick={onFreeze}>
+                  <PauseIcon className="mr-2 ml-1 size-4" />
+                  تجميد
+                </Button>
+              )}
+
+              <Button variant="destructive" size="sm" onClick={onCancel}>
+                <BanIcon className="mr-2 ml-1 size-4" />
+                إلغاء الاشتراك
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
