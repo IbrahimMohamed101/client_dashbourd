@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusIcon, SearchIcon } from "lucide-react";
+import { PlusIcon, ReceiptText, SearchIcon } from "lucide-react";
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
 import { getSubscriptionsColumns } from "./subscriptions-columns";
@@ -35,6 +35,7 @@ import { buttonVariants } from "@/components/custom/button-variants";
 import { cn } from "@/lib/utils";
 import type { Subscription } from "@/types/subscriptionTypes";
 import { SubscriptionQuickViewDialog } from "./SubscriptionQuickViewDialog";
+import { SubscriptionInvoiceDialog } from "./invoice/SubscriptionInvoiceDialog";
 
 export function SubscriptionsTable() {
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
@@ -48,6 +49,8 @@ export function SubscriptionsTable() {
   });
   const [selectedSubscription, setSelectedSubscription] =
     React.useState<Subscription | null>(null);
+  const [invoiceSubscriptionId, setInvoiceSubscriptionId] =
+    React.useState<string | null>(null);
 
   const { data: response, isLoading } =
     useSubscriptionsFulfillmentListQuery({
@@ -64,6 +67,8 @@ export function SubscriptionsTable() {
     () =>
       getSubscriptionsColumns({
         onView: setSelectedSubscription,
+        onInvoice: (subscription) =>
+          setInvoiceSubscriptionId(subscription._id || subscription.id),
       }),
     []
   );
@@ -82,6 +87,23 @@ export function SubscriptionsTable() {
 
   return (
     <div className="w-full flex-col justify-start gap-6" dir="rtl">
+      <div className="mx-4 mb-4 flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between lg:mx-6">
+        <div className="flex items-center gap-3">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+            <ReceiptText className="size-5" />
+          </div>
+          <div>
+            <p className="font-bold">فواتير الاشتراكات</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              لطباعة فاتورة أي مشترك حالي أو سابق، استخدم زر «الفاتورة» الموجود مباشرة في صف الاشتراك.
+            </p>
+          </div>
+        </div>
+        <span className="w-fit rounded-full border bg-background px-3 py-1 text-xs font-semibold text-primary">
+          بدون الدخول للتفاصيل
+        </span>
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         <div className="flex flex-wrap items-center gap-3">
@@ -232,6 +254,14 @@ export function SubscriptionsTable() {
         subscription={selectedSubscription}
         onOpenChange={(open) => {
           if (!open) setSelectedSubscription(null);
+        }}
+      />
+
+      <SubscriptionInvoiceDialog
+        subscriptionId={invoiceSubscriptionId || ""}
+        open={!!invoiceSubscriptionId}
+        onOpenChange={(open) => {
+          if (!open) setInvoiceSubscriptionId(null);
         }}
       />
     </div>
