@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { AlertTriangle, Loader2, Printer, QrCode, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, Loader2, Printer, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import api from "@/lib/apis";
 import { Button } from "@/components/ui/button";
@@ -127,7 +127,6 @@ function formatDateTime(value: string | null) {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     timeZone: RIYADH_TIME_ZONE,
   }).format(date);
 }
@@ -167,64 +166,41 @@ function deliveryModeLabel(mode: string) {
   return mode || "—";
 }
 
-function statusLabel(status: string) {
-  if (status === "active") return "نشط";
-  if (status === "pending_payment") return "بانتظار الدفع";
-  if (status === "frozen") return "مجمّد";
-  if (status === "expired" || status === "completed" || status === "ended") return "منتهي";
-  if (status === "canceled") return "ملغى";
-  return status || "—";
-}
-
-function InfoItem({ label, value, mono = false }: { label: string; value: ReactNode; mono?: boolean }) {
+function ReceiptRow({
+  label,
+  value,
+  strong = false,
+  negative = false,
+}: {
+  label: string;
+  value: ReactNode;
+  strong?: boolean;
+  negative?: boolean;
+}) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-2.5 last:border-0">
-      <span className="shrink-0 text-xs font-medium text-slate-500">{label}</span>
-      <span
-        className={`text-left text-sm font-semibold text-slate-800 ${mono ? "font-mono tracking-wide" : ""}`}
-        dir="auto"
-      >
+    <div
+      className={`flex items-start justify-between gap-3 py-1.5 ${
+        strong ? "border-y-2 border-black py-2 text-[13px] font-black" : "text-[11px]"
+      }`}
+    >
+      <span className={strong ? "font-black" : "font-medium"}>{label}</span>
+      <span className={strong ? "font-black" : "font-semibold"} dir="auto">
+        {negative ? "- " : ""}
         {value || "—"}
       </span>
     </div>
   );
 }
 
-function AmountRow({
-  label,
-  value,
-  strong = false,
-  negative = false,
-  muted = false,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-  negative?: boolean;
-  muted?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3 last:border-0 ${
-        strong ? "bg-emerald-50/80 text-base" : "text-sm"
-      }`}
-    >
-      <span className={strong ? "font-bold text-emerald-950" : muted ? "text-slate-500" : "text-slate-600"}>
-        {label}
-      </span>
-      <span
-        className={`${strong ? "text-xl font-black text-emerald-800" : "font-semibold text-slate-900"} ${
-          negative ? "text-rose-600" : ""
-        }`}
-        dir="ltr"
-      >
-        {negative && value !== "—" ? `- ${value}` : value}
-      </span>
-    </div>
-  );
+function DashedDivider() {
+  return <div className="my-2 border-t border-dashed border-black" aria-hidden="true" />;
 }
 
-export function SubscriptionInvoiceDialog({ subscriptionId, open, onOpenChange }: Props) {
+export function SubscriptionInvoiceDialog({
+  subscriptionId,
+  open,
+  onOpenChange,
+}: Props) {
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -266,273 +242,268 @@ export function SubscriptionInvoiceDialog({ subscriptionId, open, onOpenChange }
   const currency = invoice?.financial.currency || "SAR";
   const financial = invoice?.financial;
   const tax = invoice?.tax;
-  const printedTotal = financial?.totalHalala ?? null;
-  const hasInternalMismatch = financial?.reconciliationStatus === "payment_authoritative_mismatch";
   const lineItems = financial?.lineItems || [];
   const isTaxInvoice = Boolean(invoice?.tax.taxInvoiceEligible);
-  const preVatWarning = invoice?.warnings.find((warning) => warning.code === "PRE_VAT_EFFECTIVE_DATE");
+  const hasInternalMismatch =
+    financial?.reconciliationStatus === "payment_authoritative_mismatch";
+  const preVatWarning = invoice?.warnings.find(
+    (warning) => warning.code === "PRE_VAT_EFFECTIVE_DATE"
+  );
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6" dir="rtl">
+    <div
+      className="fixed inset-0 z-[100] overflow-y-auto bg-black/70 p-3 sm:p-5"
+      dir="rtl"
+    >
       <style>{`
         @media print {
-          html, body { background: white !important; }
-          body * { visibility: hidden !important; }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+          body * {
+            visibility: hidden !important;
+          }
           .subscription-invoice-print-root,
-          .subscription-invoice-print-root * { visibility: visible !important; }
+          .subscription-invoice-print-root * {
+            visibility: visible !important;
+          }
           .subscription-invoice-print-root {
             position: absolute !important;
-            inset: 0 !important;
+            top: 0 !important;
+            right: 0 !important;
             width: 100% !important;
-            max-width: none !important;
-            min-height: auto !important;
+            max-width: 80mm !important;
+            min-height: 0 !important;
             margin: 0 !important;
             border: 0 !important;
             border-radius: 0 !important;
             box-shadow: none !important;
             background: white !important;
+            color: black !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .invoice-no-print { display: none !important; }
-          @page { size: A4; margin: 8mm; }
+          .invoice-no-print {
+            display: none !important;
+          }
+          @page {
+            margin: 0;
+          }
         }
       `}</style>
 
-      <div className="invoice-no-print mx-auto mb-3 flex w-full max-w-[210mm] items-center justify-between gap-3 rounded-xl bg-white p-3 shadow-xl">
+      <div className="invoice-no-print mx-auto mb-3 flex w-full max-w-[80mm] flex-col gap-3 rounded-xl bg-white p-3 shadow-xl">
         <div>
-          <div className="flex items-center gap-2">
-            <p className="font-bold text-slate-900">
-              {isTaxInvoice ? "معاينة الفاتورة الضريبية المبسطة" : "معاينة فاتورة الاشتراك"}
-            </p>
-            {isTaxInvoice ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-bold text-emerald-800">
-                <QrCode className="size-3" /> QR محلي
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {isTaxInvoice
-              ? "الـQR يُولد داخل النظام من بيانات الفاتورة بدون إرسالها إلى خدمة QR خارجية أو ربط مباشر مع ZATCA."
-              : "راجع البيانات ثم اطبع نسخة العميل."}
+          <p className="font-bold text-black">معاينة فاتورة الكاشير</p>
+          <p className="mt-1 text-xs text-neutral-600">
+            فاتورة حرارية 80mm بتصميم أبيض وأسود ومختصر. تتكيف مع عرض ورق الطابعة عند الطباعة.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex gap-2">
           <Button
             type="button"
             onClick={() => window.print()}
             disabled={!invoice || loading || !financial?.financialDataComplete}
-            className="gap-2"
+            className="flex-1 gap-2"
           >
             <Printer className="size-4" />
-            طباعة الفاتورة
+            طباعة
           </Button>
-          <Button type="button" variant="outline" size="icon" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => onOpenChange(false)}
+          >
             <X className="size-4" />
           </Button>
         </div>
       </div>
 
       {hasInternalMismatch ? (
-        <div className="invoice-no-print mx-auto mb-3 flex w-full max-w-[210mm] items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="invoice-no-print mx-auto mb-3 flex w-full max-w-[80mm] items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          <span>يوجد اختلاف تاريخي بين إجمالي الاشتراك وسجل الدفع. تم اعتماد المبلغ المدفوع الفعلي في الفاتورة.</span>
+          <span>
+            يوجد اختلاف تاريخي بين إجمالي الاشتراك وسجل الدفع. المبلغ المطبوع هو المبلغ المدفوع الفعلي المعتمد.
+          </span>
         </div>
       ) : null}
 
       {preVatWarning ? (
-        <div className="invoice-no-print mx-auto mb-3 flex w-full max-w-[210mm] items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="invoice-no-print mx-auto mb-3 flex w-full max-w-[80mm] items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <span>{preVatWarning.messageAr}</span>
         </div>
       ) : null}
 
-      <div className="subscription-invoice-print-root mx-auto min-h-[270mm] w-full max-w-[210mm] overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div
+        className="subscription-invoice-print-root mx-auto w-full max-w-[80mm] overflow-hidden bg-white text-black shadow-2xl"
+        data-print-format="thermal-80mm"
+      >
         {loading ? (
-          <div className="flex min-h-[500px] items-center justify-center gap-3 text-slate-600">
-            <Loader2 className="size-6 animate-spin" />
+          <div className="flex min-h-64 items-center justify-center gap-2 p-6 text-sm">
+            <Loader2 className="size-5 animate-spin" />
             جاري تجهيز الفاتورة...
           </div>
         ) : error ? (
-          <div className="flex min-h-[500px] items-center justify-center p-8 text-center text-rose-600">{error}</div>
+          <div className="min-h-64 p-6 text-center text-sm font-semibold">{error}</div>
         ) : invoice ? (
-          <div className="flex min-h-[270mm] flex-col bg-white text-slate-900">
-            <header className="border-b-4 border-emerald-800 bg-gradient-to-l from-emerald-950 via-emerald-900 to-emerald-800 px-6 py-5 text-white sm:px-9">
-              <div className="flex items-center justify-between gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="flex size-20 items-center justify-center rounded-2xl bg-white p-2 shadow-lg">
-                    <img src="/logo.png" alt="Basic Diet" className="max-h-full max-w-full object-contain" />
-                  </div>
-                  <div>
-                    <p className="text-xl font-black tracking-tight">{invoice.seller.legalNameAr}</p>
-                    <p className="mt-1 text-sm text-emerald-100" dir="ltr">{invoice.seller.legalNameEn}</p>
-                  </div>
-                </div>
-                <div className="text-left" dir="rtl">
-                  <h1 className="text-2xl font-black sm:text-3xl">
-                    {isTaxInvoice ? "فاتورة ضريبية مبسطة" : "فاتورة اشتراك"}
-                  </h1>
-                  <p className="mt-1 text-[10px] font-semibold tracking-[0.13em] text-emerald-100" dir="ltr">
-                    {isTaxInvoice ? "SIMPLIFIED TAX INVOICE" : "SUBSCRIPTION INVOICE"}
-                  </p>
-                </div>
-              </div>
+          <article className="thermal-receipt px-[4mm] py-[4mm] font-sans text-black">
+            <header className="text-center">
+              <h1 className="text-[17px] font-black leading-tight">
+                {invoice.seller.legalNameAr || "Basic Diet"}
+              </h1>
+              {invoice.seller.legalNameEn ? (
+                <p className="mt-0.5 text-[10px] font-semibold" dir="ltr">
+                  {invoice.seller.legalNameEn}
+                </p>
+              ) : null}
+              <p className="mt-2 text-[12px] font-black">
+                {isTaxInvoice ? "فاتورة ضريبية مبسطة" : "فاتورة اشتراك"}
+              </p>
+              {invoice.seller.vatRegistrationNumber ? (
+                <p className="mt-1 text-[10px]">
+                  الرقم الضريبي: <span dir="ltr">{invoice.seller.vatRegistrationNumber}</span>
+                </p>
+              ) : null}
+              {invoice.seller.crNumber ? (
+                <p className="text-[10px]">
+                  السجل التجاري: <span dir="ltr">{invoice.seller.crNumber}</span>
+                </p>
+              ) : null}
+              {invoice.seller.addressAr ? (
+                <p className="mt-1 text-[9px] leading-4">{invoice.seller.addressAr}</p>
+              ) : null}
             </header>
 
-            {!financial?.financialDataComplete ? (
-              <div className="m-6 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 sm:mx-9">
-                <AlertTriangle className="mt-0.5 size-5 shrink-0" />
-                <div>
-                  <p className="font-bold">البيانات المالية التاريخية غير مكتملة</p>
-                  <p className="mt-1">لن يتم طباعة مبلغ تقديري. يلزم وجود سجل دفع أو إجمالي تاريخي موثوق للاشتراك.</p>
-                </div>
-              </div>
+            <DashedDivider />
+
+            <ReceiptRow label="رقم الفاتورة" value={invoice.invoiceNumber} />
+            <ReceiptRow label="التاريخ" value={formatDateTime(invoice.issuedAt)} />
+            <ReceiptRow label="رقم الاشتراك" value={invoice.subscription.displayId} />
+
+            <DashedDivider />
+
+            <ReceiptRow label="العميل" value={invoice.customer.name} />
+            <ReceiptRow label="الجوال" value={invoice.customer.phone} />
+            <ReceiptRow
+              label="الباقة"
+              value={invoice.subscription.planName.ar || invoice.subscription.planName.en}
+            />
+            {invoice.subscription.totalMeals !== null ? (
+              <ReceiptRow label="عدد الوجبات" value={invoice.subscription.totalMeals} />
             ) : null}
+            <ReceiptRow
+              label="الفترة"
+              value={`${formatDate(invoice.subscription.startDate)} — ${formatDate(
+                invoice.subscription.endDate
+              )}`}
+            />
+            <ReceiptRow
+              label="الاستلام"
+              value={deliveryModeLabel(invoice.subscription.deliveryMode)}
+            />
 
-            <div className="grid gap-4 px-6 pt-6 sm:grid-cols-[1.15fr_1fr_150px] sm:px-9">
-              <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                <h2 className="mb-2 border-b border-emerald-200 pb-2 text-sm font-black text-emerald-900">بيانات المورد</h2>
-                <InfoItem label="الاسم" value={invoice.seller.legalNameAr} />
-                <InfoItem label="الرقم الضريبي" value={invoice.seller.vatRegistrationNumber} mono />
-                <InfoItem label="السجل التجاري" value={invoice.seller.crNumber} mono />
-                <InfoItem label="العنوان" value={invoice.seller.addressAr} />
-              </section>
+            <DashedDivider />
 
-              <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                <h2 className="mb-2 border-b border-emerald-200 pb-2 text-sm font-black text-emerald-900">بيانات الفاتورة</h2>
-                <InfoItem label="رقم الفاتورة" value={invoice.invoiceNumber} mono />
-                <InfoItem label="رقم الاشتراك" value={invoice.subscription.displayId} mono />
-                <InfoItem label="تاريخ الإصدار" value={formatDateTime(invoice.issuedAt)} />
-                <InfoItem label="الحالة" value={paymentStatusLabel(invoice.payment?.status)} />
-              </section>
-
-              <section className="flex min-h-[150px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-3 text-center">
-                {isTaxInvoice && tax?.qr?.payloadBase64 ? (
-                  <>
-                    <QRCodeSVG
-                      value={tax.qr.payloadBase64}
-                      size={126}
-                      level="M"
-                      aria-label="Tax invoice QR code"
-                    />
-                    <p className="mt-2 text-[10px] font-bold text-slate-600">QR الفاتورة الضريبية</p>
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="size-10 text-slate-300" />
-                    <p className="mt-2 text-[10px] text-slate-400">لا يوجد QR ضريبي لهذه الفاتورة</p>
-                  </>
-                )}
-              </section>
-            </div>
-
-            <div className="grid gap-4 px-6 py-4 sm:grid-cols-2 sm:px-9">
-              <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                <h2 className="mb-2 border-b border-emerald-200 pb-2 text-sm font-black text-emerald-900">معلومات العميل</h2>
-                <InfoItem label="الاسم" value={invoice.customer.name || "—"} />
-                <InfoItem label="الجوال" value={invoice.customer.phone || "—"} />
-                {invoice.customer.email ? <InfoItem label="البريد" value={invoice.customer.email} /> : null}
-              </section>
-
-              <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                <h2 className="mb-2 border-b border-emerald-200 pb-2 text-sm font-black text-emerald-900">تفاصيل الاشتراك</h2>
-                <InfoItem label="الباقة" value={invoice.subscription.planName.ar || invoice.subscription.planName.en || "—"} />
-                <InfoItem label="حالة الاشتراك" value={statusLabel(invoice.subscription.status)} />
-                <InfoItem label="الاستلام" value={deliveryModeLabel(invoice.subscription.deliveryMode)} />
-                <InfoItem label="الفترة" value={`${formatDate(invoice.subscription.startDate)} — ${formatDate(invoice.subscription.endDate)}`} />
-              </section>
-            </div>
-
-            <div className="px-6 sm:px-9">
-              <section className="overflow-hidden rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between bg-emerald-900 px-4 py-3 text-white">
-                  <div>
-                    <h2 className="font-black">التفاصيل المالية</h2>
-                    {isTaxInvoice ? <p className="mt-0.5 text-[10px] text-emerald-100">الأسعار شاملة ضريبة القيمة المضافة</p> : null}
-                  </div>
-                  <span className="text-xs text-emerald-100">العملة: {currency}</span>
-                </div>
-
-                <div>
-                  {lineItems.map((item, index) => (
-                    <AmountRow
-                      key={`${item.kind}-${index}`}
-                      label={item.labelAr}
-                      value={formatMoney(item.amountHalala, currency)}
-                      negative={item.amountHalala < 0}
-                    />
-                  ))}
-                </div>
-
-                {isTaxInvoice ? (
-                  <div className="border-t-2 border-emerald-800 bg-slate-50">
-                    <AmountRow
-                      label="الإجمالي قبل ضريبة القيمة المضافة"
-                      value={formatMoney(tax?.subtotalExcludingVatHalala ?? null, currency)}
-                      muted
-                    />
-                    <AmountRow
-                      label={`ضريبة القيمة المضافة (${tax?.vatPercentage ?? 15}%)`}
-                      value={formatMoney(tax?.vatHalala ?? null, currency)}
-                    />
-                    <AmountRow
-                      label={invoice.payment ? "الإجمالي المدفوع شامل الضريبة" : "الإجمالي شامل الضريبة"}
-                      value={formatMoney(printedTotal, currency)}
-                      strong
-                    />
-                  </div>
-                ) : (
-                  <AmountRow
-                    label={invoice.payment ? "الإجمالي المدفوع" : "الإجمالي النهائي"}
-                    value={formatMoney(printedTotal, currency)}
-                    strong
+            <div className="text-[11px] font-black">ملخص المبلغ</div>
+            <div className="mt-1">
+              {lineItems.length ? (
+                lineItems.map((item, index) => (
+                  <ReceiptRow
+                    key={`${item.kind}-${index}`}
+                    label={item.labelAr}
+                    value={formatMoney(item.amountHalala, currency)}
+                    negative={item.amountHalala < 0}
                   />
+                ))
+              ) : financial?.subtotalHalala !== null &&
+                financial?.subtotalHalala !== undefined ? (
+                <ReceiptRow
+                  label="قيمة الاشتراك"
+                  value={formatMoney(financial.subtotalHalala, currency)}
+                />
+              ) : null}
+
+              {financial && financial.discountHalala > 0 ? (
+                <ReceiptRow
+                  label="الخصم"
+                  value={formatMoney(financial.discountHalala, currency)}
+                  negative
+                />
+              ) : null}
+
+              {financial && financial.deliveryFeeHalala > 0 ? (
+                <ReceiptRow
+                  label="رسوم التوصيل"
+                  value={formatMoney(financial.deliveryFeeHalala, currency)}
+                />
+              ) : null}
+
+              {isTaxInvoice && tax?.subtotalExcludingVatHalala !== null ? (
+                <ReceiptRow
+                  label="قبل الضريبة"
+                  value={formatMoney(tax?.subtotalExcludingVatHalala ?? null, currency)}
+                />
+              ) : null}
+
+              {isTaxInvoice ? (
+                <ReceiptRow
+                  label={`ضريبة القيمة المضافة ${tax?.vatPercentage ?? financial?.vatPercentage ?? 0}%`}
+                  value={formatMoney(tax?.vatHalala ?? financial?.vatHalala ?? 0, currency)}
+                />
+              ) : null}
+
+              <ReceiptRow
+                label="الإجمالي"
+                value={formatMoney(financial?.totalHalala ?? null, currency)}
+                strong
+              />
+            </div>
+
+            <div className="mt-2">
+              <ReceiptRow
+                label="طريقة الدفع"
+                value={paymentMethodLabel(
+                  invoice.payment?.method ?? null,
+                  invoice.payment?.provider ?? ""
                 )}
-              </section>
+              />
+              <ReceiptRow
+                label="حالة الدفع"
+                value={paymentStatusLabel(invoice.payment?.status)}
+              />
+              {invoice.payment?.paidAt ? (
+                <ReceiptRow label="وقت الدفع" value={formatDateTime(invoice.payment.paidAt)} />
+              ) : null}
             </div>
 
-            <div className="grid gap-4 px-6 py-4 sm:grid-cols-2 sm:px-9">
-              <section className="rounded-xl border border-slate-200 p-4">
-                <h2 className="text-sm font-black text-emerald-900">طريقة الدفع</h2>
-                <p className="mt-2 text-lg font-bold text-slate-900">
-                  {paymentMethodLabel(invoice.payment?.method || null, invoice.payment?.provider || "")}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">تاريخ الدفع: {formatDateTime(invoice.payment?.paidAt || invoice.issuedAt)}</p>
-              </section>
-
-              <section className="rounded-xl border border-slate-200 p-4">
-                <h2 className="text-sm font-black text-emerald-900">ملخص الخدمة</h2>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                  <div><span className="text-slate-500">عدد الوجبات:</span> <b>{invoice.subscription.totalMeals ?? "—"}</b></div>
-                  <div><span className="text-slate-500">وجبات/يوم:</span> <b>{invoice.subscription.selectedMealsPerDay ?? "—"}</b></div>
-                  <div><span className="text-slate-500">الجرامات:</span> <b>{invoice.subscription.selectedGrams ? `${invoice.subscription.selectedGrams} جم` : "—"}</b></div>
-                  <div><span className="text-slate-500">طريقة الاستلام:</span> <b>{deliveryModeLabel(invoice.subscription.deliveryMode)}</b></div>
+            {isTaxInvoice && tax?.qr?.payloadBase64 ? (
+              <>
+                <DashedDivider />
+                <div className="flex flex-col items-center text-center">
+                  <QRCodeSVG
+                    value={tax.qr.payloadBase64}
+                    size={94}
+                    level="M"
+                    bgColor="#ffffff"
+                    fgColor="#000000"
+                    title="QR الفاتورة الضريبية"
+                  />
+                  <span className="mt-1 text-[9px]">QR الفاتورة الضريبية</span>
                 </div>
-              </section>
-            </div>
-
-            {isTaxInvoice ? (
-              <div className="mx-6 mb-4 flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50/70 px-4 py-2 text-xs text-emerald-900 sm:mx-9">
-                <ShieldCheck className="size-4 shrink-0" />
-                <span>الأسعار في هذه الفاتورة شاملة ضريبة القيمة المضافة بنسبة {tax?.vatPercentage ?? 15}%.</span>
-              </div>
+              </>
             ) : null}
 
-            <footer className="mt-auto border-t border-slate-200 bg-slate-50 px-6 py-4 text-center sm:px-9">
-              <p className="font-bold text-emerald-900">شكراً لاختياركم Basic Diet</p>
-              <p className="mt-1 text-xs text-slate-500">
-                {isTaxInvoice
-                  ? "فاتورة ضريبية مبسطة مرتبطة بسجل الاشتراك والدفع المحفوظ في النظام."
-                  : "هذه الفاتورة مرتبطة بسجل الاشتراك والدفع المحفوظ في النظام."}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[11px] text-slate-400">
-                <span dir="ltr">{invoice.invoiceNumber}</span>
-                <span dir="ltr">{invoice.subscription.displayId}</span>
-                {isTaxInvoice ? <span dir="ltr">VAT {invoice.seller.vatRegistrationNumber}</span> : null}
-                <span>{formatDate(invoice.issuedAt)}</span>
-              </div>
+            <DashedDivider />
+
+            <footer className="text-center text-[9px] leading-4">
+              <p className="font-bold">شكراً لاختياركم Basic Diet</p>
+              <p>احتفظ بالفاتورة للرجوع إليها عند الحاجة.</p>
             </footer>
-          </div>
+          </article>
         ) : null}
       </div>
     </div>
