@@ -32,6 +32,7 @@ import { PremiumMealsSection } from "./PremiumMealsSection";
 import { AddonsSection } from "./AddonsSection";
 import { DeliverySection } from "./DeliverySection";
 import { PromoCodeSection } from "./PromoCodeSection";
+import { SubscriptionInvoiceDialog } from "../invoice/SubscriptionInvoiceDialog";
 
 interface CreateSubscriptionFormContentProps {
   /** Pre-set userId (when creating from user page). If provided, user selection is hidden. */
@@ -51,6 +52,11 @@ type PaymentMethodOption = {
   method: PaymentMethod;
   labelAr: string;
   gatewayRequired: false;
+};
+
+type CreatedSubscription = {
+  id: string;
+  label: string | null;
 };
 
 const FALLBACK_PAYMENT_OPTIONS: PaymentMethodOption[] = [
@@ -152,6 +158,9 @@ export function CreateSubscriptionFormContent({
   );
   const [promoError, setPromoError] = useState<string | null>(null);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [createdSubscription, setCreatedSubscription] =
+    useState<CreatedSubscription | null>(null);
+  const [createdInvoiceOpen, setCreatedInvoiceOpen] = useState(false);
   const { mutateAsync, isPending } = useCreateSubscriptionMutation();
   const isSubmitting = isPending || isValidatingPrice;
   const selectedPaymentMethod = form.watch("paymentMethod");
@@ -257,10 +266,7 @@ export function CreateSubscriptionFormContent({
       );
 
       if (subscriptionId) {
-        navigate({
-          to: "/subscriptions/$subscriptionId",
-          params: { subscriptionId },
-        });
+        setCreatedSubscription({ id: subscriptionId, label: subscriptionLabel });
         return;
       }
 
@@ -277,6 +283,79 @@ export function CreateSubscriptionFormContent({
       );
     }
   };
+
+  if (createdSubscription) {
+    return (
+      <div className="mx-auto w-full max-w-4xl" dir="rtl">
+        <section className="overflow-hidden rounded-3xl border border-emerald-500/25 bg-card shadow-sm">
+          <div className="bg-emerald-500/10 px-5 py-8 text-center sm:px-8">
+            <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
+              <CheckCircle2 className="size-8" />
+            </div>
+            <h2 className="mt-4 text-2xl font-black text-foreground">تم إنشاء الاشتراك بنجاح</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {createdSubscription.label
+                ? `رقم الاشتراك: ${createdSubscription.label}`
+                : "تم تسجيل الاشتراك والدفع بنجاح."}
+            </p>
+          </div>
+
+          <div className="space-y-5 p-5 sm:p-8">
+            <div className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <ReceiptText className="size-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">الفاتورة جاهزة للطباعة</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    افتح الفاتورة الضريبية وراجع بياناتها والـQR ثم اطبع نسخة العميل مباشرة.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="lg"
+                className="w-full gap-2 px-6 font-bold sm:w-auto"
+                onClick={() => setCreatedInvoiceOpen(true)}
+              >
+                <ReceiptText className="size-5" />
+                عرض وطباعة الفاتورة
+              </Button>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  navigate({
+                    to: "/subscriptions/$subscriptionId",
+                    params: { subscriptionId: createdSubscription.id },
+                  })
+                }
+              >
+                فتح تفاصيل الاشتراك
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => navigate({ to: "/subscriptions" })}
+              >
+                الرجوع إلى كل الاشتراكات
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <SubscriptionInvoiceDialog
+          subscriptionId={createdSubscription.id}
+          open={createdInvoiceOpen}
+          onOpenChange={setCreatedInvoiceOpen}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-4xl" dir="rtl">
