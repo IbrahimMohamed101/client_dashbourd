@@ -162,28 +162,50 @@ export function AppPromoSelectionCard({ promos }: AppPromoSelectionCardProps) {
             <SelectTrigger id="app-promo-selection" className="h-11 w-full">
               <SelectValue placeholder="اختر برومو كود للاشتراكات" />
             </SelectTrigger>
-            <SelectContent dir="rtl">
+            <SelectContent
+              dir="rtl"
+              position="popper"
+              align="start"
+              sideOffset={6}
+              className="max-h-80 w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)]"
+            >
               <SelectGroup>
-                <SelectItem value={NO_PROMO_VALUE}>
+                <SelectItem
+                  value={NO_PROMO_VALUE}
+                  className="min-h-10 text-foreground"
+                >
                   لا تعرض أي برومو كود حاليًا
                 </SelectItem>
-                {eligiblePromos.map((promo) => (
-                  <SelectItem key={promo.id} value={promo.id}>
-                    <span className="flex items-center gap-2">
-                      <span className="font-mono font-black" dir="ltr">
-                        {promo.code}
+                {eligiblePromos.map((promo) => {
+                  const promoName =
+                    getPromoCodeName(promo) || formatPromoCodeDiscount(promo);
+                  const readinessLabel =
+                    getPromoCodeStatus(promo.state) !== "active"
+                      ? " (غير جاهز الآن)"
+                      : "";
+
+                  return (
+                    <SelectItem
+                      key={promo.id}
+                      value={promo.id}
+                      textValue={`${promo.code} — ${promoName}${readinessLabel}`}
+                      className="min-h-11 text-foreground"
+                    >
+                      <span className="flex min-w-0 flex-1 items-center gap-2 text-foreground">
+                        <span
+                          className="shrink-0 font-mono font-black text-foreground"
+                          dir="ltr"
+                        >
+                          {promo.code}
+                        </span>
+                        <span className="truncate text-muted-foreground">
+                          — {promoName}
+                          {readinessLabel}
+                        </span>
                       </span>
-                      <span className="text-muted-foreground">
-                        —{" "}
-                        {getPromoCodeName(promo) ||
-                          formatPromoCodeDiscount(promo)}
-                        {getPromoCodeStatus(promo.state) !== "active"
-                          ? " (غير جاهز الآن)"
-                          : ""}
-                      </span>
-                    </span>
-                  </SelectItem>
-                ))}
+                    </SelectItem>
+                  );
+                })}
               </SelectGroup>
             </SelectContent>
           </Select>
