@@ -25,6 +25,7 @@ test("roleRoutes.test", () => {
     "/delivery",
     "/payments",
     "/accounting",
+    "/subscription-audit",
     "/promo-codes",
     "/zones",
     "/manual-deduction",
@@ -38,9 +39,11 @@ test("roleRoutes.test", () => {
   ];
 
   assert.deepEqual(SUPERADMIN_ROUTES, [
-    ...adminProtectedRoutes.slice(0, 15),
+    ...adminProtectedRoutes.slice(0, 6),
+    "/customer-management",
+    ...adminProtectedRoutes.slice(6, 16),
     "/dashboard-users",
-    ...adminProtectedRoutes.slice(15),
+    ...adminProtectedRoutes.slice(16),
   ]);
   assert.deepEqual(ADMIN_ROUTES, adminProtectedRoutes);
 
@@ -69,8 +72,8 @@ test("roleRoutes.test", () => {
   assert.equal(KITCHEN_ROUTES.includes("/users"), false);
   assert.equal(KITCHEN_ROUTES.includes("/delivery"), false);
 
-  assert.deepEqual(COURIER_ROUTES, ["/delivery", "/profile"]);
-  assert.equal(COURIER_ROUTES.includes("/operations"), false);
+  assert.deepEqual(COURIER_ROUTES, ["/delivery", "/operations", "/profile"]);
+  assert.equal(COURIER_ROUTES.includes("/operations"), true);
   assert.equal(COURIER_ROUTES.includes("/one-time-orders"), false);
 
   assert.deepEqual(RESTAURANT_ROUTES, [
@@ -98,9 +101,11 @@ test("roleRoutes.test", () => {
 
   assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/subscriptions/create"), true);
   assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/dashboard-users"), false);
+  assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/customer-management"), false);
   assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/one-time-orders"), true);
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/users/user-1"), true);
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/dashboard-users"), true);
+  assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/customer-management"), true);
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/one-time-orders"), true);
   assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/operations"), true);
   assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/one-time-orders"), true);
@@ -108,7 +113,7 @@ test("roleRoutes.test", () => {
   assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/premium-meals"), true);
   assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/delivery"), false);
   assert.equal(canRoleAccessRoute(UserRoles.COURIER, "/delivery"), true);
-  assert.equal(canRoleAccessRoute(UserRoles.COURIER, "/operations"), false);
+  assert.equal(canRoleAccessRoute(UserRoles.COURIER, "/operations"), true);
   assert.equal(canRoleAccessRoute(UserRoles.COURIER, "/one-time-orders"), false);
   assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/manual-deduction"), true);
   assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/operations"), true);

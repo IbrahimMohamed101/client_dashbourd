@@ -31,6 +31,7 @@ import { Route as ProtectedMenuIndexRouteImport } from './routes/_protected/menu
 import { Route as ProtectedManualDeductionIndexRouteImport } from './routes/_protected/manual-deduction/index'
 import { Route as ProtectedDeliveryIndexRouteImport } from './routes/_protected/delivery/index'
 import { Route as ProtectedDashboardUsersIndexRouteImport } from './routes/_protected/dashboard-users/index'
+import { Route as ProtectedCustomerManagementIndexRouteImport } from './routes/_protected/customer-management/index'
 import { Route as ProtectedAddonsIndexRouteImport } from './routes/_protected/addons/index'
 import { Route as ProtectedAccountingIndexRouteImport } from './routes/_protected/accounting/index'
 import { Route as ProtectedUsersCreateRouteImport } from './routes/_protected/users/create'
@@ -172,6 +173,12 @@ const ProtectedDashboardUsersIndexRoute =
     path: '/dashboard-users/',
     getParentRoute: () => ProtectedRouteRoute,
   } as any)
+const ProtectedCustomerManagementIndexRoute =
+  ProtectedCustomerManagementIndexRouteImport.update({
+    id: '/customer-management/',
+    path: '/customer-management/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
 const ProtectedAddonsIndexRoute = ProtectedAddonsIndexRouteImport.update({
   id: '/addons/',
   path: '/addons/',
@@ -299,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/users/create': typeof ProtectedUsersCreateRoute
   '/accounting/': typeof ProtectedAccountingIndexRoute
   '/addons/': typeof ProtectedAddonsIndexRoute
+  '/customer-management/': typeof ProtectedCustomerManagementIndexRoute
   '/dashboard-users/': typeof ProtectedDashboardUsersIndexRoute
   '/delivery/': typeof ProtectedDeliveryIndexRoute
   '/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
@@ -342,6 +350,7 @@ export interface FileRoutesByTo {
   '/users/create': typeof ProtectedUsersCreateRoute
   '/accounting': typeof ProtectedAccountingIndexRoute
   '/addons': typeof ProtectedAddonsIndexRoute
+  '/customer-management': typeof ProtectedCustomerManagementIndexRoute
   '/dashboard-users': typeof ProtectedDashboardUsersIndexRoute
   '/delivery': typeof ProtectedDeliveryIndexRoute
   '/manual-deduction': typeof ProtectedManualDeductionIndexRoute
@@ -387,6 +396,7 @@ export interface FileRoutesById {
   '/_protected/users/create': typeof ProtectedUsersCreateRoute
   '/_protected/accounting/': typeof ProtectedAccountingIndexRoute
   '/_protected/addons/': typeof ProtectedAddonsIndexRoute
+  '/_protected/customer-management/': typeof ProtectedCustomerManagementIndexRoute
   '/_protected/dashboard-users/': typeof ProtectedDashboardUsersIndexRoute
   '/_protected/delivery/': typeof ProtectedDeliveryIndexRoute
   '/_protected/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
@@ -432,6 +442,7 @@ export interface FileRouteTypes {
     | '/users/create'
     | '/accounting/'
     | '/addons/'
+    | '/customer-management/'
     | '/dashboard-users/'
     | '/delivery/'
     | '/manual-deduction/'
@@ -475,6 +486,7 @@ export interface FileRouteTypes {
     | '/users/create'
     | '/accounting'
     | '/addons'
+    | '/customer-management'
     | '/dashboard-users'
     | '/delivery'
     | '/manual-deduction'
@@ -519,6 +531,7 @@ export interface FileRouteTypes {
     | '/_protected/users/create'
     | '/_protected/accounting/'
     | '/_protected/addons/'
+    | '/_protected/customer-management/'
     | '/_protected/dashboard-users/'
     | '/_protected/delivery/'
     | '/_protected/manual-deduction/'
@@ -714,6 +727,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedDashboardUsersIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
+    '/_protected/customer-management/': {
+      id: '/_protected/customer-management/'
+      path: '/customer-management'
+      fullPath: '/customer-management/'
+      preLoaderRoute: typeof ProtectedCustomerManagementIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
     '/_protected/addons/': {
       id: '/_protected/addons/'
       path: '/addons'
@@ -866,6 +886,7 @@ interface ProtectedRouteRouteChildren {
   ProtectedUsersCreateRoute: typeof ProtectedUsersCreateRoute
   ProtectedAccountingIndexRoute: typeof ProtectedAccountingIndexRoute
   ProtectedAddonsIndexRoute: typeof ProtectedAddonsIndexRoute
+  ProtectedCustomerManagementIndexRoute: typeof ProtectedCustomerManagementIndexRoute
   ProtectedDashboardUsersIndexRoute: typeof ProtectedDashboardUsersIndexRoute
   ProtectedDeliveryIndexRoute: typeof ProtectedDeliveryIndexRoute
   ProtectedManualDeductionIndexRoute: typeof ProtectedManualDeductionIndexRoute
@@ -909,6 +930,7 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedUsersCreateRoute: ProtectedUsersCreateRoute,
   ProtectedAccountingIndexRoute: ProtectedAccountingIndexRoute,
   ProtectedAddonsIndexRoute: ProtectedAddonsIndexRoute,
+  ProtectedCustomerManagementIndexRoute: ProtectedCustomerManagementIndexRoute,
   ProtectedDashboardUsersIndexRoute: ProtectedDashboardUsersIndexRoute,
   ProtectedDeliveryIndexRoute: ProtectedDeliveryIndexRoute,
   ProtectedManualDeductionIndexRoute: ProtectedManualDeductionIndexRoute,

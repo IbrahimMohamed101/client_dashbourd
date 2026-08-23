@@ -12,6 +12,7 @@ import {
   KeyRoundIcon,
   MoreHorizontalIcon,
   PlusCircleIcon,
+  PencilLineIcon,
   UserCheckIcon,
   UserXIcon,
 } from "lucide-react";
@@ -40,6 +41,7 @@ export function UserActionsCell({ user }: UserActionsCellProps) {
   const canResetPassword =
     canManagePasswords && user.isActive && user.canResetPassword !== false;
   const canCreateSubscription = canCreateCustomerSubscription(sessionUser?.role);
+  const canEditCustomerData = sessionUser?.role === "superadmin";
 
   const handleToggleActive = () => {
     updateUser(
@@ -84,6 +86,19 @@ export function UserActionsCell({ user }: UserActionsCellProps) {
               عرض
             </Link>
           </DropdownMenuItem>
+
+          {canEditCustomerData ? (
+            <DropdownMenuItem asChild>
+              <Link
+                to="/customer-management"
+                search={{ userId: user.id }}
+                className="flex items-center gap-2"
+              >
+                <PencilLineIcon className="size-4" />
+                تعديل بيانات العميل
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
 
           {canCreateSubscription ? (
           <DropdownMenuItem asChild>

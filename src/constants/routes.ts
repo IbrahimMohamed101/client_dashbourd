@@ -8,6 +8,7 @@ const SUPERADMIN_ROUTES = [
   "/subscriptions",
   "/packages",
   "/users",
+  "/customer-management",
   "/addons",
   "/delivery",
   "/payments",

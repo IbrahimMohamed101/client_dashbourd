@@ -22,6 +22,7 @@ import {
   Ticket,
   Truck,
   Users,
+  ContactRound,
 } from "lucide-react";
 
 export const NavLinksData = {
@@ -100,6 +101,11 @@ export const NavLinksData = {
       title: "المستخدمين",
       url: "/users",
       icon: <Users />,
+    },
+    {
+      title: "إدارة بيانات العملاء",
+      url: "/customer-management",
+      icon: <ContactRound />,
     },
     {
       title: "مستخدمو لوحة التحكم",
