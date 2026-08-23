@@ -214,6 +214,14 @@ export function getPromoCodesColumns({
               <span className="block truncate text-xs text-muted-foreground">
                 {promoName || promoCodeText.unnamed}
               </span>
+              {promo.appDisplay?.isVisible ? (
+                <Badge
+                  variant="outline"
+                  className="mt-1 rounded-full border-emerald-500/20 bg-emerald-500/10 px-2 py-0 text-[10px] text-emerald-600"
+                >
+                  ظاهر في التطبيق
+                </Badge>
+              ) : null}
             </div>
           </div>
         );

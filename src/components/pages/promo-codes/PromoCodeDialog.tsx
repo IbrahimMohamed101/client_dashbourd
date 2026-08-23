@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -28,50 +27,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Info, Ticket } from "lucide-react";
+import { Home, Info, Smartphone, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCreatePromoCodeMutation,
   useUpdatePromoCodeMutation,
 } from "@/hooks/usePromoCodesQuery";
-import type {
-  PromoCodeAppliesTo,
-  PromoCodeDTO,
-  PromoCodePayload,
-} from "@/types/financeTypes";
+import type { PromoCodeDTO } from "@/types/financeTypes";
 import {
-  halalaToRiyalInput,
-  isValidRiyalInput,
-  riyalToHalala,
-} from "@/utils/price";
-
-const promoCodeSchema = z.object({
-  code: z.string().min(1, "مطلوب"),
-  nameAr: z.string().optional(),
-  nameEn: z.string().optional(),
-  discountType: z.enum(["percentage", "fixed"]),
-  discountValue: z.string().min(1, "مطلوب"),
-  usageLimitTotal: z.string().optional(),
-  usageLimitPerUser: z.string().optional(),
-  startsAt: z.string().optional(),
-  expiresAt: z.string().optional(),
-  appliesTo: z.enum(["subscription", "addon_plans", "all"]),
-  isActive: z.boolean(),
-}).superRefine((values, context) => {
-  const valid = values.discountType === "fixed"
-    ? isValidRiyalInput(values.discountValue) && riyalToHalala(values.discountValue) > 0
-    : Number(values.discountValue) > 0;
-
-  if (!valid) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["discountValue"],
-      message: "قيمة غير صحيحة",
-    });
-  }
-});
-
-type PromoCodeFormValues = z.infer<typeof promoCodeSchema>;
+  getDefaultValues,
+  promoCodeSchema,
+  toPromoCodePayload,
+  type PromoCodeFormValues,
+} from "@/utils/promoCodeForm";
 
 function readApiErrorMessage(error: unknown): string {
   if (
@@ -100,94 +68,6 @@ function readApiErrorMessage(error: unknown): string {
   return "حدث خطأ أثناء حفظ كود الخصم";
 }
 
-function formatDateTimeInputValue(value?: string | null): string {
-  if (!value) return "";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Riyadh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(date);
-  const readPart = (type: string) =>
-    parts.find((part) => part.type === type)?.value ?? "00";
-
-  return `${readPart("year")}-${readPart("month")}-${readPart("day")}T${readPart("hour")}:${readPart("minute")}`;
-}
-
-function riyadhDateTimeInputToIso(value?: string): string | null {
-  if (!value) return null;
-
-  const [datePart, timePart = "00:00"] = value.split("T");
-  const [year, month, day] = datePart.split("-").map(Number);
-  const [hour, minute] = timePart.split(":").map(Number);
-
-  if ([year, month, day, hour, minute].some((part) => !Number.isFinite(part))) {
-    return null;
-  }
-
-  return new Date(Date.UTC(year, month - 1, day, hour - 3, minute)).toISOString();
-}
-
-function getDefaultValues(editData?: PromoCodeDTO): PromoCodeFormValues {
-  const discountType = editData?.discountType === "fixed_amount"
-    ? "fixed"
-    : editData?.discountType ?? "percentage";
-
-  return {
-    code: editData?.code ?? "",
-    nameAr: editData?.name?.ar ?? "",
-    nameEn: editData?.name?.en ?? "",
-    discountType: discountType === "fixed" ? "fixed" : "percentage",
-    discountValue:
-      discountType === "fixed"
-        ? halalaToRiyalInput(editData?.discountValue)
-        : editData?.discountValue?.toString() ?? "",
-    usageLimitTotal: editData?.usageLimitTotal?.toString() ?? "",
-    usageLimitPerUser: editData?.usageLimitPerUser?.toString() ?? "",
-    startsAt: formatDateTimeInputValue(editData?.startsAt),
-    expiresAt: formatDateTimeInputValue(editData?.expiresAt),
-    appliesTo:
-      editData?.appliesTo === "addon_plans" || editData?.appliesTo === "all"
-        ? editData.appliesTo
-        : "subscription",
-    isActive: editData?.isActive ?? true,
-  };
-}
-
-function optionalInteger(value?: string): number | null {
-  if (!value) return null;
-  return Math.max(0, Math.floor(Number(value)));
-}
-
-function toPromoCodePayload(values: PromoCodeFormValues): PromoCodePayload {
-  const discountValue = values.discountType === "fixed"
-    ? riyalToHalala(values.discountValue)
-    : Number(values.discountValue);
-
-  return {
-    code: values.code.trim().toUpperCase(),
-    name: {
-      ar: values.nameAr?.trim() ?? "",
-      en: values.nameEn?.trim() ?? "",
-    },
-    discountType: values.discountType,
-    discountValue,
-    usageLimitTotal: optionalInteger(values.usageLimitTotal),
-    usageLimitPerUser: optionalInteger(values.usageLimitPerUser),
-    startsAt: riyadhDateTimeInputToIso(values.startsAt),
-    expiresAt: riyadhDateTimeInputToIso(values.expiresAt),
-    appliesTo: values.appliesTo as PromoCodeAppliesTo,
-    isActive: values.isActive,
-  };
-}
-
 interface PromoCodeDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -208,6 +88,7 @@ export function PromoCodeDialog({
   const updateMutation = useUpdatePromoCodeMutation();
   const discountType = form.watch("discountType");
   const appliesTo = form.watch("appliesTo");
+  const showInApp = form.watch("showInApp");
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   async function onSubmit(values: PromoCodeFormValues) {
@@ -244,7 +125,8 @@ export function PromoCodeDialog({
             {isEditing ? "تعديل كود الخصم" : "إضافة كود جديد"}
           </DialogTitle>
           <DialogDescription className="text-right font-medium text-muted-foreground">
-            أدخل بيانات الكود الأساسية. الحساب النهائي والقيود المتقدمة يقررها الباك اند.
+            أدخل بيانات الكود الأساسية. الحساب النهائي والقيود المتقدمة يقررها
+            الباك اند.
           </DialogDescription>
         </DialogHeader>
 
@@ -254,7 +136,8 @@ export function PromoCodeDialog({
               <div className="flex items-start gap-2">
                 <Info className="mt-0.5 size-4 shrink-0 text-primary" />
                 <p>
-                  المبلغ الثابت يُكتب بالريال، ويتم تحويله إلى هللة فقط عند إرسال البيانات للباك اند.
+                  المبلغ الثابت يُكتب بالريال، ويتم تحويله إلى هللة فقط عند
+                  إرسال البيانات للباك اند.
                 </p>
               </div>
             </div>
@@ -272,7 +155,9 @@ export function PromoCodeDialog({
                         value={field.value ?? ""}
                         dir="ltr"
                         className="font-mono uppercase"
-                        onChange={(event) => field.onChange(event.target.value.toUpperCase())}
+                        onChange={(event) =>
+                          field.onChange(event.target.value.toUpperCase())
+                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -286,7 +171,11 @@ export function PromoCodeDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>ينطبق على</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} dir="rtl">
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      dir="rtl"
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue />
@@ -294,13 +183,16 @@ export function PromoCodeDialog({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="subscription">اشتراك</SelectItem>
-                        <SelectItem value="addon_plans">خطط الإضافات</SelectItem>
+                        <SelectItem value="addon_plans">
+                          خطط الإضافات
+                        </SelectItem>
                         <SelectItem value="all">الكل</SelectItem>
                       </SelectContent>
                     </Select>
                     {appliesTo !== "subscription" ? (
                       <FormDescription>
-                        الطلبات العادية غير مدعومة، وخصومات الإضافات تحتاج مستهلك تحقق منفصل من الباك اند.
+                        الطلبات العادية غير مدعومة، وخصومات الإضافات تحتاج
+                        مستهلك تحقق منفصل من الباك اند.
                       </FormDescription>
                     ) : null}
                     <FormMessage />
@@ -342,7 +234,11 @@ export function PromoCodeDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>نوع الخصم</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} dir="rtl">
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      dir="rtl"
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue />
@@ -364,7 +260,9 @@ export function PromoCodeDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {discountType === "percentage" ? "نسبة الخصم" : "قيمة الخصم بالريال"}
+                      {discountType === "percentage"
+                        ? "نسبة الخصم"
+                        : "قيمة الخصم بالريال"}
                     </FormLabel>
                     <FormControl>
                       <div className="relative">
@@ -374,11 +272,15 @@ export function PromoCodeDialog({
                           type="number"
                           min="0"
                           step={discountType === "percentage" ? "1" : "0.01"}
-                          inputMode={discountType === "percentage" ? "numeric" : "decimal"}
+                          inputMode={
+                            discountType === "percentage"
+                              ? "numeric"
+                              : "decimal"
+                          }
                           dir="ltr"
                           className="pl-12"
                         />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs font-bold text-muted-foreground">
                           {discountType === "percentage" ? "%" : "ر.س"}
                         </span>
                       </div>
@@ -451,7 +353,9 @@ export function PromoCodeDialog({
                         dir="ltr"
                       />
                     </FormControl>
-                    <FormDescription>يُعرض ويُرسل حسب توقيت الرياض.</FormDescription>
+                    <FormDescription>
+                      يُعرض ويُرسل حسب توقيت الرياض.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -471,7 +375,9 @@ export function PromoCodeDialog({
                         dir="ltr"
                       />
                     </FormControl>
-                    <FormDescription>اتركه فارغًا إذا لم يكن له تاريخ انتهاء.</FormDescription>
+                    <FormDescription>
+                      اتركه فارغًا إذا لم يكن له تاريخ انتهاء.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -486,7 +392,8 @@ export function PromoCodeDialog({
                   <div>
                     <FormLabel>مفعّل</FormLabel>
                     <FormDescription>
-                      عند التعطيل لن يكون الكود صالحًا حتى لو كانت باقي الشروط صحيحة.
+                      عند التعطيل لن يكون الكود صالحًا حتى لو كانت باقي الشروط
+                      صحيحة.
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -498,6 +405,215 @@ export function PromoCodeDialog({
                 </FormItem>
               )}
             />
+
+            <div className="space-y-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+              <FormField
+                control={form.control}
+                name="showInApp"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                        <Smartphone className="size-5" />
+                      </div>
+                      <div>
+                        <FormLabel>إظهار كود الخصم في تطبيق الجوال</FormLabel>
+                        <FormDescription>
+                          يظهر الكود للنسخ فقط. التطبيق والتحقق من الخصم يظلان
+                          في خطوة إتمام الاشتراك.
+                        </FormDescription>
+                        <FormMessage />
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {showInApp ? (
+                <div className="space-y-4 border-t border-emerald-500/15 pt-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="showOnHome"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-xl border bg-background/70 p-3">
+                          <div className="flex items-center gap-2">
+                            <Home className="size-4 text-primary" />
+                            <FormLabel>الصفحة الرئيسية</FormLabel>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="showOnPlans"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-xl border bg-background/70 p-3">
+                          <FormLabel>شاشة باقات الاشتراك</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="displayPriority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>أولوية العرض</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            value={field.value ?? "0"}
+                            type="number"
+                            min="-1000"
+                            max="1000"
+                            step="1"
+                            dir="ltr"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          عند وجود أكثر من عرض صالح، يعرض التطبيق صاحب الأولوية
+                          الأعلى.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="appTitleAr"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>عنوان البطاقة بالعربية</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="وفّر على اشتراكك"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="appTitleEn"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>عنوان البطاقة بالإنجليزية</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              dir="ltr"
+                              placeholder="Save on your subscription"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="appDescriptionAr"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>وصف البطاقة بالعربية</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="انسخ الكود واستخدمه عند إتمام الاشتراك"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="appDescriptionEn"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>وصف البطاقة بالإنجليزية</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              dir="ltr"
+                              placeholder="Copy the code and use it at checkout"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="homeMessageAr"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>رسالة الرئيسية بالعربية</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="اعرض الخطط واحصل على كود الخصم"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="homeMessageEn"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>رسالة الرئيسية بالإنجليزية</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              dir="ltr"
+                              placeholder="View plans and copy your promo code"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-dashed border-emerald-500/30 bg-background/60 p-3 text-xs text-muted-foreground">
+                    قيمة الخصم الظاهرة في التطبيق تُنشأ تلقائيًا من نوع وقيمة
+                    الخصم أعلاه؛ لا تحتاج إلى كتابتها مرة ثانية.
+                  </div>
+                </div>
+              ) : null}
+            </div>
 
             <DialogFooter className="flex-row-reverse gap-2 pt-2">
               <Button type="submit" disabled={isLoading}>

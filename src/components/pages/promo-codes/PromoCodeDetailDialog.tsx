@@ -54,7 +54,10 @@ export default function PromoCodeDetailDialog({
   const usageRows = promoCode?.recentUsage ?? [];
 
   return (
-    <Dialog open={Boolean(promoCodeId)} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={Boolean(promoCodeId)}
+      onOpenChange={(open) => !open && onClose()}
+    >
       <DialogContent
         className="max-h-[90vh] overflow-y-auto rounded-[2rem] border-muted-foreground/10 bg-background/95 backdrop-blur-xl sm:max-w-4xl"
         aria-describedby="promo-code-detail-description"
@@ -63,7 +66,8 @@ export default function PromoCodeDetailDialog({
         <DialogHeader>
           <DialogTitle>تفاصيل كود الخصم</DialogTitle>
           <DialogDescription id="promo-code-detail-description">
-            ملخص البيانات التشغيلية، حالة الصلاحية، وحديث الاستخدامات حسب استجابة الباك اند.
+            ملخص البيانات التشغيلية، حالة الصلاحية، وحديث الاستخدامات حسب
+            استجابة الباك اند.
           </DialogDescription>
         </DialogHeader>
 
@@ -74,17 +78,26 @@ export default function PromoCodeDetailDialog({
         ) : (
           <div className="space-y-6">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <PromoDetailItem label={promoCodeText.code} value={promoCode.code} dir="ltr" />
+              <PromoDetailItem
+                label={promoCodeText.code}
+                value={promoCode.code}
+                dir="ltr"
+              />
               <PromoDetailItem
                 label={promoCodeText.name}
-                value={getPromoCodeName(promoCode) || promoCodeText.notSpecified}
+                value={
+                  getPromoCodeName(promoCode) || promoCodeText.notSpecified
+                }
               />
               <PromoDetailItem
                 label={promoCodeText.discount}
                 value={formatPromoCodeDiscount(promoCode)}
                 dir="ltr"
               />
-              <PromoDetailItem label={promoCodeText.status} value={promoCodeText[status]} />
+              <PromoDetailItem
+                label={promoCodeText.status}
+                value={promoCodeText[status]}
+              />
               <PromoDetailItem
                 label={promoCodeText.appliesTo}
                 value={formatAppliesTo(promoCode.appliesTo)}
@@ -133,8 +146,27 @@ export default function PromoCodeDetailDialog({
                 value={formatBoolean(promoCode.isActive)}
               />
               <PromoDetailItem
+                label="ظاهر في تطبيق الجوال"
+                value={formatBoolean(promoCode.appDisplay?.isVisible)}
+              />
+              <PromoDetailItem
+                label="يظهر في الرئيسية"
+                value={formatBoolean(promoCode.appDisplay?.showOnHome)}
+              />
+              <PromoDetailItem
+                label="يظهر في شاشة الباقات"
+                value={formatBoolean(promoCode.appDisplay?.showOnPlans)}
+              />
+              <PromoDetailItem
+                label="أولوية العرض"
+                value={promoCode.appDisplay?.priority ?? 0}
+                dir="ltr"
+              />
+              <PromoDetailItem
                 label="مؤرشف"
-                value={formatBoolean(Boolean(promoCode.deletedAt || promoCode.state?.isDeleted))}
+                value={formatBoolean(
+                  Boolean(promoCode.deletedAt || promoCode.state?.isDeleted)
+                )}
               />
               <PromoDetailItem
                 label="تاريخ الإنشاء"
@@ -151,7 +183,8 @@ export default function PromoCodeDetailDialog({
                 <div>
                   <h3 className="font-black">أحدث الاستخدامات</h3>
                   <p className="text-sm text-muted-foreground">
-                    يعرض الباك اند آخر 25 استخدامًا، وأسماء العملاء غير متوفرة في هذا العقد لذلك نعرض المعرّفات بأمان.
+                    يعرض الباك اند آخر 25 استخدامًا، وأسماء العملاء غير متوفرة
+                    في هذا العقد لذلك نعرض المعرّفات بأمان.
                   </p>
                 </div>
                 <Badge variant="secondary" className="rounded-full px-3 py-1">
@@ -168,7 +201,9 @@ export default function PromoCodeDetailDialog({
                         <TableHead className="text-right">الحالة</TableHead>
                         <TableHead className="text-right">قيمة الخصم</TableHead>
                         <TableHead className="text-right">وقت الحجز</TableHead>
-                        <TableHead className="text-right">وقت الاستخدام</TableHead>
+                        <TableHead className="text-right">
+                          وقت الاستخدام
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -178,15 +213,22 @@ export default function PromoCodeDetailDialog({
                             {usage.userId ?? promoCodeText.notSpecified}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="rounded-full px-3 py-1">
+                            <Badge
+                              variant="outline"
+                              className="rounded-full px-3 py-1"
+                            >
                               {formatUsageStatus(usage.status)}
                             </Badge>
                           </TableCell>
                           <TableCell className="font-medium" dir="ltr">
                             {formatHalala(usage.discountAmountHalala)}
                           </TableCell>
-                          <TableCell>{formatPromoCodeDate(usage.reservedAt)}</TableCell>
-                          <TableCell>{formatPromoCodeDate(usage.consumedAt)}</TableCell>
+                          <TableCell>
+                            {formatPromoCodeDate(usage.reservedAt)}
+                          </TableCell>
+                          <TableCell>
+                            {formatPromoCodeDate(usage.consumedAt)}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

@@ -14,6 +14,16 @@ interface LocalizedTextDTO {
   en?: string | null;
 }
 
+interface PromoCodeAppDisplayDTO {
+  isVisible: boolean;
+  showOnHome: boolean;
+  showOnPlans: boolean;
+  priority: number;
+  title: LocalizedTextDTO;
+  description: LocalizedTextDTO;
+  homeMessage: LocalizedTextDTO;
+}
+
 interface PromoCodeStateDTO {
   isExpired: boolean;
   isStarted: boolean;
@@ -70,6 +80,7 @@ interface PromoCodeDTO {
   firstPurchaseOnly?: boolean;
   allowedUserIds?: string[];
   metadata?: Record<string, unknown> | null;
+  appDisplay?: PromoCodeAppDisplayDTO | null;
   recentUsage?: PromoCodeUsageDTO[];
   state: PromoCodeStateDTO;
 }
@@ -99,6 +110,7 @@ interface PromoCodePayload {
   expiresAt?: string | null;
   appliesTo?: PromoCodeAppliesTo;
   isActive?: boolean;
+  appDisplay?: PromoCodeAppDisplayDTO;
 }
 
 interface PromoCodeValidationResult {
@@ -118,6 +130,7 @@ type StatusFilter = PromoCodeDisplayStatus | "all";
 export type {
   PaymentDTO,
   LocalizedTextDTO,
+  PromoCodeAppDisplayDTO,
   PromoCodeStateDTO,
   PromoCodeDiscountType,
   PromoCodeAppliesTo,
