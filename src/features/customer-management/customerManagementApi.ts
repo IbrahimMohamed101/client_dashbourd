@@ -15,6 +15,18 @@ export type CustomerAddress = {
   lng?: number;
 };
 
+export type MealCompensation = {
+  id: string | null;
+  idempotencyKey: string;
+  quantity: number;
+  reason: string;
+  byUserId: string | null;
+  byRole: string;
+  before: { totalMeals: number; remainingMeals: number };
+  after: { totalMeals: number; remainingMeals: number };
+  createdAt: string | null;
+};
+
 export type ManagedCustomerProfile = {
   id: string;
   coreUserId: string;
@@ -28,8 +40,26 @@ export type ManagedCustomerProfile = {
     id: string;
     displayId: string;
     status: string;
+    planId: string | null;
+    planName: { ar: string; en: string } | null;
+    startDate: string | null;
+    endDate: string | null;
+    validityEndDate: string | null;
     deliveryMode: "delivery" | "pickup";
     deliveryAddress: CustomerAddress | null;
+    selectedMealsPerDay: number;
+    selectedGrams: number;
+    balances: {
+      totalMeals: number;
+      remainingMeals: number;
+      remainingRegularMeals: number;
+      remainingPremiumMeals: number;
+      consumedMeals: number;
+      reservedMeals: number;
+      forfeitedMeals: number;
+      compensatedMealsTotal: number;
+    };
+    compensationHistory: MealCompensation[];
   } | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -70,6 +100,15 @@ type CustomerManagementUpdateResponse = {
   meta: {
     changedFields: string[];
     sessionsRevoked: boolean;
+  };
+};
+
+type MealCompensationResponse = {
+  status: boolean;
+  data: ManagedCustomerProfile;
+  meta: {
+    compensation: MealCompensation;
+    replayed: boolean;
   };
 };
 
@@ -181,6 +220,25 @@ export async function updateManagedCustomer({
   return response.data;
 }
 
+export async function grantMealCompensation({
+  customerId,
+  quantity,
+  reason,
+  idempotencyKey,
+}: {
+  customerId: string;
+  quantity: number;
+  reason: string;
+  idempotencyKey: string;
+}) {
+  const response = await api.post<MealCompensationResponse>(
+    `${CUSTOMER_MANAGEMENT_ROUTE}/${customerId}/meal-compensations`,
+    { quantity, reason: reason.trim(), idempotencyKey },
+    { suppressGlobalForbiddenToast: true }
+  );
+  return response.data;
+}
+
 export function getCustomerManagementErrorMessage(error: unknown) {
   const parsed = parseApiError(error);
   const code = parsed.code?.toUpperCase();
@@ -190,6 +248,15 @@ export function getCustomerManagementErrorMessage(error: unknown) {
   }
   if (code === "ACTIVE_DELIVERY_SUBSCRIPTION_REQUIRED") {
     return "لا يمكن تعديل العنوان بدون اشتراك توصيل نشط";
+  }
+  if (code === "ACTIVE_SUBSCRIPTION_REQUIRED") {
+    return "لا يمكن إضافة تعويض بدون اشتراك نشط";
+  }
+  if (code === "INVALID_COMPENSATION_QUANTITY") {
+    return "عدد الوجبات التعويضية يجب أن يكون من 1 إلى 100";
+  }
+  if (code === "BALANCE_CHANGED") {
+    return "تغير رصيد الاشتراك أثناء العملية؛ حدّث البيانات وحاول مرة أخرى";
   }
   if (code === "TRANSACTION_REQUIRED") {
     return "التحديث الآمن غير متاح حاليًا؛ لم يتم تغيير أي بيانات";
