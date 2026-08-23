@@ -1,11 +1,13 @@
 import api from "@/lib/apis";
 import type {
+  PromoCodeAppSelectionDTO,
   PromoCodeDTO,
   PromoCodePayload,
   PromoCodesListResponse,
   PromoCodeValidationResult,
 } from "@/types/financeTypes";
 import {
+  promoCodeAppSelectionUrl,
   promoCodeToggleUrl,
   promoCodeValidateUrl,
 } from "@/utils/promoCodeApiContract";
@@ -26,7 +28,9 @@ function readPromoCodes(value: unknown): PromoCodeDTO[] | null {
   return Array.isArray(value) ? (value as PromoCodeDTO[]) : null;
 }
 
-function normalizePromoCodesListResponse(payload: unknown): PromoCodesListResponse {
+function normalizePromoCodesListResponse(
+  payload: unknown
+): PromoCodesListResponse {
   const root = isRecord(payload) ? payload : {};
   const envelopeData = isRecord(root.data) ? root.data : root.data;
   const dataNode = isRecord(envelopeData) ? envelopeData : root;
@@ -46,9 +50,15 @@ function normalizePromoCodesListResponse(payload: unknown): PromoCodesListRespon
   const total = readNumber(metaNode.total, data.length);
   const totalPages = readNumber(
     metaNode.totalPages,
-    readNumber(metaNode.lastPage, Math.max(1, Math.ceil(total / Math.max(data.length, 1))))
+    readNumber(
+      metaNode.lastPage,
+      Math.max(1, Math.ceil(total / Math.max(data.length, 1)))
+    )
   );
-  const currentPage = readNumber(metaNode.currentPage, readNumber(metaNode.page, 1));
+  const currentPage = readNumber(
+    metaNode.currentPage,
+    readNumber(metaNode.page, 1)
+  );
 
   return {
     data,
@@ -63,7 +73,9 @@ function normalizePromoCodesListResponse(payload: unknown): PromoCodesListRespon
   };
 }
 
-function normalizePromoCodeDetailResponse(payload: unknown): PromoCodeDTO | null {
+function normalizePromoCodeDetailResponse(
+  payload: unknown
+): PromoCodeDTO | null {
   if (!isRecord(payload)) return null;
 
   if (isRecord(payload.data)) {
@@ -93,6 +105,15 @@ function normalizePromoCodeValidationResponse(
   return payload as unknown as PromoCodeValidationResult;
 }
 
+function normalizePromoCodeAppSelectionResponse(
+  payload: unknown
+): PromoCodeAppSelectionDTO {
+  const root = isRecord(payload) ? payload : {};
+  const data = isRecord(root.data) ? root.data : root;
+  const nested = isRecord(data.data) ? data.data : data;
+  return nested as unknown as PromoCodeAppSelectionDTO;
+}
+
 export const fetchPromoCodesList = async ({
   includeDeleted = false,
 }: FetchPromoCodesListParams = {}): Promise<PromoCodesListResponse> => {
@@ -110,6 +131,21 @@ export const fetchPromoCodeById = async (
 ): Promise<PromoCodeDTO | null> => {
   const response = await api.get<unknown>(`/api/dashboard/promo-codes/${id}`);
   return normalizePromoCodeDetailResponse(response.data);
+};
+
+export const fetchPromoCodeAppSelection =
+  async (): Promise<PromoCodeAppSelectionDTO> => {
+    const response = await api.get<unknown>(promoCodeAppSelectionUrl());
+    return normalizePromoCodeAppSelectionResponse(response.data);
+  };
+
+export const updatePromoCodeAppSelection = async (
+  promoCodeId: string | null
+): Promise<PromoCodeAppSelectionDTO> => {
+  const response = await api.put<unknown>(promoCodeAppSelectionUrl(), {
+    promoCodeId,
+  });
+  return normalizePromoCodeAppSelectionResponse(response.data);
 };
 
 export const createPromoCode = async (
@@ -133,8 +169,12 @@ export const updatePromoCode = async ({
   return normalizePromoCodeDetailResponse(response.data);
 };
 
-export const deletePromoCode = async (id: string): Promise<PromoCodeDTO | null> => {
-  const response = await api.delete<unknown>(`/api/dashboard/promo-codes/${id}`);
+export const deletePromoCode = async (
+  id: string
+): Promise<PromoCodeDTO | null> => {
+  const response = await api.delete<unknown>(
+    `/api/dashboard/promo-codes/${id}`
+  );
   return normalizePromoCodeDetailResponse(response.data);
 };
 

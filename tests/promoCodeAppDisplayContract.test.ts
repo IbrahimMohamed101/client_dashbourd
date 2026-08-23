@@ -5,6 +5,7 @@ import {
   toPromoCodePayload,
   type PromoCodeFormValues,
 } from "../src/utils/promoCodeForm";
+import { promoCodeAppSelectionUrl } from "../src/utils/promoCodeApiContract";
 
 const values: PromoCodeFormValues = {
   code: " save20 ",
@@ -31,6 +32,12 @@ const values: PromoCodeFormValues = {
 };
 
 describe("promo-code app display contract", () => {
+  it("uses the singleton app-promo selection endpoint", () => {
+    expect(promoCodeAppSelectionUrl()).toBe(
+      "/api/dashboard/promo-codes/app-selection"
+    );
+  });
+
   it("sends display controls and localized copy without formatting a discount label", () => {
     const payload = toPromoCodePayload(values);
 

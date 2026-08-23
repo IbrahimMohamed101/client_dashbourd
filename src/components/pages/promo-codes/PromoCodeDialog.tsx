@@ -417,10 +417,13 @@ export function PromoCodeDialog({
                         <Smartphone className="size-5" />
                       </div>
                       <div>
-                        <FormLabel>إظهار كود الخصم في تطبيق الجوال</FormLabel>
+                        <FormLabel>
+                          تجهيز كود الخصم للعرض في تطبيق الجوال
+                        </FormLabel>
                         <FormDescription>
-                          يظهر الكود للنسخ فقط. التطبيق والتحقق من الخصم يظلان
-                          في خطوة إتمام الاشتراك.
+                          بعد الحفظ اختره من بطاقة «البرومو كود المعروض في
+                          التطبيق». التطبيق والتحقق من الخصم يظلان في خطوة إتمام
+                          الاشتراك.
                         </FormDescription>
                         <FormMessage />
                       </div>
@@ -473,31 +476,10 @@ export function PromoCodeDialog({
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="displayPriority"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>أولوية العرض</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            value={field.value ?? "0"}
-                            type="number"
-                            min="-1000"
-                            max="1000"
-                            step="1"
-                            dir="ltr"
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          عند وجود أكثر من عرض صالح، يعرض التطبيق صاحب الأولوية
-                          الأعلى.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="rounded-xl border border-dashed border-primary/25 bg-background/60 p-3 text-xs leading-5 text-muted-foreground">
+                    لا توجد أولوية تلقائية بين الأكواد. الكود الظاهر للعميل هو
+                    فقط الذي تحدده من بطاقة الاختيار أعلى صفحة أكواد الخصم.
+                  </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormField

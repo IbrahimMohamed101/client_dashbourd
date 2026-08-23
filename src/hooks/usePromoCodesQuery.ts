@@ -8,10 +8,12 @@ import {
 import {
   createPromoCode,
   deletePromoCode,
+  fetchPromoCodeAppSelection,
   fetchPromoCodeById,
   fetchPromoCodesList,
   togglePromoCode,
   updatePromoCode,
+  updatePromoCodeAppSelection,
   validatePromoCode,
 } from "@/utils/fetchPromoCodesData";
 
@@ -30,6 +32,13 @@ export const promoCodeDetailQueryOptions = (id: string) =>
     staleTime: 1000 * 60 * 5,
   });
 
+export const promoCodeAppSelectionQueryOptions = () =>
+  queryOptions({
+    queryKey: ["promo-code-app-selection"],
+    queryFn: fetchPromoCodeAppSelection,
+    staleTime: 1000 * 60 * 5,
+  });
+
 export const usePromoCodesListQuery = (includeDeleted: boolean = false) => {
   return useQuery(promoCodesListQueryOptions(includeDeleted));
 };
@@ -41,6 +50,27 @@ export const usePromoCodeDetailQuery = (id: string | null) => {
   });
 };
 
+export const usePromoCodeAppSelectionQuery = () => {
+  return useQuery(promoCodeAppSelectionQueryOptions());
+};
+
+export const useUpdatePromoCodeAppSelectionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updatePromoCodeAppSelection,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["promo-code-app-selection"], data);
+      queryClient.invalidateQueries({ queryKey: ["promo-codes-list"] });
+      if (data.promoCodeId) {
+        queryClient.invalidateQueries({
+          queryKey: ["promo-code-detail", data.promoCodeId],
+        });
+      }
+    },
+  });
+};
+
 export const useCreatePromoCodeMutation = () => {
   const queryClient = useQueryClient();
 
@@ -48,6 +78,7 @@ export const useCreatePromoCodeMutation = () => {
     mutationFn: createPromoCode,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["promo-codes-list"] });
+      queryClient.invalidateQueries({ queryKey: ["promo-code-app-selection"] });
     },
   });
 };
@@ -62,6 +93,7 @@ export const useUpdatePromoCodeMutation = () => {
       queryClient.invalidateQueries({
         queryKey: ["promo-code-detail", variables.id],
       });
+      queryClient.invalidateQueries({ queryKey: ["promo-code-app-selection"] });
     },
   });
 };
@@ -74,6 +106,7 @@ export const useDeletePromoCodeMutation = () => {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["promo-codes-list"] });
       queryClient.invalidateQueries({ queryKey: ["promo-code-detail", id] });
+      queryClient.invalidateQueries({ queryKey: ["promo-code-app-selection"] });
     },
   });
 };
@@ -86,6 +119,7 @@ export const useTogglePromoCodeMutation = () => {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["promo-codes-list"] });
       queryClient.invalidateQueries({ queryKey: ["promo-code-detail", id] });
+      queryClient.invalidateQueries({ queryKey: ["promo-code-app-selection"] });
     },
   });
 };

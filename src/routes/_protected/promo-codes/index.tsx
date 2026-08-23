@@ -3,13 +3,20 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Loader } from "@/components/global/loader";
 import { PromoCodesTable } from "@/components/pages/promo-codes/PromoCodesTable";
 import { PromoCodesDashboardCharts } from "@/components/pages/promo-codes/PromoCodesDashboardCharts";
-import { promoCodesListQueryOptions } from "@/hooks/usePromoCodesQuery";
+import { AppPromoSelectionCard } from "@/components/pages/promo-codes/AppPromoSelectionCard";
+import {
+  promoCodeAppSelectionQueryOptions,
+  promoCodesListQueryOptions,
+} from "@/hooks/usePromoCodesQuery";
 import { BadgePercent, Ticket } from "lucide-react";
 
 export const Route = createFileRoute("/_protected/promo-codes/")({
   component: RouteComponent,
   loader: ({ context }) =>
-    context.queryClient.ensureQueryData(promoCodesListQueryOptions(false)),
+    Promise.all([
+      context.queryClient.ensureQueryData(promoCodesListQueryOptions(false)),
+      context.queryClient.ensureQueryData(promoCodeAppSelectionQueryOptions()),
+    ]),
   pendingComponent: () => (
     <Loader variant="full-screen" label="جاري تحميل أكواد الخصم..." />
   ),
@@ -62,6 +69,8 @@ function RouteComponent() {
           </div>
         </div>
       </div>
+
+      <AppPromoSelectionCard promos={promos} />
 
       <PromoCodesDashboardCharts promos={promos} />
 

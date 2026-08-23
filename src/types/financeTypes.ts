@@ -113,6 +113,28 @@ interface PromoCodePayload {
   appDisplay?: PromoCodeAppDisplayDTO;
 }
 
+interface PromoCodePublicOfferDTO {
+  id: string;
+  code: string;
+  isVisible: boolean;
+  showOnHome: boolean;
+  showOnPlans: boolean;
+  discountLabel: LocalizedTextDTO;
+  homeMessage: LocalizedTextDTO;
+  title: LocalizedTextDTO;
+  description: LocalizedTextDTO;
+  startsAt?: string | null;
+  expiresAt?: string | null;
+}
+
+interface PromoCodeAppSelectionDTO {
+  promoCodeId: string | null;
+  promoCode: PromoCodeDTO | null;
+  promoOffer: PromoCodePublicOfferDTO | null;
+  isPubliclyDisplayable: boolean;
+  issues: string[];
+}
+
 interface PromoCodeValidationResult {
   valid: boolean;
   promo?: {
@@ -140,6 +162,8 @@ export type {
   PromoCodesListMeta,
   PromoCodesListResponse,
   PromoCodePayload,
+  PromoCodePublicOfferDTO,
+  PromoCodeAppSelectionDTO,
   PromoCodeValidationResult,
   StatusFilter,
 };
