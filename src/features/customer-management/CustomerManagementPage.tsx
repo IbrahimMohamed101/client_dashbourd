@@ -10,6 +10,7 @@ import {
   LoaderCircle,
   Mail,
   MapPin,
+  Merge,
   Phone,
   Save,
   Search,
@@ -46,7 +47,10 @@ import {
   fetchManagedCustomer,
   grantMealCompensation,
   getCustomerManagementErrorMessage,
+  mergeCustomerAccounts,
+  previewCustomerAccountMerge,
   updateManagedCustomer,
+  type AccountMergePreview,
   type CustomerManagementDraft,
   type ManagedCustomerProfile,
   type MealCompensation,
@@ -373,6 +377,17 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
                 rows={profile.activeSubscription?.compensationHistory ?? []}
               />
 
+              <AccountMergeCard
+                profile={profile}
+                onMerged={async (targetId) => {
+                  setSelectedUserId(targetId);
+                  await queryClient.invalidateQueries({ queryKey: ["users"] });
+                  await queryClient.invalidateQueries({
+                    queryKey: ["customer-management", targetId],
+                  });
+                }}
+              />
+
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -579,6 +594,332 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
       </AlertDialog>
     </div>
   );
+}
+
+const MERGE_COUNT_LABELS: Record<string, string> = {
+  subscriptions: "الاشتراكات",
+  orders: "الطلبات",
+  payments: "المدفوعات",
+  checkoutDrafts: "مسودات الدفع",
+  promoUsages: "استخدامات الخصم",
+  notifications: "الإشعارات",
+  accountDeletionRequests: "طلبات حذف الحساب",
+  pickupRequests: "طلبات الاستلام",
+  entitlementBatches: "حزم الاستحقاق",
+  entitlementDayBlueprints: "خطط أيام الاستحقاق",
+  entitlementCompensations: "تعويضات الاستحقاق",
+  entitlementAllocations: "حجوزات الوجبات",
+  extraEntitlementBuckets: "أرصدة الإضافات",
+  extraEntitlementAllocations: "حجوزات الإضافات",
+  dayAppendOperations: "عمليات إضافة الأيام",
+};
+
+function AccountMergeCard({
+  profile,
+  onMerged,
+}: {
+  profile: ManagedCustomerProfile;
+  onMerged: (targetId: string) => Promise<void>;
+}) {
+  const [targetPhone, setTargetPhone] = React.useState("");
+  const [reason, setReason] = React.useState("");
+  const [preview, setPreview] = React.useState<AccountMergePreview | null>(null);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [idempotencyKey, setIdempotencyKey] = React.useState("");
+  const [activeSubscriptionResolution, setActiveSubscriptionResolution] = React.useState<
+    "keep_source" | "keep_target" | ""
+  >("");
+
+  React.useEffect(() => {
+    setTargetPhone("");
+    setReason("");
+    setPreview(null);
+    setConfirmOpen(false);
+    setIdempotencyKey("");
+    setActiveSubscriptionResolution("");
+  }, [profile.id]);
+
+  const previewMutation = useMutation({
+    mutationFn: previewCustomerAccountMerge,
+    onSuccess: (data) => setPreview(data),
+    onError: (error) => ToastMessage(getCustomerManagementErrorMessage(error), "error"),
+  });
+  const mergeMutation = useMutation({
+    mutationFn: mergeCustomerAccounts,
+    onSuccess: async (response) => {
+      setConfirmOpen(false);
+      ToastMessage(
+        response.meta.replayed
+          ? "تم دمج الحسابين مسبقًا"
+          : "تم نقل كل البيانات إلى الحساب الصحيح وتعطيل الحساب المكرر",
+        "success"
+      );
+      await onMerged(response.data.target.id);
+    },
+    onError: (error) => {
+      setConfirmOpen(false);
+      ToastMessage(getCustomerManagementErrorMessage(error), "error");
+    },
+  });
+
+  const requestPreview = () => {
+    if (!targetPhone.trim()) {
+      ToastMessage("اكتب رقم الحساب الصحيح أولًا", "error");
+      return;
+    }
+    setPreview(null);
+    previewMutation.mutate({ customerId: profile.id, targetPhone });
+  };
+  const requestMerge = () => {
+    if (!canMergeAfterResolution) return;
+    if (reason.trim().length < 3) {
+      ToastMessage("اكتب سبب الدمج قبل المتابعة", "error");
+      return;
+    }
+    setIdempotencyKey(crypto.randomUUID());
+    setConfirmOpen(true);
+  };
+  const confirmMerge = () => {
+    if (!preview || !idempotencyKey) return;
+    mergeMutation.mutate({
+      customerId: profile.id,
+      targetPhone: preview.target.phone,
+      reason,
+      idempotencyKey,
+      ...(activeSubscriptionResolution ? { activeSubscriptionResolution } : {}),
+    });
+  };
+
+  const countKeys = preview
+    ? Object.keys(MERGE_COUNT_LABELS).filter(
+        (key) => (preview.sourceCounts[key] || 0) > 0 || (preview.targetCounts[key] || 0) > 0
+      )
+    : [];
+  const activeSubscriptionConflict = preview?.conflicts.find(
+    (conflict) => conflict.code === "MULTIPLE_ACTIVE_SUBSCRIPTIONS"
+  );
+  const blockingConflicts = preview?.conflicts.filter(
+    (conflict) => conflict.code !== "MULTIPLE_ACTIVE_SUBSCRIPTIONS"
+  ) ?? [];
+  const canMergeAfterResolution = Boolean(
+    preview && blockingConflicts.length === 0 && (!activeSubscriptionConflict || activeSubscriptionResolution)
+  );
+
+  return (
+    <>
+      <Card className="border-amber-300/70 bg-amber-50/30 dark:bg-amber-950/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Merge className="size-4 text-amber-700" />
+            دمج حساب مكرر
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            ينقل كل الاشتراكات والطلبات والمدفوعات من الحساب المحدد إلى الحساب الصحيح،
+            مع الاحتفاظ بتسجيل الدخول وكلمة المرور وبيانات الحساب الصحيح.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+            <Field label="رقم الجوال للحساب الصحيح">
+              <Input
+                value={targetPhone}
+                onChange={(event) => {
+                  setTargetPhone(event.target.value);
+                  setPreview(null);
+                  setActiveSubscriptionResolution("");
+                }}
+                dir="ltr"
+                inputMode="tel"
+                placeholder="+9665XXXXXXXX"
+              />
+            </Field>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={requestPreview}
+              disabled={previewMutation.isPending || mergeMutation.isPending}
+            >
+              {previewMutation.isPending ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <Search className="size-4" />
+              )}
+              معاينة الدمج
+            </Button>
+          </div>
+
+          {preview ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <MergeAccountSummary title="الحساب المكرر — سيتم تعطيله" account={preview.source} destructive />
+                <MergeAccountSummary title="الحساب الصحيح — سيظل تسجيل دخوله" account={preview.target} />
+              </div>
+
+              {countKeys.length ? (
+                <div className="overflow-hidden rounded-xl border bg-background">
+                  <div className="grid grid-cols-[minmax(0,1fr)_90px_90px] bg-muted/50 px-4 py-2 text-xs font-medium">
+                    <span>نوع البيانات</span>
+                    <span className="text-center">المكرر</span>
+                    <span className="text-center">الصحيح</span>
+                  </div>
+                  {countKeys.map((key) => (
+                    <div
+                      key={key}
+                      className="grid grid-cols-[minmax(0,1fr)_90px_90px] border-t px-4 py-2 text-sm"
+                    >
+                      <span>{MERGE_COUNT_LABELS[key]}</span>
+                      <span className="text-center font-semibold tabular-nums">{preview.sourceCounts[key] || 0}</span>
+                      <span className="text-center tabular-nums">{preview.targetCounts[key] || 0}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <AddressNotice text="لا توجد بيانات تشغيلية لنقلها من الحساب المكرر." />
+              )}
+
+              {preview.conflicts.length ? (
+                <Alert variant="destructive">
+                  <AlertTriangle className="size-4" />
+                  <AlertTitle>يلزم حل تعارض قبل الدمج</AlertTitle>
+                  <AlertDescription>
+                    {preview.conflicts.map((conflict) => (
+                      <p key={conflict.code}>{accountMergeConflictMessage(conflict.code)}</p>
+                    ))}
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert>
+                  <ShieldCheck className="size-4" />
+                  <AlertTitle>المعاينة سليمة</AlertTitle>
+                  <AlertDescription>
+                    لن يتم استبدال اسم أو بريد أو كلمة مرور الحساب الصحيح. سيُعطّل الحساب
+                    المكرر وتُنقل ملكية كل البيانات الظاهرة أعلاه.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {activeSubscriptionConflict ? (
+                <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50/70 p-4 dark:bg-amber-950/20">
+                  <div>
+                    <p className="font-semibold">أي اشتراك سيظل نشطًا؟</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      لن نحذف الاشتراك الآخر؛ سيتحول إلى «مجمّد» وتبقى كل بياناته محفوظة.
+                    </p>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Button
+                      type="button"
+                      variant={activeSubscriptionResolution === "keep_source" ? "default" : "outline"}
+                      onClick={() => setActiveSubscriptionResolution("keep_source")}
+                    >
+                      إبقاء الاشتراك الجديد على الحساب المكرر
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={activeSubscriptionResolution === "keep_target" ? "default" : "outline"}
+                      onClick={() => setActiveSubscriptionResolution("keep_target")}
+                    >
+                      إبقاء اشتراك الحساب الصحيح
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <Field label="سبب الدمج — مطلوب لسجل التدقيق">
+                <Textarea
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  placeholder="مثال: العميل سجّل الاشتراك على رقم خاطئ ولديه حساب سابق بالرقم الصحيح"
+                  maxLength={500}
+                  rows={3}
+                />
+              </Field>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={requestMerge}
+                  disabled={!canMergeAfterResolution || mergeMutation.isPending}
+                >
+                  <Merge className="size-4" />
+                  مراجعة وتنفيذ الدمج
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          setConfirmOpen(open);
+          if (!open && !mergeMutation.isPending) setIdempotencyKey("");
+        }}
+      >
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد دمج حسابي العميل</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 text-right">
+              <span className="block">
+                سيتم نقل بيانات <strong dir="ltr">{preview?.source.phone}</strong> إلى الحساب
+                الصحيح <strong dir="ltr">{preview?.target.phone}</strong>.
+              </span>
+              <span className="block rounded-lg border p-3">
+                الحساب الصحيح يحتفظ بتسجيل الدخول والاسم والبريد وكلمة المرور الحالية.
+                الحساب المكرر سيُعطّل نهائيًا مع الاحتفاظ بسجل تدقيق كامل.
+              </span>
+              {activeSubscriptionResolution ? (
+                <span className="block">
+                  الاشتراك النشط بعد الدمج: {activeSubscriptionResolution === "keep_source"
+                    ? "الاشتراك الجديد الموجود على الحساب المكرر"
+                    : "اشتراك الحساب الصحيح الحالي"}.
+                </span>
+              ) : null}
+              <span className="block text-destructive">
+                هذه عملية حقيقية على الاشتراكات والطلبات والمدفوعات وليست تعديل رقم فقط.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogAction onClick={confirmMerge} disabled={mergeMutation.isPending}>
+              {mergeMutation.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}
+              تأكيد الدمج ونقل البيانات
+            </AlertDialogAction>
+            <AlertDialogCancel disabled={mergeMutation.isPending}>إلغاء</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+function MergeAccountSummary({
+  title,
+  account,
+  destructive = false,
+}: {
+  title: string;
+  account: AccountMergePreview["source"];
+  destructive?: boolean;
+}) {
+  return (
+    <div className={cn("rounded-xl border bg-background p-4", destructive && "border-destructive/40")}>
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <p className="mt-2 font-semibold">{account.fullName || "عميل بدون اسم"}</p>
+      <p className="mt-1 text-sm" dir="ltr">{account.phone}</p>
+      {account.email ? <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{account.email}</p> : null}
+    </div>
+  );
+}
+
+function accountMergeConflictMessage(code: string) {
+  if (code === "MULTIPLE_ACTIVE_SUBSCRIPTIONS") {
+    return "الحسابان لديهما اشتراك نشط. يجب تحديد الاشتراك الذي سيظل نشطًا قبل الدمج.";
+  }
+  if (code === "ORDER_KEY_CONFLICT") return "توجد طلبات متعارضة بنفس مفتاح العملية.";
+  if (code === "CHECKOUT_KEY_CONFLICT") return "توجد مسودات دفع متعارضة بنفس مفتاح العملية.";
+  return "يوجد تعارض بيانات يحتاج مراجعة قبل الدمج.";
 }
 
 function filterUsers(users: User[], search: string) {

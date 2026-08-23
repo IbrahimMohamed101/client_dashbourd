@@ -112,6 +112,37 @@ type MealCompensationResponse = {
   };
 };
 
+export type AccountMergeConflict = {
+  code: string;
+  message?: string;
+  idempotencyKeys?: string[];
+  requestHashes?: string[];
+  sourceSubscriptionId?: string;
+  targetSubscriptionId?: string;
+};
+
+export type AccountMergePreview = {
+  source: Pick<ManagedCustomerProfile, "id" | "fullName" | "phone" | "email" | "isActive" | "createdAt">;
+  target: Pick<ManagedCustomerProfile, "id" | "fullName" | "phone" | "email" | "isActive" | "createdAt">;
+  sourceCounts: Record<string, number>;
+  targetCounts: Record<string, number>;
+  conflicts: AccountMergeConflict[];
+  canMerge: boolean;
+  identityPolicy: string;
+};
+
+type AccountMergeResponse = {
+  status: boolean;
+  data: {
+    operationId: string;
+    state: "completed";
+    source: AccountMergePreview["source"];
+    target: AccountMergePreview["target"];
+    movedCounts: Record<string, number>;
+  };
+  meta: { replayed: boolean };
+};
+
 const CUSTOMER_MANAGEMENT_ROUTE = "/api/dashboard/customer-management";
 const ADDRESS_TEXT_KEYS = [
   "line1",
@@ -239,6 +270,47 @@ export async function grantMealCompensation({
   return response.data;
 }
 
+export async function previewCustomerAccountMerge({
+  customerId,
+  targetPhone,
+}: {
+  customerId: string;
+  targetPhone: string;
+}) {
+  const response = await api.post<{ status: boolean; data: AccountMergePreview }>(
+    `${CUSTOMER_MANAGEMENT_ROUTE}/${customerId}/account-merge/preview`,
+    { targetPhone: normalizePhoneE164(targetPhone.trim()) },
+    { suppressGlobalForbiddenToast: true }
+  );
+  return response.data.data;
+}
+
+export async function mergeCustomerAccounts({
+  customerId,
+  targetPhone,
+  reason,
+  idempotencyKey,
+  activeSubscriptionResolution,
+}: {
+  customerId: string;
+  targetPhone: string;
+  reason: string;
+  idempotencyKey: string;
+  activeSubscriptionResolution?: "keep_source" | "keep_target";
+}) {
+  const response = await api.post<AccountMergeResponse>(
+    `${CUSTOMER_MANAGEMENT_ROUTE}/${customerId}/account-merge`,
+    {
+      targetPhone: normalizePhoneE164(targetPhone.trim()),
+      reason: reason.trim(),
+      idempotencyKey,
+      ...(activeSubscriptionResolution ? { activeSubscriptionResolution } : {}),
+    },
+    { suppressGlobalForbiddenToast: true }
+  );
+  return response.data;
+}
+
 export function getCustomerManagementErrorMessage(error: unknown) {
   const parsed = parseApiError(error);
   const code = parsed.code?.toUpperCase();
@@ -258,6 +330,13 @@ export function getCustomerManagementErrorMessage(error: unknown) {
   if (code === "BALANCE_CHANGED") {
     return "تغير رصيد الاشتراك أثناء العملية؛ حدّث البيانات وحاول مرة أخرى";
   }
+  if (code === "ACCOUNT_MERGE_CONFLICT") {
+    return "لا يمكن تنفيذ الدمج قبل حل التعارضات الظاهرة في المعاينة";
+  }
+  if (code === "TARGET_NOT_FOUND") return "لم يتم العثور على حساب الرقم الصحيح";
+  if (code === "SAME_ACCOUNT") return "اختر حسابًا آخر ليكون الحساب الصحيح";
+  if (code === "SOURCE_ALREADY_MERGED") return "تم دمج هذا الحساب في حساب آخر مسبقًا";
+  if (code === "MERGE_ALREADY_STARTED") return "توجد عملية دمج سابقة لهذا الحساب وتحتاج مراجعة";
   if (code === "TRANSACTION_REQUIRED") {
     return "التحديث الآمن غير متاح حاليًا؛ لم يتم تغيير أي بيانات";
   }
