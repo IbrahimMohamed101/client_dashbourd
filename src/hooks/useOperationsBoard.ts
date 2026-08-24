@@ -119,6 +119,7 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
   const pendingActionsRef = useRef<PendingOperationsActions>({});
   const [pendingActions, setPendingActions] = useState<PendingOperationsActions>({});
   const role = user?.role;
+  const accountKey = user?.id || user?.email || role || "anonymous";
   const { label: screenLabel, screens: visibleScreens } =
     getScreensForRole(role);
 
@@ -126,6 +127,8 @@ export function useOperationsBoard(params: UseOperationsBoardParams = {}) {
     queryKey: [
       "operations-board",
       "queue",
+      accountKey,
+      role,
       visibleScreens,
       params.date,
       params.q,

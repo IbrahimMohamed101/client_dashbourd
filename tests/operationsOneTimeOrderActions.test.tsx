@@ -228,6 +228,15 @@ describe("useOperationsBoard one-time action pending state", () => {
     });
 
     await waitFor(() => expect(mocks.fetchDashboardOpsList).toHaveBeenCalledTimes(1));
+    const queueQuery = queryClient.getQueryCache().findAll({
+      queryKey: ["operations-board", "queue"],
+    })[0];
+    expect(queueQuery?.queryKey.slice(0, 4)).toEqual([
+      "operations-board",
+      "queue",
+      "cashier",
+      "cashier",
+    ]);
 
     act(() => {
       result.current.requestAction(orderA, "prepare", "بدء التحضير");
