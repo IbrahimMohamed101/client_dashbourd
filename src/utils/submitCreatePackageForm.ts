@@ -3,7 +3,7 @@ import { packagesQueryOptions } from "@/hooks/usePackagesQuery";
 import type { CreatePackageSchemaType } from "@/lib/validations/createPackageSchema";
 import { ToastMessage } from "@/components/global/ToastMessage";
 import { fetchCreatePackage } from "@/utils/fetchCreatePackage";
-import { optionalRiyalToHalala, riyalToHalala } from "@/utils/price";
+import { riyalToHalala } from "@/utils/price";
 
 interface SubmitCreateDeps {
   queryClient: QueryClient;
@@ -17,12 +17,12 @@ export const buildPackagePayload = (data: CreatePackageSchemaType) => ({
     ...gram,
     sortOrder: gi,
     mealsOptions: gram.mealsOptions.map((meal, mi) => {
-      const { priceSar, compareAtSar, ...rest } = meal;
+      const { priceSar, ...rest } = meal;
       return {
         ...rest,
         sortOrder: mi,
         priceHalala: riyalToHalala(priceSar),
-        compareAtHalala: optionalRiyalToHalala(compareAtSar),
+        compareAtHalala: 0,
         mealsPerDay: Number(meal.mealsPerDay),
       };
     }),

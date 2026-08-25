@@ -51,7 +51,7 @@ export function MealCard({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">
             عدد الوجبات يومياً
@@ -72,7 +72,7 @@ export function MealCard({
 
         <div className="space-y-1.5">
           <Label className="text-xs text-muted-foreground">
-            السعر بالريال
+            سعر الخطة الأساسي بالريال
           </Label>
           <div className="relative">
             <Input
@@ -86,40 +86,13 @@ export function MealCard({
               aria-invalid={!!errors?.priceSar}
               className="pl-12 text-left"
             />
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-xs font-medium text-muted-foreground">
               ر.س
             </span>
           </div>
           {errors?.priceSar && (
             <p className="text-xs text-destructive">
               {errors.priceSar.message}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">
-            سعر المقارنة بالريال
-          </Label>
-          <div className="relative">
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              dir="ltr"
-              placeholder="200.00"
-              {...form.register(`${prefix}.compareAtSar`)}
-              aria-invalid={!!errors?.compareAtSar}
-              className="pl-12 text-left"
-            />
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
-              ر.س
-            </span>
-          </div>
-          {errors?.compareAtSar && (
-            <p className="text-xs text-destructive">
-              {errors.compareAtSar.message}
             </p>
           )}
         </div>

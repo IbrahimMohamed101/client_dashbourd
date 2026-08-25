@@ -8,7 +8,6 @@ export const DEFAULT_MEAL = {
   sortOrder: 0,
   isActive: true,
   priceSar: 0,
-  compareAtSar: undefined,
 };
 
 const DEFAULT_GRAM = {

@@ -3,7 +3,7 @@ import { packagesQueryOptions } from "@/hooks/usePackagesQuery";
 import { fetchUpdatePackage } from "@/utils/fetchUpdatePackage";
 import type { CreatePackageSchemaType } from "@/lib/validations/createPackageSchema";
 import { ToastMessage } from "@/components/global/ToastMessage";
-import { optionalRiyalToHalala, riyalToHalala } from "@/utils/price";
+import { riyalToHalala } from "@/utils/price";
 
 interface SubmitUpdateDeps {
   planId: string;
@@ -24,12 +24,12 @@ export const submitUpdatePackageForm = async (
         ...gram,
         sortOrder: gi,
         mealsOptions: gram.mealsOptions.map((meal, mi) => {
-          const { priceSar, compareAtSar, ...rest } = meal;
+          const { priceSar, ...rest } = meal;
           return {
             ...rest,
             sortOrder: mi,
             priceHalala: riyalToHalala(priceSar),
-            compareAtHalala: optionalRiyalToHalala(compareAtSar),
+            compareAtHalala: 0,
             mealsPerDay: Number(meal.mealsPerDay),
           };
         }),
@@ -37,7 +37,10 @@ export const submitUpdatePackageForm = async (
       freezePolicy: data.freezePolicy,
     };
 
-    await fetchUpdatePackage(planId, payload as unknown as CreatePackageSchemaType);
+    await fetchUpdatePackage(
+      planId,
+      payload as unknown as CreatePackageSchemaType
+    );
     ToastMessage("تم تحديث الباقة بنجاح! 🎉", "success");
     await queryClient.invalidateQueries(packagesQueryOptions());
     routerNavigate({ to: "/packages" });

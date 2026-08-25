@@ -80,11 +80,9 @@ function UpdatePackagePage() {
         mealsPerDay: meal.mealsPerDay,
         sortOrder: meal.sortOrder ?? 0,
         isActive: meal.isActive ?? true,
-        priceSar: halalaToRiyal(meal.priceHalala),
-        compareAtSar:
-          meal.compareAtHalala === undefined || meal.compareAtHalala === null
-            ? ""
-            : halalaToRiyal(meal.compareAtHalala),
+        priceSar: halalaToRiyal(
+          Math.max(meal.priceHalala, meal.compareAtHalala ?? 0)
+        ),
       })),
     })),
   };

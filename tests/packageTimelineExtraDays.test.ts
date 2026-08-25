@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import createPackageSchema from "../src/lib/validations/createPackageSchema";
 import { normalizePackage } from "../src/utils/packageAdapter";
+import { buildPackagePayload } from "../src/utils/submitCreatePackageForm";
 
 test("package timeline days remain separate from meal entitlement days", () => {
   const parsed = createPackageSchema.parse({
@@ -25,7 +26,6 @@ test("package timeline days remain separate from meal entitlement days", () => {
             sortOrder: 0,
             isActive: true,
             priceSar: 1131,
-            compareAtSar: "",
           },
         ],
       },
@@ -38,6 +38,9 @@ test("package timeline days remain separate from meal entitlement days", () => {
     parsed.daysCount * parsed.gramsOptions[0].mealsOptions[0].mealsPerDay,
     60
   );
+  const payload = buildPackagePayload(parsed);
+  assert.equal(payload.gramsOptions[0].mealsOptions[0].priceHalala, 113100);
+  assert.equal(payload.gramsOptions[0].mealsOptions[0].compareAtHalala, 0);
 
   const normalized = normalizePackage({
     _id: "plan-30",
