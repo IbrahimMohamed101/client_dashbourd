@@ -23,12 +23,13 @@ interface PaymentRecoveryActionProps {
 
 export function PaymentRecoveryAction({ payment }: PaymentRecoveryActionProps) {
   const queryClient = useQueryClient();
+  const paymentId = payment.id || payment._id || "";
   const mutation = useMutation({
-    mutationFn: () => verifyPayment(payment.id),
+    mutationFn: () => verifyPayment(paymentId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["payments-list"] }),
-        queryClient.invalidateQueries({ queryKey: ["payment-details", payment.id] }),
+        queryClient.invalidateQueries({ queryKey: ["payment-details", paymentId] }),
         queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] }),
       ]);
       toast.success("تم التحقق من الدفعة ومزامنة الاشتراك");
@@ -44,8 +45,8 @@ export function PaymentRecoveryAction({ payment }: PaymentRecoveryActionProps) {
         <Button
           variant="outline"
           size="sm"
-          disabled={mutation.isPending}
-          aria-label={`مزامنة الدفعة ${payment.reference || payment.id}`}
+          disabled={mutation.isPending || !paymentId}
+          aria-label={`مزامنة الدفعة ${payment.reference || paymentId}`}
         >
           <RefreshCw className={`ml-1 size-4 ${mutation.isPending ? "animate-spin" : ""}`} />
           مزامنة

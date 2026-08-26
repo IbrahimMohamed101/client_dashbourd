@@ -1,5 +1,6 @@
 export interface Payment {
-  id: string;
+  id?: string;
+  _id?: string;
   reference: string;
   customerName: string;
   amount: number;
