@@ -3,6 +3,7 @@ import type { Payment } from "@/types/paymentTypes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CreditCard, EyeIcon } from "lucide-react";
+import { PaymentRecoveryAction } from "./PaymentRecoveryAction";
 
 const statusLabels: Record<string, { label: string; variant: React.ComponentProps<typeof Badge>["variant"] }> = {
   paid: { label: "مدفوع", variant: "default" },
@@ -125,11 +126,14 @@ export const paymentsColumns: ColumnDef<Payment>[] = [
   {
     id: "actions",
     header: "الإجراءات",
-    cell: () => (
-      <Button variant="ghost" size="sm">
-        <EyeIcon className="ml-1 size-4" />
-        عرض
-      </Button>
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm">
+          <EyeIcon className="ml-1 size-4" />
+          عرض
+        </Button>
+        <PaymentRecoveryAction payment={row.original} />
+      </div>
     ),
     enableHiding: false,
   },
