@@ -26,13 +26,18 @@ export function PaymentRecoveryAction({ payment }: PaymentRecoveryActionProps) {
   const paymentId = payment.id || payment._id || "";
   const mutation = useMutation({
     mutationFn: () => verifyPayment(paymentId),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      const payload = result?.data || result;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["payments-list"] }),
         queryClient.invalidateQueries({ queryKey: ["payment-details", paymentId] }),
         queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] }),
       ]);
-      toast.success("تم التحقق من الدفعة ومزامنة الاشتراك");
+      if (payload?.applied === true) {
+        toast.success("تم التحقق من الدفعة ومزامنة الاشتراك");
+        return;
+      }
+      toast.error("الدفعة مدفوعة لكن الاشتراك لم يُطبّق. راجع سبب التعذر قبل المحاولة مجددًا.");
     },
     onError: (error: Error & { normalizedMessage?: string }) => {
       toast.error(error.normalizedMessage || "تعذر مزامنة الدفعة. راجع حالتها وحاول مرة أخرى.");
