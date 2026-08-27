@@ -19,12 +19,42 @@ const api = axios.create({
   },
 });
 
+function createIdempotencyKey() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `manual-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 api.interceptors.request.use(
   (config) => {
     const token = Cookies.get("dashboardToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    const method = String(config.method || "GET").toUpperCase();
+    const url = String(config.url || "");
+    if (method === "POST" && /\/manual-deduction(?:\?|$)/.test(url)) {
+      const headers = config.headers as
+        | (Record<string, unknown> & {
+            get?: (header: string) => unknown;
+            set?: (header: string, value: string) => void;
+          })
+        | undefined;
+      const existing = typeof headers?.get === "function"
+        ? headers.get("Idempotency-Key")
+        : headers?.["Idempotency-Key"];
+      if (!existing) {
+        const key = createIdempotencyKey();
+        if (typeof headers?.set === "function") {
+          headers.set("Idempotency-Key", key);
+        } else if (headers) {
+          headers["Idempotency-Key"] = key;
+        }
+      }
+    }
+
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
       const headers = config.headers as
         | (Record<string, unknown> & { delete?: (header: string) => void })
