@@ -13,23 +13,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/useDebounce";
 import api from "@/lib/apis";
 import { getApiErrorMessage } from "@/lib/apiErrors";
-import { useDebounce } from "@/hooks/useDebounce";
 
 type SearchSubscription = {
-  id?: string;
-  _id?: string;
-  userId?: string;
-  userName?: string;
-  user?: {
-    id?: string;
-    fullName?: string;
-    phone?: string;
+  id: string;
+  status: string;
+  fulfillmentMethod: string;
+  remainingMeals: number;
+  selectedMealsPerDay: number;
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
   };
-  phone?: string;
-  deliveryMode?: string;
-  fulfillmentMethod?: string;
 };
 
 type QuickBatch = {
@@ -68,25 +66,8 @@ type DeductionResponse = {
     days: number;
     mealsPerDay: number;
     mealsDeducted: number;
-    before: { remainingMeals?: number } | null;
-    after: {
-      remainingMeals?: number;
-      subscriptionRemainingMeals?: number | null;
-    } | null;
   };
 };
-
-function subscriptionIdOf(row: SearchSubscription) {
-  return String(row.id ?? row._id ?? "");
-}
-
-function customerNameOf(row: SearchSubscription) {
-  return row.user?.fullName ?? row.userName ?? "مشترك";
-}
-
-function customerPhoneOf(row: SearchSubscription) {
-  return row.user?.phone ?? row.phone ?? "—";
-}
 
 function planNameOf(batch: QuickBatch) {
   if (typeof batch.planName === "string") return batch.planName;
@@ -110,24 +91,18 @@ export function PickupQuickDayDeductionCard() {
   const [days, setDays] = React.useState(1);
   const requestRef = React.useRef<{ signature: string; key: string } | null>(null);
 
-  const selectedSubscriptionId = selectedSubscription
-    ? subscriptionIdOf(selectedSubscription)
-    : "";
+  const selectedSubscriptionId = selectedSubscription?.id ?? "";
 
-  const searchQuery = useQuery({
+  const searchQuery = useQuery<SearchSubscription[]>({
     queryKey: ["pickup-quick-subscription-search", debouncedSearch],
     enabled: debouncedSearch.length >= 2,
     retry: false,
     staleTime: 30_000,
     queryFn: async () => {
-      const params = new URLSearchParams({
-        status: "active",
-        fulfillmentMethod: "pickup",
-        page: "1",
-        limit: "10",
-        q: debouncedSearch,
-      });
-      const response = await api.get(`/api/dashboard/subscriptions/list?${params}`);
+      const params = new URLSearchParams({ q: debouncedSearch, limit: "10" });
+      const response = await api.get(
+        `/api/dashboard/subscriptions/quick-day-deduction/search?${params}`
+      );
       return (response.data?.data ?? []) as SearchSubscription[];
     },
   });
@@ -185,11 +160,10 @@ export function PickupQuickDayDeductionCard() {
       return response.data as DeductionResponse;
     },
     onSuccess: async (response) => {
-      const deducted = response.data.mealsDeducted;
       toast.success(
         response.data.idempotent
-          ? `العملية مسجلة بالفعل — ${deducted} وجبة`
-          : `تم خصم ${deducted} وجبة بنجاح`
+          ? `العملية مسجلة بالفعل — ${response.data.mealsDeducted} وجبة`
+          : `تم خصم ${response.data.mealsDeducted} وجبة بنجاح`
       );
       requestRef.current = null;
       await Promise.all([
@@ -246,27 +220,28 @@ export function PickupQuickDayDeductionCard() {
           <div className="rounded-xl border bg-muted/20 p-2">
             {searchQuery.isLoading ? (
               <p className="p-3 text-sm text-muted-foreground">جاري البحث...</p>
+            ) : searchQuery.isError ? (
+              <p className="p-3 text-sm text-destructive">
+                {getApiErrorMessage(searchQuery.error) || "تعذر البحث عن العميل"}
+              </p>
             ) : searchQuery.data?.length ? (
               <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                {searchQuery.data.map((row) => {
-                  const id = subscriptionIdOf(row);
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => selectSubscription(row)}
-                      className="rounded-lg border bg-background p-3 text-right transition hover:border-primary/50 hover:bg-primary/5"
-                    >
-                      <div className="flex items-start gap-2">
-                        <UserRound className="mt-0.5 size-4 text-primary" />
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold">{customerNameOf(row)}</p>
-                          <p className="text-sm text-muted-foreground">{customerPhoneOf(row)}</p>
-                        </div>
+                {searchQuery.data.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => selectSubscription(row)}
+                    className="rounded-lg border bg-background p-3 text-right transition hover:border-primary/50 hover:bg-primary/5"
+                  >
+                    <div className="flex items-start gap-2">
+                      <UserRound className="mt-0.5 size-4 text-primary" />
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{row.customer.name || "مشترك"}</p>
+                        <p className="text-sm text-muted-foreground">{row.customer.phone || "—"}</p>
                       </div>
-                    </button>
-                  );
-                })}
+                    </div>
+                  </button>
+                ))}
               </div>
             ) : (
               <p className="p-3 text-sm text-muted-foreground">لا توجد اشتراكات استلام نشطة مطابقة.</p>
@@ -278,8 +253,8 @@ export function PickupQuickDayDeductionCard() {
           <div className="space-y-4 rounded-xl border p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="font-semibold">{customerNameOf(selectedSubscription)}</p>
-                <p className="text-sm text-muted-foreground">{customerPhoneOf(selectedSubscription)}</p>
+                <p className="font-semibold">{selectedSubscription.customer.name || "مشترك"}</p>
+                <p className="text-sm text-muted-foreground">{selectedSubscription.customer.phone || "—"}</p>
               </div>
               <Button
                 type="button"
