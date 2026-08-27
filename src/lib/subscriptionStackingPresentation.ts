@@ -8,8 +8,8 @@ export function isCombinedSubscription(subscription: Subscription): boolean {
   return subscription.stacking?.isCombinedPackage === true;
 }
 
-export function isManualDeductionAllowed(subscription: Subscription): boolean {
-  return subscription.stacking?.manualDeductionAllowed !== false;
+export function isManualDeductionAllowed(_subscription: Subscription): boolean {
+  return true;
 }
 
 export function subscriptionPlanLabel(subscription: Subscription): string {
