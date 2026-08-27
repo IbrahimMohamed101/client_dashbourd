@@ -3,6 +3,7 @@ import type { PendingOperationsActions } from "@/hooks/useOperationsBoard";
 import { getPickupItems } from "@/lib/operationsBoard";
 import { OperationsQueueCharts } from "./OperationsQueueCharts";
 import { OperationsQueueTable } from "./OperationsQueueTable";
+import { PickupQuickDayDeductionCard } from "./PickupQuickDayDeductionCard";
 
 interface OperationsPickupBoardProps {
   items: UnifiedQueueItem[];
@@ -28,6 +29,7 @@ export function OperationsPickupBoard({
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
+      <PickupQuickDayDeductionCard />
       <OperationsQueueCharts
         items={pickupItems}
         title="استلام الفرع"
