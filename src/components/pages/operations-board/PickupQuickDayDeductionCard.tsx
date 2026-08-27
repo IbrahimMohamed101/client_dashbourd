@@ -162,8 +162,8 @@ export function PickupQuickDayDeductionCard() {
     onSuccess: async (response) => {
       toast.success(
         response.data.idempotent
-          ? `العملية مسجلة بالفعل — ${response.data.mealsDeducted} وجبة`
-          : `تم خصم ${response.data.mealsDeducted} وجبة بنجاح`
+          ? `الخصم اليومي مسجل بالفعل — ${response.data.days} يوم / ${response.data.mealsDeducted} وجبة`
+          : `تم خصم ${response.data.days} يوم — ${response.data.mealsDeducted} وجبة بنجاح`
       );
       requestRef.current = null;
       await Promise.all([
@@ -175,7 +175,7 @@ export function PickupQuickDayDeductionCard() {
       ]);
     },
     onError: (error: unknown) => {
-      toast.error(getApiErrorMessage(error) || "تعذر تنفيذ الخصم");
+      toast.error(getApiErrorMessage(error) || "تعذر تنفيذ الخصم اليومي");
     },
   });
 
@@ -193,10 +193,10 @@ export function PickupQuickDayDeductionCard() {
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Utensils className="size-5" />
-              خصم وجبات سريع
+              خصم أيام الاشتراك
             </CardTitle>
             <CardDescription className="mt-1">
-              اختر العميل والباقة ثم عدد الأيام. عدد الوجبات يُحسب من الباقة تلقائيًا.
+              خصم يومي: اختر العميل والباقة وعدد الأيام، والنظام يحسب عدد الوجبات من الباقة تلقائيًا.
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" asChild>
@@ -277,7 +277,7 @@ export function PickupQuickDayDeductionCard() {
               </p>
             ) : batches.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                لا توجد باقة مؤهلة للخصم السريع اليوم. استخدم الخصم اليدوي فقط بعد المراجعة.
+                لا توجد باقة مؤهلة للخصم اليومي. استخدم الخصم اليدوي فقط للحالات الخاصة بعد المراجعة.
               </p>
             ) : (
               <div className="space-y-3">
@@ -315,7 +315,7 @@ export function PickupQuickDayDeductionCard() {
                 {selectedBatch && (
                   <div className="grid gap-3 rounded-xl bg-muted/30 p-3 md:grid-cols-[1fr_auto] md:items-end">
                     <div>
-                      <p className="mb-2 text-sm font-semibold">عدد الأيام</p>
+                      <p className="mb-2 text-sm font-semibold">عدد الأيام المراد خصمها</p>
                       <div className="flex flex-wrap gap-2">
                         {[1, 2, 3].map((value) => (
                           <Button
@@ -340,9 +340,9 @@ export function PickupQuickDayDeductionCard() {
                         />
                       </div>
                       <p className="mt-2 text-sm">
-                        سيتم خصم <strong>{mealsToDeduct}</strong> وجبة
+                        الخصم اليومي سيستهلك <strong>{mealsToDeduct}</strong> وجبة
                         <span className="text-muted-foreground">
-                          {` (${days || 0} × ${selectedBatch.mealsPerDay})`}
+                          {` (${days || 0} يوم × ${selectedBatch.mealsPerDay} وجبة/يوم)`}
                         </span>
                       </p>
                       {mealsToDeduct > selectedBatch.remainingMeals && (
@@ -358,7 +358,7 @@ export function PickupQuickDayDeductionCard() {
                       onClick={() => deductionMutation.mutate()}
                       className="min-w-36"
                     >
-                      {deductionMutation.isPending ? "جاري الخصم..." : "تأكيد الخصم"}
+                      {deductionMutation.isPending ? "جاري خصم الأيام..." : "تأكيد خصم الأيام"}
                     </Button>
                   </div>
                 )}
