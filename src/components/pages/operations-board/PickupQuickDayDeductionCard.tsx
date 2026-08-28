@@ -1,25 +1,8 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CheckCircle2,
-  Loader2,
-  Search,
-  ShieldCheck,
-  Utensils,
-  UserRound,
-} from "lucide-react";
+import { CheckCircle2, Loader2, Search, Utensils, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,24 +69,6 @@ type DeductionResponse = {
   };
 };
 
-type DeductionMutationResult = {
-  response: DeductionResponse;
-  signature: string;
-  customerName: string;
-  planName: string;
-  proteinGrams: number;
-};
-
-type LastDeduction = {
-  signature: string;
-  customerName: string;
-  planName: string;
-  proteinGrams: number;
-  days: number;
-  mealsDeducted: number;
-  idempotent: boolean;
-};
-
 function planNameOf(batch: QuickBatch) {
   if (typeof batch.planName === "string") return batch.planName;
   return batch.planName?.ar ?? batch.planName?.en ?? "باقة اشتراك";
@@ -124,8 +89,9 @@ export function PickupQuickDayDeductionCard() {
     React.useState<SearchSubscription | null>(null);
   const [selectedBatchId, setSelectedBatchId] = React.useState("");
   const [days, setDays] = React.useState(1);
-  const [confirmationOpen, setConfirmationOpen] = React.useState(false);
-  const [lastDeduction, setLastDeduction] = React.useState<LastDeduction | null>(null);
+  const [confirming, setConfirming] = React.useState(false);
+  const [lastDeduction, setLastDeduction] = React.useState<DeductionResponse["data"] | null>(null);
+  const [lastSuccessSignature, setLastSuccessSignature] = React.useState("");
   const requestRef = React.useRef<{ signature: string; key: string } | null>(null);
 
   const selectedSubscriptionId = selectedSubscription?.id ?? "";
@@ -163,7 +129,7 @@ export function PickupQuickDayDeductionCard() {
     ? `${selectedSubscriptionId}:${selectedBatch.id}:${days}`
     : "";
   const isSameCompletedOperation = Boolean(
-    currentSignature && lastDeduction?.signature === currentSignature
+    currentSignature && currentSignature === lastSuccessSignature
   );
   const hasValidSelection = Boolean(
     selectedSubscriptionId
@@ -185,45 +151,30 @@ export function PickupQuickDayDeductionCard() {
 
   React.useEffect(() => {
     requestRef.current = null;
-    setConfirmationOpen(false);
+    setConfirming(false);
   }, [selectedSubscriptionId, selectedBatchId, days]);
 
-  const deductionMutation = useMutation<DeductionMutationResult>({
+  const deductionMutation = useMutation({
     mutationFn: async () => {
       if (!selectedSubscriptionId || !selectedBatch || !canSubmit) {
         throw new Error("اختر الاشتراك والباقة وعدد الأيام أولًا");
       }
-
       const signature = `${selectedSubscriptionId}:${selectedBatch.id}:${days}`;
       if (!requestRef.current || requestRef.current.signature !== signature) {
         requestRef.current = { signature, key: makeIdempotencyKey() };
       }
-
       const response = await api.post(
         `/api/dashboard/subscriptions/${selectedSubscriptionId}/quick-day-deduction`,
         { batchId: selectedBatch.id, days },
         { headers: { "Idempotency-Key": requestRef.current.key } }
       );
-
-      return {
-        response: response.data as DeductionResponse,
-        signature,
-        customerName: selectedSubscription.customer.name || "مشترك",
-        planName: planNameOf(selectedBatch),
-        proteinGrams: selectedBatch.proteinGrams,
-      };
+      return response.data as DeductionResponse;
     },
-    onSuccess: async (result) => {
-      const { response } = result;
-      setLastDeduction({
-        signature: result.signature,
-        customerName: result.customerName,
-        planName: result.planName,
-        proteinGrams: result.proteinGrams,
-        days: response.data.days,
-        mealsDeducted: response.data.mealsDeducted,
-        idempotent: response.data.idempotent,
-      });
+    onSuccess: async (response) => {
+      const completedSignature = `${response.data.subscriptionId}:${response.data.batchId}:${response.data.days}`;
+      setLastDeduction(response.data);
+      setLastSuccessSignature(completedSignature);
+      setConfirming(false);
       toast.success(
         response.data.idempotent
           ? `الخصم اليومي مسجل بالفعل — ${response.data.days} يوم / ${response.data.mealsDeducted} وجبة`
@@ -239,6 +190,7 @@ export function PickupQuickDayDeductionCard() {
       ]);
     },
     onError: (error: unknown) => {
+      setConfirming(false);
       toast.error(getApiErrorMessage(error) || "تعذر تنفيذ الخصم اليومي");
     },
   });
@@ -250,6 +202,13 @@ export function PickupQuickDayDeductionCard() {
     setSelectedSubscription(row);
     setSelectedBatchId("");
     setDays(1);
+    setConfirming(false);
+    requestRef.current = null;
+  };
+
+  const startNewSameDeduction = () => {
+    setLastSuccessSignature("");
+    setConfirming(false);
     requestRef.current = null;
   };
 
@@ -273,7 +232,7 @@ export function PickupQuickDayDeductionCard() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {deductionMutation.isPending && (
+        {interactionLocked && (
           <div
             className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4"
             role="status"
@@ -289,7 +248,7 @@ export function PickupQuickDayDeductionCard() {
           </div>
         )}
 
-        {lastDeduction && !deductionMutation.isPending && (
+        {lastDeduction && !interactionLocked && (
           <div
             className="flex flex-col gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950 sm:flex-row sm:items-center sm:justify-between"
             role="status"
@@ -302,7 +261,7 @@ export function PickupQuickDayDeductionCard() {
                   {lastDeduction.idempotent ? "العملية كانت مسجلة بالفعل" : "تم الخصم بنجاح"}
                 </p>
                 <p className="mt-1 text-sm">
-                  {lastDeduction.customerName} · {lastDeduction.planName} ({lastDeduction.proteinGrams}g) · {lastDeduction.days} {lastDeduction.days === 1 ? "يوم" : "أيام"} · {lastDeduction.mealsDeducted} وجبة
+                  تم خصم {lastDeduction.days} {lastDeduction.days === 1 ? "يوم" : "أيام"} — {lastDeduction.mealsDeducted} وجبة.
                 </p>
                 {isSameCompletedOperation && (
                   <p className="mt-1 text-xs font-medium text-emerald-800">
@@ -317,7 +276,7 @@ export function PickupQuickDayDeductionCard() {
                 variant="outline"
                 size="sm"
                 className="shrink-0 border-emerald-300 bg-white text-emerald-900 hover:bg-emerald-100"
-                onClick={() => setLastDeduction(null)}
+                onClick={startNewSameDeduction}
               >
                 بدء خصم جديد بنفس البيانات
               </Button>
@@ -385,6 +344,7 @@ export function PickupQuickDayDeductionCard() {
                 onClick={() => {
                   setSelectedSubscription(null);
                   setSelectedBatchId("");
+                  setConfirming(false);
                 }}
               >
                 تغيير العميل
@@ -436,67 +396,97 @@ export function PickupQuickDayDeductionCard() {
                 </div>
 
                 {selectedBatch && (
-                  <div className="grid gap-3 rounded-xl bg-muted/30 p-3 md:grid-cols-[1fr_auto] md:items-end">
-                    <div>
-                      <p className="mb-2 text-sm font-semibold">عدد الأيام المراد خصمها</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[1, 2, 3].map((value) => (
-                          <Button
-                            key={value}
-                            type="button"
-                            variant={days === value ? "default" : "outline"}
-                            size="sm"
+                  <div className="space-y-3 rounded-xl bg-muted/30 p-3">
+                    <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                      <div>
+                        <p className="mb-2 text-sm font-semibold">عدد الأيام المراد خصمها</p>
+                        <div className="flex flex-wrap gap-2">
+                          {[1, 2, 3].map((value) => (
+                            <Button
+                              key={value}
+                              type="button"
+                              variant={days === value ? "default" : "outline"}
+                              size="sm"
+                              disabled={interactionLocked}
+                              onClick={() => setDays(value)}
+                            >
+                              {value === 1 ? "يوم" : `${value} أيام`}
+                            </Button>
+                          ))}
+                          <Input
+                            type="number"
+                            min={1}
+                            max={31}
+                            step={1}
+                            value={days}
+                            onChange={(event) => setDays(Number(event.target.value))}
+                            className="w-24"
+                            aria-label="عدد الأيام"
                             disabled={interactionLocked}
-                            onClick={() => setDays(value)}
-                          >
-                            {value === 1 ? "يوم" : `${value} أيام`}
-                          </Button>
-                        ))}
-                        <Input
-                          type="number"
-                          min={1}
-                          max={31}
-                          step={1}
-                          value={days}
-                          onChange={(event) => setDays(Number(event.target.value))}
-                          className="w-24"
-                          aria-label="عدد الأيام"
-                          disabled={interactionLocked}
-                        />
-                      </div>
-                      <p className="mt-2 text-sm">
-                        الخصم اليومي سيستهلك <strong>{mealsToDeduct}</strong> وجبة
-                        <span className="text-muted-foreground">
-                          {` (${days || 0} يوم × ${selectedBatch.mealsPerDay} وجبة/يوم)`}
-                        </span>
-                      </p>
-                      {mealsToDeduct > selectedBatch.remainingMeals && (
-                        <p className="mt-1 text-sm text-destructive">
-                          الرصيد المتبقي في هذه الباقة لا يكفي.
+                          />
+                        </div>
+                        <p className="mt-2 text-sm">
+                          الخصم اليومي سيستهلك <strong>{mealsToDeduct}</strong> وجبة
+                          <span className="text-muted-foreground">
+                            {` (${days || 0} يوم × ${selectedBatch.mealsPerDay} وجبة/يوم)`}
+                          </span>
                         </p>
-                      )}
+                        {mealsToDeduct > selectedBatch.remainingMeals && (
+                          <p className="mt-1 text-sm text-destructive">
+                            الرصيد المتبقي في هذه الباقة لا يكفي.
+                          </p>
+                        )}
+                      </div>
+
+                      <Button
+                        type="button"
+                        disabled={!canSubmit || interactionLocked}
+                        onClick={() => setConfirming(true)}
+                        className="min-w-44 gap-2"
+                      >
+                        {interactionLocked ? (
+                          <>
+                            <Loader2 className="size-4 animate-spin" />
+                            جارٍ تنفيذ الخصم...
+                          </>
+                        ) : isSameCompletedOperation ? (
+                          <>
+                            <CheckCircle2 className="size-4" />
+                            تم الخصم بنجاح
+                          </>
+                        ) : (
+                          "مراجعة وتأكيد الخصم"
+                        )}
+                      </Button>
                     </div>
 
-                    <Button
-                      type="button"
-                      disabled={!canSubmit || interactionLocked}
-                      onClick={() => setConfirmationOpen(true)}
-                      className="min-w-44 gap-2"
-                    >
-                      {deductionMutation.isPending ? (
-                        <>
-                          <Loader2 className="size-4 animate-spin" />
-                          جارٍ تنفيذ الخصم...
-                        </>
-                      ) : isSameCompletedOperation ? (
-                        <>
-                          <CheckCircle2 className="size-4" />
-                          تم الخصم بنجاح
-                        </>
-                      ) : (
-                        "مراجعة وتأكيد الخصم"
-                      )}
-                    </Button>
+                    {confirming && canSubmit && !interactionLocked && (
+                      <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-bold">تأكيد نهائي قبل الخصم</p>
+                          <p className="mt-1 text-sm">
+                            سيتم خصم <strong>{days} {days === 1 ? "يوم" : "أيام"}</strong> = <strong>{mealsToDeduct} وجبة</strong> من باقة {planNameOf(selectedBatch)} ({selectedBatch.proteinGrams}g) للعميل {selectedSubscription.customer.name || "مشترك"}.
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setConfirming(false)}
+                          >
+                            إلغاء
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => deductionMutation.mutate()}
+                          >
+                            نعم، نفّذ الخصم
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -504,58 +494,6 @@ export function PickupQuickDayDeductionCard() {
           </div>
         )}
       </CardContent>
-
-      <AlertDialog
-        open={confirmationOpen}
-        onOpenChange={(open) => {
-          if (!interactionLocked) setConfirmationOpen(open);
-        }}
-      >
-        <AlertDialogContent dir="rtl" className="text-right">
-          <AlertDialogHeader className="place-items-start text-right sm:text-right">
-            <div className="mb-2 flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <ShieldCheck className="size-6" />
-            </div>
-            <AlertDialogTitle>راجع الخصم قبل التنفيذ</AlertDialogTitle>
-            <AlertDialogDescription className="text-right">
-              تأكد من العميل والباقة وعدد الوجبات. بعد التأكيد سيبدأ الخصم فورًا.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-
-          {selectedSubscription && selectedBatch && (
-            <div className="space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">العميل</span>
-                <strong>{selectedSubscription.customer.name || "مشترك"}</strong>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">الباقة</span>
-                <strong>{planNameOf(selectedBatch)} · {selectedBatch.proteinGrams}g</strong>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">عدد الأيام</span>
-                <strong>{days} {days === 1 ? "يوم" : "أيام"}</strong>
-              </div>
-              <div className="flex items-center justify-between gap-3 border-t pt-2 text-base">
-                <span>سيتم خصم</span>
-                <strong className="text-primary">{mealsToDeduct} وجبة</strong>
-              </div>
-            </div>
-          )}
-
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={interactionLocked}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={!canSubmit || interactionLocked}
-              onClick={() => deductionMutation.mutate()}
-              className="gap-2"
-            >
-              <ShieldCheck className="size-4" />
-              نعم، خصم {mealsToDeduct} وجبة
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Card>
   );
 }
