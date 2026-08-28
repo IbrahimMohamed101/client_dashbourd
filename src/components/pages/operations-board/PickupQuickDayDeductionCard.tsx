@@ -1,8 +1,25 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Utensils, UserRound } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  Search,
+  ShieldCheck,
+  Utensils,
+  UserRound,
+} from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +86,24 @@ type DeductionResponse = {
   };
 };
 
+type DeductionMutationResult = {
+  response: DeductionResponse;
+  signature: string;
+  customerName: string;
+  planName: string;
+  proteinGrams: number;
+};
+
+type LastDeduction = {
+  signature: string;
+  customerName: string;
+  planName: string;
+  proteinGrams: number;
+  days: number;
+  mealsDeducted: number;
+  idempotent: boolean;
+};
+
 function planNameOf(batch: QuickBatch) {
   if (typeof batch.planName === "string") return batch.planName;
   return batch.planName?.ar ?? batch.planName?.en ?? "باقة اشتراك";
@@ -89,6 +124,8 @@ export function PickupQuickDayDeductionCard() {
     React.useState<SearchSubscription | null>(null);
   const [selectedBatchId, setSelectedBatchId] = React.useState("");
   const [days, setDays] = React.useState(1);
+  const [confirmationOpen, setConfirmationOpen] = React.useState(false);
+  const [lastDeduction, setLastDeduction] = React.useState<LastDeduction | null>(null);
   const requestRef = React.useRef<{ signature: string; key: string } | null>(null);
 
   const selectedSubscriptionId = selectedSubscription?.id ?? "";
@@ -122,7 +159,13 @@ export function PickupQuickDayDeductionCard() {
   const batches = optionsQuery.data?.data?.batches ?? [];
   const selectedBatch = batches.find((batch) => batch.id === selectedBatchId) ?? null;
   const mealsToDeduct = selectedBatch ? days * selectedBatch.mealsPerDay : 0;
-  const canSubmit = Boolean(
+  const currentSignature = selectedBatch
+    ? `${selectedSubscriptionId}:${selectedBatch.id}:${days}`
+    : "";
+  const isSameCompletedOperation = Boolean(
+    currentSignature && lastDeduction?.signature === currentSignature
+  );
+  const hasValidSelection = Boolean(
     selectedSubscriptionId
       && selectedBatch
       && Number.isInteger(days)
@@ -130,6 +173,7 @@ export function PickupQuickDayDeductionCard() {
       && mealsToDeduct > 0
       && mealsToDeduct <= selectedBatch.remainingMeals
   );
+  const canSubmit = hasValidSelection && !isSameCompletedOperation;
 
   React.useEffect(() => {
     if (batches.length === 1) {
@@ -141,25 +185,45 @@ export function PickupQuickDayDeductionCard() {
 
   React.useEffect(() => {
     requestRef.current = null;
+    setConfirmationOpen(false);
   }, [selectedSubscriptionId, selectedBatchId, days]);
 
-  const deductionMutation = useMutation({
+  const deductionMutation = useMutation<DeductionMutationResult>({
     mutationFn: async () => {
       if (!selectedSubscriptionId || !selectedBatch || !canSubmit) {
         throw new Error("اختر الاشتراك والباقة وعدد الأيام أولًا");
       }
+
       const signature = `${selectedSubscriptionId}:${selectedBatch.id}:${days}`;
       if (!requestRef.current || requestRef.current.signature !== signature) {
         requestRef.current = { signature, key: makeIdempotencyKey() };
       }
+
       const response = await api.post(
         `/api/dashboard/subscriptions/${selectedSubscriptionId}/quick-day-deduction`,
         { batchId: selectedBatch.id, days },
         { headers: { "Idempotency-Key": requestRef.current.key } }
       );
-      return response.data as DeductionResponse;
+
+      return {
+        response: response.data as DeductionResponse,
+        signature,
+        customerName: selectedSubscription.customer.name || "مشترك",
+        planName: planNameOf(selectedBatch),
+        proteinGrams: selectedBatch.proteinGrams,
+      };
     },
-    onSuccess: async (response) => {
+    onSuccess: async (result) => {
+      const { response } = result;
+      setLastDeduction({
+        signature: result.signature,
+        customerName: result.customerName,
+        planName: result.planName,
+        proteinGrams: result.proteinGrams,
+        days: response.data.days,
+        mealsDeducted: response.data.mealsDeducted,
+        idempotent: response.data.idempotent,
+      });
       toast.success(
         response.data.idempotent
           ? `الخصم اليومي مسجل بالفعل — ${response.data.days} يوم / ${response.data.mealsDeducted} وجبة`
@@ -179,7 +243,10 @@ export function PickupQuickDayDeductionCard() {
     },
   });
 
+  const interactionLocked = deductionMutation.isPending;
+
   const selectSubscription = (row: SearchSubscription) => {
+    if (interactionLocked) return;
     setSelectedSubscription(row);
     setSelectedBatchId("");
     setDays(1);
@@ -206,6 +273,58 @@ export function PickupQuickDayDeductionCard() {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {deductionMutation.isPending && (
+          <div
+            className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4"
+            role="status"
+            aria-live="assertive"
+          >
+            <Loader2 className="mt-0.5 size-5 shrink-0 animate-spin text-primary" />
+            <div>
+              <p className="font-bold text-primary">جارٍ تنفيذ الخصم الآن...</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                لا تضغط مرة أخرى ولا تغيّر البيانات. ننتظر تأكيد العملية من النظام.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {lastDeduction && !deductionMutation.isPending && (
+          <div
+            className="flex flex-col gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950 sm:flex-row sm:items-center sm:justify-between"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 size-6 shrink-0 text-emerald-600" />
+              <div>
+                <p className="font-bold">
+                  {lastDeduction.idempotent ? "العملية كانت مسجلة بالفعل" : "تم الخصم بنجاح"}
+                </p>
+                <p className="mt-1 text-sm">
+                  {lastDeduction.customerName} · {lastDeduction.planName} ({lastDeduction.proteinGrams}g) · {lastDeduction.days} {lastDeduction.days === 1 ? "يوم" : "أيام"} · {lastDeduction.mealsDeducted} وجبة
+                </p>
+                {isSameCompletedOperation && (
+                  <p className="mt-1 text-xs font-medium text-emerald-800">
+                    تم قفل نفس العملية لمنع الخصم بالخطأ مرة ثانية.
+                  </p>
+                )}
+              </div>
+            </div>
+            {isSameCompletedOperation && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-emerald-300 bg-white text-emerald-900 hover:bg-emerald-100"
+                onClick={() => setLastDeduction(null)}
+              >
+                بدء خصم جديد بنفس البيانات
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="relative">
           <Search className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -213,6 +332,7 @@ export function PickupQuickDayDeductionCard() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="ابحث باسم العميل أو رقم الجوال"
             className="pr-9"
+            disabled={interactionLocked}
           />
         </div>
 
@@ -231,7 +351,8 @@ export function PickupQuickDayDeductionCard() {
                     key={row.id}
                     type="button"
                     onClick={() => selectSubscription(row)}
-                    className="rounded-lg border bg-background p-3 text-right transition hover:border-primary/50 hover:bg-primary/5"
+                    disabled={interactionLocked}
+                    className="rounded-lg border bg-background p-3 text-right transition hover:border-primary/50 hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-60"
                   >
                     <div className="flex items-start gap-2">
                       <UserRound className="mt-0.5 size-4 text-primary" />
@@ -260,6 +381,7 @@ export function PickupQuickDayDeductionCard() {
                 type="button"
                 variant="ghost"
                 size="sm"
+                disabled={interactionLocked}
                 onClick={() => {
                   setSelectedSubscription(null);
                   setSelectedBatchId("");
@@ -293,7 +415,8 @@ export function PickupQuickDayDeductionCard() {
                           key={batch.id}
                           type="button"
                           onClick={() => setSelectedBatchId(batch.id)}
-                          className={`rounded-xl border p-3 text-right transition ${
+                          disabled={interactionLocked}
+                          className={`rounded-xl border p-3 text-right transition disabled:pointer-events-none disabled:opacity-60 ${
                             selected
                               ? "border-primary bg-primary/5 ring-1 ring-primary/30"
                               : "bg-background hover:border-primary/40"
@@ -323,6 +446,7 @@ export function PickupQuickDayDeductionCard() {
                             type="button"
                             variant={days === value ? "default" : "outline"}
                             size="sm"
+                            disabled={interactionLocked}
                             onClick={() => setDays(value)}
                           >
                             {value === 1 ? "يوم" : `${value} أيام`}
@@ -337,6 +461,7 @@ export function PickupQuickDayDeductionCard() {
                           onChange={(event) => setDays(Number(event.target.value))}
                           className="w-24"
                           aria-label="عدد الأيام"
+                          disabled={interactionLocked}
                         />
                       </div>
                       <p className="mt-2 text-sm">
@@ -354,11 +479,23 @@ export function PickupQuickDayDeductionCard() {
 
                     <Button
                       type="button"
-                      disabled={!canSubmit || deductionMutation.isPending}
-                      onClick={() => deductionMutation.mutate()}
-                      className="min-w-36"
+                      disabled={!canSubmit || interactionLocked}
+                      onClick={() => setConfirmationOpen(true)}
+                      className="min-w-44 gap-2"
                     >
-                      {deductionMutation.isPending ? "جاري خصم الأيام..." : "تأكيد خصم الأيام"}
+                      {deductionMutation.isPending ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          جارٍ تنفيذ الخصم...
+                        </>
+                      ) : isSameCompletedOperation ? (
+                        <>
+                          <CheckCircle2 className="size-4" />
+                          تم الخصم بنجاح
+                        </>
+                      ) : (
+                        "مراجعة وتأكيد الخصم"
+                      )}
                     </Button>
                   </div>
                 )}
@@ -367,6 +504,58 @@ export function PickupQuickDayDeductionCard() {
           </div>
         )}
       </CardContent>
+
+      <AlertDialog
+        open={confirmationOpen}
+        onOpenChange={(open) => {
+          if (!interactionLocked) setConfirmationOpen(open);
+        }}
+      >
+        <AlertDialogContent dir="rtl" className="text-right">
+          <AlertDialogHeader className="place-items-start text-right sm:text-right">
+            <div className="mb-2 flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <ShieldCheck className="size-6" />
+            </div>
+            <AlertDialogTitle>راجع الخصم قبل التنفيذ</AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              تأكد من العميل والباقة وعدد الوجبات. بعد التأكيد سيبدأ الخصم فورًا.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {selectedSubscription && selectedBatch && (
+            <div className="space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">العميل</span>
+                <strong>{selectedSubscription.customer.name || "مشترك"}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">الباقة</span>
+                <strong>{planNameOf(selectedBatch)} · {selectedBatch.proteinGrams}g</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">عدد الأيام</span>
+                <strong>{days} {days === 1 ? "يوم" : "أيام"}</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t pt-2 text-base">
+                <span>سيتم خصم</span>
+                <strong className="text-primary">{mealsToDeduct} وجبة</strong>
+              </div>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={interactionLocked}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!canSubmit || interactionLocked}
+              onClick={() => deductionMutation.mutate()}
+              className="gap-2"
+            >
+              <ShieldCheck className="size-4" />
+              نعم، خصم {mealsToDeduct} وجبة
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
