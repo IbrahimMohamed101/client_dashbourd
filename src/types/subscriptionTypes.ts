@@ -61,6 +61,7 @@ export interface SubscriptionMealBalanceReadModel {
   displayRemainingMeals: number;
   availableMeals: number;
   reservedMeals: number;
+  deductibleMeals?: number;
   consumedMeals: number;
   forfeitedMeals: number;
   accountedMeals: number;
@@ -71,6 +72,7 @@ export interface SubscriptionMealBalanceReadModel {
   manualDeductionMaxMeals: number;
   displaySemantics: string;
   availableSemantics: string;
+  manualDeductionSemantics?: string;
 }
 
 export interface ManualDeductionResponse {
@@ -222,102 +224,17 @@ export interface SubscriptionsMeta {
   totalPages: number;
 }
 
-export interface SubscriptionsListResponse {
-  status: boolean;
-  data: Subscription[];
-  meta: SubscriptionsMeta;
-  filters: SubscriptionFilters;
-}
-
-export interface SubscriptionDetailsResponse {
-  status: boolean;
-  data: Subscription;
-}
-
-export interface FreezeSubscriptionPayload {
-  startDate: string;
-  days: number;
-}
-
-export interface ExtendSubscriptionPayload {
-  days: number;
-  reason?: string;
-}
-
-export interface SubscriptionDeliveryUpdatePayload {
-  deliveryMode: "delivery" | "pickup";
-  deliveryZoneId?: string;
-  deliveryAddress?: {
-    line1: string;
-    notes?: string;
-  };
-  deliveryWindow?: string;
-  pickupLocationId?: string;
-  reason?: string;
-}
-
-export interface SubscriptionAddonEntitlementPayload {
-  addonId: string;
-  maxPerDay?: number;
-}
-
-export interface SubscriptionAddonEntitlement {
-  id?: string;
-  _id?: string;
-  addonId: string;
-  category?: string;
-  name: string;
-  purchasedDailyQty?: number;
-  includedTotalQty?: number;
-  totalHalala?: number;
-  maxPerDay?: number;
-}
-
-export interface SubscriptionAddonEntitlementsResponse {
+export interface SubscriptionsResponse {
   status: boolean;
   data: {
-    addonSubscriptions: SubscriptionAddonEntitlement[];
-    addonEntitlements?: SubscriptionAddonEntitlement[];
+    subscriptions: Subscription[];
+    meta: SubscriptionsMeta;
   };
 }
 
-export interface SubscriptionDayRecord {
-  [key: string]: unknown;
-}
-
-export interface SubscriptionDaysResponse {
-  status: boolean;
-  data: SubscriptionDayRecord[];
-}
-
-export interface SubscriptionBalancePremiumRow {
-  premiumKey: string;
-  proteinId: string | null;
-  purchasedQty: number;
-  remainingQty: number;
-}
-
-export interface SubscriptionBalanceAddonRow {
-  addonId: string | null;
-  purchasedQty: number;
-  remainingQty: number;
-}
-
-export interface SubscriptionBalancesPayload {
-  premiumBalance?: SubscriptionBalancePremiumRow[];
-  addonBalance?: SubscriptionBalanceAddonRow[];
-  reason?: string;
-}
-
-export interface SubscriptionBalancesResponse {
+export interface SubscriptionByIdResponse {
   status: boolean;
   data: {
-    subscriptionId: string;
-    balances: {
-      premiumBalance: SubscriptionBalancePremiumRow[];
-      addonBalance: SubscriptionBalanceAddonRow[];
-    };
-    premiumBalance: SubscriptionBalancePremiumRow[];
-    addonBalance: SubscriptionBalanceAddonRow[];
+    subscription: Subscription;
   };
 }
