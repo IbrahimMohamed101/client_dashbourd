@@ -40,6 +40,7 @@ type QuickBatch = {
   totalMeals: number;
   remainingMeals: number;
   reservedMeals: number;
+  deductibleMeals?: number;
   consumedMeals: number;
   effectiveStartDate?: string;
   validityEndDate?: string;
@@ -72,6 +73,10 @@ type DeductionResponse = {
 function planNameOf(batch: QuickBatch) {
   if (typeof batch.planName === "string") return batch.planName;
   return batch.planName?.ar ?? batch.planName?.en ?? "باقة اشتراك";
+}
+
+function deductibleMealsOf(batch: QuickBatch) {
+  return batch.deductibleMeals ?? Math.max(0, batch.remainingMeals) + Math.max(0, batch.reservedMeals);
 }
 
 function makeIdempotencyKey() {
@@ -124,6 +129,7 @@ export function PickupQuickDayDeductionCard() {
 
   const batches = optionsQuery.data?.data?.batches ?? [];
   const selectedBatch = batches.find((batch) => batch.id === selectedBatchId) ?? null;
+  const selectedBatchDeductibleMeals = selectedBatch ? deductibleMealsOf(selectedBatch) : 0;
   const mealsToDeduct = selectedBatch ? days * selectedBatch.mealsPerDay : 0;
   const currentSignature = selectedBatch
     ? `${selectedSubscriptionId}:${selectedBatch.id}:${days}`
@@ -137,7 +143,7 @@ export function PickupQuickDayDeductionCard() {
       && Number.isInteger(days)
       && days > 0
       && mealsToDeduct > 0
-      && mealsToDeduct <= selectedBatch.remainingMeals
+      && mealsToDeduct <= selectedBatchDeductibleMeals
   );
   const canSubmit = hasValidSelection && !isSameCompletedOperation;
 
@@ -359,7 +365,7 @@ export function PickupQuickDayDeductionCard() {
               </p>
             ) : batches.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                لا توجد باقة مؤهلة للخصم اليومي. استخدم الخصم اليدوي فقط للحالات الخاصة بعد المراجعة.
+                لا توجد باقة مؤهلة للخصم اليومي بعد استبعاد الوجبات المستلمة فعليًا.
               </p>
             ) : (
               <div className="space-y-3">
@@ -370,6 +376,7 @@ export function PickupQuickDayDeductionCard() {
                   <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                     {batches.map((batch) => {
                       const selected = batch.id === selectedBatchId;
+                      const deductibleMeals = deductibleMealsOf(batch);
                       return (
                         <button
                           key={batch.id}
@@ -387,8 +394,13 @@ export function PickupQuickDayDeductionCard() {
                             <Badge variant="secondary">{batch.proteinGrams}g</Badge>
                           </div>
                           <p className="mt-2 text-sm text-muted-foreground">
-                            {batch.mealsPerDay} وجبة/يوم · متبقي {batch.remainingMeals} وجبة
+                            {batch.mealsPerDay} وجبة/يوم · قابل للخصم {deductibleMeals} وجبة
                           </p>
+                          {batch.reservedMeals > 0 && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              منها {batch.reservedMeals} محجوزة؛ الحجز اختيار مسبق وليس استلامًا.
+                            </p>
+                          )}
                         </button>
                       );
                     })}
@@ -431,9 +443,12 @@ export function PickupQuickDayDeductionCard() {
                             {` (${days || 0} يوم × ${selectedBatch.mealsPerDay} وجبة/يوم)`}
                           </span>
                         </p>
-                        {mealsToDeduct > selectedBatch.remainingMeals && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          المتاح غير المحجوز {selectedBatch.remainingMeals} + المحجوز {selectedBatch.reservedMeals} = {selectedBatchDeductibleMeals} وجبة غير مستلمة.
+                        </p>
+                        {mealsToDeduct > selectedBatchDeductibleMeals && (
                           <p className="mt-1 text-sm text-destructive">
-                            الرصيد المتبقي في هذه الباقة لا يكفي.
+                            عدد الوجبات غير المستلمة في هذه الباقة لا يكفي.
                           </p>
                         )}
                       </div>
@@ -467,6 +482,11 @@ export function PickupQuickDayDeductionCard() {
                           <p className="mt-1 text-sm">
                             سيتم خصم <strong>{days} {days === 1 ? "يوم" : "أيام"}</strong> = <strong>{mealsToDeduct} وجبة</strong> من باقة {planNameOf(selectedBatch)} ({selectedBatch.proteinGrams}g) للعميل {selectedSubscription.customer.name || "مشترك"}.
                           </p>
+                          {selectedBatch.reservedMeals > 0 && (
+                            <p className="mt-1 text-xs">
+                              سيحوّل النظام الحجوزات الموجودة إلى مستلمة أولًا، ولن يخصمها مرة ثانية من الرصيد.
+                            </p>
+                          )}
                         </div>
                         <div className="flex shrink-0 gap-2">
                           <Button
