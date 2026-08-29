@@ -61,6 +61,7 @@ export interface SubscriptionMealBalanceReadModel {
   displayRemainingMeals: number;
   availableMeals: number;
   reservedMeals: number;
+  deductibleMeals?: number;
   consumedMeals: number;
   forfeitedMeals: number;
   accountedMeals: number;
@@ -71,6 +72,7 @@ export interface SubscriptionMealBalanceReadModel {
   manualDeductionMaxMeals: number;
   displaySemantics: string;
   availableSemantics: string;
+  manualDeductionSemantics?: string;
 }
 
 export interface ManualDeductionResponse {

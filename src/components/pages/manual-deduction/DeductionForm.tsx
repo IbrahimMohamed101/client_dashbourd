@@ -114,12 +114,13 @@ export function DeductionForm({
 }: DeductionFormProps) {
   const availableMeals = subscription.availableMeals ?? subscription.remainingMeals;
   const reservedMeals = subscription.reservedMeals ?? 0;
+  const deductibleMeals =
+    subscription.balance?.manualDeductionMaxMeals ?? availableMeals + reservedMeals;
   const displayRemainingMeals =
     subscription.displayRemainingMeals ?? availableMeals + reservedMeals;
-  const regularRemaining =
-    subscription.remainingRegularMeals ?? availableMeals;
   const premiumRemaining =
     subscription.remainingPremiumMeals ?? subscription.premiumRemaining ?? 0;
+  const regularDeductible = Math.max(0, deductibleMeals - premiumRemaining);
   const balanceNeedsReview = subscription.balance?.balanced === false;
   const addonBalances = useMemo(
     () => subscription.addonBalances ?? [],
@@ -167,10 +168,10 @@ export function DeductionForm({
       });
       return;
     }
-    if (values.regularMeals > regularRemaining) {
+    if (values.regularMeals > regularDeductible) {
       form.setError("regularMeals", {
         type: "manual",
-        message: `المتاح من الوجبات العادية هو ${regularRemaining}`,
+        message: `المتاح من الوجبات العادية غير المستلمة هو ${regularDeductible}`,
       });
       return;
     }
@@ -181,10 +182,10 @@ export function DeductionForm({
       });
       return;
     }
-    if (values.regularMeals + values.premiumMeals > availableMeals) {
+    if (values.regularMeals + values.premiumMeals > deductibleMeals) {
       form.setError("regularMeals", {
         type: "manual",
-        message: `إجمالي الوجبات المتاح للخصم هو ${availableMeals}`,
+        message: `إجمالي الوجبات غير المستلمة المتاح للخصم هو ${deductibleMeals}`,
       });
       return;
     }
@@ -220,19 +221,19 @@ export function DeductionForm({
             icon={<Package className="h-4 w-4" />}
           />
           <BalanceCard
-            label="متاح للخصم الآن"
-            value={`${availableMeals} وجبة`}
+            label="قابل للخصم — غير مستلم"
+            value={`${deductibleMeals} وجبة`}
             icon={<Package className="h-4 w-4" />}
             tone="primary"
           />
           <BalanceCard
-            label="محجوز لأيام قادمة"
+            label="منها محجوز لأيام قادمة"
             value={`${reservedMeals} وجبة`}
             icon={<Calendar className="h-4 w-4" />}
           />
           <BalanceCard
-            label="وجبات عادية متاحة"
-            value={`${regularRemaining} وجبة`}
+            label="وجبات عادية قابلة للخصم"
+            value={`${regularDeductible} وجبة`}
             icon={<Package className="h-4 w-4" />}
           />
           <BalanceCard
@@ -257,7 +258,7 @@ export function DeductionForm({
 
         {reservedMeals > 0 ? (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-            يوجد {reservedMeals} وجبة محجوزة ضمن رصيد العميل، لذلك لا تدخل في الحد المتاح للخصم اليدوي. استخدم تنفيذ يوم الاشتراك للحجوزات بدل خصمها يدويًا.
+            يوجد {reservedMeals} وجبة محجوزة باختيار العميل، لكنها لم تُستلم بعد. يمكن خصمها عادي؛ عند التنفيذ سيحوّل النظام الحجز نفسه إلى مستلم أولًا حتى لا تُخصم الوجبة مرتين.
           </div>
         ) : null}
 
@@ -279,7 +280,7 @@ export function DeductionForm({
                 <div>
                   <h3 className="font-semibold">خصم الوجبات</h3>
                   <p className="text-sm text-muted-foreground">
-                    الخصم يتم من الرصيد غير المحجوز فقط، والخادم يعيد التحقق داخل معاملة ذرية قبل الحفظ.
+                    الخصم يشمل الوجبات غير المستلمة سواء كانت متاحة أو محجوزة مسبقًا. الحجوزات تُحوّل إلى مستلمة بدل إنشاء خصم ثانٍ عليها.
                   </p>
                 </div>
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
@@ -317,7 +318,7 @@ export function DeductionForm({
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
-                        المتاح الآن: {regularRemaining}
+                        غير المستلم القابل للخصم: {regularDeductible}
                       </p>
                       <FormMessage />
                     </FormItem>
@@ -463,12 +464,12 @@ export function DeductionForm({
 
             <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs leading-6 text-muted-foreground">
-                سيتم إرسال العملية كمعاملة واحدة. لو الرصيد تغيّر بالتزامن أو توجد حجوزات لليوم سيرفض الخادم العملية بالكامل.
+                الخادم يعيد التحقق من الرصيد عند التنفيذ. الوجبات المحجوزة تُستهلك من نفس سجل الحجز أولًا، لذلك لا تتحول إلى خصم مزدوج لاحقًا.
               </p>
               <div className="flex gap-3">
                 <Button
                   type="submit"
-                  disabled={isPending || balanceNeedsReview || selectedMealTotal > availableMeals}
+                  disabled={isPending || balanceNeedsReview || selectedMealTotal > deductibleMeals}
                   className="min-w-[120px]"
                 >
                   {isPending ? "جاري الخصم..." : "تأكيد الخصم"}
