@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -8,24 +10,173 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useCancelSubscriptionMutation } from "@/hooks/useSubscriptionsQuery";
-import { TriangleAlertIcon } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { parseApiError } from "@/lib/apiErrors";
+import {
+  executeFinancialControl,
+  fetchFinancialControlPreview,
+  type FinancialControlAction,
+  type RefundMode,
+} from "@/features/subscription-financial-control/subscriptionFinancialControlApi";
+import {
+  Loader2,
+  RotateCcw,
+  TriangleAlertIcon,
+  WalletCards,
+} from "lucide-react";
 import { ToastMessage } from "@/components/global/ToastMessage";
 
 interface CancelModalProps {
   subscriptionId: string;
   isOpen: boolean;
   onClose: () => void;
+  isStacked?: boolean;
+}
+
+function makeOperationKey() {
+  const random =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID().replaceAll("-", "_")
+      : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  return `subfin_${random}`.slice(0, 120);
+}
+
+function sar(halala: number) {
+  return new Intl.NumberFormat("ar-SA", {
+    style: "currency",
+    currency: "SAR",
+    minimumFractionDigits: 2,
+  }).format(Math.max(0, Number(halala || 0)) / 100);
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("ar-SA", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 export function CancelModal({
   subscriptionId,
   isOpen,
   onClose,
+  isStacked = false,
 }: CancelModalProps) {
-  const { mutateAsync: cancelSubscription, isPending } =
+  const { user } = useAuth();
+  const isSuperadmin = user?.role === "superadmin";
+  const queryClient = useQueryClient();
+  const { mutateAsync: cancelSubscription, isPending: isLegacyCancelPending } =
     useCancelSubscriptionMutation();
 
-  const handleCancel = async () => {
+  const [action, setAction] = useState<FinancialControlAction>("cancel");
+  const [refundMode, setRefundMode] = useState<RefundMode>("full");
+  const [paymentId, setPaymentId] = useState("");
+  const [partialAmountSar, setPartialAmountSar] = useState("");
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [operationKey, setOperationKey] = useState(makeOperationKey);
+
+  const previewQuery = useQuery({
+    queryKey: ["subscription-financial-control", subscriptionId],
+    queryFn: () => fetchFinancialControlPreview(subscriptionId),
+    enabled: isOpen && isSuperadmin,
+    staleTime: 0,
+    retry: false,
+  });
+
+  const preview = previewQuery.data;
+  const refundablePayments = useMemo(
+    () => (preview?.payments || []).filter((payment) => payment.refundableHalala > 0),
+    [preview?.payments]
+  );
+  const selectedPayment = useMemo(
+    () => refundablePayments.find((payment) => payment.paymentId === paymentId) || null,
+    [paymentId, refundablePayments]
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setAction("cancel");
+    setRefundMode("full");
+    setPartialAmountSar("");
+    setReason("");
+    setNote("");
+    setConfirmed(false);
+    setOperationKey(makeOperationKey());
+  }, [isOpen, subscriptionId]);
+
+  useEffect(() => {
+    if (!isOpen || !isSuperadmin) return;
+    if (!paymentId || !refundablePayments.some((payment) => payment.paymentId === paymentId)) {
+      setPaymentId(refundablePayments[0]?.paymentId || "");
+    }
+  }, [isOpen, isSuperadmin, paymentId, refundablePayments]);
+
+  const startNewOperation = () => {
+    setOperationKey(makeOperationKey());
+    setConfirmed(false);
+  };
+
+  const financialMutation = useMutation({
+    mutationFn: async () => {
+      const includesRefund = action === "refund" || action === "cancel_and_refund";
+      const amountHalala = Math.round(Number(partialAmountSar) * 100);
+      return executeFinancialControl(subscriptionId, {
+        action,
+        operationKey,
+        reason: reason.trim(),
+        ...(note.trim() ? { note: note.trim() } : {}),
+        ...(includesRefund
+          ? {
+              paymentId,
+              refundMode,
+              ...(refundMode === "partial" ? { amountHalala } : {}),
+            }
+          : {}),
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["subscription-details", subscriptionId] }),
+        queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["subscription-financial-control", subscriptionId],
+        }),
+      ]);
+      const message =
+        action === "cancel"
+          ? "تم إلغاء الاشتراك بنجاح"
+          : action === "refund"
+            ? "تم تأكيد الاسترجاع المالي وتسجيله بنجاح"
+            : "تم تأكيد الاسترجاع المالي وإلغاء الاشتراك بنجاح";
+      ToastMessage(message, "success");
+      onClose();
+    },
+    onError: (error: unknown) => {
+      const parsed = parseApiError(error);
+      if (parsed.code === "REFUND_PROVIDER_UNCONFIRMED") {
+        ToastMessage(
+          "حالة الاسترجاع عند ميسر غير مؤكدة. لا تغيّر الإعدادات؛ أعد المحاولة بنفس العملية ليتم التحقق بدون تكرار الاسترجاع.",
+          "error"
+        );
+        return;
+      }
+      if (parsed.code === "REFUND_OPERATION_IN_PROGRESS") {
+        ToastMessage(
+          "هناك عملية استرجاع سابقة على هذه الدفعة. أكمل العملية السابقة أولًا لحماية العميل من الاسترجاع المكرر.",
+          "error"
+        );
+        return;
+      }
+      ToastMessage(parsed.message || "تعذر تنفيذ العملية", "error");
+    },
+  });
+
+  const handleLegacyCancel = async () => {
     try {
       await cancelSubscription(subscriptionId);
       ToastMessage("تم إلغاء الاشتراك بنجاح", "success");
@@ -36,40 +187,284 @@ export function CancelModal({
     }
   };
 
+  if (!isSuperadmin) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-106.25">
+          <DialogHeader>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+              <TriangleAlertIcon className="h-6 w-6 text-red-600" aria-hidden="true" />
+            </div>
+            <DialogTitle className="text-xl">إلغاء الاشتراك</DialogTitle>
+            <DialogDescription className="pt-2 text-base">
+              هل أنت متأكد من رغبتك في إلغاء هذا الاشتراك؟ هذا الإجراء لا يمكن التراجع عنه.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-row-reverse gap-2 pt-4 sm:flex-row sm:justify-start">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLegacyCancelPending}>
+              تراجع
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleLegacyCancel} disabled={isLegacyCancelPending}>
+              {isLegacyCancelPending ? "جاري الإلغاء..." : "نعم، إلغاء الاشتراك"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const includesRefund = action === "refund" || action === "cancel_and_refund";
+  const includesCancel = action === "cancel" || action === "cancel_and_refund";
+  const partialAmountHalala = Math.round(Number(partialAmountSar) * 100);
+  const invalidPartial =
+    refundMode === "partial" &&
+    (!Number.isFinite(partialAmountHalala) ||
+      partialAmountHalala <= 0 ||
+      !selectedPayment ||
+      partialAmountHalala > selectedPayment.refundableHalala);
+  const cancellationBlocked = includesCancel && (isStacked || preview?.canCancel === false);
+  const submitDisabled =
+    financialMutation.isPending ||
+    previewQuery.isLoading ||
+    previewQuery.isError ||
+    reason.trim().length < 3 ||
+    !confirmed ||
+    cancellationBlocked ||
+    (includesRefund && (!selectedPayment || selectedPayment.refundableHalala <= 0)) ||
+    (includesRefund && refundMode === "partial" && invalidPartial);
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-106.25">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !financialMutation.isPending && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl" dir="rtl">
         <DialogHeader>
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-            <TriangleAlertIcon
-              className="h-6 w-6 text-red-600"
-              aria-hidden="true"
-            />
+          <div className="mb-2 flex items-center gap-3">
+            <div className="flex size-11 items-center justify-center rounded-full bg-red-100">
+              <WalletCards className="size-5 text-red-700" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl">إدارة الإلغاء والاسترجاع المالي</DialogTitle>
+              <DialogDescription className="mt-1">
+                متاح للسوبر أدمن فقط. الاسترجاع المالي يتم فعليًا عبر ميسر ثم يُسجل في النظام.
+              </DialogDescription>
+            </div>
           </div>
-          <DialogTitle className="text-xl">إلغاء الاشتراك</DialogTitle>
-          <DialogDescription className="pt-2 text-base">
-            هل أنت متأكد من رغبتك في إلغاء هذا الاشتراك؟ هذا الإجراء لا يمكن
-            التراجع عنه.
-          </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="flex flex-row-reverse gap-2 pt-4 sm:flex-row sm:justify-start">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={isPending}
-            className="w-full sm:w-auto"
-          >
-            تراجع
+
+        {previewQuery.isLoading ? (
+          <div className="flex items-center justify-center gap-2 rounded-xl border p-8 text-sm text-muted-foreground">
+            <Loader2 className="size-5 animate-spin" />
+            جاري مراجعة الدفعات وحالة الاشتراك...
+          </div>
+        ) : previewQuery.isError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            تعذر تحميل بيانات الاسترجاع. أغلق النافذة وحاول مرة أخرى.
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="grid gap-3 rounded-xl border bg-muted/30 p-4 sm:grid-cols-3">
+              <div>
+                <p className="text-xs text-muted-foreground">حالة الاشتراك</p>
+                <p className="mt-1 font-semibold">{preview?.subscription.status || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">إجمالي قابل للاسترجاع</p>
+                <p className="mt-1 font-semibold">{sar(preview?.totalRefundableHalala || 0)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">عدد الدفعات المتاحة</p>
+                <p className="mt-1 font-semibold">{refundablePayments.length}</p>
+              </div>
+            </div>
+
+            {isStacked ? (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                هذا اشتراك متعدد الباقات. الاسترجاع لكل دفعة متاح، لكن إلغاء الحاوية كاملة متوقف لحماية أرصدة الباقات المجمعة حتى يكتمل مسار الإلغاء الخاص بها.
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">نوع العملية</label>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {([
+                  ["cancel", "إلغاء فقط"],
+                  ["refund", "استرجاع فقط"],
+                  ["cancel_and_refund", "استرجاع + إلغاء"],
+                ] as const).map(([value, label]) => {
+                  const blocked = value !== "refund" && (isStacked || preview?.canCancel === false);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      disabled={blocked}
+                      onClick={() => {
+                        setAction(value);
+                        startNewOperation();
+                      }}
+                      className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
+                        action === value
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "bg-background hover:bg-muted"
+                      } disabled:cursor-not-allowed disabled:opacity-40`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {includesRefund ? (
+              <div className="space-y-4 rounded-xl border p-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">الدفعة المطلوب استرجاعها</label>
+                  <select
+                    value={paymentId}
+                    onChange={(event) => {
+                      setPaymentId(event.target.value);
+                      setPartialAmountSar("");
+                      startNewOperation();
+                    }}
+                    className="h-11 w-full rounded-md border bg-background px-3 text-sm"
+                  >
+                    {refundablePayments.length === 0 ? (
+                      <option value="">لا توجد دفعات قابلة للاسترجاع</option>
+                    ) : null}
+                    {refundablePayments.map((payment) => (
+                      <option key={payment.paymentId} value={payment.paymentId}>
+                        {sar(payment.refundableHalala)} متاح — {formatDate(payment.paidAt)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRefundMode("full");
+                      setPartialAmountSar("");
+                      startNewOperation();
+                    }}
+                    className={`rounded-xl border p-3 text-right text-sm ${
+                      refundMode === "full" ? "border-primary bg-primary/10" : "bg-background"
+                    }`}
+                  >
+                    <span className="block font-semibold">استرجاع كامل للدفعة</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {selectedPayment ? sar(selectedPayment.refundableHalala) : "—"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRefundMode("partial");
+                      startNewOperation();
+                    }}
+                    className={`rounded-xl border p-3 text-right text-sm ${
+                      refundMode === "partial" ? "border-primary bg-primary/10" : "bg-background"
+                    }`}
+                  >
+                    <span className="block font-semibold">استرجاع جزئي</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">حدد المبلغ بالريال</span>
+                  </button>
+                </div>
+
+                {refundMode === "partial" ? (
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">المبلغ بالريال السعودي</label>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={partialAmountSar}
+                      onChange={(event) => {
+                        setPartialAmountSar(event.target.value);
+                        startNewOperation();
+                      }}
+                      placeholder="مثال: 125.50"
+                      className="h-11 w-full rounded-md border bg-background px-3 text-sm"
+                    />
+                    {invalidPartial ? (
+                      <p className="text-xs text-red-600">
+                        المبلغ يجب أن يكون أكبر من صفر ولا يتجاوز الرصيد القابل للاسترجاع.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">سبب العملية *</label>
+              <textarea
+                value={reason}
+                onChange={(event) => {
+                  setReason(event.target.value);
+                  startNewOperation();
+                }}
+                rows={3}
+                maxLength={500}
+                placeholder="مثال: طلب العميل إلغاء الاشتراك واسترجاع المبلغ"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">ملاحظة داخلية (اختياري)</label>
+              <textarea
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                rows={2}
+                maxLength={1000}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(event) => setConfirmed(event.target.checked)}
+                className="mt-1 size-4"
+              />
+              <span>
+                أؤكد أنني راجعت الاشتراك والدفعة والمبلغ. عند وجود استرجاع سيتم إرسال طلب مالي حقيقي إلى ميسر، ولا يتم اعتبار الاسترجاع ناجحًا إلا بعد تأكيده.
+              </span>
+            </label>
+
+            {financialMutation.isError ? (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                <RotateCcw className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  إذا كانت الرسالة تشير إلى حالة غير مؤكدة عند ميسر، اضغط تنفيذ مرة أخرى بدون تغيير البيانات؛ النظام يستخدم نفس مفتاح العملية ويتحقق أولًا قبل أي استرجاع جديد.
+                </span>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 pt-2 sm:justify-start">
+          <Button type="button" variant="outline" onClick={onClose} disabled={financialMutation.isPending}>
+            إغلاق
           </Button>
           <Button
             type="button"
-            variant="destructive"
-            onClick={handleCancel}
-            disabled={isPending}
-            className="mt-2 w-full sm:mt-0 sm:w-auto"
+            variant={includesCancel ? "destructive" : "default"}
+            disabled={submitDisabled}
+            onClick={() => financialMutation.mutate()}
           >
-            {isPending ? "جاري الإلغاء..." : "نعم، إلغاء الاشتراك"}
+            {financialMutation.isPending ? (
+              <>
+                <Loader2 className="ml-2 size-4 animate-spin" />
+                جاري التحقق والتنفيذ...
+              </>
+            ) : action === "cancel" ? (
+              "إلغاء الاشتراك"
+            ) : action === "refund" ? (
+              "تنفيذ الاسترجاع المالي"
+            ) : (
+              "استرجاع المبلغ ثم إلغاء الاشتراك"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
