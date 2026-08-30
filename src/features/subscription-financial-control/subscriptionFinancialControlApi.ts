@@ -2,16 +2,40 @@ import api from "@/lib/apis";
 
 export type FinancialControlAction = "cancel" | "refund" | "cancel_and_refund";
 export type RefundMode = "full" | "partial";
+export type RefundChannel = "moyasar" | "payment_gateway" | "cash" | "bank_transfer";
 
 export interface RefundablePayment {
   paymentId: string;
-  providerPaymentId: string;
+  providerPaymentId: string | null;
+  provider: string | null;
+  method: string | null;
+  source: string | null;
   amountHalala: number;
   recordedRefundedHalala: number;
   refundableHalala: number;
   paidAt: string | null;
   currency: string;
-  providerRefundStatus: string | null;
+}
+
+export interface RefundRecord {
+  id: string;
+  paymentId: string | null;
+  amountHalala: number;
+  vatHalala: number;
+  status: string;
+  executionMode: "provider_confirmed" | "recorded_only" | null;
+  refundChannel: RefundChannel | null;
+  recordedAt: string | null;
+  reason: string;
+  settlement: {
+    status: "pending" | "partially_settled" | "settled";
+    method: RefundChannel | null;
+    settledAmountHalala: number;
+    settledAt: string | null;
+    reference: string | null;
+    note: string | null;
+    providerConfirmedHalala: number;
+  };
 }
 
 export interface FinancialControlPreview {
@@ -23,8 +47,13 @@ export interface FinancialControlPreview {
     cancellationReason: string;
   };
   canCancel: boolean;
+  accountingOnly: boolean;
+  moneyMovementEnabled: boolean;
+  refundChannels: RefundChannel[];
   payments: RefundablePayment[];
+  refunds: RefundRecord[];
   totalRefundableHalala: number;
+  pendingSettlementHalala: number;
 }
 
 export interface ExecuteFinancialControlPayload {
@@ -34,7 +63,14 @@ export interface ExecuteFinancialControlPayload {
   note?: string;
   paymentId?: string;
   refundMode?: RefundMode;
+  refundChannel?: RefundChannel;
   amountHalala?: number;
+}
+
+export interface SettleRefundPayload {
+  method: RefundChannel;
+  reference?: string;
+  note?: string;
 }
 
 export async function fetchFinancialControlPreview(subscriptionId: string) {
@@ -50,6 +86,18 @@ export async function executeFinancialControl(
 ) {
   const response = await api.post(
     `/api/dashboard/subscriptions/${subscriptionId}/financial-control`,
+    payload
+  );
+  return response.data;
+}
+
+export async function settleRefund(
+  subscriptionId: string,
+  refundId: string,
+  payload: SettleRefundPayload
+) {
+  const response = await api.post(
+    `/api/dashboard/subscriptions/${subscriptionId}/financial-control/refunds/${refundId}/settle`,
     payload
   );
   return response.data;
