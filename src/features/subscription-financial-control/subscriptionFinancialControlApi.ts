@@ -47,8 +47,10 @@ export interface FinancialControlPreview {
     cancellationReason: string;
   };
   canCancel: boolean;
-  accountingOnly: boolean;
-  moneyMovementEnabled: boolean;
+  // Contract guarantee from the backend: financial-control refund actions only
+  // recognize the refund for accounting. They never execute a money transfer.
+  accountingOnly: true;
+  moneyMovementEnabled: false;
   refundChannels: RefundChannel[];
   payments: RefundablePayment[];
   refunds: RefundRecord[];
@@ -68,6 +70,8 @@ export interface ExecuteFinancialControlPayload {
 }
 
 export interface SettleRefundPayload {
+  // This records how the money was returned outside the dashboard. Calling this
+  // endpoint does not invoke Moyasar or another payment provider.
   method: RefundChannel;
   reference?: string;
   note?: string;
