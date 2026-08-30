@@ -78,6 +78,7 @@ export function ResetPasswordDialog({
     retry: false,
     gcTime: 0,
   });
+  const resetPasswordMutationState = resetPassword.reset;
   const protectedState =
     resetPassword.isPending || Boolean(credentials) || malformedSuccessOpen;
 
@@ -95,14 +96,14 @@ export function ResetPasswordDialog({
   function closeCredentials() {
     setCredentials(null);
     setReason("");
-    resetPassword.reset();
+    resetPasswordMutationState();
     refreshCustomerData();
   }
 
   function closeMalformedSuccess() {
     setMalformedSuccessOpen(false);
     setReason("");
-    resetPassword.reset();
+    resetPasswordMutationState();
     refreshCustomerData();
   }
 
@@ -121,9 +122,9 @@ export function ResetPasswordDialog({
       setCredentials(null);
       setMalformedSuccessOpen(false);
       requestInFlightRef.current = false;
-      resetPassword.reset();
+      resetPasswordMutationState();
     };
-  }, [resetPassword]);
+  }, [resetPasswordMutationState]);
 
   function submitReset() {
     const normalizedReason = reason.trim();
