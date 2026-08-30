@@ -4,10 +4,11 @@ import {
   subscriptionDetailsQueryOptions,
   useUnfreezeSubscriptionMutation,
 } from "@/hooks/useSubscriptionsQuery";
+import { useAuth } from "@/hooks/useAuth";
 import { Loader } from "@/components/global/loader";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ReceiptText, ShieldCheck } from "lucide-react";
+import { ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
 
 import { SubscriptionHeader } from "@/components/pages/subscriptions/details/subscription-header";
 import {
@@ -26,6 +27,7 @@ import { CancelModal } from "@/components/pages/subscriptions/details/modals/can
 import { ToastMessage } from "@/components/global/ToastMessage";
 import { SubscriptionStackingOverview } from "@/components/pages/subscriptions/SubscriptionStackingOverview";
 import { SubscriptionInvoiceDialog } from "@/components/pages/subscriptions/invoice/SubscriptionInvoiceDialog";
+import { hasEntitlementBatches } from "@/lib/subscriptionStackingPresentation";
 
 export const Route = createFileRoute(
   "/_protected/subscriptions/$subscriptionId/"
@@ -42,11 +44,14 @@ export const Route = createFileRoute(
 
 function SubscriptionDetailsPage() {
   const { subscriptionId } = Route.useParams();
+  const { user } = useAuth();
   const { data: response } = useSuspenseQuery(
     subscriptionDetailsQueryOptions(subscriptionId)
   );
 
   const subscription = response.data;
+  const isSuperadmin = user?.role === "superadmin";
+  const isStacked = hasEntitlementBatches(subscription);
   const { mutateAsync: unfreezeSubscription } =
     useUnfreezeSubscriptionMutation();
 
@@ -75,6 +80,41 @@ function SubscriptionDetailsPage() {
         onUnfreeze={handleUnfreeze}
         onInvoice={() => setIsInvoiceOpen(true)}
       />
+
+      {isSuperadmin ? (
+        <section className="flex flex-col gap-4 rounded-2xl border border-red-200 bg-gradient-to-l from-red-50 via-background to-background p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex items-start gap-3">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
+              <WalletCards className="size-6" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-bold">إدارة الإلغاء والاسترجاع المالي</h2>
+                <span className="rounded-full border border-red-200 bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800">
+                  Super Admin فقط
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                إلغاء الاشتراك، استرجاع كامل أو جزئي لكل دفعة، أو استرجاع ثم إلغاء مع تسجيل العملية ومنع التكرار.
+              </p>
+              {isStacked ? (
+                <p className="mt-2 text-xs font-medium text-amber-700">
+                  الاشتراك متعدد الباقات: الاسترجاع المالي للدفعات متاح، أما إلغاء الحاوية المجمعة فيظل محميًا حتى يكتمل مسار إلغاء الباقات المجمعة.
+                </p>
+              ) : null}
+            </div>
+          </div>
+          <Button
+            size="lg"
+            variant="destructive"
+            onClick={() => setIsCancelModalOpen(true)}
+            className="w-full gap-2 px-6 font-bold shadow-sm sm:w-auto"
+          >
+            <WalletCards className="size-5" />
+            فتح التحكم المالي
+          </Button>
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-4 rounded-2xl border border-primary/20 bg-gradient-to-l from-primary/10 via-primary/5 to-background p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div className="flex items-start gap-3">
@@ -134,6 +174,7 @@ function SubscriptionDetailsPage() {
         subscriptionId={subscription._id}
         isOpen={isCancelModalOpen}
         onClose={() => setIsCancelModalOpen(false)}
+        isStacked={isStacked}
       />
       <SubscriptionInvoiceDialog
         subscriptionId={subscription._id}
