@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangleIcon, KeyRoundIcon } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+  AlertTriangleIcon,
+  CheckCircle2Icon,
+  CopyIcon,
+  KeyRoundIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 
 import { ToastMessage } from "@/components/global/ToastMessage";
@@ -14,14 +20,44 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useResetAdminCustomerPasswordMutation } from "@/hooks/useUsersQuery";
+import api from "@/lib/apis";
 import type { User } from "@/types/userTypes";
 import { getAdminCustomerErrorMessage } from "@/utils/fetchUsersData";
-import type { CredentialsDialogData } from "./temporary-credentials-dialog";
-import { TemporaryCredentialsDialog } from "./temporary-credentials-dialog";
+
+type DirectPasswordResetResult = {
+  userId: string;
+  phoneE164: string;
+  password: string;
+  passwordChangedAt?: string | null;
+  forcePasswordChange: false;
+  sessionsRevoked: boolean;
+  directLoginReady: boolean;
+};
+
+type PasswordCredentials = {
+  customerName: string | null;
+  phoneE164: string;
+  password: string;
+  sessionsRevoked: boolean;
+};
 
 const malformedResetCredentialsMessage =
-  "تمت إعادة تعيين كلمة المرور، ولكن تعذر عرض بيانات الدخول المؤقتة. تحقق من حالة المستخدم قبل تنفيذ أي إعادة تعيين أخرى.";
+  "تمت إعادة تعيين كلمة المرور، ولكن تعذر عرض كلمة المرور الجديدة. حدّث بيانات العميل قبل تنفيذ إعادة تعيين أخرى حتى لا تفقد كلمة المرور التي تم إنشاؤها.";
+
+async function resetCustomerPasswordDirect({
+  userId,
+  reason,
+}: {
+  userId: string;
+  reason: string;
+}) {
+  const response = await api.post<{ status: boolean; data: DirectPasswordResetResult }>(
+    `/api/dashboard/customer-management/${userId}/password-reset`,
+    { reason },
+    { suppressGlobalForbiddenToast: true }
+  );
+  return response.data.data;
+}
 
 export function ResetPasswordDialog({
   user,
@@ -33,14 +69,15 @@ export function ResetPasswordDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [reason, setReason] = useState("");
-  const [credentials, setCredentials] = useState<CredentialsDialogData | null>(
-    null
-  );
+  const [credentials, setCredentials] = useState<PasswordCredentials | null>(null);
   const [malformedSuccessOpen, setMalformedSuccessOpen] = useState(false);
   const requestInFlightRef = useRef(false);
   const queryClient = useQueryClient();
-  const resetPassword = useResetAdminCustomerPasswordMutation();
-  const resetPasswordMutationState = resetPassword.reset;
+  const resetPassword = useMutation({
+    mutationFn: resetCustomerPasswordDirect,
+    retry: false,
+    gcTime: 0,
+  });
   const protectedState =
     resetPassword.isPending || Boolean(credentials) || malformedSuccessOpen;
 
@@ -50,20 +87,23 @@ export function ResetPasswordDialog({
     shouldBlockFn: () => protectedState,
   });
 
+  function refreshCustomerData() {
+    queryClient.invalidateQueries({ queryKey: ["users"] });
+    queryClient.invalidateQueries({ queryKey: ["user-details", user.id] });
+  }
+
   function closeCredentials() {
     setCredentials(null);
     setReason("");
-    resetPasswordMutationState();
-    queryClient.invalidateQueries({ queryKey: ["users"] });
-    queryClient.invalidateQueries({ queryKey: ["user-details", user.id] });
+    resetPassword.reset();
+    refreshCustomerData();
   }
 
   function closeMalformedSuccess() {
     setMalformedSuccessOpen(false);
     setReason("");
-    resetPasswordMutationState();
-    queryClient.invalidateQueries({ queryKey: ["users"] });
-    queryClient.invalidateQueries({ queryKey: ["user-details", user.id] });
+    resetPassword.reset();
+    refreshCustomerData();
   }
 
   useEffect(() => {
@@ -81,40 +121,36 @@ export function ResetPasswordDialog({
       setCredentials(null);
       setMalformedSuccessOpen(false);
       requestInFlightRef.current = false;
-      resetPasswordMutationState();
+      resetPassword.reset();
     };
-  }, [resetPasswordMutationState]);
+  }, [resetPassword]);
 
   function submitReset() {
+    const normalizedReason = reason.trim();
+    if (normalizedReason.length < 3) {
+      ToastMessage("اكتب سبب إعادة التعيين قبل المتابعة", "error");
+      return;
+    }
     if (requestInFlightRef.current) return;
+
     requestInFlightRef.current = true;
     resetPassword.mutate(
-      {
-        userId: user.id,
-        payload: reason.trim() ? { reason: reason.trim() } : {},
-      },
+      { userId: user.id, reason: normalizedReason },
       {
         onSuccess: (result) => {
           onOpenChange(false);
           const phoneE164 = result.phoneE164 || user.phoneE164 || user.phone;
-          if (
-            !phoneE164 ||
-            !result.temporaryPassword ||
-            !result.temporaryPasswordExpiresAt
-          ) {
-            resetPasswordMutationState();
+          if (!phoneE164 || !result.password || result.forcePasswordChange !== false) {
             setMalformedSuccessOpen(true);
             return;
           }
+
           setCredentials({
-            title: "تمت إعادة تعيين كلمة المرور",
             customerName: user.fullName,
             phoneE164,
-            temporaryPassword: result.temporaryPassword,
-            expiresAt: result.temporaryPasswordExpiresAt,
+            password: result.password,
             sessionsRevoked: result.sessionsRevoked,
           });
-          resetPasswordMutationState();
         },
         onError: (error) => {
           ToastMessage(getAdminCustomerErrorMessage(error), "error");
@@ -148,23 +184,29 @@ export function ResetPasswordDialog({
           <DialogHeader>
             <DialogTitle>إعادة تعيين كلمة المرور</DialogTitle>
             <DialogDescription>
-              سيتم إلغاء جلسات العميل الحالية وإنشاء كلمة مرور مؤقتة جديدة.
-              سيُطلب من العميل تغييرها عند تسجيل الدخول التالي.
+              سيتم إنشاء كلمة مرور جديدة ونهائية تعمل مباشرة في تطبيق العميل، مع تسجيل
+              خروج العميل من كل الأجهزة وإلغاء الجلسات القديمة. كلمة المرور ستظهر مرة
+              واحدة فقط بعد التنفيذ.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="reset-reason">
-              سبب إعادة التعيين
+              سبب إعادة التعيين — مطلوب
             </label>
             <Textarea
               id="reset-reason"
               value={reason}
               disabled={resetPassword.isPending}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="العميل حضر إلى الفرع وطلب إعادة تعيين كلمة المرور"
+              placeholder="مثال: العميل حضر إلى الفرع وطلب إعادة تعيين كلمة المرور"
               className="min-h-24"
+              maxLength={500}
             />
+          </div>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+            بعد التنفيذ لن تعمل كلمة المرور القديمة. أعطِ العميل كلمة المرور الجديدة فقط.
           </div>
 
           <DialogFooter className="gap-2 sm:justify-start">
@@ -188,10 +230,7 @@ export function ResetPasswordDialog({
         </DialogContent>
       </Dialog>
 
-      <TemporaryCredentialsDialog
-        credentials={credentials}
-        onClose={closeCredentials}
-      />
+      <NewPasswordDialog credentials={credentials} onClose={closeCredentials} />
 
       <Dialog open={malformedSuccessOpen}>
         <DialogContent
@@ -204,7 +243,7 @@ export function ResetPasswordDialog({
           <DialogHeader className="text-right">
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangleIcon className="size-5 text-amber-600" />
-              تعذر عرض بيانات الدخول المؤقتة
+              تعذر عرض كلمة المرور الجديدة
             </DialogTitle>
             <DialogDescription>{malformedResetCredentialsMessage}</DialogDescription>
           </DialogHeader>
@@ -216,5 +255,146 @@ export function ResetPasswordDialog({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function NewPasswordDialog({
+  credentials,
+  onClose,
+}: {
+  credentials: PasswordCredentials | null;
+  onClose: () => void;
+}) {
+  const open = Boolean(credentials);
+
+  async function copyValue(value: string, message: string) {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      ToastMessage(message, "success");
+    } catch {
+      ToastMessage("تعذر النسخ تلقائيًا. انسخ البيانات يدويًا.", "error");
+    }
+  }
+
+  const copyText = credentials
+    ? [
+        `اسم العميل: ${credentials.customerName || "—"}`,
+        `رقم الجوال: ${credentials.phoneE164}`,
+        `كلمة المرور الجديدة: ${credentials.password}`,
+        "كلمة المرور تعمل مباشرة في التطبيق ولا تحتاج تغييرًا عند أول دخول.",
+      ].join("\n")
+    : "";
+
+  return (
+    <Dialog open={open}>
+      <DialogContent
+        dir="rtl"
+        showCloseButton={false}
+        className="max-w-xl"
+        onEscapeKeyDown={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.preventDefault()}
+      >
+        <DialogHeader className="text-right">
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCircle2Icon className="size-5 text-emerald-600" />
+            تمت إعادة تعيين كلمة المرور
+          </DialogTitle>
+          <DialogDescription>
+            هذه هي كلمة المرور الجديدة النهائية. يمكن للعميل تسجيل الدخول بها مباشرة من
+            التطبيق ولا يحتاج إلى شاشة تغيير كلمة مرور إضافية.
+          </DialogDescription>
+        </DialogHeader>
+
+        {credentials ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <dl className="grid gap-4 text-sm">
+                <CredentialRow label="اسم العميل" value={credentials.customerName || "—"} />
+                <CredentialRow label="رقم الجوال" value={credentials.phoneE164} ltr />
+                <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-center">
+                  <dt className="text-muted-foreground">كلمة المرور الجديدة</dt>
+                  <dd className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                    <bdi
+                      dir="ltr"
+                      className="min-w-0 flex-1 select-all break-all rounded-md border bg-background px-3 py-2 text-left font-mono text-lg font-bold [unicode-bidi:isolate]"
+                    >
+                      {credentials.password}
+                    </bdi>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        copyValue(credentials.password, "تم نسخ كلمة المرور الجديدة")
+                      }
+                    >
+                      <CopyIcon data-icon="inline-start" />
+                      نسخ
+                    </Button>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <div className="flex items-start gap-2">
+                <ShieldCheckIcon className="mt-0.5 size-4 shrink-0" />
+                <span>
+                  كلمة المرور القديمة لم تعد تعمل، والجلسات القديمة أُلغيت. يمكن تسجيل
+                  الدخول الآن برقم الجوال وكلمة المرور الظاهرة أعلاه.
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+              احفظ أو انسخ كلمة المرور قبل الضغط على «تم». لن تظهر مرة أخرى بعد إغلاق
+              هذه النافذة.
+            </div>
+          </div>
+        ) : null}
+
+        <DialogFooter className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => copyValue(copyText, "تم نسخ بيانات الدخول الجديدة")}
+          >
+            <CopyIcon data-icon="inline-start" />
+            نسخ بيانات الدخول
+          </Button>
+          <Button type="button" onClick={onClose}>
+            تم
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CredentialRow({
+  label,
+  value,
+  ltr = false,
+}: {
+  label: string;
+  value: string;
+  ltr?: boolean;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-center">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd>
+        <bdi
+          dir={ltr ? "ltr" : "rtl"}
+          className={
+            ltr
+              ? "block select-all break-all text-left font-medium tabular-nums [unicode-bidi:isolate]"
+              : "block select-all break-words text-right font-medium [unicode-bidi:isolate]"
+          }
+        >
+          {value}
+        </bdi>
+      </dd>
+    </div>
   );
 }
