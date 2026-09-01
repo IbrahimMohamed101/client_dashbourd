@@ -11,10 +11,38 @@ type InvoiceLineItem = {
   amountHalala: number;
 };
 
+type InvoicePaymentOption = {
+  id: string;
+  type: string;
+  status: string;
+  amountHalala: number;
+  currency: string;
+  provider: string;
+  method: string | null;
+  paidAt: string | null;
+};
+
+type InvoiceRefundRow = {
+  id: string;
+  amountHalala: number;
+  vatHalala: number;
+  status: string;
+  executionMode: string;
+  refundChannel: string;
+  refundedAt: string | null;
+  settledAmountHalala: number;
+  settlementStatus: string;
+  settlementMethod: string;
+  settledAt: string | null;
+  reference: string;
+};
+
 type InvoiceData = {
   invoiceNumber: string;
   issuedAt: string | null;
   invoiceType: "simplified_tax_invoice" | "subscription_invoice";
+  selectedPaymentId: string | null;
+  availablePayments: InvoicePaymentOption[];
   seller: {
     legalNameAr: string;
     legalNameEn: string;
@@ -62,6 +90,7 @@ type InvoiceData = {
   financial: {
     currency: string;
     source: "payment" | "subscription_snapshot" | "unavailable";
+    snapshotSource?: string;
     financialDataComplete: boolean;
     reconciliationStatus: string;
     lineItems: InvoiceLineItem[];
@@ -73,17 +102,25 @@ type InvoiceData = {
     vatHalala: number;
     priceIncludesVat: boolean;
     subscriptionTotalHalala: number | null;
+    checkoutDraftTotalHalala?: number | null;
     paidAmountHalala: number | null;
     totalHalala: number | null;
   };
   payment: {
     id: string;
+    type?: string;
     status: string;
     method: string | null;
     provider: string;
     paidAt: string | null;
     refunded: boolean;
   } | null;
+  refunds: {
+    recognizedAmountHalala: number;
+    settledAmountHalala: number;
+    pendingSettlementAmountHalala: number;
+    rows: InvoiceRefundRow[];
+  };
   createdBy: {
     id: string | null;
     email: string;
@@ -160,6 +197,12 @@ function paymentStatusLabel(status: string | undefined) {
   return status || "غير محدد";
 }
 
+function paymentTypeLabel(type: string) {
+  if (type === "subscription_activation") return "اشتراك جديد";
+  if (type === "subscription_renewal") return "تجديد / شراء إضافي";
+  return "عملية شراء";
+}
+
 function deliveryModeLabel(mode: string) {
   if (mode === "delivery") return "توصيل";
   if (mode === "pickup") return "استلام من الفرع";
@@ -204,6 +247,15 @@ export function SubscriptionInvoiceDialog({
   const [invoice, setInvoice] = useState<InvoiceData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentSelection, setPaymentSelection] = useState<{
+    subscriptionId: string;
+    paymentId: string;
+  } | null>(null);
+
+  const requestedPaymentId =
+    paymentSelection?.subscriptionId === subscriptionId
+      ? paymentSelection.paymentId
+      : null;
 
   useEffect(() => {
     if (!open || !subscriptionId) return;
@@ -211,8 +263,14 @@ export function SubscriptionInvoiceDialog({
     setLoading(true);
     setError(null);
 
+    const paymentQuery = requestedPaymentId
+      ? `?paymentId=${encodeURIComponent(requestedPaymentId)}`
+      : "";
+
     api
-      .get<InvoiceResponse>(`/api/dashboard/subscriptions/${subscriptionId}/invoice`)
+      .get<InvoiceResponse>(
+        `/api/dashboard/subscriptions/${subscriptionId}/invoice${paymentQuery}`
+      )
       .then((response) => {
         if (active) setInvoice(response.data.data);
       })
@@ -226,7 +284,7 @@ export function SubscriptionInvoiceDialog({
     return () => {
       active = false;
     };
-  }, [open, subscriptionId]);
+  }, [open, subscriptionId, requestedPaymentId]);
 
   useEffect(() => {
     if (!open) return;
@@ -246,11 +304,21 @@ export function SubscriptionInvoiceDialog({
   const hasDeliveryLineItem = lineItems.some((item) => item.kind === "delivery");
   const hasDiscountLineItem = lineItems.some((item) => item.kind === "discount");
   const isTaxInvoice = Boolean(invoice?.tax.taxInvoiceEligible);
-  const hasInternalMismatch =
-    financial?.reconciliationStatus === "payment_authoritative_mismatch";
+  const hasInternalMismatch = Boolean(
+    financial?.reconciliationStatus?.includes("mismatch")
+  );
   const preVatWarning = invoice?.warnings.find(
     (warning) => warning.code === "PRE_VAT_EFFECTIVE_DATE"
   );
+  const breakdownWarning = invoice?.warnings.find(
+    (warning) =>
+      warning.code === "PAYMENT_BREAKDOWN_UNAVAILABLE" ||
+      warning.code === "PAYMENT_SNAPSHOT_MISMATCH"
+  );
+  const multiplePayments = (invoice?.availablePayments?.length || 0) > 1;
+  const recognizedRefundHalala = invoice?.refunds?.recognizedAmountHalala || 0;
+  const settledRefundHalala = invoice?.refunds?.settledAmountHalala || 0;
+  const pendingRefundHalala = invoice?.refunds?.pendingSettlementAmountHalala || 0;
 
   return (
     <div
@@ -303,6 +371,42 @@ export function SubscriptionInvoiceDialog({
             فاتورة حرارية 80mm بتصميم أبيض وأسود ومختصر. تتكيف مع عرض ورق الطابعة عند الطباعة.
           </p>
         </div>
+
+        {multiplePayments && invoice ? (
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-2.5">
+            <label
+              htmlFor={`invoice-payment-${subscriptionId}`}
+              className="mb-1.5 block text-xs font-bold text-neutral-900"
+            >
+              عملية الشراء / الفاتورة
+            </label>
+            <select
+              id={`invoice-payment-${subscriptionId}`}
+              value={invoice.selectedPaymentId || ""}
+              onChange={(event) =>
+                setPaymentSelection({
+                  subscriptionId,
+                  paymentId: event.target.value,
+                })
+              }
+              disabled={loading}
+              className="w-full rounded-md border border-neutral-300 bg-white px-2 py-2 text-xs text-neutral-950"
+            >
+              {invoice.availablePayments.map((payment) => (
+                <option key={payment.id} value={payment.id}>
+                  {paymentTypeLabel(payment.type)} — {formatDateTime(payment.paidAt)} — {formatMoney(
+                    payment.amountHalala,
+                    payment.currency
+                  )}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-[11px] text-neutral-600">
+              كل عملية دفع لها فاتورة مستقلة بسعرها التاريخي وقت الشراء.
+            </p>
+          </div>
+        ) : null}
+
         <div className="flex gap-2">
           <Button
             type="button"
@@ -328,8 +432,15 @@ export function SubscriptionInvoiceDialog({
         <div className="invoice-no-print mx-auto mb-3 flex w-full max-w-[80mm] items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <span>
-            يوجد اختلاف تاريخي بين إجمالي الاشتراك وسجل الدفع. المبلغ المطبوع هو المبلغ المدفوع الفعلي المعتمد.
+            يوجد اختلاف تاريخي بين تفاصيل السعر وسجل الدفع. المبلغ المطبوع هو المبلغ المدفوع الفعلي المعتمد، وأي فرق ظاهر كتسوية صريحة داخل الفاتورة.
           </span>
+        </div>
+      ) : null}
+
+      {breakdownWarning ? (
+        <div className="invoice-no-print mx-auto mb-3 flex w-full max-w-[80mm] items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <span>{breakdownWarning.messageAr}</span>
         </div>
       ) : null}
 
@@ -464,7 +575,7 @@ export function SubscriptionInvoiceDialog({
               ) : null}
 
               <ReceiptRow
-                label="الإجمالي"
+                label="إجمالي الفاتورة الأصلي"
                 value={formatMoney(financial?.totalHalala ?? null, currency)}
                 strong
               />
@@ -486,6 +597,31 @@ export function SubscriptionInvoiceDialog({
                 <ReceiptRow label="وقت الدفع" value={formatDateTime(invoice.payment.paidAt)} />
               ) : null}
             </div>
+
+            {recognizedRefundHalala > 0 ? (
+              <>
+                <DashedDivider />
+                <div className="text-[11px] font-black">استرجاعات لاحقة</div>
+                <p className="mb-1 mt-0.5 text-[9px] leading-4">
+                  الاسترجاع المالي سجل مستقل ولا يغيّر قيمة الفاتورة الأصلية أعلاه.
+                </p>
+                <ReceiptRow
+                  label="استرجاع مسجل"
+                  value={formatMoney(recognizedRefundHalala, currency)}
+                  negative
+                />
+                <ReceiptRow
+                  label="تمت تسويته فعلياً"
+                  value={formatMoney(settledRefundHalala, currency)}
+                />
+                {pendingRefundHalala > 0 ? (
+                  <ReceiptRow
+                    label="بانتظار التسوية"
+                    value={formatMoney(pendingRefundHalala, currency)}
+                  />
+                ) : null}
+              </>
+            ) : null}
 
             {isTaxInvoice && tax?.qr?.payloadBase64 ? (
               <>
