@@ -101,7 +101,8 @@ export function MealPlannerItemsDialogV2({
           <DialogHeader className="text-right">
             <DialogTitle>إدارة عناصر «{sectionTitle(section)}»</DialogTitle>
             <DialogDescription className="text-right leading-6">
-              احفظ القائمة كاملة دفعة واحدة. سيعيد الـBackend النسخة الكاملة بعد التحقق.
+              فعّل العناصر التي تريد ظهورها للعميل، وألغِ التحديد لتعطيلها من اختيار الاشتراك.
+              هذا لا يحذف أي منتج أو خيار من المنيو، والحفظ يتم والتحقق منه من الـBackend قبل اعتماد المسودة.
             </DialogDescription>
           </DialogHeader>
 
@@ -149,7 +150,7 @@ export function MealPlannerItemsDialogV2({
               ) : (
                 <Check className="size-4" />
               )}
-              حفظ العناصر
+              حفظ الظهور
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -177,13 +178,13 @@ export function MealPlannerItemsDialogV2({
           <AlertDialogHeader className="text-right">
             <AlertDialogTitle>لا يمكن ترك الكارت فارغًا</AlertDialogTitle>
             <AlertDialogDescription className="text-right leading-6">
-              احذف الكارت بدلًا من إرسال قائمة عناصر فارغة.
+              إذا أردت إيقاف هذا الكارت بالكامل، أزله من منشئ الوجبات. لن يتم حذف المنتجات أو الخيارات الأصلية من المنيو.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:justify-start">
             <AlertDialogCancel>العودة للاختيار</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={onDeleteCard}>
-              حذف الكارت
+              إزالة الكارت من المنشئ
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
