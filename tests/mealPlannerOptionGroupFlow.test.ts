@@ -134,15 +134,23 @@ describe("Meal Builder composed option-group flow", () => {
     });
   });
 
-  it("keeps canonical menu options selectable when the optional picker omits them", () => {
+  it("does not offer unlinked global menu options when the authoritative picker omits them", () => {
     const rows = mergeMenuOptionsWithPicker(menuOptions, [], []);
-    expect(rows).toHaveLength(2);
+    expect(rows).toEqual([]);
+  });
+
+  it("keeps a previously selected unlinked option visible only for removal", () => {
+    const rows = mergeMenuOptionsWithPicker(menuOptions, [], ["option-chicken"]);
+    expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       optionId: "option-chicken",
-      assignable: true,
-      eligible: true,
-      state: "menu_option",
-      reasonCodes: [],
+      selected: true,
+      assignable: false,
+      eligible: false,
+      linked: false,
+      relationExists: false,
+      state: "not_attached_to_product",
+      reasonCodes: ["OPTION_RELATION_UNAVAILABLE"],
     });
   });
 

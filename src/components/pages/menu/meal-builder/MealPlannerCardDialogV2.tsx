@@ -45,7 +45,7 @@ import {
 } from "@/utils/fetchMenuOptionGroups";
 import { MealPlannerBuilderGroupSelector } from "./MealPlannerBuilderGroupSelector";
 import { MealPlannerMenuProductPicker } from "./MealPlannerMenuProductPicker";
-import { MealPlannerOptionFamilyPicker } from "./MealPlannerOptionFamilyPicker";
+import { MealPlannerCandidatePickerV2 } from "./MealPlannerCandidatePickerV2";
 import { resolveMealBuilderAuthoringContexts } from "./mealPlannerAuthoringContexts";
 import {
   builderGroupContextLabel,
@@ -482,13 +482,19 @@ export function MealPlannerCardDialogV2({
                 }
               />
             ) : (
-              <MealPlannerOptionFamilyPicker
-                options={menuOptions}
+              <MealPlannerCandidatePickerV2
+                type="option"
+                targetSectionKey={section?.key}
                 selectedIds={value.selectedIds}
-                loading={menuOptionsQuery.isLoading}
-                error={Boolean(menuOptionsQuery.error)}
+                menuOptions={menuOptions}
+                menuOptionsLoading={menuOptionsQuery.isLoading}
+                menuOptionsError={Boolean(menuOptionsQuery.error)}
                 disabled={!selectedContext}
-                onRetry={() => void menuOptionsQuery.refetch()}
+                onRetryMenuOptions={() => void menuOptionsQuery.refetch()}
+                productContextId={value.productContextId}
+                sourceGroupId={value.sourceGroupId}
+                optionRole={value.optionRole}
+                familyKey={value.familyKey}
                 onChange={(selectedIds) =>
                   setValue((current) => ({ ...current, selectedIds }))
                 }

@@ -52,6 +52,21 @@ export interface ProductCustomizationOption {
     isActive?: boolean;
     isVisible?: boolean;
     isAvailable?: boolean;
+    global?: {
+      isActive?: boolean;
+      isVisible?: boolean;
+      isAvailable?: boolean;
+    };
+    product?: {
+      isActive?: boolean;
+      isVisible?: boolean;
+      isAvailable?: boolean;
+    };
+    effective?: {
+      isActive?: boolean;
+      isVisible?: boolean;
+      isAvailable?: boolean;
+    };
   };
   sortOrder?: number;
 }

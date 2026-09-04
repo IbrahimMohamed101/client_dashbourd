@@ -112,7 +112,7 @@ export function MealPlannerCandidatePickerV2({
               optionRole,
               familyKey:
                 optionRole === "protein" && familyKey ? familyKey : undefined,
-              includeUnavailable: true,
+              includeUnavailable: false,
               unassignedOnly: false,
               page: Number(pageParam),
               limit: 1000,
@@ -236,8 +236,8 @@ export function MealPlannerCandidatePickerV2({
       ) : (
         <>
           {type === "option" && pickerQuery.error ? (
-            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-5 text-amber-700 dark:text-amber-300">
-              تعذر تحميل بيانات الإتاحة الإضافية، لكن يمكنك اختيار خيارات المجموعة وسيتم التحقق منها عند الحفظ.
+            <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs leading-5 text-destructive">
+              تعذر تحميل علاقات المنتج. تم إيقاف اختيار خيارات جديدة حتى ينجح التحديث.
             </p>
           ) : null}
 

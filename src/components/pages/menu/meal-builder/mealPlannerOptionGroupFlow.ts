@@ -56,46 +56,50 @@ export function canonicalPickerOptionId(candidate: MealPlannerCatalogCandidate) 
 }
 
 /**
- * MenuOptionGroup is the canonical visible option source for card authoring.
- * When the optional Meal Builder picker returns a matching row we preserve its
- * assignment/availability metadata. When it does not, the MenuOption itself is
- * still a valid selectable ID and the create/update mutation remains the final
- * backend validation boundary.
+ * ProductGroupOption-backed picker rows are the only selectable authority.
+ * Global MenuOption rows may enrich labels, but never grant product membership.
+ * A selected legacy row that is no longer attached remains visible only so the
+ * employee can remove it from the card.
  */
 export function mergeMenuOptionsWithPicker(
   menuOptions: MenuOption[],
   pickerCandidates: MealPlannerCatalogCandidate[],
   selectedIds: string[]
 ): MealPlannerCatalogCandidate[] {
-  const pickerById = new Map(
-    pickerCandidates
-      .map((candidate) => [canonicalPickerOptionId(candidate), candidate] as const)
-      .filter(([id]) => Boolean(id))
-  );
+  const menuById = new Map(menuOptions.map((option) => [String(option.id), option]));
+  const rows: MealPlannerCatalogCandidate[] = pickerCandidates
+    .map((candidate) => {
+      const id = canonicalPickerOptionId(candidate);
+      if (!id) return null;
+      const option = menuById.get(id);
+      return {
+        ...(option
+          ? {
+              key: option.key,
+              name: option.name,
+              imageUrl: option.imageUrl,
+              extraPriceHalala: option.extraPriceHalala,
+              displayCategoryKey: option.displayCategoryKey,
+              proteinFamilyKey: option.proteinFamilyKey,
+              familyKey: option.proteinFamilyKey || option.displayCategoryKey,
+              sortOrder: option.sortOrder,
+            }
+          : {}),
+        ...candidate,
+        id,
+        optionId: id,
+        type: "option" as const,
+        selected: selectedIds.includes(id) || candidate.selected === true,
+      };
+    })
+    .filter(Boolean) as MealPlannerCatalogCandidate[];
 
-  const candidatesByKey = new Map<string, MealPlannerCatalogCandidate[]>();
-  for (const candidate of pickerCandidates) {
-    const key = String(candidate.key || "").trim();
-    if (!key) continue;
-    const matches = candidatesByKey.get(key) || [];
-    matches.push(candidate);
-    candidatesByKey.set(key, matches);
-  }
-
-  const rows: MealPlannerCatalogCandidate[] = menuOptions.map((option) => {
-    const keyMatches = candidatesByKey.get(String(option.key || "").trim()) || [];
-    const authoritative =
-      pickerById.get(option.id) || (keyMatches.length === 1 ? keyMatches[0] : undefined);
-    const id = authoritative ? canonicalPickerOptionId(authoritative) : option.id;
-    const selected =
-      selectedIds.includes(id) ||
-      selectedIds.includes(option.id) ||
-      authoritative?.selected === true;
-    const menuFallback = !authoritative;
-
-    return {
-      id,
-      optionId: id,
+  const authoritativeIds = new Set(rows.map((option) => canonicalPickerOptionId(option)));
+  for (const option of menuOptions) {
+    if (!selectedIds.includes(option.id) || authoritativeIds.has(option.id)) continue;
+    rows.push({
+      id: option.id,
+      optionId: option.id,
       key: option.key,
       type: "option",
       name: option.name,
@@ -104,25 +108,16 @@ export function mergeMenuOptionsWithPicker(
       displayCategoryKey: option.displayCategoryKey,
       proteinFamilyKey: option.proteinFamilyKey,
       familyKey: option.proteinFamilyKey || option.displayCategoryKey,
-      selected,
-      assigned: authoritative?.assigned,
-      assignedSectionKey: authoritative?.assignedSectionKey,
-      assignable: menuFallback ? true : authoritative.assignable === true,
-      eligible: menuFallback ? true : authoritative.eligible === true,
-      state: menuFallback ? "menu_option" : authoritative.state,
-      reasonCodes: menuFallback ? [] : authoritative.reasonCodes,
-      relationStatus: authoritative?.relationStatus,
-      effectiveStatus: authoritative?.effectiveStatus,
-      currency: authoritative?.currency,
+      selected: true,
+      assignable: false,
+      eligible: false,
+      linked: false,
+      relationExists: false,
+      relationStatus: { exists: false, effective: false },
+      state: "not_attached_to_product",
+      reasonCodes: ["OPTION_RELATION_UNAVAILABLE"],
       sortOrder: option.sortOrder,
-    };
-  });
-
-  const menuIds = new Set(rows.map((option) => canonicalPickerOptionId(option)));
-  for (const candidate of pickerCandidates) {
-    const id = canonicalPickerOptionId(candidate);
-    if (!id || menuIds.has(id) || !selectedIds.includes(id)) continue;
-    rows.push({ ...candidate, id, optionId: id, selected: true });
+    });
   }
 
   return rows.sort((left, right) => {

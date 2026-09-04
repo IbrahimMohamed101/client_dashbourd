@@ -38,6 +38,7 @@ import type {
   ProductCustomizationGroup,
   SaveProductCustomizationPayload,
 } from "@/types/menuCustomizationTypes";
+import { isProductOptionAttached } from "@/utils/fetchMenuCustomization";
 
 interface ProductCustomizationPanelProps {
   productId: string;
@@ -89,7 +90,12 @@ export function ProductCustomizationPanel({
 
   useEffect(() => {
     if (customizationData?.data.customization.groups) {
-      setGroups(customizationData.data.customization.groups);
+      setGroups(
+        customizationData.data.customization.groups.map((group) => ({
+          ...group,
+          options: group.options.filter(isProductOptionAttached),
+        }))
+      );
     }
   }, [customizationData?.data.customization.groups]);
 
@@ -341,6 +347,8 @@ function LinkedGroupCard({
           size="icon"
           className="text-destructive hover:text-destructive"
           onClick={onRemove}
+          aria-label="إزالة المجموعة من هذه الوجبة"
+          title="إزالة المجموعة من هذه الوجبة"
         >
           <Trash2 />
         </Button>
@@ -371,7 +379,7 @@ function LinkedGroupCard({
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="secondary" onClick={onChooseOptions}>
           <ListChecks data-icon="inline-start" />
-          اختيار الخيارات
+          إضافة أو إزالة خيارات الوجبة
         </Button>
         <Button type="button" variant="outline" onClick={onEditRules}>
           <Settings2 data-icon="inline-start" />
@@ -530,7 +538,7 @@ function ChooseOptionsDialog({
         <DialogHeader>
           <DialogTitle>اختيار الخيارات</DialogTitle>
           <DialogDescription>
-            الاختيارات هنا تخص هذا المنتج فقط داخل مجموعة {group?.name.ar || group?.key}.
+            إضافة الخيار تربطه بهذه الوجبة فقط. إلغاء تحديده يعني إزالته من هذه الوجبة، ولا يحذف الخيار عالميًا من مجموعة {group?.name.ar || group?.key}.
           </DialogDescription>
         </DialogHeader>
         <SearchInput value={query} onChange={setQuery} placeholder="ابحث عن خيار" />
@@ -566,7 +574,7 @@ function ChooseOptionsDialog({
         </div>
         <DialogFooter className="gap-2 sm:justify-start">
           <Button type="button" onClick={handleSave}>
-            حفظ الاختيارات ({selectedIds.length})
+            ربط الخيارات بالوجبة ({selectedIds.length})
           </Button>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             إلغاء
