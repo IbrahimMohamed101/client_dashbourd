@@ -10,7 +10,10 @@ import {
   mergeMenuOptionsWithPicker,
   optionRoleLabel,
 } from "../src/components/pages/menu/meal-builder/mealPlannerOptionGroupFlow";
-import { buildOptionFamilyPayload } from "../src/components/pages/menu/meal-builder/mealPlannerV2Utils";
+import {
+  buildOptionFamilyPayload,
+  candidateSelectable,
+} from "../src/components/pages/menu/meal-builder/mealPlannerV2Utils";
 
 const menuGroup: MenuOptionGroup = {
   id: "group-proteins",
@@ -68,6 +71,9 @@ const menuOptions: MenuOption[] = [
     isAvailable: true,
     sortOrder: 1,
     proteinFamilyKey: "chicken",
+    availableFor: ["subscription"],
+    availableForSubscription: true,
+    selectionType: "standard_meal",
   },
   {
     id: "option-fish",
@@ -79,6 +85,24 @@ const menuOptions: MenuOption[] = [
     isAvailable: true,
     sortOrder: 2,
     proteinFamilyKey: "fish",
+    availableFor: ["subscription"],
+    availableForSubscription: true,
+    selectionType: "standard_meal",
+  },
+  {
+    id: "option-premium",
+    groupId: menuGroup.id,
+    key: "premium",
+    name: { ar: "مميز", en: "Premium" },
+    extraPriceHalala: 2000,
+    isActive: true,
+    isAvailable: true,
+    sortOrder: 3,
+    proteinFamilyKey: "chicken",
+    premiumKey: "premium-test",
+    availableFor: ["subscription"],
+    availableForSubscription: true,
+    selectionType: "premium_meal",
   },
 ];
 
@@ -134,24 +158,31 @@ describe("Meal Builder composed option-group flow", () => {
     });
   });
 
-  it("does not offer unlinked global menu options when the authoritative picker omits them", () => {
+  it("offers regular unlinked group options as explicit attach-on-save choices", () => {
     const rows = mergeMenuOptionsWithPicker(menuOptions, [], []);
-    expect(rows).toEqual([]);
+    expect(rows.map((row) => row.optionId)).toEqual(["option-chicken", "option-fish"]);
+    expect(rows.every((row) => candidateSelectable(row))).toBe(true);
+    expect(rows.every((row) => row.linked === false)).toBe(true);
+    expect(rows.every((row) => row.relationExists === false)).toBe(true);
+    expect(rows.every((row) => row.attachable === true)).toBe(true);
+    expect(rows.every((row) => row.state === "attachable_on_save")).toBe(true);
+    expect(rows.some((row) => row.optionId === "option-premium")).toBe(false);
   });
 
-  it("keeps a previously selected unlinked option visible only for removal", () => {
+  it("keeps a selected unlinked regular option selectable so save can attach it", () => {
     const rows = mergeMenuOptionsWithPicker(menuOptions, [], ["option-chicken"]);
-    expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       optionId: "option-chicken",
       selected: true,
-      assignable: false,
-      eligible: false,
+      assignable: true,
+      eligible: true,
       linked: false,
       relationExists: false,
-      state: "not_attached_to_product",
-      reasonCodes: ["OPTION_RELATION_UNAVAILABLE"],
+      attachable: true,
+      state: "attachable_on_save",
+      reasonCodes: ["ATTACH_TO_PRODUCT_ON_SAVE"],
     });
+    expect(candidateSelectable(rows[0])).toBe(true);
   });
 
   it("builds the canonical option-family create payload without product IDs as options", () => {
