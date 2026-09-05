@@ -123,11 +123,7 @@ const CARB_KEYS = [
   "grilled_mixed_vegetables",
 ];
 
-const CHICKEN_MATCHERS = ["chicken", "دجاج"];
-const BEEF_MATCHERS = ["beef", "meat", "stroganoff", "steak", "لحم"];
-const FISH_MATCHERS = ["fish", "tuna", "salmon", "shrimp", "سمك", "تونا"];
-const EGG_MATCHERS = ["egg", "بيض"];
-const CARB_MATCHERS = ["rice", "pasta", "potato", "carb", "نشو", "رز", "بطاط"];
+const NORMAL_PROTEIN_FAMILIES = new Set(["chicken", "beef", "fish", "eggs", "other"]);
 
 export function buildMealBuilderVisualCards({
   sections,
@@ -178,8 +174,10 @@ export function buildMealBuilderVisualCards({
 
     if (section.sectionType === "option_group") {
       selectedOptions.forEach((option) => {
-        const family = optionFamily(option, section);
-        addOption(cards[family], option, section, index);
+        const family = optionFamily(option, section) || String(
+          section.metadata?.proteinFamilyKey || section.metadata?.familyKey || "other"
+        );
+        addOption(ensureCard(cards, family, section, index), option, section, index);
       });
     }
 
@@ -540,12 +538,22 @@ function premiumItemToVisualItem(
 
 export function optionFamily(option: MenuOption, section?: Pick<MealBuilderSection, "selectionType">) {
   void section;
-  if (matchesOption(option, CARB_KEYS, CARB_MATCHERS)) return "carbs";
-  if (matchesOption(option, BEEF_KEYS, BEEF_MATCHERS)) return "beef";
-  if (matchesOption(option, FISH_KEYS, FISH_MATCHERS)) return "fish";
-  if (matchesOption(option, EGG_KEYS, EGG_MATCHERS)) return "eggs";
-  if (matchesOption(option, CHICKEN_KEYS, CHICKEN_MATCHERS)) return "chicken";
-  return "chicken";
+  const backendResolved = String(option.resolvedFamilyKey || "").trim().toLowerCase();
+  if (NORMAL_PROTEIN_FAMILIES.has(backendResolved)) return backendResolved;
+
+  const explicitFamily = String(option.proteinFamilyKey || "").trim().toLowerCase();
+  const displayFamily = String(option.displayCategoryKey || "").trim().toLowerCase();
+  if (NORMAL_PROTEIN_FAMILIES.has(explicitFamily)) return explicitFamily;
+  if (NORMAL_PROTEIN_FAMILIES.has(displayFamily)) return displayFamily;
+  if (displayFamily === "standard_carbs") return "carbs";
+
+  const key = option.key.toLowerCase();
+  if (CARB_KEYS.includes(key)) return "carbs";
+  if (BEEF_KEYS.includes(key)) return "beef";
+  if (FISH_KEYS.includes(key)) return "fish";
+  if (EGG_KEYS.includes(key)) return "eggs";
+  if (CHICKEN_KEYS.includes(key)) return "chicken";
+  return "";
 }
 
 export function optionMatchesVisualCard(option: MenuOption, cardKey: string) {
@@ -579,13 +587,6 @@ export function productMatchesVisualCard(
   return false;
 }
 
-function matchesOption(option: MenuOption, keys: string[], matchers: string[]) {
-  const key = option.key.toLowerCase();
-  if (keys.includes(key)) return true;
-  const text = `${option.key} ${option.proteinFamilyKey ?? ""} ${option.displayCategoryKey ?? ""} ${option.name.ar} ${option.name.en}`.toLowerCase();
-  return matchers.some((matcher) => text.includes(matcher));
-}
-
 function sectionTarget(
   section: MealBuilderSection,
   selectedOptions: MenuOption[],
@@ -595,7 +596,9 @@ function sectionTarget(
   if (sectionTreatsAsFullMeal(section)) return section.key || section.selectionType || "full_meal_product";
   void selectedProducts;
   if (selectedOptions.some((option) => optionFamily(option, section) === "carbs")) return "carbs";
-  return "chicken";
+  return String(
+    section.metadata?.proteinFamilyKey || section.metadata?.familyKey || section.key || "other"
+  );
 }
 
 function uniqueItems(items: MealBuilderVisualItem[]) {

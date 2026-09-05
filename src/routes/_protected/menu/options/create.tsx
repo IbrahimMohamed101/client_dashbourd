@@ -33,6 +33,7 @@ function CreateOptionPage() {
       name: { ar: "", en: "" },
       description: { ar: "", en: "" },
       imageUrl: "",
+      proteinFamilyKey: "",
       extraPriceSar: 0,
       isActive: true,
       isAvailable: true,

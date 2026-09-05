@@ -31,6 +31,20 @@ interface Props {
   isEdit?: boolean;
 }
 
+export const PROTEIN_FAMILY_OPTIONS = [
+  { value: "chicken", ar: "دجاج", en: "Chicken" },
+  { value: "beef", ar: "لحم", en: "Beef" },
+  { value: "fish", ar: "سمك", en: "Fish" },
+  { value: "eggs", ar: "بيض", en: "Eggs" },
+  { value: "other", ar: "أخرى", en: "Other" },
+] as const;
+
+export function isProteinOptionGroup(group?: MenuOptionGroup | null) {
+  return ["protein", "proteins"].includes(
+    String(group?.key || "").trim().toLowerCase()
+  );
+}
+
 export function MenuOptionFormFields({ form, isEdit }: Props) {
   const isActive = form.watch("isActive") ?? true;
   const isAvailable = form.watch("isAvailable") ?? true;
@@ -40,6 +54,9 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
   const groups = (
     Array.isArray(responseData) ? responseData : responseData?.items || []
   ) as MenuOptionGroup[];
+  const selectedGroupId = form.watch("groupId");
+  const selectedGroup = groups.find((group) => group.id === selectedGroupId);
+  const proteinGroupSelected = isProteinOptionGroup(selectedGroup);
 
   return (
     <div className="space-y-6">
@@ -78,7 +95,16 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
                 render={({ field }) => (
                     <Select
                       value={field.value ?? ""}
-                      onValueChange={field.onChange}
+                      onValueChange={(groupId) => {
+                        field.onChange(groupId);
+                        const nextGroup = groups.find((group) => group.id === groupId);
+                        if (!isProteinOptionGroup(nextGroup)) {
+                          form.setValue("proteinFamilyKey", "", {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                        }
+                      }}
                     >
                       <SelectTrigger className="min-w-36">
                         <SelectValue placeholder="اختر المجموعة" />
@@ -99,6 +125,42 @@ export function MenuOptionFormFields({ form, isEdit }: Props) {
                 </p>
               )}
             </div>
+            {proteinGroupSelected ? (
+              <div className="space-y-1.5">
+                <Label>نوع البروتين / Protein family</Label>
+                <Controller
+                  control={form.control}
+                  name="proteinFamilyKey"
+                  rules={{
+                    validate: (value) =>
+                      Boolean(value) || "نوع البروتين مطلوب لخيارات مجموعة البروتين",
+                  }}
+                  render={({ field }) => (
+                    <Select value={field.value || ""} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر نوع البروتين" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROTEIN_FAMILY_OPTIONS.map((family) => (
+                          <SelectItem key={family.value} value={family.value}>
+                            {family.ar} / {family.en}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {form.formState.errors.proteinFamilyKey ? (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.proteinFamilyKey.message}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    يستخدمه منشئ الوجبات لتحديد بطاقة الدجاج أو اللحم أو السمك أو البيض.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-1.5">

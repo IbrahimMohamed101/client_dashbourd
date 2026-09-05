@@ -53,7 +53,7 @@ test("menuPayloadMappers.test", () => {
     extraPriceSar: 7.5,
     extraWeightUnitGrams: 100,
     extraWeightPriceSar: 3,
-    displayCategoryKey: "protein",
+    proteinFamilyKey: "chicken",
     availableFor: ["order", "subscription"],
     availableForSubscription: true,
     isActive: true,
@@ -62,7 +62,8 @@ test("menuPayloadMappers.test", () => {
     sortOrder: 0,
   });
 
-  assert.equal(optionPayload.displayCategoryKey, undefined);
+  assert.equal(optionPayload.proteinFamilyKey, "chicken");
+  assert.equal(optionPayload.displayCategoryKey, "chicken");
   assert.equal("displayCategory" in optionPayload, false);
   assert.equal(optionPayload.key, undefined);
   assert.equal("key" in optionPayload, false);
@@ -82,6 +83,8 @@ test("menuPayloadMappers.test", () => {
 
   assert.equal(optionUpdatePayload.premiumKey, undefined);
   assert.equal(optionUpdatePayload.selectionType, undefined);
+  assert.equal(optionUpdatePayload.proteinFamilyKey, "chicken");
+  assert.equal(optionUpdatePayload.displayCategoryKey, "chicken");
   assert.equal(optionUpdatePayload.extraFeeHalala, 0);
   assert.equal(optionUpdatePayload.ruleTags, undefined);
 

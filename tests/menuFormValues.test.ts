@@ -163,6 +163,7 @@ test("menuFormValues.test", () => {
     name: { ar: "", en: "" },
     description: { ar: "", en: "" },
     imageUrl: "",
+    proteinFamilyKey: "",
     extraPriceSar: 0,
     extraWeightUnitGrams: undefined,
     extraWeightPriceSar: undefined,
