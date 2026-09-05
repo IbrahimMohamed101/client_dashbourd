@@ -61,6 +61,31 @@ function optionFamily(option: MenuOption) {
     .toLowerCase();
 }
 
+function hasPremiumClassification(option: MenuOption) {
+  return Boolean(
+    String(option.premiumKey || "").trim() ||
+      ["premium_meal", "premium_large_salad"].includes(
+        String(option.selectionType || "").trim().toLowerCase()
+      )
+  );
+}
+
+function isGloballyVisibleOption(option: MenuOption) {
+  const availableForSubscription = option.availableForSubscription !== false;
+  const availableFor = Array.isArray(option.availableFor) ? option.availableFor : [];
+  const subscriptionChannelAllowed =
+    availableFor.length === 0 || availableFor.includes("subscription");
+
+  return (
+    option.isActive !== false &&
+    option.isVisible !== false &&
+    option.isAvailable !== false &&
+    availableForSubscription &&
+    subscriptionChannelAllowed &&
+    !hasPremiumClassification(option)
+  );
+}
+
 function isGloballyAttachableOption(option: MenuOption, familyKey = "") {
   const normalizedFamilyKey = String(familyKey || "").trim().toLowerCase();
   const explicitProteinFamily = String(option.proteinFamilyKey || "")
@@ -71,16 +96,6 @@ function isGloballyAttachableOption(option: MenuOption, familyKey = "") {
     .toLowerCase();
   const hasExplicitFamilyMetadata = Boolean(
     explicitProteinFamily || explicitDisplayCategory
-  );
-  const availableForSubscription = option.availableForSubscription !== false;
-  const availableFor = Array.isArray(option.availableFor) ? option.availableFor : [];
-  const subscriptionChannelAllowed =
-    availableFor.length === 0 || availableFor.includes("subscription");
-  const premiumLike = Boolean(
-    String(option.premiumKey || "").trim() ||
-      ["premium_meal", "premium_large_salad"].includes(
-        String(option.selectionType || "").trim().toLowerCase()
-      )
   );
 
   // A legacy/newly-created standard protein with no family metadata is still
@@ -93,24 +108,17 @@ function isGloballyAttachableOption(option: MenuOption, familyKey = "") {
     (!hasExplicitFamilyMetadata && Boolean(normalizedFamilyKey)) ||
     optionFamily(option) === normalizedFamilyKey;
 
-  return (
-    option.isActive !== false &&
-    option.isVisible !== false &&
-    option.isAvailable !== false &&
-    availableForSubscription &&
-    subscriptionChannelAllowed &&
-    familyMatches &&
-    !premiumLike
-  );
+  return isGloballyVisibleOption(option) && familyMatches;
 }
 
 /**
  * ProductGroupOption-backed picker rows remain the authoritative state for
- * already-attached choices. A globally valid MenuOption that belongs to the
- * selected group/family may also be offered as an explicit "attach on save"
- * choice. Selecting it does not bypass product membership: the Backend creates
- * or reactivates ProductGroupOption first, then runs the normal strict Meal
- * Builder validation. Premium/system-managed options are never attachable here.
+ * already-attached choices. Every regular option from the selected MenuOption
+ * group is also rendered in the picker so the card stays a dynamic view of its
+ * source group. For protein cards, the selected family controls which rows are
+ * actually selectable: matching/unclassified options are attachable on save;
+ * explicitly conflicting families stay visible but disabled. Premium/system-
+ * managed options remain protected and are never exposed by this fallback.
  */
 export function mergeMenuOptionsWithPicker(
   menuOptions: MenuOption[],
@@ -151,12 +159,22 @@ export function mergeMenuOptionsWithPicker(
     if (authoritativeIds.has(option.id)) continue;
     const selected = selectedIds.includes(option.id);
     const attachable = isGloballyAttachableOption(option, familyKey);
-    if (!attachable && !selected) continue;
+    const visible = isGloballyVisibleOption(option);
+    if (!visible && !selected) continue;
 
     const hasExplicitFamilyMetadata = Boolean(
       String(option.proteinFamilyKey || "").trim() ||
         String(option.displayCategoryKey || "").trim()
     );
+    const normalizedFamilyKey = String(familyKey || "").trim().toLowerCase();
+    const explicitFamily = optionFamily(option);
+    const familyConflict = Boolean(
+      normalizedFamilyKey &&
+        hasExplicitFamilyMetadata &&
+        explicitFamily &&
+        explicitFamily !== normalizedFamilyKey
+    );
+
     rows.push({
       id: option.id,
       optionId: option.id,
@@ -173,20 +191,19 @@ export function mergeMenuOptionsWithPicker(
       eligible: attachable,
       linked: false,
       relationExists: false,
-      relationStatus: attachable
-        ? { exists: false }
-        : { exists: false, effective: false },
       attachable,
-      classificationPending: !hasExplicitFamilyMetadata && Boolean(familyKey),
-      state: attachable ? "attachable_on_save" : "not_attached_to_product",
+      classificationPending: !hasExplicitFamilyMetadata && Boolean(normalizedFamilyKey),
+      state: attachable ? "attachable_on_save" : "not_attachable_to_product",
       reasonCodes: attachable
         ? [
             "ATTACH_TO_PRODUCT_ON_SAVE",
-            ...(!hasExplicitFamilyMetadata && familyKey
+            ...(!hasExplicitFamilyMetadata && normalizedFamilyKey
               ? ["CLASSIFY_FAMILY_ON_SAVE"]
               : []),
           ]
-        : ["OPTION_RELATION_UNAVAILABLE"],
+        : familyConflict
+          ? ["OPTION_FAMILY_MISMATCH"]
+          : ["OPTION_RELATION_UNAVAILABLE"],
       sortOrder: option.sortOrder,
     });
   }
