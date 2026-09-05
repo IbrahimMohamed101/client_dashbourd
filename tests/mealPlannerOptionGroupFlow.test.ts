@@ -169,8 +169,18 @@ describe("Meal Builder composed option-group flow", () => {
     expect(rows.some((row) => row.optionId === "option-premium")).toBe(false);
   });
 
+  it("scopes attach-on-save protein options to the requested family", () => {
+    const rows = mergeMenuOptionsWithPicker(menuOptions, [], [], "chicken");
+    expect(rows.map((row) => row.optionId)).toEqual(["option-chicken"]);
+    expect(rows[0]).toMatchObject({
+      familyKey: "chicken",
+      attachable: true,
+      assignable: true,
+    });
+  });
+
   it("keeps a selected unlinked regular option selectable so save can attach it", () => {
-    const rows = mergeMenuOptionsWithPicker(menuOptions, [], ["option-chicken"]);
+    const rows = mergeMenuOptionsWithPicker(menuOptions, [], ["option-chicken"], "chicken");
     expect(rows[0]).toMatchObject({
       optionId: "option-chicken",
       selected: true,
