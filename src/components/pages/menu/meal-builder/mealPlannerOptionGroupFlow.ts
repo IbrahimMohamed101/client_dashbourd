@@ -55,11 +55,34 @@ export function canonicalPickerOptionId(candidate: MealPlannerCatalogCandidate) 
   return String(candidate.optionId || candidate.id || candidate._id || "");
 }
 
+function isGloballyAttachableOption(option: MenuOption) {
+  const availableForSubscription = option.availableForSubscription !== false;
+  const availableFor = Array.isArray(option.availableFor) ? option.availableFor : [];
+  const subscriptionChannelAllowed =
+    availableFor.length === 0 || availableFor.includes("subscription");
+  const premiumLike = Boolean(
+    String(option.premiumKey || "").trim() ||
+      ["premium_meal", "premium_large_salad"].includes(
+        String(option.selectionType || "").trim().toLowerCase()
+      )
+  );
+  return (
+    option.isActive !== false &&
+    option.isVisible !== false &&
+    option.isAvailable !== false &&
+    availableForSubscription &&
+    subscriptionChannelAllowed &&
+    !premiumLike
+  );
+}
+
 /**
- * ProductGroupOption-backed picker rows are the only selectable authority.
- * Global MenuOption rows may enrich labels, but never grant product membership.
- * A selected legacy row that is no longer attached remains visible only so the
- * employee can remove it from the card.
+ * ProductGroupOption-backed picker rows remain the authoritative state for
+ * already-attached choices. A globally valid MenuOption that belongs to the
+ * selected group may also be offered as an explicit "attach on save" choice.
+ * Selecting it does not bypass product membership: the Backend creates or
+ * reactivates ProductGroupOption first, then runs the normal strict Meal
+ * Builder validation. Premium/system-managed options are never attachable here.
  */
 export function mergeMenuOptionsWithPicker(
   menuOptions: MenuOption[],
@@ -96,7 +119,11 @@ export function mergeMenuOptionsWithPicker(
 
   const authoritativeIds = new Set(rows.map((option) => canonicalPickerOptionId(option)));
   for (const option of menuOptions) {
-    if (!selectedIds.includes(option.id) || authoritativeIds.has(option.id)) continue;
+    if (authoritativeIds.has(option.id)) continue;
+    const selected = selectedIds.includes(option.id);
+    const attachable = isGloballyAttachableOption(option);
+    if (!attachable && !selected) continue;
+
     rows.push({
       id: option.id,
       optionId: option.id,
@@ -108,14 +135,17 @@ export function mergeMenuOptionsWithPicker(
       displayCategoryKey: option.displayCategoryKey,
       proteinFamilyKey: option.proteinFamilyKey,
       familyKey: option.proteinFamilyKey || option.displayCategoryKey,
-      selected: true,
-      assignable: false,
-      eligible: false,
+      selected,
+      assignable: attachable,
+      eligible: attachable,
       linked: false,
       relationExists: false,
       relationStatus: { exists: false, effective: false },
-      state: "not_attached_to_product",
-      reasonCodes: ["OPTION_RELATION_UNAVAILABLE"],
+      attachable,
+      state: attachable ? "attachable_on_save" : "not_attached_to_product",
+      reasonCodes: attachable
+        ? ["ATTACH_TO_PRODUCT_ON_SAVE"]
+        : ["OPTION_RELATION_UNAVAILABLE"],
       sortOrder: option.sortOrder,
     });
   }
@@ -125,6 +155,7 @@ export function mergeMenuOptionsWithPicker(
     const rightSelected = selectedIds.includes(canonicalPickerOptionId(right)) ? 1 : 0;
     return (
       rightSelected - leftSelected ||
+      Number(right.assignable === true) - Number(left.assignable === true) ||
       Number(left.sortOrder ?? 0) - Number(right.sortOrder ?? 0)
     );
   });
