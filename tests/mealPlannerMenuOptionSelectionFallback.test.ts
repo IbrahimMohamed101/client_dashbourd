@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { mergeMenuOptionsWithPicker } from "../src/components/pages/menu/meal-builder/mealPlannerOptionGroupFlow";
+import { candidateSelectable } from "../src/components/pages/menu/meal-builder/mealPlannerV2Utils";
 
 const menuOption = {
   id: "menu-option-1",
@@ -10,16 +11,31 @@ const menuOption = {
   extraPriceHalala: 0,
   isActive: true,
   isAvailable: true,
+  isVisible: true,
+  availableFor: ["subscription"],
+  availableForSubscription: true,
+  selectionType: "standard_meal",
   sortOrder: 1,
 };
 
-describe("Meal Builder option picker fail-closed fallback", () => {
-  it("hides unlinked menu options when the authoritative picker omits them", () => {
+describe("Meal Builder option picker attach-on-save fallback", () => {
+  it("offers a globally valid unlinked option only as an explicit attach-on-save candidate", () => {
     const rows = mergeMenuOptionsWithPicker([menuOption], [], []);
-    expect(rows).toEqual([]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      optionId: "menu-option-1",
+      linked: false,
+      relationExists: false,
+      attachable: true,
+      assignable: true,
+      eligible: true,
+      state: "attachable_on_save",
+      reasonCodes: ["ATTACH_TO_PRODUCT_ON_SAVE"],
+    });
+    expect(candidateSelectable(rows[0])).toBe(true);
   });
 
-  it("uses authoritative picker candidates as the only selectable source", () => {
+  it("uses authoritative picker candidates as the identity source once a relation exists", () => {
     const rows = mergeMenuOptionsWithPicker(
       [menuOption],
       [
@@ -36,8 +52,16 @@ describe("Meal Builder option picker fail-closed fallback", () => {
       []
     );
 
-    expect(rows[0].optionId).toBe("authoritative-option-1");
+    expect(rows.map((row) => row.optionId)).toEqual([
+      "authoritative-option-1",
+      "menu-option-1",
+    ]);
     expect(rows[0].assignable).toBe(true);
+    expect(rows[1]).toMatchObject({
+      optionId: "menu-option-1",
+      attachable: true,
+      relationExists: false,
+    });
   });
 
   it("never lets global key equality change authoritative picker identities", () => {
@@ -50,7 +74,28 @@ describe("Meal Builder option picker fail-closed fallback", () => {
       []
     );
 
-    expect(rows.map((row) => row.optionId)).toEqual(["one", "two"]);
-    expect(rows.every((row) => row.assignable === true)).toBe(true);
+    expect(rows.map((row) => row.optionId)).toEqual(["one", "two", "menu-option-1"]);
+    expect(rows.slice(0, 2).every((row) => row.assignable === true)).toBe(true);
+    expect(rows[2]).toMatchObject({
+      optionId: "menu-option-1",
+      attachable: true,
+      relationExists: false,
+    });
+  });
+
+  it("does not expose Premium global options as attach-on-save choices", () => {
+    const rows = mergeMenuOptionsWithPicker(
+      [
+        {
+          ...menuOption,
+          id: "premium-option",
+          premiumKey: "steak",
+          selectionType: "premium_meal",
+        },
+      ],
+      [],
+      []
+    );
+    expect(rows).toEqual([]);
   });
 });
