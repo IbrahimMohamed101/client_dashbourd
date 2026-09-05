@@ -174,6 +174,8 @@ export function MealPlannerCandidatePickerV2({
   const initialLoading =
     (type === "option" && menuOptionsLoading) ||
     (type === "product" && pickerQuery.isLoading && !pickerQuery.data);
+  const disableNewOptionSelections =
+    type === "option" && Boolean(pickerQuery.error);
 
   return (
     <section className="space-y-3">
@@ -245,6 +247,7 @@ export function MealPlannerCandidatePickerV2({
             <OptionRows
               candidates={visibleCandidates}
               selectedIds={selectedIds}
+              disableNewSelections={disableNewOptionSelections}
               onChange={onChange}
             />
           ) : (
@@ -276,10 +279,12 @@ export function MealPlannerCandidatePickerV2({
 function OptionRows({
   candidates,
   selectedIds,
+  disableNewSelections = false,
   onChange,
 }: {
   candidates: MealPlannerCatalogCandidate[];
   selectedIds: string[];
+  disableNewSelections?: boolean;
   onChange: (ids: string[]) => void;
 }) {
   return (
@@ -287,7 +292,10 @@ function OptionRows({
       {candidates.map((candidate) => {
         const id = candidateId(candidate);
         const selected = selectedIds.includes(id);
-        const selectable = candidateSelectable(candidate);
+        // On relation-picker failure, keep already-selected rows removable but
+        // never allow a new option to be selected from fallback/global data.
+        const selectable =
+          selected || (!disableNewSelections && candidateSelectable(candidate));
         return (
           <button
             key={id}
