@@ -64,15 +64,32 @@ describe("Meal Builder option picker attach-on-save fallback", () => {
     expect(candidateSelectable(rows[0])).toBe(true);
   });
 
-  it("does not expose an explicitly conflicting family as a family fallback", () => {
+  it("renders every regular option from the selected group while disabling an explicitly conflicting family", () => {
     const rows = mergeMenuOptionsWithPicker(
       [
+        {
+          ...menuOption,
+          id: "beef-option",
+          key: "kofta",
+          proteinFamilyKey: "beef",
+          displayCategoryKey: "beef",
+          sortOrder: 1,
+        },
         {
           ...menuOption,
           id: "chicken-option",
           key: "grilled_chicken",
           proteinFamilyKey: "chicken",
           displayCategoryKey: "chicken",
+          sortOrder: 2,
+        },
+        {
+          ...menuOption,
+          id: "unclassified-option",
+          key: "minced_beef_new",
+          proteinFamilyKey: "",
+          displayCategoryKey: "",
+          sortOrder: 3,
         },
       ],
       [],
@@ -80,7 +97,28 @@ describe("Meal Builder option picker attach-on-save fallback", () => {
       "beef"
     );
 
-    expect(rows).toEqual([]);
+    expect(rows.map((row) => row.optionId)).toEqual([
+      "beef-option",
+      "chicken-option",
+      "unclassified-option",
+    ]);
+    expect(rows.find((row) => row.optionId === "beef-option")).toMatchObject({
+      attachable: true,
+      assignable: true,
+    });
+    expect(rows.find((row) => row.optionId === "unclassified-option")).toMatchObject({
+      attachable: true,
+      assignable: true,
+      classificationPending: true,
+    });
+    expect(rows.find((row) => row.optionId === "chicken-option")).toMatchObject({
+      attachable: false,
+      assignable: false,
+      eligible: false,
+      state: "not_attachable_to_product",
+      reasonCodes: ["OPTION_FAMILY_MISMATCH"],
+    });
+    expect(candidateSelectable(rows.find((row) => row.optionId === "chicken-option")!)).toBe(false);
   });
 
   it("uses authoritative picker candidates as the identity source once a relation exists", () => {
