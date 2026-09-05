@@ -138,10 +138,10 @@ export function MealPlannerCandidatePickerV2({
 
   const candidates = useMemo(() => {
     if (type === "option") {
-      return mergeMenuOptionsWithPicker(menuOptions, fetchedCandidates, selectedIds);
+      return mergeMenuOptionsWithPicker(menuOptions, fetchedCandidates, selectedIds, familyKey);
     }
     return mergeCandidates(seedCandidates, fetchedCandidates, selectedIds);
-  }, [fetchedCandidates, menuOptions, seedCandidates, selectedIds, type]);
+  }, [familyKey, fetchedCandidates, menuOptions, seedCandidates, selectedIds, type]);
 
   const categories = useMemo(
     () =>
@@ -185,7 +185,7 @@ export function MealPlannerCandidatePickerV2({
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             {type === "product"
               ? "اختر المنتجات المتاحة لهذا الكارت."
-              : "اختر من خيارات مجموعة المنيو. سيقوم الـBackend بالتحقق النهائي عند الحفظ."}
+              : "اختر من خيارات مجموعة المنيو. الخيار الجديد غير المربوط سيتم ربطه بهذه الوجبة تلقائيًا عند الحفظ، ثم يتحقق الـBackend منه."}
           </p>
         </div>
         <Badge variant="outline">{selectedIds.length} محدد</Badge>
@@ -412,6 +412,7 @@ function candidateMeta(candidate: MealPlannerCatalogCandidate) {
   const parts = [candidate.key];
   const family = candidate.familyKey || candidate.proteinFamilyKey;
   if (family) parts.push(`العائلة: ${family}`);
+  if (candidate.attachable === true) parts.push("سيتم ربطه بالوجبة عند الحفظ");
   const price = candidate.extraPriceHalala ?? candidate.priceHalala;
   if (typeof price === "number") {
     parts.push(`${(price / 100).toFixed(2)} ${candidate.currency || "SAR"}`);
