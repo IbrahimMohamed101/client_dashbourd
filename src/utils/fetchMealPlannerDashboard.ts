@@ -86,15 +86,16 @@ export async function getMealPlannerOptionsPicker(
   params: MealPlannerPickerParamsV2,
   signal?: AbortSignal
 ): Promise<MealPlannerPickerResponseV2> {
-  const sectionKey = String(
-    params.targetSectionKey ||
-      (params.optionRole === "carbs" ? "carbs" : params.familyKey || "chicken")
-  ).trim();
   const response = await api.get(
-    `${MEAL_PLANNER_DASHBOARD_ROUTE}/pickers/${encodeURIComponent(sectionKey)}`,
+    `${MEAL_PLANNER_DASHBOARD_ROUTE}/pickers/options`,
     {
       params: cleanParams({
         targetSectionKey: params.targetSectionKey,
+        productContextId: params.productContextId,
+        sourceGroupId: params.sourceGroupId,
+        optionRole: params.optionRole,
+        familyKey:
+          params.optionRole === "protein" ? params.familyKey : undefined,
         q: params.q || params.search,
         includeUnavailable: params.includeUnavailable,
         includeNotLinked: true,

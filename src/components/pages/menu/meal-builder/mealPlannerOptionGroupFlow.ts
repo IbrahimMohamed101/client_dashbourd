@@ -56,7 +56,12 @@ export function canonicalPickerOptionId(candidate: MealPlannerCatalogCandidate) 
 }
 
 function optionFamily(option: MenuOption) {
-  return String(option.proteinFamilyKey || option.displayCategoryKey || "")
+  return String(
+    option.proteinFamilyKey ||
+    option.resolvedFamilyKey ||
+    option.displayCategoryKey ||
+    ""
+  )
     .trim()
     .toLowerCase();
 }
@@ -114,7 +119,10 @@ export function mergeMenuOptionsWithPicker(
               extraPriceHalala: option.extraPriceHalala,
               displayCategoryKey: option.displayCategoryKey,
               proteinFamilyKey: option.proteinFamilyKey,
-              familyKey: option.proteinFamilyKey || option.displayCategoryKey,
+              familyKey:
+                option.proteinFamilyKey ||
+                option.resolvedFamilyKey ||
+                option.displayCategoryKey,
               sortOrder: option.sortOrder,
             }
           : {}),
@@ -144,7 +152,10 @@ export function mergeMenuOptionsWithPicker(
       extraPriceHalala: option.extraPriceHalala,
       displayCategoryKey: option.displayCategoryKey,
       proteinFamilyKey: option.proteinFamilyKey,
-      familyKey: option.proteinFamilyKey || option.displayCategoryKey,
+      familyKey:
+        option.proteinFamilyKey ||
+        option.resolvedFamilyKey ||
+        option.displayCategoryKey,
       selected,
       assignable: attachable,
       eligible: attachable,

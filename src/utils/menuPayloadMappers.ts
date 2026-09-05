@@ -294,6 +294,8 @@ export const toCreateMenuOptionPayload = (
       name: data.name,
       description: data.description,
       imageUrl: data.imageUrl,
+      proteinFamilyKey: data.proteinFamilyKey || undefined,
+      displayCategoryKey: data.proteinFamilyKey || undefined,
       extraPriceHalala: riyalToHalala(data.extraPriceSar),
       extraWeightUnitGrams: data.extraWeightUnitGrams,
       extraWeightPriceHalala: optionalRiyalToHalala(
@@ -319,6 +321,8 @@ export const toUpdateMenuOptionPayload = (
   name: data.name,
   description: data.description,
   imageUrl: data.imageUrl,
+  proteinFamilyKey: data.proteinFamilyKey || undefined,
+  displayCategoryKey: data.proteinFamilyKey || undefined,
   extraPriceHalala: riyalToHalala(data.extraPriceSar),
   extraWeightUnitGrams: data.extraWeightUnitGrams,
   extraWeightPriceHalala: optionalRiyalToHalala(data.extraWeightPriceSar),

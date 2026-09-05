@@ -34,6 +34,10 @@ export interface CustomizationLibraryOption {
   suggestedGroupKey?: string | null;
   defaultPricing?: CustomizationPricing;
   nutrition?: CustomizationNutrition;
+  proteinFamilyKey?: string;
+  displayCategoryKey?: string;
+  resolvedFamilyKey?: string;
+  familyResolutionSource?: string;
   enabled?: boolean;
   sortOrder?: number;
 }
@@ -48,6 +52,10 @@ export interface ProductCustomizationOption {
   overridePricing?: CustomizationPricing;
   effectivePricing?: CustomizationPricing;
   nutrition?: CustomizationNutrition;
+  proteinFamilyKey?: string;
+  displayCategoryKey?: string;
+  resolvedFamilyKey?: string;
+  familyResolutionSource?: string;
   status?: {
     isActive?: boolean;
     isVisible?: boolean;

@@ -418,8 +418,11 @@ function mergeCandidates(
 
 function candidateMeta(candidate: MealPlannerCatalogCandidate) {
   const parts = [candidate.key];
-  const family = candidate.familyKey || candidate.proteinFamilyKey;
-  if (family) parts.push(`العائلة: ${family}`);
+  const family =
+    candidate.familyKey ||
+    candidate.proteinFamilyKey ||
+    candidate.resolvedFamilyKey;
+  parts.push(family ? `العائلة: ${family}` : "التصنيف غير محدد");
   if (candidate.attachable === true) parts.push("سيتم ربطه بالوجبة عند الحفظ");
   const price = candidate.extraPriceHalala ?? candidate.priceHalala;
   if (typeof price === "number") {
