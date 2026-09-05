@@ -63,6 +63,15 @@ function optionFamily(option: MenuOption) {
 
 function isGloballyAttachableOption(option: MenuOption, familyKey = "") {
   const normalizedFamilyKey = String(familyKey || "").trim().toLowerCase();
+  const explicitProteinFamily = String(option.proteinFamilyKey || "")
+    .trim()
+    .toLowerCase();
+  const explicitDisplayCategory = String(option.displayCategoryKey || "")
+    .trim()
+    .toLowerCase();
+  const hasExplicitFamilyMetadata = Boolean(
+    explicitProteinFamily || explicitDisplayCategory
+  );
   const availableForSubscription = option.availableForSubscription !== false;
   const availableFor = Array.isArray(option.availableFor) ? option.availableFor : [];
   const subscriptionChannelAllowed =
@@ -73,7 +82,17 @@ function isGloballyAttachableOption(option: MenuOption, familyKey = "") {
         String(option.selectionType || "").trim().toLowerCase()
       )
   );
-  const familyMatches = !normalizedFamilyKey || optionFamily(option) === normalizedFamilyKey;
+
+  // A legacy/newly-created standard protein with no family metadata is still
+  // safe to offer in a specific family card. The backend completes the family
+  // metadata only after verifying the exact option group and requested family.
+  // Never infer a family from the option name/key, and never override an
+  // explicit conflicting classification.
+  const familyMatches =
+    !normalizedFamilyKey ||
+    (!hasExplicitFamilyMetadata && Boolean(normalizedFamilyKey)) ||
+    optionFamily(option) === normalizedFamilyKey;
+
   return (
     option.isActive !== false &&
     option.isVisible !== false &&
@@ -134,6 +153,10 @@ export function mergeMenuOptionsWithPicker(
     const attachable = isGloballyAttachableOption(option, familyKey);
     if (!attachable && !selected) continue;
 
+    const hasExplicitFamilyMetadata = Boolean(
+      String(option.proteinFamilyKey || "").trim() ||
+        String(option.displayCategoryKey || "").trim()
+    );
     rows.push({
       id: option.id,
       optionId: option.id,
@@ -154,9 +177,15 @@ export function mergeMenuOptionsWithPicker(
         ? { exists: false }
         : { exists: false, effective: false },
       attachable,
+      classificationPending: !hasExplicitFamilyMetadata && Boolean(familyKey),
       state: attachable ? "attachable_on_save" : "not_attached_to_product",
       reasonCodes: attachable
-        ? ["ATTACH_TO_PRODUCT_ON_SAVE"]
+        ? [
+            "ATTACH_TO_PRODUCT_ON_SAVE",
+            ...(!hasExplicitFamilyMetadata && familyKey
+              ? ["CLASSIFY_FAMILY_ON_SAVE"]
+              : []),
+          ]
         : ["OPTION_RELATION_UNAVAILABLE"],
       sortOrder: option.sortOrder,
     });

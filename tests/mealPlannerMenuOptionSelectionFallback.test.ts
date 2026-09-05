@@ -35,6 +35,54 @@ describe("Meal Builder option picker attach-on-save fallback", () => {
     expect(candidateSelectable(rows[0])).toBe(true);
   });
 
+  it("offers an unclassified standard protein inside a specific family for safe backend classification on save", () => {
+    const rows = mergeMenuOptionsWithPicker(
+      [
+        {
+          ...menuOption,
+          id: "minced-beef",
+          key: "minced_beef",
+          name: { ar: "لحمة مفرومة", en: "Minced Beef" },
+        },
+      ],
+      [],
+      [],
+      "beef"
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      optionId: "minced-beef",
+      attachable: true,
+      assignable: true,
+      eligible: true,
+      classificationPending: true,
+      state: "attachable_on_save",
+      relationExists: false,
+      reasonCodes: ["ATTACH_TO_PRODUCT_ON_SAVE", "CLASSIFY_FAMILY_ON_SAVE"],
+    });
+    expect(candidateSelectable(rows[0])).toBe(true);
+  });
+
+  it("does not expose an explicitly conflicting family as a family fallback", () => {
+    const rows = mergeMenuOptionsWithPicker(
+      [
+        {
+          ...menuOption,
+          id: "chicken-option",
+          key: "grilled_chicken",
+          proteinFamilyKey: "chicken",
+          displayCategoryKey: "chicken",
+        },
+      ],
+      [],
+      [],
+      "beef"
+    );
+
+    expect(rows).toEqual([]);
+  });
+
   it("uses authoritative picker candidates as the identity source once a relation exists", () => {
     const rows = mergeMenuOptionsWithPicker(
       [menuOption],
