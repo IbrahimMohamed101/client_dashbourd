@@ -140,7 +140,9 @@ export function mergeMenuOptionsWithPicker(
       eligible: attachable,
       linked: false,
       relationExists: false,
-      relationStatus: { exists: false, effective: false },
+      relationStatus: attachable
+        ? { exists: false }
+        : { exists: false, effective: false },
       attachable,
       state: attachable ? "attachable_on_save" : "not_attached_to_product",
       reasonCodes: attachable
