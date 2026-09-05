@@ -341,6 +341,7 @@ const REASON_MESSAGES: Record<string, string> = {
   OPTION_UNAVAILABLE: "الخيار غير متاح",
   OPTION_UNPUBLISHED: "الخيار غير منشور",
   OPTION_NOT_SUBSCRIPTION_ENABLED: "الخيار غير متاح للاشتراكات",
+  OPTION_RELATION_UNAVAILABLE: "غير مربوط بالوجبة",
   CATALOG_ITEM_UNAVAILABLE: "عنصر الكتالوج غير متاح",
 };
 

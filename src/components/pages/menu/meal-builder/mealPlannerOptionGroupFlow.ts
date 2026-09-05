@@ -55,47 +55,88 @@ export function canonicalPickerOptionId(candidate: MealPlannerCatalogCandidate) 
   return String(candidate.optionId || candidate.id || candidate._id || "");
 }
 
+function optionFamily(option: MenuOption) {
+  return String(option.proteinFamilyKey || option.displayCategoryKey || "")
+    .trim()
+    .toLowerCase();
+}
+
+function isGloballyAttachableOption(option: MenuOption, familyKey = "") {
+  const normalizedFamilyKey = String(familyKey || "").trim().toLowerCase();
+  const availableForSubscription = option.availableForSubscription !== false;
+  const availableFor = Array.isArray(option.availableFor) ? option.availableFor : [];
+  const subscriptionChannelAllowed =
+    availableFor.length === 0 || availableFor.includes("subscription");
+  const premiumLike = Boolean(
+    String(option.premiumKey || "").trim() ||
+      ["premium_meal", "premium_large_salad"].includes(
+        String(option.selectionType || "").trim().toLowerCase()
+      )
+  );
+  const familyMatches = !normalizedFamilyKey || optionFamily(option) === normalizedFamilyKey;
+  return (
+    option.isActive !== false &&
+    option.isVisible !== false &&
+    option.isAvailable !== false &&
+    availableForSubscription &&
+    subscriptionChannelAllowed &&
+    familyMatches &&
+    !premiumLike
+  );
+}
+
 /**
- * MenuOptionGroup is the canonical visible option source for card authoring.
- * When the optional Meal Builder picker returns a matching row we preserve its
- * assignment/availability metadata. When it does not, the MenuOption itself is
- * still a valid selectable ID and the create/update mutation remains the final
- * backend validation boundary.
+ * ProductGroupOption-backed picker rows remain the authoritative state for
+ * already-attached choices. A globally valid MenuOption that belongs to the
+ * selected group/family may also be offered as an explicit "attach on save"
+ * choice. Selecting it does not bypass product membership: the Backend creates
+ * or reactivates ProductGroupOption first, then runs the normal strict Meal
+ * Builder validation. Premium/system-managed options are never attachable here.
  */
 export function mergeMenuOptionsWithPicker(
   menuOptions: MenuOption[],
   pickerCandidates: MealPlannerCatalogCandidate[],
-  selectedIds: string[]
+  selectedIds: string[],
+  familyKey = ""
 ): MealPlannerCatalogCandidate[] {
-  const pickerById = new Map(
-    pickerCandidates
-      .map((candidate) => [canonicalPickerOptionId(candidate), candidate] as const)
-      .filter(([id]) => Boolean(id))
-  );
+  const menuById = new Map(menuOptions.map((option) => [String(option.id), option]));
+  const rows: MealPlannerCatalogCandidate[] = pickerCandidates
+    .map((candidate) => {
+      const id = canonicalPickerOptionId(candidate);
+      if (!id) return null;
+      const option = menuById.get(id);
+      return {
+        ...(option
+          ? {
+              key: option.key,
+              name: option.name,
+              imageUrl: option.imageUrl,
+              extraPriceHalala: option.extraPriceHalala,
+              displayCategoryKey: option.displayCategoryKey,
+              proteinFamilyKey: option.proteinFamilyKey,
+              familyKey: option.proteinFamilyKey || option.displayCategoryKey,
+              sortOrder: option.sortOrder,
+            }
+          : {}),
+        ...candidate,
+        id,
+        optionId: id,
+        type: "option" as const,
+        selected: selectedIds.includes(id) || candidate.selected === true,
+      };
+    })
+    .filter(Boolean) as MealPlannerCatalogCandidate[];
 
-  const candidatesByKey = new Map<string, MealPlannerCatalogCandidate[]>();
-  for (const candidate of pickerCandidates) {
-    const key = String(candidate.key || "").trim();
-    if (!key) continue;
-    const matches = candidatesByKey.get(key) || [];
-    matches.push(candidate);
-    candidatesByKey.set(key, matches);
-  }
+  const authoritativeIds = new Set(rows.map((option) => canonicalPickerOptionId(option)));
+  for (const option of menuOptions) {
+    if (authoritativeIds.has(option.id)) continue;
+    const selected = selectedIds.includes(option.id);
+    const attachable = isGloballyAttachableOption(option, familyKey);
+    if (!attachable && !selected) continue;
 
-  const rows: MealPlannerCatalogCandidate[] = menuOptions.map((option) => {
-    const keyMatches = candidatesByKey.get(String(option.key || "").trim()) || [];
-    const authoritative =
-      pickerById.get(option.id) || (keyMatches.length === 1 ? keyMatches[0] : undefined);
-    const id = authoritative ? canonicalPickerOptionId(authoritative) : option.id;
-    const selected =
-      selectedIds.includes(id) ||
-      selectedIds.includes(option.id) ||
-      authoritative?.selected === true;
-    const menuFallback = !authoritative;
-
-    return {
-      id,
-      optionId: id,
+    rows.push({
+      id: option.id,
+      optionId: option.id,
       key: option.key,
       type: "option",
       name: option.name,
@@ -105,24 +146,20 @@ export function mergeMenuOptionsWithPicker(
       proteinFamilyKey: option.proteinFamilyKey,
       familyKey: option.proteinFamilyKey || option.displayCategoryKey,
       selected,
-      assigned: authoritative?.assigned,
-      assignedSectionKey: authoritative?.assignedSectionKey,
-      assignable: menuFallback ? true : authoritative.assignable === true,
-      eligible: menuFallback ? true : authoritative.eligible === true,
-      state: menuFallback ? "menu_option" : authoritative.state,
-      reasonCodes: menuFallback ? [] : authoritative.reasonCodes,
-      relationStatus: authoritative?.relationStatus,
-      effectiveStatus: authoritative?.effectiveStatus,
-      currency: authoritative?.currency,
+      assignable: attachable,
+      eligible: attachable,
+      linked: false,
+      relationExists: false,
+      relationStatus: attachable
+        ? { exists: false }
+        : { exists: false, effective: false },
+      attachable,
+      state: attachable ? "attachable_on_save" : "not_attached_to_product",
+      reasonCodes: attachable
+        ? ["ATTACH_TO_PRODUCT_ON_SAVE"]
+        : ["OPTION_RELATION_UNAVAILABLE"],
       sortOrder: option.sortOrder,
-    };
-  });
-
-  const menuIds = new Set(rows.map((option) => canonicalPickerOptionId(option)));
-  for (const candidate of pickerCandidates) {
-    const id = canonicalPickerOptionId(candidate);
-    if (!id || menuIds.has(id) || !selectedIds.includes(id)) continue;
-    rows.push({ ...candidate, id, optionId: id, selected: true });
+    });
   }
 
   return rows.sort((left, right) => {
@@ -130,6 +167,7 @@ export function mergeMenuOptionsWithPicker(
     const rightSelected = selectedIds.includes(canonicalPickerOptionId(right)) ? 1 : 0;
     return (
       rightSelected - leftSelected ||
+      Number(right.assignable === true) - Number(left.assignable === true) ||
       Number(left.sortOrder ?? 0) - Number(right.sortOrder ?? 0)
     );
   });

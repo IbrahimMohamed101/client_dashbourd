@@ -112,7 +112,7 @@ export function MealPlannerCandidatePickerV2({
               optionRole,
               familyKey:
                 optionRole === "protein" && familyKey ? familyKey : undefined,
-              includeUnavailable: true,
+              includeUnavailable: false,
               unassignedOnly: false,
               page: Number(pageParam),
               limit: 1000,
@@ -138,10 +138,10 @@ export function MealPlannerCandidatePickerV2({
 
   const candidates = useMemo(() => {
     if (type === "option") {
-      return mergeMenuOptionsWithPicker(menuOptions, fetchedCandidates, selectedIds);
+      return mergeMenuOptionsWithPicker(menuOptions, fetchedCandidates, selectedIds, familyKey);
     }
     return mergeCandidates(seedCandidates, fetchedCandidates, selectedIds);
-  }, [fetchedCandidates, menuOptions, seedCandidates, selectedIds, type]);
+  }, [familyKey, fetchedCandidates, menuOptions, seedCandidates, selectedIds, type]);
 
   const categories = useMemo(
     () =>
@@ -174,6 +174,8 @@ export function MealPlannerCandidatePickerV2({
   const initialLoading =
     (type === "option" && menuOptionsLoading) ||
     (type === "product" && pickerQuery.isLoading && !pickerQuery.data);
+  const disableNewOptionSelections =
+    type === "option" && Boolean(pickerQuery.error);
 
   return (
     <section className="space-y-3">
@@ -185,7 +187,7 @@ export function MealPlannerCandidatePickerV2({
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             {type === "product"
               ? "اختر المنتجات المتاحة لهذا الكارت."
-              : "اختر من خيارات مجموعة المنيو. سيقوم الـBackend بالتحقق النهائي عند الحفظ."}
+              : "اختر من خيارات مجموعة المنيو. الخيار الجديد غير المربوط سيتم ربطه بهذه الوجبة تلقائيًا عند الحفظ، ثم يتحقق الـBackend منه."}
           </p>
         </div>
         <Badge variant="outline">{selectedIds.length} محدد</Badge>
@@ -236,8 +238,8 @@ export function MealPlannerCandidatePickerV2({
       ) : (
         <>
           {type === "option" && pickerQuery.error ? (
-            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs leading-5 text-amber-700 dark:text-amber-300">
-              تعذر تحميل بيانات الإتاحة الإضافية، لكن يمكنك اختيار خيارات المجموعة وسيتم التحقق منها عند الحفظ.
+            <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs leading-5 text-destructive">
+              تعذر تحميل علاقات المنتج. تم إيقاف اختيار خيارات جديدة حتى ينجح التحديث.
             </p>
           ) : null}
 
@@ -245,6 +247,7 @@ export function MealPlannerCandidatePickerV2({
             <OptionRows
               candidates={visibleCandidates}
               selectedIds={selectedIds}
+              disableNewSelections={disableNewOptionSelections}
               onChange={onChange}
             />
           ) : (
@@ -276,10 +279,12 @@ export function MealPlannerCandidatePickerV2({
 function OptionRows({
   candidates,
   selectedIds,
+  disableNewSelections = false,
   onChange,
 }: {
   candidates: MealPlannerCatalogCandidate[];
   selectedIds: string[];
+  disableNewSelections?: boolean;
   onChange: (ids: string[]) => void;
 }) {
   return (
@@ -287,7 +292,10 @@ function OptionRows({
       {candidates.map((candidate) => {
         const id = candidateId(candidate);
         const selected = selectedIds.includes(id);
-        const selectable = candidateSelectable(candidate);
+        // On relation-picker failure, keep already-selected rows removable but
+        // never allow a new option to be selected from fallback/global data.
+        const selectable =
+          selected || (!disableNewSelections && candidateSelectable(candidate));
         return (
           <button
             key={id}
@@ -412,6 +420,7 @@ function candidateMeta(candidate: MealPlannerCatalogCandidate) {
   const parts = [candidate.key];
   const family = candidate.familyKey || candidate.proteinFamilyKey;
   if (family) parts.push(`العائلة: ${family}`);
+  if (candidate.attachable === true) parts.push("سيتم ربطه بالوجبة عند الحفظ");
   const price = candidate.extraPriceHalala ?? candidate.priceHalala;
   if (typeof price === "number") {
     parts.push(`${(price / 100).toFixed(2)} ${candidate.currency || "SAR"}`);

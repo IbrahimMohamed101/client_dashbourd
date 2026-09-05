@@ -74,12 +74,34 @@ export const saveProductCustomization = async (
         );
       }
 
-      if (!sameOptionIds(existing.options.map((option) => option.optionId), group.optionIds)) {
-        await api.put(
+      const nextOptionIds = new Set(group.optionIds);
+      const existingByOptionId = new Map(
+        existing.options.map((option) => [option.optionId, option])
+      );
+      const removedOptionIds = existing.options
+        .map((option) => option.optionId)
+        .filter((optionId) => !nextOptionIds.has(optionId));
+      for (const optionId of removedOptionIds) {
+        await api.delete(
+          `/api/dashboard/menu/products/${productId}/option-groups/${group.groupId}/options/${optionId}`
+        );
+      }
+
+      for (const optionId of group.optionIds) {
+        const current = existingByOptionId.get(optionId);
+        if (current && isProductOptionAttached(current)) continue;
+        const optionInput = group.options?.find((option) => option.optionId === optionId);
+        await api.post(
           `/api/dashboard/menu/products/${productId}/option-groups/${group.groupId}/options`,
           {
-            optionIds: group.optionIds,
-            preserveOverrides: true,
+            optionId,
+            extraPriceHalala: optionInput?.extraPriceHalala,
+            extraWeightUnitGrams: optionInput?.extraWeightUnitGrams,
+            extraWeightPriceHalala: optionInput?.extraWeightPriceHalala,
+            sortOrder: optionInput?.sortOrder,
+            isActive: true,
+            isVisible: true,
+            isAvailable: true,
           }
         );
       }
@@ -119,7 +141,13 @@ function hasGroupRuleChanges(
   );
 }
 
-function sameOptionIds(current: string[], next: string[]) {
-  if (current.length !== next.length) return false;
-  return current.every((optionId, index) => optionId === next[index]);
+export function isProductOptionAttached(
+  option: ProductCustomizationResponse["data"]["customization"]["groups"][number]["options"][number]
+) {
+  const relation = option.status?.product ?? option.status;
+  return (
+    relation?.isActive !== false &&
+    relation?.isVisible !== false &&
+    relation?.isAvailable !== false
+  );
 }
