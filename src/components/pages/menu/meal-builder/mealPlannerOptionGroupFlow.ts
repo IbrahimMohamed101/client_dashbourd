@@ -55,7 +55,14 @@ export function canonicalPickerOptionId(candidate: MealPlannerCatalogCandidate) 
   return String(candidate.optionId || candidate.id || candidate._id || "");
 }
 
-function isGloballyAttachableOption(option: MenuOption) {
+function optionFamily(option: MenuOption) {
+  return String(option.proteinFamilyKey || option.displayCategoryKey || "")
+    .trim()
+    .toLowerCase();
+}
+
+function isGloballyAttachableOption(option: MenuOption, familyKey = "") {
+  const normalizedFamilyKey = String(familyKey || "").trim().toLowerCase();
   const availableForSubscription = option.availableForSubscription !== false;
   const availableFor = Array.isArray(option.availableFor) ? option.availableFor : [];
   const subscriptionChannelAllowed =
@@ -66,12 +73,14 @@ function isGloballyAttachableOption(option: MenuOption) {
         String(option.selectionType || "").trim().toLowerCase()
       )
   );
+  const familyMatches = !normalizedFamilyKey || optionFamily(option) === normalizedFamilyKey;
   return (
     option.isActive !== false &&
     option.isVisible !== false &&
     option.isAvailable !== false &&
     availableForSubscription &&
     subscriptionChannelAllowed &&
+    familyMatches &&
     !premiumLike
   );
 }
@@ -79,15 +88,16 @@ function isGloballyAttachableOption(option: MenuOption) {
 /**
  * ProductGroupOption-backed picker rows remain the authoritative state for
  * already-attached choices. A globally valid MenuOption that belongs to the
- * selected group may also be offered as an explicit "attach on save" choice.
- * Selecting it does not bypass product membership: the Backend creates or
- * reactivates ProductGroupOption first, then runs the normal strict Meal
+ * selected group/family may also be offered as an explicit "attach on save"
+ * choice. Selecting it does not bypass product membership: the Backend creates
+ * or reactivates ProductGroupOption first, then runs the normal strict Meal
  * Builder validation. Premium/system-managed options are never attachable here.
  */
 export function mergeMenuOptionsWithPicker(
   menuOptions: MenuOption[],
   pickerCandidates: MealPlannerCatalogCandidate[],
-  selectedIds: string[]
+  selectedIds: string[],
+  familyKey = ""
 ): MealPlannerCatalogCandidate[] {
   const menuById = new Map(menuOptions.map((option) => [String(option.id), option]));
   const rows: MealPlannerCatalogCandidate[] = pickerCandidates
@@ -121,7 +131,7 @@ export function mergeMenuOptionsWithPicker(
   for (const option of menuOptions) {
     if (authoritativeIds.has(option.id)) continue;
     const selected = selectedIds.includes(option.id);
-    const attachable = isGloballyAttachableOption(option);
+    const attachable = isGloballyAttachableOption(option, familyKey);
     if (!attachable && !selected) continue;
 
     rows.push({
