@@ -12,6 +12,7 @@ import {
   getDeliverySlotSelectionValues,
   getSubscriptionFulfillmentResetValues,
 } from "../src/utils/subscriptionFulfillmentState";
+import { normalizeSlots } from "../src/utils/fetchDeliveryOptions";
 
 const baseData = {
   userId: "USER_ID",
@@ -67,6 +68,45 @@ function issuePaths(
 }
 
 describe("subscription creation contract", () => {
+  it("uses backend canonical IDs for string-based delivery window settings", () => {
+    expect(normalizeSlots(["10:00-12:00", "12:00-14:00"], "delivery")).toEqual([
+      {
+        id: "delivery_slot_1",
+        type: "delivery",
+        window: "10:00-12:00",
+        label: "10:00-12:00",
+      },
+      {
+        id: "delivery_slot_2",
+        type: "delivery",
+        window: "12:00-14:00",
+        label: "12:00-14:00",
+      },
+    ]);
+  });
+
+  it("preserves an explicit backend delivery slot ID from object settings", () => {
+    expect(
+      normalizeSlots(
+        [
+          {
+            id: "evening_slot",
+            window: "18:00-20:00",
+            label: { ar: "مساء", en: "Evening" },
+          },
+        ],
+        "delivery"
+      )
+    ).toEqual([
+      {
+        id: "evening_slot",
+        type: "delivery",
+        window: "18:00-20:00",
+        label: "مساء",
+      },
+    ]);
+  });
+
   it("requires an explicit payment method", () => {
     const { paymentMethod: _paymentMethod, ...withoutPayment } = baseData;
     const result = createSubscriptionSchema.safeParse(withoutPayment);

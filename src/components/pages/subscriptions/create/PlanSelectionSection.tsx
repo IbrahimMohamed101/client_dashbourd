@@ -19,7 +19,20 @@ import { usePackagesQuery } from "@/hooks/usePackagesQuery";
 import { Package, CalendarDays } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubscriptionSchema";
-import type { Package as PackageType, GramsOption, MealOption } from "@/types/packageTypes";
+
+function getTodayInKsa() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Riyadh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+import type {
+  Package as PackageType,
+  GramsOption,
+  MealOption,
+} from "@/types/packageTypes";
 
 interface PlanSelectionSectionProps {
   form: UseFormReturn<CreateSubscriptionSchemaType>;
@@ -45,7 +58,8 @@ export function PlanSelectionSection({
     (g: GramsOption) => Number(g.grams) === Number(selectedGrams)
   );
   const mealsOptions =
-    selectedGramsOption?.mealsOptions?.filter((m: MealOption) => m.isActive) || [];
+    selectedGramsOption?.mealsOptions?.filter((m: MealOption) => m.isActive) ||
+    [];
   const selectedMealsPerDay = form.watch("mealsPerDay");
   const selectedMealOption = mealsOptions.find(
     (m: MealOption) => Number(m.mealsPerDay) === Number(selectedMealsPerDay)
@@ -111,7 +125,9 @@ export function PlanSelectionSection({
             <div className="text-sm">
               <span className="font-semibold">{selectedPackage.name?.ar}</span>
               <span className="mx-2 text-muted-foreground">•</span>
-              <span className="text-muted-foreground">{selectedPackage.daysCount} يوم</span>
+              <span className="text-muted-foreground">
+                {selectedPackage.daysCount} يوم
+              </span>
             </div>
           </div>
         )}
@@ -150,7 +166,9 @@ export function PlanSelectionSection({
             <Select
               value={selectedMealsPerDay ? String(selectedMealsPerDay) : ""}
               onValueChange={(value) =>
-                form.setValue("mealsPerDay", Number(value), { shouldValidate: true })
+                form.setValue("mealsPerDay", Number(value), {
+                  shouldValidate: true,
+                })
               }
               disabled={!selectedGrams}
             >
@@ -160,7 +178,8 @@ export function PlanSelectionSection({
               <SelectContent>
                 {mealsOptions.map((m: MealOption) => (
                   <SelectItem key={m.mealsPerDay} value={String(m.mealsPerDay)}>
-                    {m.mealsPerDay} وجبات — {(m.priceHalala / 100).toFixed(0)} ريال
+                    {m.mealsPerDay} وجبات — {(m.priceHalala / 100).toFixed(0)}{" "}
+                    ريال
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -178,6 +197,7 @@ export function PlanSelectionSection({
           <Input
             type="date"
             dir="ltr"
+            min={getTodayInKsa()}
             {...form.register("startDate")}
             className="text-left"
           />
