@@ -6,7 +6,10 @@ import {
   manualDeductionQuantity,
 } from "@/utils/subscriptionMovementLabels";
 import type { Subscription } from "@/types/subscriptionTypes";
-import type { SubscriptionTrackingResponse } from "@/types/subscriptionTrackingTypes";
+import type {
+  SubscriptionTrackingResponse,
+  SubscriptionTrackingSummary,
+} from "@/types/subscriptionTrackingTypes";
 import type { SubscriptionTrackingDataWithProvenance } from "@/types/subscriptionMovementProvenanceTypes";
 
 export const subscriptionTrackingQueryKey = (subscriptionId: string) =>
@@ -99,7 +102,7 @@ function normalizeEntitlementBalance(
   );
 
   const summary = response.data.summary;
-  const normalizedSummary = {
+  const normalizedSummary: SubscriptionTrackingSummary = {
     ...summary,
     totalMeals,
     consumedMeals,
