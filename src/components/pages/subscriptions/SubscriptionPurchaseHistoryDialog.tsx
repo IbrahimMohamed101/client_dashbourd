@@ -63,9 +63,13 @@ function statusLabel(status: string | null | undefined) {
   switch (status) {
     case "active":
       return "نشط";
+    case "paid_scheduled":
+      return "مجدولة";
+    case "exhausted":
+      return "مستنفدة";
     case "expired":
     case "ended":
-      return "منتهي";
+      return "منتهية";
     case "canceled":
       return "ملغى";
     case "pending":
@@ -151,22 +155,6 @@ export function SubscriptionPurchaseHistoryDialog({
               <p className="mt-1 text-2xl font-black tabular-nums">{historicalCount}</p>
             </div>
           </div>
-
-<div className="grid gap-3 rounded-xl border bg-muted/30 p-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-muted-foreground">المشترك</p>
-              <p className="mt-1 font-semibold">{subscription.userName}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">الاشتراك</p>
-              <p className="mt-1 font-semibold">{subscription.displayId}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">عدد المشتريات</p>
-              <p className="mt-1 font-semibold">{purchaseCount || 1}</p>
-            </div>
-          </div>
-
           {aggregate ? (
             <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.04] p-4">
               <div className="flex items-start gap-3">
@@ -285,6 +273,8 @@ export function SubscriptionPurchaseHistoryDialog({
                         )}
                       </div>
                     </div>
+                  </div>
+
                   {purchase.status === "expired" ? (
                     <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-xs leading-5 text-muted-foreground">
                       هذه الباقة انتهت زمنيًا. ظهور الوجبات المتبقية هنا يحافظ على السجل التاريخي ولا يعني أنها رصيد نشط قابل للاستخدام حاليًا.
