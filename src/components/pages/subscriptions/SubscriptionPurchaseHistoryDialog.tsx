@@ -181,7 +181,7 @@ export function SubscriptionPurchaseHistoryDialog({
                 <div>
                   <p className="font-black">إجمالي سجل الباقات</p>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    هذا هو الرصيد المجمع المسجل للحاوية التشغيلية، ويجمع الاستحقاقات المتبقية من الباقات المرتبطة بها.
+                    هذا هو الرصيد المجمع المسجل للحاوية التشغيلية. لا يعني ذلك أن كل رصيد ظاهر داخل باقة تاريخية قابل للاستهلاك من هذه الباقة نفسها.
                   </p>
                 </div>
               </div>
@@ -191,7 +191,7 @@ export function SubscriptionPurchaseHistoryDialog({
                 <p className="mt-1 text-lg font-bold">{aggregate.totalMeals}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">الرصيد المجمع المتبقي</p>
+                <p className="text-xs text-muted-foreground">الرصيد المجمع المسجل</p>
                 <p className="mt-1 text-lg font-bold">{aggregate.remainingMeals}</p>
               </div>
               <div>
@@ -257,10 +257,25 @@ export function SubscriptionPurchaseHistoryDialog({
                     <div className="flex items-start gap-2">
                       <WalletCards className="mt-0.5 size-4 text-muted-foreground" />
                       <div>
-                        <p className="text-xs text-muted-foreground">الرصيد المتبقي في هذه الباقة</p>
-                        <p className="mt-1 text-sm font-semibold">
-                          {purchase.remainingMeals} / {purchase.totalMeals}
+                        <p className="text-xs text-muted-foreground">
+                          {purchase.status === "active"
+                            ? "الرصيد القابل للاستخدام الآن"
+                            : "حالة الرصيد في هذه الباقة"}
                         </p>
+                        <p className="mt-1 text-sm font-semibold">
+                          {purchase.status === "active"
+                            ? purchase.remainingMeals + " / " + purchase.totalMeals
+                            : purchase.status === "expired" || purchase.status === "ended" || purchase.status === "exhausted" || purchase.status === "canceled"
+                              ? "غير متاح للاستخدام"
+                              : "غير متاح حاليًا"}
+                        </p>
+                        {purchase.status !== "active" ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {purchase.status === "expired" || purchase.status === "ended" || purchase.status === "exhausted" || purchase.status === "canceled"
+                              ? "المسجل تاريخيًا: " + purchase.remainingMeals + " من " + purchase.totalMeals + " وجبة"
+                              : "لا يمكن استخدام رصيد هذه الباقة حتى تصبح نشطة."}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 
