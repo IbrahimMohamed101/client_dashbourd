@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { UserSelectionSection } from "./UserSelectionSection";
+import { SubscriptionModeSection } from "./SubscriptionModeSection";
 import { PlanSelectionSection } from "./PlanSelectionSection";
 import { PremiumMealsSection } from "./PremiumMealsSection";
 import { AddonsSection } from "./AddonsSection";
@@ -361,6 +362,7 @@ export function CreateSubscriptionFormContent({
     <div className="mx-auto w-full max-w-4xl" dir="rtl">
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {!userId && <UserSelectionSection form={form} />}
+        <SubscriptionModeSection form={form} />
         <PlanSelectionSection
           form={form}
           onPriceChange={handlePlanPriceChange}
