@@ -48,7 +48,7 @@ export function SubscriptionModeSection({
         <button
           type="button"
           role="radio"
-          aria-checked={mode === "standalone"}
+          aria-checked={effectiveMode === "standalone"}
           className={
             "rounded-2xl border p-4 text-right transition " +
             standaloneClass +
@@ -80,7 +80,7 @@ export function SubscriptionModeSection({
         <button
           type="button"
           role="radio"
-          aria-checked={mode === "stack_into_current"}
+          aria-checked={effectiveMode === "stack_into_current"}
           className={"rounded-2xl border p-4 text-right transition " + stackedClass}
           onClick={() =>
             form.setValue("subscriptionMode", "stack_into_current", {
