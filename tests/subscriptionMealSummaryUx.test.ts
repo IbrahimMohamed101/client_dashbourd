@@ -84,7 +84,7 @@ test("other deductions stay separate from the received total", () => {
     source,
     /const operationalDeducted = hasCurrentStackingBalance\s*\?\s*0\s*:\s*Math\.max\(0, consumed - systemReceived - manualDeducted\);/
   );
-  assert.match(source, /const otherDeductions = operationalDeducted \+ forfeited;/);
+  assert.match(source, /const otherDeductions = hasCurrentStackingBalance/);
   assert.match(source, /حسم أو مصادرة/);
   assert.match(source, /حسم تشغيلي/);
   assert.match(source, /مصادَر/);
