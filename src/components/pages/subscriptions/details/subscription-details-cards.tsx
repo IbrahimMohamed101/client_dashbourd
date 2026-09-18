@@ -12,6 +12,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  currentStackingAggregateBalance,
   isCombinedSubscription,
   subscriptionPlanLabel,
 } from "@/lib/subscriptionStackingPresentation";
@@ -59,6 +60,9 @@ export function CustomerInfoCard({ subscription }: CardProps) {
 
 export function SubscriptionContractCard({ subscription }: CardProps) {
   const isCombined = isCombinedSubscription(subscription);
+  const aggregate = currentStackingAggregateBalance(subscription);
+  const totalMeals = isCombined && aggregate ? aggregate.totalMeals : subscription.totalMeals;
+  const remainingMeals = isCombined && aggregate ? aggregate.remainingMeals : subscription.remainingMeals;
   return (
     <Card className="border shadow-none">
       <CardHeader className="pb-3">
@@ -70,7 +74,7 @@ export function SubscriptionContractCard({ subscription }: CardProps) {
         <InfoItem label="الباقة" value={subscriptionPlanLabel(subscription)} />
         <InfoItem
           label={isCombined ? "إجمالي الاستحقاقات الحالية" : "إجمالي الوجبات"}
-          value={`${subscription.totalMeals} وجبة`}
+          value={`${totalMeals} وجبة`}
         />
         {!isCombined ? <InfoItem label="الجرامات" value={`${subscription.selectedGrams}g`} /> : null}
         {!isCombined ? (
@@ -108,7 +112,7 @@ export function SubscriptionContractCard({ subscription }: CardProps) {
             الوجبات المتبقية حاليًا
           </span>
           <span className="text-sm font-bold text-emerald-500">
-            {subscription.remainingMeals}
+            {remainingMeals}
           </span>
         </div>
       </CardContent>

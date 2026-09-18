@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Subscription, SubscriptionPurchase } from "@/types/subscriptionTypes";
+import { isStackingPackageUsableNow } from "@/lib/subscriptionStackingPresentation";
 import {
   CalendarDays,
   CheckCircle2,
@@ -181,7 +182,7 @@ export function SubscriptionPurchaseHistoryDialog({
                 <div>
                   <p className="font-black">إجمالي سجل الباقات</p>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    هذا هو الرصيد المجمع المسجل للحاوية التشغيلية، ويجمع الاستحقاقات المتبقية من الباقات المرتبطة بها.
+                    هذا هو الرصيد المجمع المسجل للحاوية التشغيلية. لا يعني ذلك أن كل رصيد ظاهر داخل باقة تاريخية قابل للاستهلاك من هذه الباقة نفسها.
                   </p>
                 </div>
               </div>
@@ -191,7 +192,7 @@ export function SubscriptionPurchaseHistoryDialog({
                 <p className="mt-1 text-lg font-bold">{aggregate.totalMeals}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">الرصيد المجمع المتبقي</p>
+                <p className="text-xs text-muted-foreground">الرصيد المجمع المسجل</p>
                 <p className="mt-1 text-lg font-bold">{aggregate.remainingMeals}</p>
               </div>
               <div>
@@ -208,7 +209,11 @@ export function SubscriptionPurchaseHistoryDialog({
 
           {orderedPackages.length ? (
             <div className="space-y-3">
-              {orderedPackages.map((purchase, index) => (
+              {orderedPackages.map((purchase, index) => {
+                const usableNow = isStackingPackageUsableNow(purchase);
+                const historical = ["expired", "ended", "exhausted", "canceled"].includes(purchase.status || "");
+
+                return (
                 <div
                   key={purchaseKey(purchase, index)}
                   className="rounded-xl border bg-card p-4 shadow-sm"
@@ -216,7 +221,7 @@ export function SubscriptionPurchaseHistoryDialog({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        {purchase.status === "active" ? (
+                        {usableNow ? (
                           <span className="flex size-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
                             <CheckCircle2 className="size-4" />
                           </span>
@@ -224,8 +229,10 @@ export function SubscriptionPurchaseHistoryDialog({
                         <span className="font-black">
                           {purchase.displayId || "PUR-" + (index + 1)}
                         </span>
-                        <Badge variant={statusVariant(purchase.status)}>
-                          {statusLabel(purchase.status)}
+                        <Badge variant={usableNow ? "default" : statusVariant(purchase.status)}>
+                          {usableNow && purchase.status === "paid_scheduled"
+                            ? "نشط حاليًا"
+                            : statusLabel(purchase.status)}
                         </Badge>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -257,10 +264,25 @@ export function SubscriptionPurchaseHistoryDialog({
                     <div className="flex items-start gap-2">
                       <WalletCards className="mt-0.5 size-4 text-muted-foreground" />
                       <div>
-                        <p className="text-xs text-muted-foreground">الرصيد المتبقي في هذه الباقة</p>
-                        <p className="mt-1 text-sm font-semibold">
-                          {purchase.remainingMeals} / {purchase.totalMeals}
+                        <p className="text-xs text-muted-foreground">
+                          {purchase.status === "active"
+                            ? "الرصيد القابل للاستخدام الآن"
+                            : "حالة الرصيد في هذه الباقة"}
                         </p>
+                        <p className="mt-1 text-sm font-semibold">
+                          {purchase.status === "active"
+                            ? purchase.remainingMeals + " / " + purchase.totalMeals
+                            : purchase.status === "expired" || purchase.status === "ended" || purchase.status === "exhausted" || purchase.status === "canceled"
+                              ? "غير متاح للاستخدام"
+                              : "غير متاح حاليًا"}
+                        </p>
+                        {!usableNow ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {historical
+                              ? "المسجل تاريخيًا: " + purchase.remainingMeals + " من " + purchase.totalMeals + " وجبة"
+                              : "لا يمكن استخدام رصيد هذه الباقة حتى تصبح نشطة."}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 
@@ -297,7 +319,8 @@ export function SubscriptionPurchaseHistoryDialog({
                   </div>
 
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">

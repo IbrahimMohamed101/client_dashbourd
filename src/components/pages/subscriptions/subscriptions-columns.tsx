@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EyeIcon, History, ReceiptText } from "lucide-react";
 import {
+  currentStackingAggregateBalance,
   subscriptionPlanLabel,
   subscriptionRelationshipLabel,
   subscriptionPurchaseCount,
@@ -108,7 +109,12 @@ export function getSubscriptionsColumns({
       header: "الوجبات (متبقي/إجمالي)",
       cell: ({ row }) => (
         <span className="font-medium text-muted-foreground">
-          {row.original.remainingMeals} / {row.original.totalMeals}
+          {(() => {
+            const aggregate = currentStackingAggregateBalance(row.original);
+            return aggregate
+              ? aggregate.remainingMeals + " / " + aggregate.totalMeals
+              : row.original.remainingMeals + " / " + row.original.totalMeals;
+          })()}
         </span>
       ),
     },

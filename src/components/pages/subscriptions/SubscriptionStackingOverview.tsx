@@ -1,6 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Subscription } from "@/types/subscriptionTypes";
+import {
+  currentStackingAggregateBalance,
+  isStackingPackageUsableNow,
+} from "@/lib/subscriptionStackingPresentation";
 import type {
   SubscriptionStackingPackage,
   SubscriptionStackingPayment,
@@ -9,7 +13,6 @@ import {
   CalendarDays,
   CheckCircle2,
   CreditCard,
-  History,
   Layers3,
   WalletCards,
 } from "lucide-react";
@@ -91,7 +94,8 @@ function paymentMethodLabel(method?: string | null) {
 }
 
 function PackageCard({ item }: { item: SubscriptionStackingPackage }) {
-  const isActive = item.status === "active";
+  const isUsableNow = isStackingPackageUsableNow(item);
+  const isActive = isUsableNow;
   const isHistorical = item.status === "expired" || item.status === "exhausted" || item.status === "canceled";
 
   return (
@@ -129,18 +133,33 @@ function PackageCard({ item }: { item: SubscriptionStackingPackage }) {
             className={statusTone(item.status)}
           >
             {isActive ? <CheckCircle2 className="ml-1 h-3.5 w-3.5" /> : null}
-            {statusLabel(item.status)}
+            {isUsableNow ? "نشطة الآن" : statusLabel(item.status)}
           </Badge>
         </div>
 
         <div className="grid gap-2 sm:grid-cols-4">
           <div className="rounded-xl border bg-background/75 px-3 py-3">
-            <p className="text-[11px] text-muted-foreground">رصيد هذه الباقة</p>
-            <p className="mt-1 text-lg font-black tabular-nums">
-              {item.remainingMeals}
-              <span className="mx-1 text-sm font-normal text-muted-foreground">/</span>
-              {item.totalMeals}
+            <p className="text-[11px] text-muted-foreground">
+              {isUsableNow ? "الرصيد القابل للاستخدام الآن" : "حالة الرصيد في هذه الباقة"}
             </p>
+            <p className="mt-1 text-lg font-black tabular-nums">
+              {isUsableNow ? (
+                <>
+                  {item.remainingMeals}
+                  <span className="mx-1 text-sm font-normal text-muted-foreground">/</span>
+                  {item.totalMeals}
+                </>
+              ) : (
+                <span className="text-base">{isHistorical ? "غير متاح للاستخدام" : "غير متاح حاليًا"}</span>
+              )}
+            </p>
+            {!isUsableNow ? (
+              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                {isHistorical
+                  ? "المسجل تاريخيًا: " + item.remainingMeals + " من " + item.totalMeals + " وجبة"
+                  : "لا يمكن استخدام رصيد هذه الباقة حتى تصبح نشطة."}
+              </p>
+            ) : null}
           </div>
           <div className="rounded-xl border bg-background/75 px-3 py-3">
             <p className="text-[11px] text-muted-foreground">الجرامات</p>
@@ -220,13 +239,15 @@ export function SubscriptionStackingOverview({
   const stacking = subscription.stacking;
   if (!stacking?.hasEntitlementBatches) return null;
 
-  const activePackages = stacking.packages.filter((item) => item.status === "active");
-  const scheduledPackages = stacking.packages.filter((item) => item.status === "paid_scheduled");
+  const activePackages = stacking.packages.filter((item) => isStackingPackageUsableNow(item));
+  const scheduledPackages = stacking.packages.filter(
+    (item) => item.status === "paid_scheduled" && !isStackingPackageUsableNow(item)
+  );
   const historicalPackages = stacking.packages.filter((item) =>
     item.status === "expired" || item.status === "exhausted" || item.status === "canceled"
   );
 
-  const aggregateMeals = stacking.aggregateBalance;
+  const aggregateMeals = currentStackingAggregateBalance(subscription) || stacking.aggregateBalance;
   const orderedPackages = [...stacking.packages].sort((left, right) => {
     const rank = (status: string | null) =>
       status === "active" ? 0 : status === "paid_scheduled" ? 1 : 2;
@@ -280,7 +301,7 @@ export function SubscriptionStackingOverview({
             <div>
               <p className="font-bold">ملخص سجل المشتريات</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                هذا هو الرصيد المجمع المسجل للحاوية التشغيلية، ويجمع الاستحقاقات المتبقية من الباقات المرتبطة بها.
+                هذا هو الرصيد المجمع المسجل للحاوية التشغيلية. لا يعني ذلك أن كل رصيد ظاهر داخل باقة تاريخية قابل للاستهلاك من هذه الباقة نفسها.
               </p>
             </div>
           </div>
@@ -291,7 +312,7 @@ export function SubscriptionStackingOverview({
               <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.totalMeals}</p>
             </div>
             <div className="rounded-xl border bg-background/80 p-3">
-              <p className="text-[11px] text-muted-foreground">الرصيد المجمع المتبقي</p>
+              <p className="text-[11px] text-muted-foreground">الرصيد المجمع المسجل</p>
               <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.remainingMeals}</p>
             </div>
             <div className="rounded-xl border bg-background/80 p-3">
