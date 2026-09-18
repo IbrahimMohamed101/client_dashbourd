@@ -2,6 +2,7 @@ import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubsc
 
 export interface SubscriptionCreationPayload extends Record<string, unknown> {
   userId: string;
+  subscriptionMode: "standalone" | "stack_into_current";
   planId: string;
   grams: number;
   mealsPerDay: number;
@@ -79,6 +80,7 @@ export function buildSubscriptionCreationPayload(
 
   return {
     userId: data.userId,
+    subscriptionMode: data.subscriptionMode,
     planId: data.planId,
     grams: data.grams,
     mealsPerDay: data.mealsPerDay,
