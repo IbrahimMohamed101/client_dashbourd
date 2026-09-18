@@ -227,6 +227,17 @@ export function SubscriptionStackingOverview({
   );
 
   const aggregateMeals = stacking.aggregateBalance;
+  const orderedPackages = [...stacking.packages].sort((left, right) => {
+    const rank = (status: string | null) =>
+      status === "active" ? 0 : status === "paid_scheduled" ? 1 : 2;
+    const statusOrder = rank(left.status) - rank(right.status);
+    if (statusOrder !== 0) return statusOrder;
+    const leftDate = Date.parse(left.effectiveStartDate || left.requestedStartDate || "");
+    const rightDate = Date.parse(right.effectiveStartDate || right.requestedStartDate || "");
+    return Number.isFinite(leftDate) && Number.isFinite(rightDate)
+      ? rightDate - leftDate
+      : 0;
+  });
 
   return (
     <Card className="overflow-hidden border-border/80 bg-card shadow-sm">
@@ -298,7 +309,7 @@ export function SubscriptionStackingOverview({
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h3 className="font-black">الباقات المرتبطة</h3>
-              <p className="text-xs text-muted-foreground">الأحدث في الأسفل حسب تاريخ بدء الاستحقاق.</p>
+              <p className="text-xs text-muted-foreground">الباقة النشطة أولًا، ثم المجدولة، ثم السجل التاريخي.</p>
             </div>
             <Badge variant="secondary">{stacking.packages.length} باقة</Badge>
           </div>
