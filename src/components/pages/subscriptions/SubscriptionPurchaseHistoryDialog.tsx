@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Subscription, SubscriptionPurchase } from "@/types/subscriptionTypes";
+import { isStackingPackageUsableNow } from "@/lib/subscriptionStackingPresentation";
 import {
   CalendarDays,
   CheckCircle2,
@@ -208,7 +209,10 @@ export function SubscriptionPurchaseHistoryDialog({
 
           {orderedPackages.length ? (
             <div className="space-y-3">
-              {orderedPackages.map((purchase, index) => (
+              {orderedPackages.map((purchase, index) => {
+                const usableNow = isStackingPackageUsableNow(purchase);
+                const historical = ["expired", "ended", "exhausted", "canceled"].includes(purchase.status || "");
+
                 <div
                   key={purchaseKey(purchase, index)}
                   className="rounded-xl border bg-card p-4 shadow-sm"
@@ -269,9 +273,9 @@ export function SubscriptionPurchaseHistoryDialog({
                               ? "غير متاح للاستخدام"
                               : "غير متاح حاليًا"}
                         </p>
-                        {purchase.status !== "active" ? (
+                        {!usableNow ? (
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {purchase.status === "expired" || purchase.status === "ended" || purchase.status === "exhausted" || purchase.status === "canceled"
+                            {historical
                               ? "المسجل تاريخيًا: " + purchase.remainingMeals + " من " + purchase.totalMeals + " وجبة"
                               : "لا يمكن استخدام رصيد هذه الباقة حتى تصبح نشطة."}
                           </p>
@@ -312,7 +316,7 @@ export function SubscriptionPurchaseHistoryDialog({
                   </div>
 
                 </div>
-              ))}
+              )})}
             </div>
           ) : (
             <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
