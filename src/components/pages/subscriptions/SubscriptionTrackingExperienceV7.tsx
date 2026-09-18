@@ -492,7 +492,7 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
     ? Math.max(0, total - remaining - received)
     : operationalDeducted + forfeited;
   const deductedWithoutReceipt = hasCurrentStackingBalance
-    ? 0
+    ? otherDeductions
     : Math.max(0, total - remaining - received);
   const receivedLabel = hasCurrentStackingBalance
     ? "المستخدم من الباقة الحالية"
@@ -636,7 +636,7 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
                       <div>
                         <h2 className="text-lg font-black">الحساب ببساطة</h2>
                         <p className="mt-1 text-sm text-muted-foreground">
-{receivedNote}
+                          {receivedNote}
                         </p>
                       </div>
                       <Badge variant={balanceDifference === 0 ? "secondary" : "destructive"}>
@@ -808,7 +808,7 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
                   <section className="rounded-xl border bg-card p-4 shadow-sm">
                     <h2 className="text-lg font-black">تفاصيل حركة الرصيد</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      الخصم اليدوي محسوب ضمن المستلم، لكنه يظل ظاهرًا منفصلًا هنا لمعرفة طريقة تسجيل الاستلام ومن نفّذ العملية.
+                      الباقة الحالية تُعرض من رصيدها التشغيلي الحالي، بينما تفاصيل السجل التاريخي تبقى ظاهرة للمراجعة.
                     </p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                       <SmallMetric label={receivedLabel} value={received} note={receivedNote} icon={<CheckCircle2 className="h-4 w-4" />} />
