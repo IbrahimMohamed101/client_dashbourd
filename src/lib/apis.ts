@@ -35,7 +35,10 @@ api.interceptors.request.use(
 
     const method = String(config.method || "GET").toUpperCase();
     const url = String(config.url || "");
-    if (method === "POST" && /\/manual-deduction(?:\?|$)/.test(url)) {
+    if (
+      method === "POST"
+      && (/\/manual-deduction(?:\?|$)/.test(url) || /\/subscriptions\/?$/.test(url))
+    ) {
       const headers = config.headers as
         | (Record<string, unknown> & {
             get?: (header: string) => unknown;
