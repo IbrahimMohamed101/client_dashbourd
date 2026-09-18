@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import type { Subscription } from "@/types/subscriptionTypes";
 import { SubscriptionQuickViewDialog } from "./SubscriptionQuickViewDialog";
 import { SubscriptionInvoiceDialog } from "./invoice/SubscriptionInvoiceDialog";
+import { SubscriptionPurchaseHistoryDialog } from "./SubscriptionPurchaseHistoryDialog";
 
 export function SubscriptionsTable() {
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
@@ -51,6 +52,8 @@ export function SubscriptionsTable() {
     React.useState<Subscription | null>(null);
   const [invoiceSubscriptionId, setInvoiceSubscriptionId] =
     React.useState<string | null>(null);
+  const [purchaseHistorySubscription, setPurchaseHistorySubscription] =
+    React.useState<Subscription | null>(null);
 
   const { data: response, isLoading } =
     useSubscriptionsFulfillmentListQuery({
@@ -69,6 +72,7 @@ export function SubscriptionsTable() {
         onView: setSelectedSubscription,
         onInvoice: (subscription) =>
           setInvoiceSubscriptionId(subscription._id || subscription.id),
+        onPurchaseHistory: setPurchaseHistorySubscription,
       }),
     []
   );
@@ -262,6 +266,14 @@ export function SubscriptionsTable() {
         open={!!invoiceSubscriptionId}
         onOpenChange={(open) => {
           if (!open) setInvoiceSubscriptionId(null);
+        }}
+      />
+
+      <SubscriptionPurchaseHistoryDialog
+        subscription={purchaseHistorySubscription}
+        open={!!purchaseHistorySubscription}
+        onOpenChange={(open) => {
+          if (!open) setPurchaseHistorySubscription(null);
         }}
       />
     </div>
