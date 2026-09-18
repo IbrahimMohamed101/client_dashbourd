@@ -3,7 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { Subscription } from "@/types/subscriptionTypes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EyeIcon, ReceiptText } from "lucide-react";
+import { EyeIcon, History, ReceiptText } from "lucide-react";
 import {
   subscriptionPlanLabel,
   subscriptionRelationshipLabel,
@@ -13,11 +13,13 @@ import {
 interface SubscriptionsColumnsOptions {
   onView: (subscription: Subscription) => void;
   onInvoice: (subscription: Subscription) => void;
+  onPurchaseHistory: (subscription: Subscription) => void;
 }
 
 export function getSubscriptionsColumns({
   onView,
   onInvoice,
+  onPurchaseHistory,
 }: SubscriptionsColumnsOptions): ColumnDef<Subscription>[] {
   return [
     {
@@ -148,6 +150,17 @@ export function getSubscriptionsColumns({
             <ReceiptText className="size-4" />
             الفاتورة
           </Button>
+          {subscriptionPurchaseCount(row.original) > 1 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => onPurchaseHistory(row.original)}
+            >
+              <History className="size-4" />
+              المشتريات
+            </Button>
+          ) : null}
           <Button variant="outline" size="sm" onClick={() => onView(row.original)}>
             <EyeIcon className="ml-1 size-4" />
             التفاصيل
