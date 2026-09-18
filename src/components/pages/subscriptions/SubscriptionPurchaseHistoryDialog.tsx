@@ -7,7 +7,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Subscription, SubscriptionPurchase } from "@/types/subscriptionTypes";
-import { CalendarDays, CreditCard, ReceiptText, WalletCards } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  CreditCard,
+  History,
+  ReceiptText,
+  WalletCards,
+} from "lucide-react";
 
 type Props = {
   subscription: Subscription | null;
@@ -56,9 +63,13 @@ function statusLabel(status: string | null | undefined) {
   switch (status) {
     case "active":
       return "نشط";
+    case "paid_scheduled":
+      return "مجدولة";
+    case "exhausted":
+      return "مستنفدة";
     case "expired":
     case "ended":
-      return "منتهي";
+      return "منتهية";
     case "canceled":
       return "ملغى";
     case "pending":
@@ -72,7 +83,7 @@ function statusLabel(status: string | null | undefined) {
 function statusVariant(status: string | null | undefined) {
   if (status === "active") return "default" as const;
   if (status === "canceled") return "destructive" as const;
-  if (status === "expired" || status === "ended") return "secondary" as const;
+  if (status === "expired" || status === "ended" || status === "exhausted") return "secondary" as const;
   return "outline" as const;
 }
 
@@ -105,38 +116,57 @@ export function SubscriptionPurchaseHistoryDialog({
   const packages = subscription.stacking?.packages || [];
   const aggregate = subscription.stacking?.aggregateBalance;
   const purchaseCount = packages.length;
+  const activeCount = packages.filter((purchase) => purchase.status === "active").length;
+  const historicalCount = packages.filter((purchase) =>
+    ["expired", "ended", "exhausted", "canceled"].includes(purchase.status || "")
+  ).length;
   const title = purchaseCount > 1
     ? "سجل مشتريات الاشتراك"
     : "تفاصيل عملية الشراء";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir="rtl" className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            جميع عمليات الشراء المرتبطة بهذا الاشتراك التشغيلي، بدون تغيير أي بيانات أو أرصدة.
+      <DialogContent dir="rtl" className="max-h-[92vh] max-w-4xl overflow-hidden p-0">
+        <DialogHeader className="border-b bg-muted/20 px-5 py-4 text-right sm:px-6">
+          <DialogTitle className="flex flex-wrap items-center gap-2 text-lg sm:text-xl">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <History className="size-4" />
+            </span>
+            {title}
+            <Badge variant="outline">{purchaseCount} باقات</Badge>
+          </DialogTitle>
+          <DialogDescription className="mt-2 max-w-2xl leading-6">
+            عرض تاريخي لكل عملية شراء مرتبطة بالحاوية التشغيلية. لا يتم تعديل أي رصيد أو بيانات من هذه النافذة.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid gap-3 rounded-xl border bg-muted/30 p-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-muted-foreground">المشترك</p>
-              <p className="mt-1 font-semibold">{subscription.userName}</p>
+        <div className="max-h-[calc(92vh-112px)] space-y-5 overflow-y-auto px-4 py-5 sm:px-6">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-xl border bg-card p-3">
+              <p className="text-[11px] text-muted-foreground">المشتريات الكلية</p>
+              <p className="mt-1 text-2xl font-black tabular-nums">{purchaseCount}</p>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">الاشتراك</p>
-              <p className="mt-1 font-semibold">{subscription.displayId}</p>
+            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.045] p-3">
+              <p className="text-[11px] text-muted-foreground">مشتريات نشطة</p>
+              <p className="mt-1 text-2xl font-black tabular-nums text-emerald-700 dark:text-emerald-300">{activeCount}</p>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">عدد المشتريات</p>
-              <p className="mt-1 font-semibold">{purchaseCount || 1}</p>
+            <div className="rounded-xl border bg-card p-3">
+              <p className="text-[11px] text-muted-foreground">سجل تاريخي</p>
+              <p className="mt-1 text-2xl font-black tabular-nums">{historicalCount}</p>
             </div>
           </div>
-
           {aggregate ? (
-            <div className="grid gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:grid-cols-4">
+            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.04] p-4">
+              <div className="flex items-start gap-3">
+                <WalletCards className="mt-0.5 size-5 shrink-0 text-blue-600" />
+                <div>
+                  <p className="font-black">إجمالي سجل الباقات</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    هذا مجموع الأرقام المخزنة لكل الباقات، بما فيها الباقات المنتهية. لا يُستخدم وحده لتعريف الرصيد القابل للاستخدام حاليًا.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-4">
               <div>
                 <p className="text-xs text-muted-foreground">إجمالي الوجبات</p>
                 <p className="mt-1 text-lg font-bold">{aggregate.totalMeals}</p>
@@ -153,6 +183,7 @@ export function SubscriptionPurchaseHistoryDialog({
                 <p className="text-xs text-muted-foreground">المحجوز</p>
                 <p className="mt-1 text-lg font-bold">{aggregate.reservedMeals}</p>
               </div>
+              </div>
             </div>
           ) : null}
 
@@ -166,7 +197,12 @@ export function SubscriptionPurchaseHistoryDialog({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold">
+                        {purchase.status === "active" ? (
+                          <span className="flex size-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                            <CheckCircle2 className="size-4" />
+                          </span>
+                        ) : null}
+                        <span className="font-black">
                           {purchase.displayId || "PUR-" + (index + 1)}
                         </span>
                         <Badge variant={statusVariant(purchase.status)}>
@@ -200,7 +236,7 @@ export function SubscriptionPurchaseHistoryDialog({
                     <div className="flex items-start gap-2">
                       <WalletCards className="mt-0.5 size-4 text-muted-foreground" />
                       <div>
-                        <p className="text-xs text-muted-foreground">الوجبات</p>
+                        <p className="text-xs text-muted-foreground">{purchase.status === "active" ? "المتبقي حاليًا" : "المتبقي عند نهاية الباقة"}</p>
                         <p className="mt-1 text-sm font-semibold">
                           {purchase.remainingMeals} / {purchase.totalMeals}
                         </p>
@@ -212,7 +248,7 @@ export function SubscriptionPurchaseHistoryDialog({
                       <div>
                         <p className="text-xs text-muted-foreground">الفترة</p>
                         <p className="mt-1 text-sm font-semibold">
-                          {formatDate(purchase.requestedStartDate)} — {formatDate(purchase.endDate)}
+                          {formatDate(purchase.effectiveStartDate || purchase.requestedStartDate)} — {formatDate(purchase.validityEndDate || purchase.endDate)}
                         </p>
                       </div>
                     </div>
@@ -238,6 +274,12 @@ export function SubscriptionPurchaseHistoryDialog({
                       </div>
                     </div>
                   </div>
+
+                  {purchase.status === "expired" ? (
+                    <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-xs leading-5 text-muted-foreground">
+                      هذه الباقة انتهت زمنيًا. ظهور الوجبات المتبقية هنا يحافظ على السجل التاريخي ولا يعني أنها رصيد نشط قابل للاستخدام حاليًا.
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
