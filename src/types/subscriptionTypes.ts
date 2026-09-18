@@ -157,6 +157,69 @@ export interface ContractMeta {
   diagnosticsAvailable: boolean;
 }
 
+export interface SubscriptionPurchasePayment {
+  id: string;
+  status: string | null;
+  type: string | null;
+  provider: string | null;
+  method: string | null;
+  amountHalala: number;
+  currency: string;
+  providerReference: string | null;
+  paidAt: string | null;
+  createdAt: string | null;
+}
+
+export interface SubscriptionPurchase {
+  id: string;
+  purchaseId: string;
+  displayId: string | null;
+  sourceType: string;
+  isLegacyPackage: boolean;
+  planId: string;
+  planName: string | null;
+  status: string | null;
+  applicationState: string | null;
+  requestedStartDate: string | null;
+  effectiveStartDate: string | null;
+  endDate: string | null;
+  validityEndDate: string | null;
+  daysCount: number;
+  mealsPerDay: number;
+  proteinGrams: number;
+  totalMeals: number;
+  remainingMeals: number;
+  reservedMeals: number;
+  consumedMeals: number;
+  forfeitedMeals: number;
+  fulfillment: Record<string, unknown> | null;
+  pricing: Record<string, unknown> | null;
+  payment: SubscriptionPurchasePayment | null;
+  createdAt: string | null;
+}
+
+export interface SubscriptionAggregateBalance {
+  totalMeals: number;
+  remainingMeals: number;
+  reservedMeals: number;
+  consumedMeals: number;
+  forfeitedMeals: number;
+}
+
+export interface SubscriptionStackingReadModel {
+  version: string;
+  hasEntitlementBatches: boolean;
+  isCombinedPackage: boolean;
+  packageCount: number;
+  presentationMode: "stacked" | "single_batch" | "legacy";
+  parentSubscriptionId: string;
+  parentRole: string;
+  manualDeductionAllowed: boolean;
+  aggregateBalance: SubscriptionAggregateBalance;
+  packages: SubscriptionPurchase[];
+  transactions: SubscriptionPurchasePayment[];
+}
+
 export interface SubscriptionUser {
   id: string;
   fullName: string;
@@ -217,6 +280,7 @@ export interface Subscription {
   user: SubscriptionUser;
   userName: string;
   hasDeliveryDeductionToday?: boolean;
+  stacking?: SubscriptionStackingReadModel;
 }
 
 export interface SubscriptionsMeta {
