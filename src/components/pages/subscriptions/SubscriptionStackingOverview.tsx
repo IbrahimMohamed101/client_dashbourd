@@ -1,6 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Subscription } from "@/types/subscriptionTypes";
+import {
+  currentStackingAggregateBalance,
+  isStackingPackageUsableNow,
+} from "@/lib/subscriptionStackingPresentation";
 import type {
   SubscriptionStackingPackage,
   SubscriptionStackingPayment,
@@ -91,9 +95,9 @@ function paymentMethodLabel(method?: string | null) {
 }
 
 function PackageCard({ item }: { item: SubscriptionStackingPackage }) {
-  const isActive = item.status === "active";
+  const isUsableNow = isStackingPackageUsableNow(item);
+  const isActive = isUsableNow;
   const isHistorical = item.status === "expired" || item.status === "exhausted" || item.status === "canceled";
-  const isUsableNow = isActive;
 
   return (
     <article
@@ -242,7 +246,7 @@ export function SubscriptionStackingOverview({
     item.status === "expired" || item.status === "exhausted" || item.status === "canceled"
   );
 
-  const aggregateMeals = stacking.aggregateBalance;
+  const aggregateMeals = currentStackingAggregateBalance(subscription) || stacking.aggregateBalance;
   const orderedPackages = [...stacking.packages].sort((left, right) => {
     const rank = (status: string | null) =>
       status === "active" ? 0 : status === "paid_scheduled" ? 1 : 2;
