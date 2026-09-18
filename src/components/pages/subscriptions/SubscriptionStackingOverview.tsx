@@ -30,7 +30,14 @@ function PackageCard({ item }: { item: SubscriptionStackingPackage }) {
     <div className="space-y-3 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="font-semibold">{item.planName || "باقة محفوظة"}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold">{item.planName || "باقة محفوظة"}</p>
+            {item.displayId ? (
+              <Badge variant="outline" className="font-mono text-[10px]">
+                {item.displayId}
+              </Badge>
+            ) : null}
+          </div>
           <p className="text-xs text-muted-foreground">{sourceLabel(item)}</p>
         </div>
         <Badge variant={item.status === "active" ? "default" : "secondary"}>
@@ -66,7 +73,8 @@ export function SubscriptionStackingOverview({
       <CardHeader className={compact ? "p-4 pb-2" : undefined}>
         <CardTitle className="flex flex-wrap items-center gap-2 text-base">
           <Layers3 className="h-4 w-4 text-blue-600" />
-          الحزم المكوّنة للاشتراك
+          المشتريات المكوّنة للرّصيد
+
           <Badge variant="outline">{stacking.packageCount} باقة</Badge>
         </CardTitle>
         <p className="text-sm leading-6 text-muted-foreground">
