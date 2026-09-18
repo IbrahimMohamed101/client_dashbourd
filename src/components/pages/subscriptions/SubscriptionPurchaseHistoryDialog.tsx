@@ -168,7 +168,17 @@ export function SubscriptionPurchaseHistoryDialog({
           </div>
 
           {aggregate ? (
-            <div className="grid gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:grid-cols-4">
+            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/[0.04] p-4">
+              <div className="flex items-start gap-3">
+                <WalletCards className="mt-0.5 size-5 shrink-0 text-blue-600" />
+                <div>
+                  <p className="font-black">إجمالي سجل الباقات</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    هذا مجموع الأرقام المخزنة لكل الباقات، بما فيها الباقات المنتهية. لا يُستخدم وحده لتعريف الرصيد القابل للاستخدام حاليًا.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-4">
               <div>
                 <p className="text-xs text-muted-foreground">إجمالي الوجبات</p>
                 <p className="mt-1 text-lg font-bold">{aggregate.totalMeals}</p>
@@ -184,6 +194,7 @@ export function SubscriptionPurchaseHistoryDialog({
               <div>
                 <p className="text-xs text-muted-foreground">المحجوز</p>
                 <p className="mt-1 text-lg font-bold">{aggregate.reservedMeals}</p>
+              </div>
               </div>
             </div>
           ) : null}
@@ -274,13 +285,12 @@ export function SubscriptionPurchaseHistoryDialog({
                         )}
                       </div>
                     </div>
-                  </div>
-                </div>
                   {purchase.status === "expired" ? (
                     <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-xs leading-5 text-muted-foreground">
                       هذه الباقة انتهت زمنيًا. ظهور الوجبات المتبقية هنا يحافظ على السجل التاريخي ولا يعني أنها رصيد نشط قابل للاستخدام حاليًا.
                     </div>
                   ) : null}
+                </div>
               ))}
             </div>
           ) : (
