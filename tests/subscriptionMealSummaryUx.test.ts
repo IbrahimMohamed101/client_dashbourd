@@ -57,12 +57,20 @@ test("customer remaining includes available and reserved meals", () => {
 test("manual deductions are included in received and remain auditable", () => {
   const source = read(experiencePath);
 
-  assert.match(source, /const systemReceived = safeCount\(summary\?\.receivedMeals\);/);
   assert.match(
     source,
-    /const received = Math\.min\(total, systemReceived \+ manualDeducted\);/
+    /const stackedAggregate = details\?\.stacking\?\.hasEntitlementBatches/
   );
-  assert.match(source, /خصم يدوي محسوب كمستلم/);
+  assert.match(
+    source,
+    /const total = safeCount\(\s*stackedAggregate\?\.totalMeals/
+  );
+  assert.match(
+    source,
+    /const received = hasCurrentStackingBalance\s*\?\s*consumed\s*:\s*Math\.min\(total, systemReceived \+ manualDeducted\)/
+  );
+  assert.match(source, /المستخدم من الباقة الحالية/);
+  assert.match(source, /وجبة مستخدمة من الاستحقاق الحالي فقط/);
   assert.match(source, /محسوب ضمن المستلم/);
   assert.match(source, /استلام مثبت/);
   assert.match(source, /خصم يدوي ضمن المستلم/);
@@ -74,7 +82,7 @@ test("other deductions stay separate from the received total", () => {
 
   assert.match(
     source,
-    /const operationalDeducted = Math\.max\(0, consumed - systemReceived - manualDeducted\);/
+    /const operationalDeducted = hasCurrentStackingBalance\s*\?\s*0\s*:\s*Math\.max\(0, consumed - systemReceived - manualDeducted\);/
   );
   assert.match(source, /const otherDeductions = operationalDeducted \+ forfeited;/);
   assert.match(source, /حسم أو مصادرة/);
