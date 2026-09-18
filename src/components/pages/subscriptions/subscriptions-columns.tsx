@@ -4,7 +4,11 @@ import type { Subscription } from "@/types/subscriptionTypes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EyeIcon, ReceiptText } from "lucide-react";
-import { subscriptionPlanLabel } from "@/lib/subscriptionStackingPresentation";
+import {
+  subscriptionPlanLabel,
+  subscriptionRelationshipLabel,
+  subscriptionPurchaseCount,
+} from "@/lib/subscriptionStackingPresentation";
 
 interface SubscriptionsColumnsOptions {
   onView: (subscription: Subscription) => void;
@@ -48,6 +52,22 @@ export function getSubscriptionsColumns({
         <span className="text-muted-foreground">
           {subscriptionPlanLabel(row.original)}
         </span>
+      ),
+    },
+    {
+      id: "relationship",
+      header: "نوع الاشتراك",
+      cell: ({ row }) => (
+        <div className="flex flex-col gap-1">
+          <Badge variant={row.original.stacking?.isCombinedPackage ? "default" : "outline"}>
+            {subscriptionRelationshipLabel(row.original)}
+          </Badge>
+          {subscriptionPurchaseCount(row.original) > 1 ? (
+            <span className="text-xs text-muted-foreground">
+              {subscriptionPurchaseCount(row.original)} مشتريات
+            </span>
+          ) : null}
+        </div>
       ),
     },
     {
