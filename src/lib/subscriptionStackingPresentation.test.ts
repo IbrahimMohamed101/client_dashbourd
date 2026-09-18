@@ -31,6 +31,7 @@ describe("subscription stacking presentation", () => {
         hasEntitlementBatches: true,
         isCombinedPackage: true,
         packageCount: 2,
+        presentationMode: "stacked",
         parentSubscriptionId: "parent-a",
         parentRole: "operational_container",
         manualDeductionAllowed: false,
