@@ -38,6 +38,7 @@ import { getApiErrorMessage } from "@/lib/apiErrors";
 import {
   isManualDeductionAllowed,
   subscriptionPlanLabel,
+  subscriptionRelationshipLabel,
 } from "@/lib/subscriptionStackingPresentation";
 
 import { CustomerSearch } from "./CustomerSearch";
@@ -142,7 +143,7 @@ export default function ManualDeductionPage() {
 
   const handleSelectSubscription = (sub: Subscription) => {
     if (!isManualDeductionAllowed(sub)) {
-      toast.error("الخصم اليدوي غير متاح للاشتراكات متعددة الباقات");
+      toast.error("الخصم اليدوي غير متاح لهذا الاشتراك");
       return;
     }
     if (sub.balance?.balanced === false) {
@@ -289,6 +290,15 @@ export default function ManualDeductionPage() {
           <Package className="h-4 w-4" />
           {info.getValue()}
         </div>
+      ),
+    }),
+    columnHelper.display({
+      id: "relationship",
+      header: "نوع الرصيد",
+      cell: ({ row }) => (
+        <Badge variant={row.original.stacking?.isCombinedPackage ? "default" : "outline"}>
+          {subscriptionRelationshipLabel(row.original)}
+        </Badge>
       ),
     }),
     columnHelper.accessor(
