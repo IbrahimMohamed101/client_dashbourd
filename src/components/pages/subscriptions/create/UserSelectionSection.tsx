@@ -15,6 +15,7 @@ import type { User } from "@/types/userTypes";
 
 interface UserSelectionSectionProps {
   form: UseFormReturn<CreateSubscriptionSchemaType>;
+  onUserSelected?: (user: User) => void;
 }
 
 function getUserDisplayName(user: User) {
@@ -30,7 +31,10 @@ function getSearchText(user: User) {
   return [user.fullName, user.phone, user.email].filter(Boolean).join(" ").toLowerCase();
 }
 
-export function UserSelectionSection({ form }: UserSelectionSectionProps) {
+export function UserSelectionSection({
+  form,
+  onUserSelected,
+}: UserSelectionSectionProps) {
   const { data: usersResponse, isLoading } = useAllUsersQuery();
   const users = usersResponse?.data || [];
   const [search, setSearch] = useState("");
@@ -108,11 +112,12 @@ export function UserSelectionSection({ form }: UserSelectionSectionProps) {
                 <button
                   key={user.id}
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     form.setValue("userId", user.coreUserId || user.id, {
                       shouldValidate: true,
-                    })
-                  }
+                    });
+                    onUserSelected?.(user);
+                  }}
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-right transition-all ${
                     isSelected
                       ? "bg-primary/10 ring-1 ring-primary/30"
