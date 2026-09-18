@@ -15,6 +15,8 @@ export interface SubscriptionStackingPayment {
 
 export interface SubscriptionStackingPackage {
   id: string;
+  purchaseId: string;
+  displayId: string | null;
   sourceType: string;
   isLegacyPackage: boolean;
   planId: string;
@@ -44,6 +46,7 @@ export interface SubscriptionStackingContext {
   hasEntitlementBatches: boolean;
   isCombinedPackage: boolean;
   packageCount: number;
+  presentationMode: "stacked" | "single_batch" | "legacy";
   parentSubscriptionId: string;
   parentRole: "operational_container";
   manualDeductionAllowed: boolean;
