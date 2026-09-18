@@ -289,10 +289,17 @@ export function CreateSubscriptionFormContent({
       }
     } catch (error: unknown) {
       setIsValidatingPrice(false);
-      ToastMessage(
-        getApiErrorMessage(error) || "حدث خطأ أثناء إنشاء الاشتراك",
-        "error"
-      );
+      const root = asRecord(asRecord(error)?.response);
+      const payload = asRecord(root?.data);
+      const errorBlock = asRecord(payload?.error);
+      const code = readString(errorBlock?.code);
+      const message =
+        code === "STANDALONE_ACTIVE_SUBSCRIPTION_CONFLICT"
+          ? "هذا العميل لديه اشتراك نشط. اختر «إضافة إلى الرصيد الحالي» لضم الشراء إلى الرصيد المجمع."
+          : code === "STACK_TARGET_NOT_FOUND"
+            ? "لا يوجد اشتراك نشط يمكن إضافة الشراء إليه. اختر «اشتراك مستقل»."
+            : getApiErrorMessage(error) || "حدث خطأ أثناء إنشاء الاشتراك";
+      ToastMessage(message, "error");
     }
   };
 
