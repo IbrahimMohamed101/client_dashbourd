@@ -213,6 +213,7 @@ export function SubscriptionPurchaseHistoryDialog({
                 const usableNow = isStackingPackageUsableNow(purchase);
                 const historical = ["expired", "ended", "exhausted", "canceled"].includes(purchase.status || "");
 
+                return (
                 <div
                   key={purchaseKey(purchase, index)}
                   className="rounded-xl border bg-card p-4 shadow-sm"
@@ -220,7 +221,7 @@ export function SubscriptionPurchaseHistoryDialog({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        {purchase.status === "active" ? (
+                        {usableNow ? (
                           <span className="flex size-8 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
                             <CheckCircle2 className="size-4" />
                           </span>
@@ -318,7 +319,8 @@ export function SubscriptionPurchaseHistoryDialog({
                   </div>
 
                 </div>
-              )})}
+                );
+              })}
             </div>
           ) : (
             <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
