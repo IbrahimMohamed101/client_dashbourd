@@ -13,7 +13,6 @@ import {
   CalendarDays,
   CheckCircle2,
   CreditCard,
-  History,
   Layers3,
   WalletCards,
 } from "lucide-react";
