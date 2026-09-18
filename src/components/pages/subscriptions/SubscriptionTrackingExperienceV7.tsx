@@ -447,23 +447,59 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
     .filter((movement) => movement.sourceCode === "dashboard_manual_deduction")
     .reduce((sum, movement) => sum + manualDeductionQuantity(movement), 0);
 
-  const total = safeCount(summary?.totalMeals ?? details?.totalMeals);
+  const stackedAggregate = details?.stacking?.hasEntitlementBatches
+    ? details.stacking.aggregateBalance
+    : null;
+  const hasCurrentStackingBalance = Boolean(stackedAggregate);
+
+  const total = safeCount(
+    stackedAggregate?.totalMeals ?? summary?.totalMeals ?? details?.totalMeals
+  );
   const systemReceived = safeCount(summary?.receivedMeals);
-  const available = safeCount(summary?.availableMeals ?? details?.remainingMeals);
-  const reserved = safeCount(summary?.reservedMeals);
+  const available = safeCount(
+    stackedAggregate?.remainingMeals ??
+      summary?.availableMeals ??
+      details?.remainingMeals
+  );
+  const reserved = safeCount(
+    stackedAggregate?.reservedMeals ?? summary?.reservedMeals
+  );
   const remaining = available + reserved;
-  const consumed = safeCount(summary?.balanceConsumedMeals ?? summary?.consumedMeals);
-  const forfeited = safeCount(summary?.forfeitedMeals);
+  const consumed = safeCount(
+    stackedAggregate?.consumedMeals ??
+      summary?.balanceConsumedMeals ??
+      summary?.consumedMeals
+  );
+  const forfeited = safeCount(
+    stackedAggregate?.forfeitedMeals ?? summary?.forfeitedMeals
+  );
   const manualDeducted = Math.max(
     manualFromMovements,
     safeCount(summary?.manualDeductedMeals),
     safeCount(tracking?.adjustments?.totals.manualDeductedMeals),
     safeCount(coverage?.consumption.dashboardManual)
   );
-  const received = Math.min(total, systemReceived + manualDeducted);
-  const operationalDeducted = Math.max(0, consumed - systemReceived - manualDeducted);
-  const otherDeductions = operationalDeducted + forfeited;
-  const deductedWithoutReceipt = Math.max(0, total - remaining - received);
+
+  // For stacked subscriptions, keep the summary inside the current entitlement scope.
+  // Do not mix current 60/4/56 figures with historical parent-level totals.
+  const received = hasCurrentStackingBalance
+    ? consumed
+    : Math.min(total, systemReceived + manualDeducted);
+  const operationalDeducted = hasCurrentStackingBalance
+    ? 0
+    : Math.max(0, consumed - systemReceived - manualDeducted);
+  const otherDeductions = hasCurrentStackingBalance
+    ? Math.max(0, total - remaining - received)
+    : operationalDeducted + forfeited;
+  const deductedWithoutReceipt = hasCurrentStackingBalance
+    ? otherDeductions
+    : Math.max(0, total - remaining - received);
+  const receivedLabel = hasCurrentStackingBalance
+    ? "المستخدم من الباقة الحالية"
+    : "المستلم";
+  const receivedNote = hasCurrentStackingBalance
+    ? received + " وجبة مستخدمة من الاستحقاق الحالي فقط"
+    : systemReceived + " استلام مثبت · " + manualDeducted + " خصم يدوي محسوب كمستلم";
   const accounted = available + reserved + consumed + forfeited;
   const balanceDifference = safeCount(summary?.balanceIntegrity?.difference ?? Math.abs(total - accounted));
   const unknownMeals = safeCount(coverage?.unknownMeals ?? summary?.unattributedConsumedMeals);
@@ -600,7 +636,7 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
                       <div>
                         <h2 className="text-lg font-black">الحساب ببساطة</h2>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          الخصم اليدوي يُعامل هنا كاستلام لأن العامل أكد خروج الوجبات للعميل.
+                          {receivedNote}
                         </p>
                       </div>
                       <Badge variant={balanceDifference === 0 ? "secondary" : "destructive"}>
@@ -610,7 +646,7 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
 
                     <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                       <FormulaItem label="إجمالي الوجبات" value={total} />
-                      <FormulaItem label="المستلم" value={received} sign="−" />
+                      <FormulaItem label={receivedLabel} value={received} sign="−" />
                       <FormulaItem label="خصومات أخرى" value={deductedWithoutReceipt} sign="−" />
                       <FormulaItem label="المتبقي للعميل" value={remaining} sign="=" />
                     </div>
@@ -653,9 +689,9 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
                       </p>
                       <div className="mt-4 grid gap-3 sm:grid-cols-2">
                         <SmallMetric
-                          label="المستلم الإجمالي"
+                          label={receivedLabel}
                           value={received}
-                          note={`${systemReceived} استلام مثبت · ${manualDeducted} خصم يدوي`}
+                          note={receivedNote}
                           icon={<CheckCircle2 className="h-4 w-4" />}
                         />
                         <SmallMetric
@@ -772,10 +808,10 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
                   <section className="rounded-xl border bg-card p-4 shadow-sm">
                     <h2 className="text-lg font-black">تفاصيل حركة الرصيد</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      الخصم اليدوي محسوب ضمن المستلم، لكنه يظل ظاهرًا منفصلًا هنا لمعرفة طريقة تسجيل الاستلام ومن نفّذ العملية.
+                      الباقة الحالية تُعرض من رصيدها التشغيلي الحالي، بينما تفاصيل السجل التاريخي تبقى ظاهرة للمراجعة.
                     </p>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                      <SmallMetric label="المستلم الإجمالي" value={received} icon={<CheckCircle2 className="h-4 w-4" />} />
+                      <SmallMetric label={receivedLabel} value={received} note={receivedNote} icon={<CheckCircle2 className="h-4 w-4" />} />
                       <SmallMetric label="استلام مثبت" value={systemReceived} icon={<Truck className="h-4 w-4" />} />
                       <SmallMetric label="خصم يدوي ضمن المستلم" value={manualDeducted} icon={<LayoutDashboard className="h-4 w-4" />} tone={manualDeducted ? "manual" : "default"} />
                       <SmallMetric label="حسم تشغيلي" value={operationalDeducted} icon={<AlertTriangle className="h-4 w-4" />} tone={operationalDeducted ? "danger" : "default"} />
