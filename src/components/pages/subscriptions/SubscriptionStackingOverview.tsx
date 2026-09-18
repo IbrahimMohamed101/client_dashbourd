@@ -93,6 +93,7 @@ function paymentMethodLabel(method?: string | null) {
 function PackageCard({ item }: { item: SubscriptionStackingPackage }) {
   const isActive = item.status === "active";
   const isHistorical = item.status === "expired" || item.status === "exhausted" || item.status === "canceled";
+  const isUsableNow = isActive;
 
   return (
     <article
@@ -135,12 +136,27 @@ function PackageCard({ item }: { item: SubscriptionStackingPackage }) {
 
         <div className="grid gap-2 sm:grid-cols-4">
           <div className="rounded-xl border bg-background/75 px-3 py-3">
-            <p className="text-[11px] text-muted-foreground">رصيد هذه الباقة</p>
-            <p className="mt-1 text-lg font-black tabular-nums">
-              {item.remainingMeals}
-              <span className="mx-1 text-sm font-normal text-muted-foreground">/</span>
-              {item.totalMeals}
+            <p className="text-[11px] text-muted-foreground">
+              {isUsableNow ? "الرصيد القابل للاستخدام الآن" : "حالة الرصيد في هذه الباقة"}
             </p>
+            <p className="mt-1 text-lg font-black tabular-nums">
+              {isUsableNow ? (
+                <>
+                  {item.remainingMeals}
+                  <span className="mx-1 text-sm font-normal text-muted-foreground">/</span>
+                  {item.totalMeals}
+                </>
+              ) : (
+                <span className="text-base">{isHistorical ? "غير متاح للاستخدام" : "غير متاح حاليًا"}</span>
+              )}
+            </p>
+            {!isUsableNow ? (
+              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                {isHistorical
+                  ? "المسجل تاريخيًا: " + item.remainingMeals + " من " + item.totalMeals + " وجبة"
+                  : "لا يمكن استخدام رصيد هذه الباقة حتى تصبح نشطة."}
+              </p>
+            ) : null}
           </div>
           <div className="rounded-xl border bg-background/75 px-3 py-3">
             <p className="text-[11px] text-muted-foreground">الجرامات</p>
@@ -280,7 +296,7 @@ export function SubscriptionStackingOverview({
             <div>
               <p className="font-bold">ملخص سجل المشتريات</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                هذا هو الرصيد المجمع المسجل للحاوية التشغيلية، ويجمع الاستحقاقات المتبقية من الباقات المرتبطة بها.
+                هذا هو الرصيد المجمع المسجل للحاوية التشغيلية. لا يعني ذلك أن كل رصيد ظاهر داخل باقة تاريخية قابل للاستهلاك من هذه الباقة نفسها.
               </p>
             </div>
           </div>
@@ -291,7 +307,7 @@ export function SubscriptionStackingOverview({
               <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.totalMeals}</p>
             </div>
             <div className="rounded-xl border bg-background/80 p-3">
-              <p className="text-[11px] text-muted-foreground">الرصيد المجمع المتبقي</p>
+              <p className="text-[11px] text-muted-foreground">الرصيد المجمع المسجل</p>
               <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.remainingMeals}</p>
             </div>
             <div className="rounded-xl border bg-background/80 p-3">
