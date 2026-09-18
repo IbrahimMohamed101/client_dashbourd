@@ -228,8 +228,10 @@ export function SubscriptionPurchaseHistoryDialog({
                         <span className="font-black">
                           {purchase.displayId || "PUR-" + (index + 1)}
                         </span>
-                        <Badge variant={statusVariant(purchase.status)}>
-                          {statusLabel(purchase.status)}
+                        <Badge variant={usableNow ? "default" : statusVariant(purchase.status)}>
+                          {usableNow && purchase.status === "paid_scheduled"
+                            ? "نشط حاليًا"
+                            : statusLabel(purchase.status)}
                         </Badge>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
