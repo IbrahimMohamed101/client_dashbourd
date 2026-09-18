@@ -1,3 +1,5 @@
+export type DashboardSubscriptionMode = "standalone" | "stack_into_current";
+
 export interface SubscriptionFilters {
   q: string;
   status: string | null;
