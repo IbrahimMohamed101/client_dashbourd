@@ -134,7 +134,7 @@ function PackageCard({ item }: { item: SubscriptionStackingPackage }) {
             className={statusTone(item.status)}
           >
             {isActive ? <CheckCircle2 className="ml-1 h-3.5 w-3.5" /> : null}
-            {statusLabel(item.status)}
+            {isUsableNow ? "نشطة الآن" : statusLabel(item.status)}
           </Badge>
         </div>
 
@@ -240,8 +240,10 @@ export function SubscriptionStackingOverview({
   const stacking = subscription.stacking;
   if (!stacking?.hasEntitlementBatches) return null;
 
-  const activePackages = stacking.packages.filter((item) => item.status === "active");
-  const scheduledPackages = stacking.packages.filter((item) => item.status === "paid_scheduled");
+  const activePackages = stacking.packages.filter((item) => isStackingPackageUsableNow(item));
+  const scheduledPackages = stacking.packages.filter(
+    (item) => item.status === "paid_scheduled" && !isStackingPackageUsableNow(item)
+  );
   const historicalPackages = stacking.packages.filter((item) =>
     item.status === "expired" || item.status === "exhausted" || item.status === "canceled"
   );
