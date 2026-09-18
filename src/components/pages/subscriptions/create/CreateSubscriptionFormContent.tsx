@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import useCreateSubscriptionForm from "@/hooks/useCreateSubscriptionForm";
 import { getApiErrorMessage } from "@/lib/apiErrors";
 import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubscriptionSchema";
+import type { User } from "@/types/userTypes";
 import { useCreateSubscriptionMutation } from "@/hooks/useSubscriptionsQuery";
+import { useUserDetailsQuery } from "@/hooks/useUsersQuery";
 import {
   buildSubscriptionCreationPayload,
   buildSubscriptionQuotePayload,
@@ -154,6 +156,50 @@ export function CreateSubscriptionFormContent({
 }: CreateSubscriptionFormContentProps) {
   const form = useCreateSubscriptionForm(userId || "");
   const navigate = useNavigate();
+  const [selectedUserHasActiveSubscription, setSelectedUserHasActiveSubscription] =
+    useState<boolean | null>(userId ? null : false);
+  const {
+    data: preselectedUserResponse,
+    isLoading: isPreselectedUserLoading,
+  } = useUserDetailsQuery(userId || "", Boolean(userId));
+  const preselectedUser = preselectedUserResponse?.data;
+  const hasActiveSubscriptionForMode = userId
+    ? preselectedUser
+      ? preselectedUser.activeSubscriptionsCount > 0
+      : null
+    : selectedUserHasActiveSubscription;
+
+  useEffect(() => {
+    if (!userId || !preselectedUser) return;
+    form.setValue(
+      "subscriptionMode",
+      preselectedUser.activeSubscriptionsCount > 0
+        ? "stack_into_current"
+        : "standalone",
+      {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      }
+    );
+  }, [form, preselectedUser?.activeSubscriptionsCount, userId]);
+
+  const handleUserSelected = useCallback(
+    (user: User) => {
+      const hasActiveSubscription = user.activeSubscriptionsCount > 0;
+      setSelectedUserHasActiveSubscription(hasActiveSubscription);
+      form.setValue(
+        "subscriptionMode",
+        hasActiveSubscription ? "stack_into_current" : "standalone",
+        {
+          shouldDirty: true,
+          shouldTouch: false,
+          shouldValidate: true,
+        }
+      );
+    },
+    [form]
+  );
   const [isValidatingPrice, setIsValidatingPrice] = useState(false);
   const [paymentOptions, setPaymentOptions] = useState(
     FALLBACK_PAYMENT_OPTIONS
@@ -385,8 +431,16 @@ export function CreateSubscriptionFormContent({
   return (
     <div className="mx-auto w-full max-w-4xl" dir="rtl">
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {!userId && <UserSelectionSection form={form} />}
-        <SubscriptionModeSection form={form} />
+        {!userId && (
+          <UserSelectionSection
+            form={form}
+            onUserSelected={handleUserSelected}
+          />
+        )}
+        <SubscriptionModeSection
+          form={form}
+          hasActiveSubscription={hasActiveSubscriptionForMode}
+        />
         <PlanSelectionSection
           form={form}
           onPriceChange={handlePlanPriceChange}
@@ -558,7 +612,11 @@ export function CreateSubscriptionFormContent({
             <div className="flex justify-end border-t pt-5">
               <Button
                 type="submit"
-                disabled={isSubmitting || !selectedPaymentMethod}
+                disabled={
+                  isSubmitting ||
+                  !selectedPaymentMethod ||
+                  (Boolean(userId) && isPreselectedUserLoading)
+                }
                 size="lg"
                 className="w-full gap-2 sm:w-auto sm:min-w-52"
               >

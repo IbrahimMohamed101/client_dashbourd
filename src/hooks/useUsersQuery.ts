@@ -61,8 +61,11 @@ export const userDetailsQueryOptions = (userId: string) =>
     staleTime: 1000 * 60 * 5,
   });
 
-export const useUserDetailsQuery = (userId: string) => {
-  return useQuery(userDetailsQueryOptions(userId));
+export const useUserDetailsQuery = (userId: string, enabled = true) => {
+  return useQuery({
+    ...userDetailsQueryOptions(userId),
+    enabled: enabled && Boolean(userId),
+  });
 };
 
 export const userSubscriptionsQueryOptions = (userId: string) =>
