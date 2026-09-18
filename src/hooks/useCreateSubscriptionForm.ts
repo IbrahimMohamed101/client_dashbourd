@@ -8,6 +8,7 @@ const useCreateSubscriptionForm = (userId: string) => {
     resolver: zodResolver(createSubscriptionSchema),
     defaultValues: {
       userId,
+      subscriptionMode: "standalone",
       planId: "",
       grams: 0,
       mealsPerDay: 0,
