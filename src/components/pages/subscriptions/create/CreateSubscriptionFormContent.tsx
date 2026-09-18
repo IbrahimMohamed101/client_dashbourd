@@ -58,6 +58,7 @@ type PaymentMethodOption = {
 type CreatedSubscription = {
   id: string;
   label: string | null;
+  stacked: boolean;
 };
 
 const FALLBACK_PAYMENT_OPTIONS: PaymentMethodOption[] = [
@@ -87,6 +88,12 @@ function readSubscriptionLabel(response: unknown) {
     readSubscriptionId(response)?.slice(-8) ||
     null
   );
+}
+
+function readIsStackedPurchase(response: unknown) {
+  const root = asRecord(response);
+  const meta = asRecord(root?.meta);
+  return meta?.isStackedPurchase === true;
 }
 
 function readRecordedPaymentMethod(
@@ -267,7 +274,11 @@ export function CreateSubscriptionFormContent({
       );
 
       if (subscriptionId) {
-        setCreatedSubscription({ id: subscriptionId, label: subscriptionLabel });
+        setCreatedSubscription({
+          id: subscriptionId,
+          label: subscriptionLabel,
+          stacked: readIsStackedPurchase(response),
+        });
         return;
       }
 
@@ -293,10 +304,16 @@ export function CreateSubscriptionFormContent({
             <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
               <CheckCircle2 className="size-8" />
             </div>
-            <h2 className="mt-4 text-2xl font-black text-foreground">تم إنشاء الاشتراك بنجاح</h2>
+            <h2 className="mt-4 text-2xl font-black text-foreground">
+              {createdSubscription.stacked
+                ? "تمت إضافة شراء جديد إلى الرصيد المجمع"
+                : "تم إنشاء الاشتراك بنجاح"}
+            </h2>
             <p className="mt-2 text-sm text-muted-foreground">
               {createdSubscription.label
-                ? `رقم الاشتراك: ${createdSubscription.label}`
+                ? createdSubscription.stacked
+                  ? `رقم الاشتراك التشغيلي: ${createdSubscription.label}`
+                  : `رقم الاشتراك: ${createdSubscription.label}`
                 : "تم تسجيل الاشتراك والدفع بنجاح."}
             </p>
           </div>
