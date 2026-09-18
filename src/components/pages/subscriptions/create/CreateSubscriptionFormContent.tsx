@@ -615,8 +615,7 @@ export function CreateSubscriptionFormContent({
                 disabled={
                   isSubmitting ||
                   !selectedPaymentMethod ||
-                  (Boolean(userId) &&
-                    (isPreselectedUserLoading || !preselectedUserResponse))
+                  (Boolean(userId) && isPreselectedUserLoading)
                 }
                 size="lg"
                 className="w-full gap-2 sm:w-auto sm:min-w-52"
