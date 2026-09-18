@@ -43,7 +43,7 @@ const deliverySchema = z.object({
 const createSubscriptionSchema = z
   .object({
     userId: z.string().min(1, "معرف المستخدم مطلوب"),
-    subscriptionMode: z.enum(["standalone", "stack_into_current"]).default("standalone"),
+    subscriptionMode: z.enum(["standalone", "stack_into_current"]),
     planId: z.string().min(1, "الباقة مطلوبة"),
     grams: z.number().min(1, "الجرامات مطلوبة"),
     mealsPerDay: z.number().min(1, "عدد الوجبات في اليوم مطلوب"),
