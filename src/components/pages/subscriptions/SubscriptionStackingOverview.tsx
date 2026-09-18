@@ -135,7 +135,7 @@ function PackageCard({ item }: { item: SubscriptionStackingPackage }) {
 
         <div className="grid gap-2 sm:grid-cols-4">
           <div className="rounded-xl border bg-background/75 px-3 py-3">
-            <p className="text-[11px] text-muted-foreground">الوجبات</p>
+            <p className="text-[11px] text-muted-foreground">رصيد هذه الباقة</p>
             <p className="mt-1 text-lg font-black tabular-nums">
               {item.remainingMeals}
               <span className="mx-1 text-sm font-normal text-muted-foreground">/</span>
@@ -175,7 +175,7 @@ function PackageCard({ item }: { item: SubscriptionStackingPackage }) {
               <span>· {paymentMethodLabel(item.payment.method)}</span>
             </div>
           ) : (
-            <span>لا توجد عملية دفع مرتبطة</span>
+            <span>لا يوجد دفع مرتبط مباشرة بهذه الباقة</span>
           )}
         </div>
       </div>
@@ -280,7 +280,7 @@ export function SubscriptionStackingOverview({
             <div>
               <p className="font-bold">ملخص سجل المشتريات</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                الأرقام التالية تجمع كل الباقات المرتبطة بالحاوية، بما فيها الباقات المنتهية أو المستنفدة. لا تستخدم هذا الرقم وحده لتحديد الرصيد القابل للاستخدام الآن.
+                هذا هو الرصيد المجمع المسجل للحاوية التشغيلية، ويجمع الاستحقاقات المتبقية من الباقات المرتبطة بها.
               </p>
             </div>
           </div>
@@ -291,7 +291,7 @@ export function SubscriptionStackingOverview({
               <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.totalMeals}</p>
             </div>
             <div className="rounded-xl border bg-background/80 p-3">
-              <p className="text-[11px] text-muted-foreground">متبقي مسجل</p>
+              <p className="text-[11px] text-muted-foreground">الرصيد المجمع المتبقي</p>
               <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.remainingMeals}</p>
             </div>
             <div className="rounded-xl border bg-background/80 p-3">
@@ -315,7 +315,7 @@ export function SubscriptionStackingOverview({
           </div>
 
           <div className="space-y-3">
-            {stacking.packages.map((item) => (
+            {orderedPackages.map((item) => (
               <PackageCard key={item.id} item={item} />
             ))}
           </div>

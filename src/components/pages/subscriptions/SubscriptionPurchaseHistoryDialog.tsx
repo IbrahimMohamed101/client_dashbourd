@@ -87,6 +87,14 @@ function statusVariant(status: string | null | undefined) {
   return "outline" as const;
 }
 
+function sourceLabel(sourceType: string | null | undefined, isLegacyPackage?: boolean) {
+  if (isLegacyPackage) return "الباقة الأصلية";
+  if (sourceType === "dashboard") return "شراء من لوحة التحكم";
+  if (sourceType === "checkout") return "شراء من التطبيق";
+  if (sourceType === "renewal") return "تجديد مدفوع";
+  return "شراء إضافي";
+}
+
 function paymentMethodLabel(method: string | null | undefined) {
   switch (method) {
     case "cash":
@@ -123,6 +131,17 @@ export function SubscriptionPurchaseHistoryDialog({
   const title = purchaseCount > 1
     ? "سجل مشتريات الاشتراك"
     : "تفاصيل عملية الشراء";
+  const orderedPackages = [...packages].sort((left, right) => {
+    const rank = (status: string | null) =>
+      status === "active" ? 0 : status === "paid_scheduled" ? 1 : 2;
+    const statusOrder = rank(left.status) - rank(right.status);
+    if (statusOrder !== 0) return statusOrder;
+    const leftDate = Date.parse(left.effectiveStartDate || left.requestedStartDate || "");
+    const rightDate = Date.parse(right.effectiveStartDate || right.requestedStartDate || "");
+    return Number.isFinite(leftDate) && Number.isFinite(rightDate)
+      ? rightDate - leftDate
+      : 0;
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,7 +181,7 @@ export function SubscriptionPurchaseHistoryDialog({
                 <div>
                   <p className="font-black">إجمالي سجل الباقات</p>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    هذا مجموع الأرقام المخزنة لكل الباقات، بما فيها الباقات المنتهية. لا يُستخدم وحده لتعريف الرصيد القابل للاستخدام حاليًا.
+                    هذا هو الرصيد المجمع المسجل للحاوية التشغيلية، ويجمع الاستحقاقات المتبقية من الباقات المرتبطة بها.
                   </p>
                 </div>
               </div>
@@ -172,7 +191,7 @@ export function SubscriptionPurchaseHistoryDialog({
                 <p className="mt-1 text-lg font-bold">{aggregate.totalMeals}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">المتبقي</p>
+                <p className="text-xs text-muted-foreground">الرصيد المجمع المتبقي</p>
                 <p className="mt-1 text-lg font-bold">{aggregate.remainingMeals}</p>
               </div>
               <div>
@@ -187,9 +206,9 @@ export function SubscriptionPurchaseHistoryDialog({
             </div>
           ) : null}
 
-          {packages.length ? (
+          {orderedPackages.length ? (
             <div className="space-y-3">
-              {packages.map((purchase, index) => (
+              {orderedPackages.map((purchase, index) => (
                 <div
                   key={purchaseKey(purchase, index)}
                   className="rounded-xl border bg-card p-4 shadow-sm"
@@ -209,13 +228,15 @@ export function SubscriptionPurchaseHistoryDialog({
                           {statusLabel(purchase.status)}
                         </Badge>
                       </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {purchase.planName || "بدون اسم باقة"}
-                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        <span>{purchase.planName || "بدون اسم باقة"}</span>
+                        <span aria-hidden>•</span>
+                        <span>{sourceLabel(purchase.sourceType, purchase.isLegacyPackage)}</span>
+                      </div>
                     </div>
 
                     <div className="text-left sm:text-right">
-                      <p className="text-xs text-muted-foreground">تاريخ الإنشاء</p>
+                      <p className="text-xs text-muted-foreground">تاريخ تسجيل السجل</p>
                       <p className="mt-1 text-sm font-medium">
                         {formatDateTime(purchase.createdAt)}
                       </p>
@@ -236,7 +257,7 @@ export function SubscriptionPurchaseHistoryDialog({
                     <div className="flex items-start gap-2">
                       <WalletCards className="mt-0.5 size-4 text-muted-foreground" />
                       <div>
-                        <p className="text-xs text-muted-foreground">{purchase.status === "active" ? "المتبقي حاليًا" : "المتبقي عند نهاية الباقة"}</p>
+                        <p className="text-xs text-muted-foreground">الرصيد المتبقي في هذه الباقة</p>
                         <p className="mt-1 text-sm font-semibold">
                           {purchase.remainingMeals} / {purchase.totalMeals}
                         </p>
@@ -268,18 +289,13 @@ export function SubscriptionPurchaseHistoryDialog({
                           </>
                         ) : (
                           <p className="mt-1 text-sm font-medium text-muted-foreground">
-                            لا توجد عملية دفع مرتبطة
+                            لا يوجد دفع مرتبط مباشرة بهذه الباقة
                           </p>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {purchase.status === "expired" ? (
-                    <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-xs leading-5 text-muted-foreground">
-                      هذه الباقة انتهت زمنيًا. ظهور الوجبات المتبقية هنا يحافظ على السجل التاريخي ولا يعني أنها رصيد نشط قابل للاستخدام حاليًا.
-                    </div>
-                  ) : null}
                 </div>
               ))}
             </div>
