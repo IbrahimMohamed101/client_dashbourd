@@ -498,39 +498,154 @@ export function CreateSubscriptionFormContent({
               <ReceiptText className="size-5" />
             </div>
             <div>
-              <h2 className="font-semibold">ملخص الاشتراك</h2>
+              <h2 className="font-semibold">إجمالي الاشتراك</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                راجع الأسعار النهائية قبل إنشاء الاشتراك.
+                إجمالي أسعار الخيارات المحددة في النموذج.
               </p>
             </div>
           </div>
 
-          <div className="space-y-4 p-4 sm:p-6">
-            <PriceSummaryRow
-              label="سعر الباقة"
-              value={formatMoney(planPrice.halala, currency)}
-            />
-            <PriceSummaryRow
-              label="الوجبات المميزة"
-              value={formatMoney(premiumPrice.halala, currency)}
-            />
-            <PriceSummaryRow
-              label="الإضافات"
-              value={formatMoney(addonsPrice.halala, currency)}
-            />
-            <div className="border-t pt-4">
-              <PriceSummaryRow
-                label="الإجمالي"
-                value={formatMoney(totalHalala, currency)}
-                highlighted
+          <div className="space-y-5 p-4 sm:p-6">
+            {appliedPromo ? (
+              <div className="space-y-3 rounded-xl bg-primary/5 p-4">
+                <PriceSummaryRow
+                  label="السعر قبل الخصم"
+                  value={formatMoney(
+                    appliedPromo.grossTotalHalala,
+                    appliedPromo.currency
+                  )}
+                />
+                <PriceSummaryRow
+                  label={`قيمة الخصم — ${appliedPromo.code}`}
+                  value={`-${formatMoney(
+                    appliedPromo.discountHalala,
+                    appliedPromo.currency
+                  )}`}
+                />
+                <PriceSummaryRow
+                  label="السعر بعد الخصم"
+                  value={formatMoney(
+                    appliedPromo.totalHalala,
+                    appliedPromo.currency
+                  )}
+                  highlighted
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 rounded-xl bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm font-medium text-muted-foreground">
+                  الإجمالي الحالي
+                </span>
+                <strong
+                  className="text-2xl font-bold text-primary"
+                  aria-live="polite"
+                >
+                  {formatMoney(totalHalala, currency)}
+                </strong>
+              </div>
+            )}
+
+            <div className="grid gap-2 text-sm sm:grid-cols-3">
+              <PriceLine
+                label="سعر الباقة"
+                value={formatMoney(planPrice.halala, currency)}
+              />
+              <PriceLine
+                label="الوجبات المميزة"
+                value={formatMoney(premiumPrice.halala, currency)}
+              />
+              <PriceLine
+                label="الإضافات"
+                value={formatMoney(addonsPrice.halala, currency)}
               />
             </div>
 
-            <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:justify-end">
+            {!hasSelectedPrice ? (
+              <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
+                اختر الباقة والخيارات ليظهر الإجمالي تلقائياً هنا.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                هذا ملخص مباشر للأسعار الظاهرة في الخيارات المحددة. يقوم الخادم
+                بمراجعة السعر والبيانات مرة أخيرة عند إنشاء الاشتراك.
+              </p>
+            )}
+
+            <div className="border-t pt-5">
+              <div className="mb-3">
+                <h3 className="font-semibold">طريقة الدفع</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  يتم تسجيل كاش أو فيزا يدويًا بدون بوابة دفع أو إعادة توجيه.
+                </p>
+              </div>
+
+              <div
+                className="grid gap-3 sm:grid-cols-2"
+                role="radiogroup"
+                aria-label="طريقة الدفع"
+              >
+                {paymentOptions.map((option) => {
+                  const selected = selectedPaymentMethod === option.method;
+                  const Icon = option.method === "cash" ? Banknote : CreditCard;
+                  return (
+                    <button
+                      key={option.method}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      className={`flex min-h-24 items-center gap-3 rounded-xl border p-4 text-right transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+                        selected
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "hover:border-primary/40 hover:bg-muted/30"
+                      }`}
+                      onClick={() => {
+                        form.setValue("paymentMethod", option.method, {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true,
+                        });
+                      }}
+                    >
+                      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
+                        <Icon className="size-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold">
+                          {option.labelAr}
+                        </span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {option.method === "cash"
+                            ? "تسجيل دفع نقدي كامل"
+                            : "تسجيل دفع بطاقة / جهاز نقاط بيع"}
+                        </span>
+                      </span>
+                      {selected ? (
+                        <CheckCircle2 className="size-5 shrink-0 text-primary" />
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {form.formState.errors.paymentMethod?.message ? (
+                <p
+                  className="mt-2 text-sm font-medium text-destructive"
+                  role="alert"
+                >
+                  {form.formState.errors.paymentMethod.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex justify-end border-t pt-5">
               <Button
                 type="submit"
+                disabled={
+                  isSubmitting ||
+                  !selectedPaymentMethod ||
+                  (Boolean(userId) && isPreselectedUserLoading)
+                }
                 size="lg"
-                disabled={isSubmitting || !hasSelectedPrice}
                 className="w-full gap-2 sm:w-auto sm:min-w-52"
               >
                 {isSubmitting ? (
