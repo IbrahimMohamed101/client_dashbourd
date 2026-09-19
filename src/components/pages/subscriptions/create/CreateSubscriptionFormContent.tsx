@@ -166,7 +166,7 @@ export function CreateSubscriptionFormContent({
           promo.isActive &&
           !promo.deletedAt &&
           promo.state.isCurrentlyValid &&
-          (promo.appliesTo === "subscription" || promo.appliesTo === "all")
+          (promo.code === "KSA96" || promo.code === "BASIC15")
       ),
     [promoCodesResponse?.data]
   );
