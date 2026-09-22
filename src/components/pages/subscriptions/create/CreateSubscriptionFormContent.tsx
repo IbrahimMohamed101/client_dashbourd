@@ -161,6 +161,8 @@ export function CreateSubscriptionFormContent({
   const { data: promoCodesResponse } = usePromoCodesListQuery(false);
   const availablePromoCodes = useMemo<PromoCodeDTO[]>(
     () =>
+      // Only these two offers are promoted/visible in the creation UI.
+      // Manual entry remains open for any other valid backend promo code.
       (promoCodesResponse?.data ?? []).filter((promo) => {
         const code = normalizePromoCode(promo.code);
         return (
@@ -172,23 +174,6 @@ export function CreateSubscriptionFormContent({
       }),
     [promoCodesResponse?.data]
   );
-  useEffect(() => {
-    const currentCode = normalizePromoCode(form.getValues("promoCode"));
-    if (
-      currentCode &&
-      currentCode !== "KSA96" &&
-      currentCode !== "BASIC15"
-    ) {
-      form.setValue("promoCode", "", {
-        shouldDirty: false,
-        shouldTouch: false,
-        shouldValidate: false,
-      });
-      setAppliedPromo(null);
-      setPromoError(null);
-    }
-  }, [form, promoCodesResponse?.data]);
-
   const [selectedUserHasActiveSubscription, setSelectedUserHasActiveSubscription] =
     useState<boolean | null>(userId ? null : false);
   const {
@@ -289,12 +274,6 @@ export function CreateSubscriptionFormContent({
       requestedCode ?? form.getValues("promoCode")
     );
     if (!promoCode) return;
-
-    if (promoCode !== "KSA96" && promoCode !== "BASIC15") {
-      setAppliedPromo(null);
-      setPromoError("هذا الكود غير متاح للاشتراكات من لوحة التحكم.");
-      return;
-    }
 
     const fields: Array<keyof CreateSubscriptionSchemaType> = [
       "userId",
