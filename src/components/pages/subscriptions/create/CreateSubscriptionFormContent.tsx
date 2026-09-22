@@ -172,6 +172,23 @@ export function CreateSubscriptionFormContent({
       }),
     [promoCodesResponse?.data]
   );
+  useEffect(() => {
+    const currentCode = normalizePromoCode(form.getValues("promoCode"));
+    if (
+      currentCode &&
+      currentCode !== "KSA96" &&
+      currentCode !== "BASIC15"
+    ) {
+      form.setValue("promoCode", "", {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false,
+      });
+      setAppliedPromo(null);
+      setPromoError(null);
+    }
+  }, [form, promoCodesResponse?.data]);
+
   const [selectedUserHasActiveSubscription, setSelectedUserHasActiveSubscription] =
     useState<boolean | null>(userId ? null : false);
   const {
