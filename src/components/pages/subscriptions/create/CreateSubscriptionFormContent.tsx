@@ -161,13 +161,15 @@ export function CreateSubscriptionFormContent({
   const { data: promoCodesResponse } = usePromoCodesListQuery(false);
   const availablePromoCodes = useMemo<PromoCodeDTO[]>(
     () =>
-      (promoCodesResponse?.data ?? []).filter(
-        (promo) =>
+      (promoCodesResponse?.data ?? []).filter((promo) => {
+        const code = normalizePromoCode(promo.code);
+        return (
           promo.isActive &&
           !promo.deletedAt &&
           promo.state.isCurrentlyValid &&
-          (promo.code === "KSA96" || promo.code === "BASIC15")
-      ),
+          (code === "KSA96" || code === "BASIC15")
+        );
+      }),
     [promoCodesResponse?.data]
   );
   const [selectedUserHasActiveSubscription, setSelectedUserHasActiveSubscription] =
@@ -265,9 +267,17 @@ export function CreateSubscriptionFormContent({
   const hasSelectedPrice =
     planPrice.halala > 0 || premiumPrice.halala > 0 || addonsPrice.halala > 0;
 
-  const handleApplyPromo = useCallback(async () => {
-    const promoCode = normalizePromoCode(form.getValues("promoCode"));
+  const handleApplyPromo = useCallback(async (requestedCode?: string) => {
+    const promoCode = normalizePromoCode(
+      requestedCode ?? form.getValues("promoCode")
+    );
     if (!promoCode) return;
+
+    if (promoCode !== "KSA96" && promoCode !== "BASIC15") {
+      setAppliedPromo(null);
+      setPromoError("هذا الكود غير متاح للاشتراكات من لوحة التحكم.");
+      return;
+    }
 
     const fields: Array<keyof CreateSubscriptionSchemaType> = [
       "userId",
@@ -309,12 +319,15 @@ export function CreateSubscriptionFormContent({
 
   const handleUsePromoCode = useCallback(
     (code: string) => {
-      form.setValue("promoCode", code.toUpperCase(), {
+      const normalizedCode = normalizePromoCode(code);
+      if (!normalizedCode) return;
+
+      form.setValue("promoCode", normalizedCode, {
         shouldDirty: true,
         shouldTouch: true,
         shouldValidate: true,
       });
-      void handleApplyPromo();
+      void handleApplyPromo(normalizedCode);
     },
     [form, handleApplyPromo]
   );
