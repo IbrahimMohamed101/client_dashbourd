@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePackagesQuery } from "@/hooks/usePackagesQuery";
+import { useSubscriptionPackagesQuery } from "@/hooks/usePackagesQuery";
 import { Package, CalendarDays } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubscriptionSchema";
@@ -43,7 +43,7 @@ export function PlanSelectionSection({
   form,
   onPriceChange,
 }: PlanSelectionSectionProps) {
-  const { data: packagesResponse } = usePackagesQuery();
+  const { data: packagesResponse } = useSubscriptionPackagesQuery();
   const packages = packagesResponse?.data || [];
 
   const selectedPlanId = form.watch("planId");
@@ -178,8 +178,7 @@ export function PlanSelectionSection({
               <SelectContent>
                 {mealsOptions.map((m: MealOption) => (
                   <SelectItem key={m.mealsPerDay} value={String(m.mealsPerDay)}>
-                    {m.mealsPerDay} وجبات — {(m.priceHalala / 100).toFixed(0)}{" "}
-                    ريال
+                    {m.mealsPerDay} وجبات — {(m.priceHalala / 100).toFixed(0)} ريال
                   </SelectItem>
                 ))}
               </SelectContent>
