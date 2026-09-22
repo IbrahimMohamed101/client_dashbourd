@@ -1,8 +1,6 @@
 import api from "@/lib/apis";
-import {
-  isCanonicalSubscriptionPlanKey,
-  normalizePackagesResponse,
-} from "@/utils/packageAdapter";
+import { normalizePackagesResponse } from "@/utils/packageAdapter";
+import { isCanonicalSubscriptionPlanKey } from "@/constants/menuCatalog";
 
 export type FetchPackagesOptions = {
   /**
