@@ -1,5 +1,8 @@
 import api from "@/lib/apis";
-import { normalizePackagesResponse } from "@/utils/packageAdapter";
+import {
+  isCanonicalSubscriptionPlanKey,
+  normalizePackagesResponse,
+} from "@/utils/packageAdapter";
 
 export type FetchPackagesOptions = {
   /**
@@ -23,5 +26,16 @@ export const fetchGetPackagesData = async ({
       : {}),
   });
 
-  return normalizePackagesResponse(response.data);
+  const normalized = normalizePackagesResponse(response.data);
+
+  // Subscription creation must never surface legacy/test/duplicate plans.
+  // The canonical commercial catalog is keyed by the stable subscription_*_days keys.
+  if (fresh) {
+    return {
+      ...normalized,
+      data: normalized.data.filter((pkg) => isCanonicalSubscriptionPlanKey(pkg.key)),
+    };
+  }
+
+  return normalized;
 };
