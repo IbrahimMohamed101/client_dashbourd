@@ -104,6 +104,7 @@ export function PlanSelectionSection({
               // Respect the commercial catalog order. For the 26-day
               // package the first configured option is 100g, unless the
               // package data itself defines another first option.
+              const preferredGrams = Number(nextGramsOptions[0]?.grams || 0);
 
               const nextMealsOptions =
                 nextGramsOptions.find(
