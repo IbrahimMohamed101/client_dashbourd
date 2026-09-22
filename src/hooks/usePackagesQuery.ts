@@ -4,7 +4,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 export const packagesQueryOptions = () =>
   queryOptions({
     queryKey: ["packages"],
-    queryFn: fetchGetPackagesData,
+    queryFn: () => fetchGetPackagesData(),
     staleTime: 1000 * 60 * 5,
   });
 
