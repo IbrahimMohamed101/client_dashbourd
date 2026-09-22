@@ -101,12 +101,9 @@ export function PlanSelectionSection({
                   (g: GramsOption) => g.isActive
                 ) || [];
 
-              // Commercial default for the 26-day package is 150g.
-              const preferredGrams =
-                nextPackage?.daysCount === 26 &&
-                nextGramsOptions.some((g) => Number(g.grams) === 150)
-                  ? 150
-                  : Number(nextGramsOptions[0]?.grams || 0);
+              // Respect the commercial catalog order. For the 26-day
+              // package the first configured option is 100g, unless the
+              // package data itself defines another first option.
 
               const nextMealsOptions =
                 nextGramsOptions.find(
