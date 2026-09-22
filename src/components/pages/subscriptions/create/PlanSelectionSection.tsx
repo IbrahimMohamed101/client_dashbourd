@@ -93,9 +93,37 @@ export function PlanSelectionSection({
           <Select
             value={selectedPlanId}
             onValueChange={(value) => {
+              const nextPackage = packages.find(
+                (pkg: PackageType) => (pkg.id || pkg._id) === value
+              );
+              const nextGramsOptions =
+                nextPackage?.gramsOptions?.filter(
+                  (g: GramsOption) => g.isActive
+                ) || [];
+
+              // Commercial default for the 26-day package is 150g.
+              const preferredGrams =
+                nextPackage?.daysCount === 26 &&
+                nextGramsOptions.some((g) => Number(g.grams) === 150)
+                  ? 150
+                  : Number(nextGramsOptions[0]?.grams || 0);
+
+              const nextMealsOptions =
+                nextGramsOptions.find(
+                  (g) => Number(g.grams) === preferredGrams
+                )?.mealsOptions?.filter(
+                  (m: MealOption) => m.isActive
+                ) || [];
+
+              const preferredMeals =
+                Number(nextMealsOptions.find((m) => m.mealsPerDay === 1)?.mealsPerDay) ||
+                Number(nextMealsOptions[0]?.mealsPerDay || 0);
+
               form.setValue("planId", value, { shouldValidate: true });
-              form.setValue("grams", 0);
-              form.setValue("mealsPerDay", 0);
+              form.setValue("grams", preferredGrams, { shouldValidate: true });
+              form.setValue("mealsPerDay", preferredMeals, {
+                shouldValidate: true,
+              });
             }}
           >
             <SelectTrigger>
