@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,7 @@ import {
   MapPin,
   Package,
   ReceiptText,
+  Settings2,
   ShieldCheck,
   Store,
   Truck,
@@ -549,12 +552,23 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
                 ) : null}
               </div>
               {details ? (
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary">{details.displayId || details.id || details._id}</Badge>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Badge variant="secondary">
+                    {details.displayId || details.id || details._id}
+                  </Badge>
                   <Badge variant="outline" className="gap-1">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     قراءة فقط
                   </Badge>
+                  <Button asChild size="sm" variant="secondary" className="gap-1.5 font-semibold">
+                    <Link
+                      to="/subscriptions/$subscriptionId"
+                      params={{ subscriptionId: details._id || details.id }}
+                    >
+                      <Settings2 className="h-4 w-4" />
+                      إدارة الاشتراك
+                    </Link>
+                  </Button>
                 </div>
               ) : null}
             </div>
