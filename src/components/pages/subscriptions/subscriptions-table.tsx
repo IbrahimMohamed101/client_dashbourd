@@ -34,6 +34,7 @@ import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/custom/button-variants";
 import { cn } from "@/lib/utils";
 import type { Subscription } from "@/types/subscriptionTypes";
+import { SubscriptionQuickViewDialog } from "./SubscriptionQuickViewDialog";
 import { SubscriptionInvoiceDialog } from "./invoice/SubscriptionInvoiceDialog";
 import { SubscriptionPurchaseHistoryDialog } from "./SubscriptionPurchaseHistoryDialog";
 
@@ -47,6 +48,8 @@ export function SubscriptionsTable() {
     pageIndex: 0,
     pageSize: 10,
   });
+  const [selectedSubscription, setSelectedSubscription] =
+    React.useState<Subscription | null>(null);
   const [invoiceSubscriptionId, setInvoiceSubscriptionId] =
     React.useState<string | null>(null);
   const [purchaseHistorySubscription, setPurchaseHistorySubscription] =
@@ -66,6 +69,7 @@ export function SubscriptionsTable() {
   const columns = React.useMemo(
     () =>
       getSubscriptionsColumns({
+        onView: setSelectedSubscription,
         onInvoice: (subscription) =>
           setInvoiceSubscriptionId(subscription._id || subscription.id),
         onPurchaseHistory: setPurchaseHistorySubscription,
@@ -240,6 +244,14 @@ export function SubscriptionsTable() {
           itemsLabel="الاشتراكات"
         />
       </div>
+
+      <SubscriptionQuickViewDialog
+        open={!!selectedSubscription}
+        subscription={selectedSubscription}
+        onOpenChange={(open) => {
+          if (!open) setSelectedSubscription(null);
+        }}
+      />
 
       <SubscriptionInvoiceDialog
         subscriptionId={invoiceSubscriptionId || ""}
