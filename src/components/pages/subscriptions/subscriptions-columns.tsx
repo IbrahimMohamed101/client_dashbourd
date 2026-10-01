@@ -13,13 +13,11 @@ import {
 } from "@/lib/subscriptionStackingPresentation";
 
 interface SubscriptionsColumnsOptions {
-  onView: (subscription: Subscription) => void;
   onInvoice: (subscription: Subscription) => void;
   onPurchaseHistory: (subscription: Subscription) => void;
 }
 
 export function getSubscriptionsColumns({
-  onView,
   onInvoice,
   onPurchaseHistory,
 }: SubscriptionsColumnsOptions): ColumnDef<Subscription>[] {
@@ -174,7 +172,6 @@ export function getSubscriptionsColumns({
             <Link
               to="/subscriptions/$subscriptionId"
               params={{ subscriptionId: row.original._id || row.original.id }}
-              onClick={() => onView(row.original)}
             >
               <EyeIcon className="ml-1 size-4" />
               إدارة الاشتراك
