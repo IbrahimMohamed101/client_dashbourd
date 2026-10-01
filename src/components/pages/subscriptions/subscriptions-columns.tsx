@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Subscription } from "@/types/subscriptionTypes";
 import { Badge } from "@/components/ui/badge";
@@ -156,6 +157,7 @@ export function getSubscriptionsColumns({
             <ReceiptText className="size-4" />
             الفاتورة
           </Button>
+
           {subscriptionPurchaseCount(row.original) > 1 ? (
             <Button
               variant="outline"
@@ -167,9 +169,16 @@ export function getSubscriptionsColumns({
               المشتريات
             </Button>
           ) : null}
-          <Button variant="outline" size="sm" onClick={() => onView(row.original)}>
-            <EyeIcon className="ml-1 size-4" />
-            التفاصيل
+
+          <Button variant="outline" size="sm" asChild>
+            <Link
+              to="/subscriptions/$subscriptionId"
+              params={{ subscriptionId: row.original._id || row.original.id }}
+              onClick={() => onView(row.original)}
+            >
+              <EyeIcon className="ml-1 size-4" />
+              إدارة الاشتراك
+            </Link>
           </Button>
         </div>
       ),
