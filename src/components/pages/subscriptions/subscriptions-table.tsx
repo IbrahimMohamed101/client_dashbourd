@@ -125,6 +125,8 @@ export function SubscriptionsTable() {
                 <SelectItem value="all">كل الحالات</SelectItem>
                 <SelectItem value="active">نشط</SelectItem>
                 <SelectItem value="pending">قيد الانتظار</SelectItem>
+                <SelectItem value="pending_payment">قيد الدفع</SelectItem>
+                <SelectItem value="frozen">مجمّد</SelectItem>
                 <SelectItem value="expired">منتهي</SelectItem>
                 <SelectItem value="canceled">ملغى</SelectItem>
                 <SelectItem value="ended">انتهى</SelectItem>
