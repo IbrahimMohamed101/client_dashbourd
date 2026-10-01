@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { Subscription } from "@/types/subscriptionTypes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EyeIcon, History, ReceiptText } from "lucide-react";
+import { EyeIcon, History, ReceiptText, Settings2 } from "lucide-react";
 import {
   currentStackingAggregateBalance,
   subscriptionPlanLabel,
@@ -13,11 +13,13 @@ import {
 } from "@/lib/subscriptionStackingPresentation";
 
 interface SubscriptionsColumnsOptions {
+  onView: (subscription: Subscription) => void;
   onInvoice: (subscription: Subscription) => void;
   onPurchaseHistory: (subscription: Subscription) => void;
 }
 
 export function getSubscriptionsColumns({
+  onView,
   onInvoice,
   onPurchaseHistory,
 }: SubscriptionsColumnsOptions): ColumnDef<Subscription>[] {
@@ -61,7 +63,11 @@ export function getSubscriptionsColumns({
       header: "نوع الاشتراك",
       cell: ({ row }) => (
         <div className="flex flex-col gap-1">
-          <Badge variant={row.original.stacking?.isCombinedPackage ? "default" : "outline"}>
+          <Badge
+            variant={
+              row.original.stacking?.isCombinedPackage ? "default" : "outline"
+            }
+          >
             {subscriptionRelationshipLabel(row.original)}
           </Badge>
           {subscriptionPurchaseCount(row.original) > 1 ? (
@@ -144,41 +150,61 @@ export function getSubscriptionsColumns({
     {
       id: "actions",
       header: "الإجراءات",
-      cell: ({ row }) => (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            className="gap-1.5 font-semibold"
-            onClick={() => onInvoice(row.original)}
-          >
-            <ReceiptText className="size-4" />
-            الفاتورة
-          </Button>
+      cell: ({ row }) => {
+        const subscription = row.original;
+        const subscriptionId = subscription._id || subscription.id;
 
-          {subscriptionPurchaseCount(row.original) > 1 ? (
+        return (
+          <div className="flex min-w-[310px] flex-wrap items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-1.5 font-semibold"
+              onClick={() => onInvoice(subscription)}
+            >
+              <ReceiptText className="size-4" />
+              الفاتورة
+            </Button>
+
+            {subscriptionPurchaseCount(subscription) > 1 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => onPurchaseHistory(subscription)}
+              >
+                <History className="size-4" />
+                المشتريات
+              </Button>
+            ) : null}
+
             <Button
               variant="outline"
               size="sm"
               className="gap-1.5"
-              onClick={() => onPurchaseHistory(row.original)}
+              onClick={() => onView(subscription)}
             >
-              <History className="size-4" />
-              المشتريات
+              <EyeIcon className="size-4" />
+              التفاصيل
             </Button>
-          ) : null}
 
-          <Button variant="outline" size="sm" asChild>
-            <Link
-              to="/subscriptions/$subscriptionId"
-              params={{ subscriptionId: row.original._id || row.original.id }}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-1.5 font-semibold"
+              asChild
             >
-              <EyeIcon className="ml-1 size-4" />
-              إدارة الاشتراك
-            </Link>
-          </Button>
-        </div>
-      ),
+              <Link
+                to="/subscriptions/$subscriptionId"
+                params={{ subscriptionId }}
+              >
+                <Settings2 className="size-4" />
+                إدارة الاشتراك
+              </Link>
+            </Button>
+          </div>
+        );
+      },
       enableHiding: false,
     },
   ];
