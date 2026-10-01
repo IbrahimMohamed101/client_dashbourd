@@ -34,7 +34,6 @@ import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/custom/button-variants";
 import { cn } from "@/lib/utils";
 import type { Subscription } from "@/types/subscriptionTypes";
-import { SubscriptionQuickViewDialog } from "./SubscriptionQuickViewDialog";
 import { SubscriptionInvoiceDialog } from "./invoice/SubscriptionInvoiceDialog";
 import { SubscriptionPurchaseHistoryDialog } from "./SubscriptionPurchaseHistoryDialog";
 
@@ -48,8 +47,6 @@ export function SubscriptionsTable() {
     pageIndex: 0,
     pageSize: 10,
   });
-  const [selectedSubscription, setSelectedSubscription] =
-    React.useState<Subscription | null>(null);
   const [invoiceSubscriptionId, setInvoiceSubscriptionId] =
     React.useState<string | null>(null);
   const [purchaseHistorySubscription, setPurchaseHistorySubscription] =
@@ -69,7 +66,6 @@ export function SubscriptionsTable() {
   const columns = React.useMemo(
     () =>
       getSubscriptionsColumns({
-        onView: setSelectedSubscription,
         onInvoice: (subscription) =>
           setInvoiceSubscriptionId(subscription._id || subscription.id),
         onPurchaseHistory: setPurchaseHistorySubscription,
@@ -108,10 +104,8 @@ export function SubscriptionsTable() {
         </span>
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Status filter */}
           <Select
             value={statusFilter}
             onValueChange={(value) => {
@@ -134,7 +128,6 @@ export function SubscriptionsTable() {
             </SelectContent>
           </Select>
 
-          {/* Fulfillment filter */}
           <Select
             value={fulfillmentFilter}
             onValueChange={(value) => {
@@ -154,7 +147,6 @@ export function SubscriptionsTable() {
             </SelectContent>
           </Select>
 
-          {/* Search box */}
           <div className="relative min-w-64 flex-1">
             <SearchIcon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -168,7 +160,6 @@ export function SubscriptionsTable() {
             />
           </div>
 
-          {/* action link */}
           <Link
             to="/subscriptions/create"
             className={cn(buttonVariants({ variant: "default" }), "bg-primary")}
@@ -177,12 +168,10 @@ export function SubscriptionsTable() {
             إضافة اشتراك جديد
           </Link>
 
-          {/* Column visibility */}
           <DataTableViewOptions table={table} />
         </div>
       </div>
 
-      {/* Table */}
       <div className="relative mt-4 flex flex-col gap-4 overflow-auto px-4 lg:px-6">
         <div className="overflow-hidden rounded-lg border bg-card">
           <Table>
@@ -245,21 +234,12 @@ export function SubscriptionsTable() {
           </Table>
         </div>
 
-        {/* Pagination */}
         <DataTablePagination
           table={table}
           totalItems={meta.total}
           itemsLabel="الاشتراكات"
         />
       </div>
-
-      <SubscriptionQuickViewDialog
-        open={!!selectedSubscription}
-        subscription={selectedSubscription}
-        onOpenChange={(open) => {
-          if (!open) setSelectedSubscription(null);
-        }}
-      />
 
       <SubscriptionInvoiceDialog
         subscriptionId={invoiceSubscriptionId || ""}
