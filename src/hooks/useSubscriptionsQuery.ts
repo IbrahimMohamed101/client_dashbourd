@@ -187,7 +187,9 @@ export const useSearchSubscriptionsByPhoneQuery = (phone: string) => {
     queryKey: ["subscriptions-search", phone],
     queryFn: () => searchSubscriptionsByPhone(phone),
     enabled: !!phone && phone.length >= 8,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
     retry: false,
   });
 };
