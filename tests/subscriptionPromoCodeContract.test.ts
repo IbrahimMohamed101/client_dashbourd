@@ -115,5 +115,8 @@ describe("subscription promo-code contract", () => {
     expect(source).toContain("السعر قبل الخصم");
     expect(source).toContain("قيمة الخصم");
     expect(source).toContain("السعر بعد الخصم");
+    expect(source).toContain(
+      "الخصم يُطبق على سعر الباقة فقط. الإضافات والوجبات المميزة ورسوم التوصيل تُضاف كاملة بعد الخصم."
+    );
   });
 });
