@@ -49,7 +49,7 @@ export function PromoCodeSection({
         <div>
           <h2 className="font-semibold">كود الخصم</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            اختر كودًا جاهزًا بالأسفل ليتم تعبئته وتطبيقه تلقائيًا، أو أدخل الكود يدويًا.
+            الخصم يُطبق على سعر الباقة فقط. الإضافات والوجبات المميزة ورسوم التوصيل تُضاف كاملة بعد الخصم.
           </p>
         </div>
       </div>
