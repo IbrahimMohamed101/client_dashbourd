@@ -408,7 +408,7 @@ export function MarketingAnalyticsReport() {
             />
             <MetricCard
               icon={<BadgeDollarSignIcon className="size-4" />}
-              label="إيراد التطبيق"
+              label="إيراد التطبيق حسب الفلاتر"
               value={formatMoney(report.kpis.appRevenueHalala)}
               helper={comparisonLabel(metrics.appRevenueHalala)}
             />
@@ -479,7 +479,7 @@ export function MarketingAnalyticsReport() {
                   <EmptyLine />
                 )}
                 <div className="flex items-center justify-between border-t pt-3 font-semibold">
-                  <span>إجمالي إيراد الاشتراكات</span>
+                  <span>إجمالي إيراد الاشتراكات — كل القنوات</span>
                   <span>{formatMoney(report.kpis.totalSubscriptionRevenueHalala)}</span>
                 </div>
               </CardContent>
@@ -498,7 +498,7 @@ export function MarketingAnalyticsReport() {
                 <thead className="border-b bg-muted/25 text-muted-foreground">
                   <tr>
                     <TableHead>الكود</TableHead>
-                    <TableHead>المحاولات</TableHead>
+                    <TableHead>استخدامات مسجلة</TableHead>
                     <TableHead>مدفوع</TableHead>
                     <TableHead>التحويل</TableHead>
                     <TableHead>الإيراد</TableHead>
