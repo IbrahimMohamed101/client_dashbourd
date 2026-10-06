@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIcon,
   ArrowDownIcon,
@@ -636,7 +636,7 @@ function FilterField({
   children,
 }: {
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
@@ -681,7 +681,7 @@ function MetricCard({
   value,
   helper,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   value: string;
   helper?: string | null;
@@ -798,7 +798,7 @@ function EmptyLine() {
   );
 }
 
-function TableHead({ children }: { children: React.ReactNode }) {
+function TableHead({ children }: { children: ReactNode }) {
   return <th className="px-4 py-3 text-right font-medium">{children}</th>;
 }
 
@@ -807,7 +807,7 @@ function TableCell({
   className = "",
   colSpan,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   colSpan?: number;
 }) {
