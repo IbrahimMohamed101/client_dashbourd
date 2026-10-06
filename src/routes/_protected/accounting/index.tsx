@@ -35,6 +35,7 @@ import {
 } from "@/features/accounting/accountingRange";
 import { AccountingRangeInsights } from "@/features/accounting/components/AccountingRangeInsights";
 import { LegacyDailyAccountingReport } from "@/features/accounting/components/LegacyDailyAccountingReport";
+import { MarketingAnalyticsReport } from "@/features/accounting/components/MarketingAnalyticsReport";
 import { SubscriptionPaymentsReport } from "@/features/accounting/components/SubscriptionPaymentsReport";
 import type { SubscriptionPaymentRangeParams } from "@/features/accounting/accountingRangeTypes";
 import {
@@ -63,7 +64,7 @@ export const Route = createFileRoute("/_protected/accounting/")({
   component: AccountingPage,
 });
 
-type AccountingTab = "subscription-payments" | "legacy-daily";
+type AccountingTab = "subscription-payments" | "marketing-analytics" | "legacy-daily";
 type AccountingReportMode = SubscriptionPaymentReportMode | "range";
 type RangePresetSelection = AccountingRangePresetId | "custom";
 
@@ -190,7 +191,9 @@ function AccountingPage() {
 
   return (
     <div className="space-y-5 px-4 py-5 text-right lg:px-6" dir="rtl">
-      <AccountingHeader range={appliedRange} reportMode={reportMode} />
+      {activeTab !== "marketing-analytics" ? (
+        <AccountingHeader range={appliedRange} reportMode={reportMode} />
+      ) : null}
 
       <Tabs
         value={activeTab}
@@ -198,10 +201,14 @@ function AccountingPage() {
         className="space-y-5"
         dir="rtl"
       >
-        <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl bg-muted/60 p-1 lg:w-fit lg:min-w-[430px]">
+        <TabsList className="grid h-11 w-full grid-cols-3 rounded-xl bg-muted/60 p-1 lg:w-fit lg:min-w-[660px]">
           <TabsTrigger value="subscription-payments" className="gap-2">
             <ReceiptTextIcon className="size-4" />
             تحصيل الاشتراكات
+          </TabsTrigger>
+          <TabsTrigger value="marketing-analytics" className="gap-2">
+            <SparklesIcon className="size-4" />
+            تحليلات التسويق
           </TabsTrigger>
           <TabsTrigger value="legacy-daily" className="gap-2">
             <CalendarDaysIcon className="size-4" />
@@ -248,6 +255,10 @@ function AccountingPage() {
             onRetry={() => void activeReportQuery.refetch()}
             isFetching={activeReportQuery.isFetching}
           />
+        </TabsContent>
+
+        <TabsContent value="marketing-analytics" className="space-y-5">
+          <MarketingAnalyticsReport />
         </TabsContent>
 
         <TabsContent value="legacy-daily" className="space-y-5">

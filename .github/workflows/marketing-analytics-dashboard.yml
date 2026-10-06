@@ -1,0 +1,33 @@
+name: Marketing analytics dashboard
+
+on:
+  pull_request:
+    paths:
+      - "src/features/accounting/marketingAnalytics.ts"
+      - "src/features/accounting/components/MarketingAnalyticsReport.tsx"
+      - "src/routes/_protected/accounting/index.tsx"
+      - ".github/workflows/marketing-analytics-dashboard.yml"
+  push:
+    branches:
+      - main
+      - "feat/marketing-analytics-readonly"
+    paths:
+      - "src/features/accounting/marketingAnalytics.ts"
+      - "src/features/accounting/components/MarketingAnalyticsReport.tsx"
+      - "src/routes/_protected/accounting/index.tsx"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
