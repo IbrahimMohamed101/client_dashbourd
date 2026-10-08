@@ -36,6 +36,7 @@ import {
 import { AccountingRangeInsights } from "@/features/accounting/components/AccountingRangeInsights";
 import { LegacyDailyAccountingReport } from "@/features/accounting/components/LegacyDailyAccountingReport";
 import { MarketingAnalyticsReport } from "@/features/accounting/components/MarketingAnalyticsReport";
+import { LandingAnalyticsReport } from "@/features/accounting/components/LandingAnalyticsReport";
 import { SubscriptionPaymentsReport } from "@/features/accounting/components/SubscriptionPaymentsReport";
 import type { SubscriptionPaymentRangeParams } from "@/features/accounting/accountingRangeTypes";
 import {
@@ -259,6 +260,7 @@ function AccountingPage() {
 
         <TabsContent value="marketing-analytics" className="space-y-5">
           <MarketingAnalyticsReport />
+          <LandingAnalyticsReport />
         </TabsContent>
 
         <TabsContent value="legacy-daily" className="space-y-5">
