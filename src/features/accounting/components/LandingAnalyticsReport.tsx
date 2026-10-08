@@ -12,7 +12,7 @@ interface Bucket { key: string; count: number }
 interface LandingAnalyticsData {
   range: { from: string; to: string; days: number; timezone: string };
   kpis: {
-    pageViews: number; sessions: number; ctaClicks: number;
+    pageViews: number; sessions: number; ctaClicks: number; uniqueLeads: number;
     storeClicks: number; storeClickRate: number;
     navClicks: number; sectionViews: number; faqOpens: number; reelClicks: number;
   };
@@ -67,6 +67,7 @@ export function LandingAnalyticsReport() {
   const report = query.data;
   const cards = report ? [
     ["مشاهدات الصفحة", report.kpis.pageViews],
+    ["طلبات تواصل فريدة محفوظة", report.kpis.uniqueLeads],
     ["الجلسات التقريبية (تبويب المتصفح)", report.kpis.sessions],
     ["نقرات بدء الاشتراك", report.kpis.ctaClicks],
     ["نقرات متاجر التطبيق", report.kpis.storeClicks],
