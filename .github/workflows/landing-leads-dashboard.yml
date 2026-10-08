@@ -1,0 +1,25 @@
+name: Landing leads dashboard build
+on:
+  pull_request:
+    paths:
+      - "src/routes/_protected/landing-leads/**"
+      - "src/features/landing-leads/**"
+      - "src/constants/NavLinksData.tsx"
+      - "src/constants/routes.ts"
+      - ".github/workflows/landing-leads-dashboard.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/routes/_protected/landing-leads/**"
+      - "src/features/landing-leads/**"
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
