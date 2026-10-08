@@ -23,6 +23,7 @@ import {
   Truck,
   Users,
   ContactRound,
+  ClipboardList,
 } from "lucide-react";
 
 export const NavLinksData = {
@@ -41,6 +42,11 @@ export const NavLinksData = {
       title: "المحاسبة",
       url: "/accounting",
       icon: <ChartNoAxesCombined />,
+    },
+    {
+      title: "طلبات الاشتراك من الموقع",
+      url: "/landing-leads",
+      icon: <ClipboardList />,
     },
     {
       title: "مراجعة خصم الوجبات",
