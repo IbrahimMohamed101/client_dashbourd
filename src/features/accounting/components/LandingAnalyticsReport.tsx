@@ -26,6 +26,7 @@ const initialRange = resolveAccountingRangePreset("last30", getTodayKSADate());
 const fmt = (n: number) => new Intl.NumberFormat("ar-SA").format(n);
 const locationLabels: Record<string,string> = {
   hero: "الواجهة الرئيسية", header: "شريط التنقل", app: "قسم التطبيق",
+  benefits: "الاشتراك على مقاسك",
   plans: "الباقات", final: "آخر الصفحة",
   ios: "iOS", android: "Android", desktop: "كمبيوتر",
   app_store: "App Store", google_play: "Google Play",
