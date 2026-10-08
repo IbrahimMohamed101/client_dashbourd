@@ -22,6 +22,7 @@ type Lead = {
   daysCount: number;
   grams: number;
   mealsPerDay: number;
+  fulfillmentMethod?: "delivery" | "pickup" | "unspecified";
   status: Status;
   staffNote: string;
   marketingConsent: boolean;
@@ -76,6 +77,8 @@ function LeadCard({ lead }: { lead: Lead }) {
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
           <span>المصدر: <strong className="text-foreground">{displaySource(lead)}</strong></span>
+          <span>الاستلام المفضل: <strong className="text-foreground">{lead.fulfillmentMethod === "delivery" ? "توصيل" : lead.fulfillmentMethod === "pickup" ? "استلام من الفرع" : "غير محدد"}</strong></span>
+          {lead.location === "benefits" && <span>من قسم: <strong className="text-foreground">الاشتراك على مقاسك</strong></span>}
           {lead.campaign && <span>الحملة: <strong className="text-foreground">{lead.campaign}</strong></span>}
           <span>موافقة العروض: {lead.marketingConsent ? "نعم" : "لا"}</span>
         </div>
