@@ -13,6 +13,7 @@ const SUPERADMIN_ROUTES = [
   "/delivery",
   "/payments",
   "/accounting",
+  "/landing-leads",
   "/subscription-audit",
   "/promo-codes",
   "/zones",
@@ -71,6 +72,7 @@ const CASHIER_ROUTES = [
 ];
 
 const RESTAURANT_ROUTES = [
+  "/landing-leads",
   "/operations",
   "/one-time-orders",
   "/subscriptions",
