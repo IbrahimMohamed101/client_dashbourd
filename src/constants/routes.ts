@@ -30,6 +30,7 @@ const SUPERADMIN_ROUTES = [
 ];
 
 const ADMIN_ROUTES = [
+  "/daily-closing",
   "/landing-leads",
   "/dashboard",
   "/operations",
