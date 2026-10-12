@@ -115,7 +115,10 @@ function DailyClosingPage() {
   const change = (key: keyof FormState, value: string) => setForm(f => ({ ...f, [key]: value }));
   const action = useMutation({
     mutationFn: async (kind: "save" | "submit" | "approve" | "return") => {
-      if (kind === "save") return (await api.put<ClosingResponse>(`/api/dashboard/daily-closings/${date}`, parseForm(form))).data.data;
+      if (kind === "save" || kind === "submit") {
+        const saved = (await api.put<ClosingResponse>(`/api/dashboard/daily-closings/${date}`, parseForm(form))).data.data;
+        if (kind === "save") return saved;
+      }
       return (await api.post<ClosingResponse>(`/api/dashboard/daily-closings/${date}/${kind}`,
         kind === "return" ? { reason: returnReason } : {})).data.data;
     },
@@ -265,9 +268,9 @@ function DailyClosingPage() {
               </div>
               {!locked && <div className="flex flex-wrap gap-2">
                 <Button onClick={() => { try { parseForm(form); action.mutate("save"); } catch (e) { toast.error(formatError(e)); } }} disabled={action.isPending}><Save className="size-4" /> حفظ مسودة</Button>
-                {view.status === "draft" && <Button variant="secondary" disabled={action.isPending} onClick={() => action.mutate("submit")}><Send className="size-4" /> إرسال للمراجعة</Button>}
+                <Button variant="secondary" disabled={action.isPending} onClick={() => action.mutate("submit")}><Send className="size-4" /> حفظ وإرسال للمراجعة</Button>
               </div>}
-              {view.status === "new" && <p className="text-xs text-muted-foreground">احفظ المسودة أولًا قبل إرسالها للمراجعة.</p>}
+              {view.status === "new" && <p className="text-xs text-muted-foreground">يمكنك حفظ مسودة أو إرسال التقفيلة مباشرة للمراجعة.</p>}
               {status === "submitted" && <div className="rounded-lg border p-4 space-y-3">
                 <p className="flex items-center gap-2 text-sm"><FileCheck2 className="size-4" /> التقفيلة بانتظار موافقة المدير، ولا يمكن تعديلها الآن.</p>
                 {canApprove && <>
