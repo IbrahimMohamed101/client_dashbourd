@@ -1,0 +1,27 @@
+name: Daily Cash Closing UI
+on:
+  pull_request:
+    paths:
+      - 'src/routes/_protected/daily-closing/**'
+      - 'src/constants/routes.ts'
+      - 'src/constants/NavLinksData.tsx'
+      - 'src/constants/dailyClosingPermissions.test.ts'
+      - '.github/workflows/daily-cash-closing.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/routes/_protected/daily-closing/**'
+      - 'src/constants/routes.ts'
+      - 'src/constants/NavLinksData.tsx'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx vitest run src/constants/dailyClosingPermissions.test.ts
