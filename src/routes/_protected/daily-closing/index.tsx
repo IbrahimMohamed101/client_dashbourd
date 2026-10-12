@@ -215,7 +215,7 @@ function DailyClosingPage() {
     (automatic?.reviewPaymentsCount ?? 0) > 0 ||
     (automatic?.unknownHalala ?? 0) > 0 || (automatic?.refundsHalala ?? 0) > 0;
   const totalChannelSales = restaurant + apps;
-  const differenceLabel = overallDifference === 0 ? "المبالغ متطابقة" : overallDifference < 0 ? "يوجد عجز" : "يوجد زيادة";
+  const differenceLabel = overallDifference === 0 ? (reviewNeeded ? "توجد ملاحظات للمراجعة" : "المبالغ متطابقة") : overallDifference < 0 ? "يوجد عجز" : "يوجد زيادة";
   const canEdit = !locked && !action.isPending;
 
   const amountField = (label: string, id: "restaurant" | "hungerstation" | "keeta" | "cash" | "card", hint?: string) => (
@@ -226,7 +226,7 @@ function DailyClosingPage() {
           onFocus={e => e.currentTarget.select()} disabled={!canEdit} value={form[id]}
           onChange={e => change(id, e.target.value)}
           className="h-12 rounded-xl border-border/70 bg-background ps-4 pe-14 text-left text-lg font-semibold tabular-nums shadow-none focus-visible:ring-2" />
-        <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted-foreground">ر.س</span>
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">ر.س</span>
       </div>
       {hint && <p className="text-xs leading-5 text-muted-foreground">{hint}</p>}
     </div>
@@ -283,11 +283,11 @@ function DailyClosingPage() {
                     <p className="text-3xl font-bold tracking-tight tabular-nums sm:text-4xl" dir="ltr">{moneySar(sales)}</p>
                     <p className="text-xs leading-5 text-muted-foreground">المطعم + التطبيقات + تحصيل الاشتراكات قبل الاستردادات</p>
                   </div>
-                  <div className={overallDifference === 0
+                  <div className={!reviewNeeded
                     ? "rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
                     : "rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300"}>
                     <p className="flex items-center gap-2 text-xs font-semibold">
-                      {overallDifference === 0 ? <CheckCircle2 className="size-4" /> : <AlertTriangle className="size-4" />}
+                      {!reviewNeeded ? <CheckCircle2 className="size-4" /> : <AlertTriangle className="size-4" />}
                       {differenceLabel}
                     </p>
                     <p dir="ltr" className="mt-1 text-xl font-bold tabular-nums">{moneySar(overallDifference)}</p>
