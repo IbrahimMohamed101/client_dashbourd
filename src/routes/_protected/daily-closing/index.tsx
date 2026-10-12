@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, FileCheck2, Plus, RefreshCw, Save, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, FileCheck2, Info, Plus, RefreshCw, Save, Send, ShoppingBag, Store, Trash2, Wallet, CreditCard } from "lucide-react";
 
 import api from "@/lib/apis";
 import { useAuth } from "@/hooks/useAuth";
@@ -132,6 +132,10 @@ function DailyClosingPage() {
   const [date, setDate] = useState(getTodayKSADate());
   const [form, setForm] = useState<FormState>(defaultForm);
   const [returnReason, setReturnReason] = useState("");
+  const [edited, setEdited] = useState(false);
+  const [showPayments, setShowPayments] = useState(false);
+  const [showCountCorrection, setShowCountCorrection] = useState(false);
+  const [showExtraNotes, setShowExtraNotes] = useState(false);
   const queryClient = useQueryClient();
   const key = ["daily-cash-closing", date];
   const query = useQuery({
@@ -142,8 +146,40 @@ function DailyClosingPage() {
   });
   const view = query.data;
   const locked = view?.status === "submitted" || view?.status === "approved";
-  useEffect(() => { if (view) setForm(formFromView(view)); }, [view]);
-  const change = (key: keyof FormState, value: string) => setForm(f => ({ ...f, [key]: value }));
+  useEffect(() => {
+    if (view && !edited) {
+      setForm(formFromView(view));
+      if (view.confirmedSubscriptionCount !== null) setShowCountCorrection(true);
+      if (view.notes) setShowExtraNotes(true);
+    }
+  }, [view, edited]);
+  useEffect(() => {
+    if (!edited) return;
+    const warnBeforeLeave = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeave);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeave);
+  }, [edited]);
+  const change = (key: keyof FormState, value: string) => {
+    setEdited(true);
+    setForm(f => ({ ...f, [key]: value }));
+  };
+  const updateOther = (next: (current: FormState["other"]) => FormState["other"]) => {
+    setEdited(true);
+    setForm(f => ({ ...f, other: next(f.other) }));
+  };
+  const changeDate = (nextDate: string) => {
+    if (!nextDate || nextDate === date) return;
+    if (edited && !window.confirm("فيه تعديلات لسه متحفظتش. عايز تغير التاريخ وتلغي التعديلات؟")) return;
+    setEdited(false);
+    setDate(nextDate);
+    setForm(defaultForm);
+    setShowPayments(false);
+    setShowCountCorrection(false);
+    setShowExtraNotes(false);
+  };
   const action = useMutation({
     mutationFn: async (kind: "save" | "submit" | "approve" | "return") => {
       if (kind === "save" || kind === "submit") {
@@ -155,6 +191,7 @@ function DailyClosingPage() {
     },
     onSuccess: (value, kind) => {
       queryClient.setQueryData(key, value);
+      setEdited(false);
       setReturnReason("");
       toast.success({ save: "تم حفظ المسودة", submit: "تم إرسال التقفيلة للمراجعة", approve: "تم اعتماد التقفيلة", return: "تمت إعادة التقفيلة للتعديل" }[kind]);
     },
@@ -173,17 +210,29 @@ function DailyClosingPage() {
   const count = form.confirmedCount.trim() ? Number(form.confirmedCount) : automatic?.count ?? 0;
   const countDiff = count - (automatic?.count ?? 0);
   const status = view?.status || "new";
-  const statusLabels = { new: "لم تُحفظ", draft: "مسودة", submitted: "بانتظار الاعتماد", approved: "معتمدة" };
+  const statusLabels = { new: "لم تُحفظ", draft: "مسودة محفوظة", submitted: "بانتظار اعتماد المدير", approved: "معتمدة" };
+  const reviewNeeded = countDiff !== 0 || collected !== expected || overallDifference !== 0 ||
+    (automatic?.reviewPaymentsCount ?? 0) > 0 ||
+    (automatic?.unknownHalala ?? 0) > 0 || (automatic?.refundsHalala ?? 0) > 0;
+  const totalChannelSales = restaurant + apps;
+  const differenceLabel = overallDifference === 0 ? "المبالغ متطابقة" : overallDifference < 0 ? "يوجد عجز" : "يوجد زيادة";
+  const canEdit = !locked && !action.isPending;
 
-  const amountField = (label: string, id: keyof FormState, hint?: string) => (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
+  const amountField = (label: string, id: "restaurant" | "hungerstation" | "keeta" | "cash" | "card", hint?: string) => (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-sm font-medium">{label}</Label>
       <div className="relative">
-        <Input dir="ltr" className="text-left" id={id} inputMode="decimal" type="number" min="0" step="0.01"
-          value={form[id] as string} disabled={locked || action.isPending} onChange={e => change(id, e.target.value)} />
+        <Input id={id} dir="ltr" inputMode="decimal" type="number" min="0" step="0.01"
+          onFocus={e => e.currentTarget.select()} disabled={!canEdit} value={form[id]}
+          onChange={e => change(id, e.target.value)}
+          className="h-12 rounded-xl border-border/70 bg-background ps-4 pe-14 text-left text-lg font-semibold tabular-nums shadow-none focus-visible:ring-2" />
+        <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted-foreground">ر.س</span>
       </div>
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {hint && <p className="text-xs leading-5 text-muted-foreground">{hint}</p>}
     </div>
+  );
+  const errorNotice = (message: string) => (
+    <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{message}</div>
   );
 
   return (
