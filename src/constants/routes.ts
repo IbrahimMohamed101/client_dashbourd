@@ -13,6 +13,7 @@ const SUPERADMIN_ROUTES = [
   "/delivery",
   "/payments",
   "/accounting",
+  "/daily-closing",
   "/landing-leads",
   "/subscription-audit",
   "/promo-codes",
@@ -65,6 +66,7 @@ const KITCHEN_ROUTES = [
 const COURIER_ROUTES = ["/delivery", "/operations", "/profile"];
 
 const CASHIER_ROUTES = [
+  "/daily-closing",
   "/manual-deduction",
   "/operations",
   "/one-time-orders",
@@ -73,6 +75,7 @@ const CASHIER_ROUTES = [
 ];
 
 const RESTAURANT_ROUTES = [
+  "/daily-closing",
   "/landing-leads",
   "/operations",
   "/one-time-orders",
