@@ -36,6 +36,8 @@ type PaymentRow = {
   paymentType?: string;
   paymentTypeLabelAr?: string;
   paymentStatus?: string;
+  sourceChannel?: string;
+  paidAt?: string;
   reference?: string;
   reviewReasons?: string[];
 };
@@ -272,16 +274,17 @@ function DailyClosingPage() {
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>{row.method === "moyasar" ? "ميسر" : row.method === "cash" ? "كاش" : row.method === "card" ? "شبكة" : "غير محدد"}</span>
+                      <span>{row.sourceChannel === "app" ? "من التطبيق" : row.sourceChannel === "dashboard" ? "من الداشبورد" : "مصدر غير محدد"}</span>
                       <span>{row.customerName || "العميل غير معروف"}</span>
                       <span>حالة الاشتراك: {row.subscriptionStatus || "غير متاحة"}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <span>رقم الاشتراك:</span>
-                      <code dir="ltr" className="select-all">{row.subscriptionId || "لا يوجد اشتراك مرتبط"}</code>
+                      <code dir="ltr" className="select-all break-all">{row.subscriptionId || "لا يوجد اشتراك مرتبط"}</code>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <span>مرجع الدفع:</span>
-                      <code dir="ltr" className="select-all">{row.reference || row.paymentId}</code>
+                      <code dir="ltr" className="select-all break-all">{row.reference || row.paymentId}</code>
                     </div>
                     {(row.reviewReasons?.length ?? 0) > 0 && <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-900">
                       {row.reviewReasons?.map((reason, i) => <p key={i}>{reason}</p>)}
