@@ -24,6 +24,7 @@ import {
   Users,
   ContactRound,
   ClipboardList,
+  ClipboardCheck,
 } from "lucide-react";
 
 export const NavLinksData = {
@@ -37,6 +38,11 @@ export const NavLinksData = {
       title: "المدفوعات",
       url: "/payments",
       icon: <CreditCard />,
+    },
+    {
+      title: "تقفيلة الكاشير",
+      url: "/daily-closing",
+      icon: <ClipboardCheck />,
     },
     {
       title: "المحاسبة",
