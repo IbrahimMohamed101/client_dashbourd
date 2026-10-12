@@ -26,10 +26,39 @@ type ClosingValues = {
   discrepancyReason: string;
   notes: string;
 };
+type PaymentRow = {
+  paymentId: string;
+  subscriptionId: string | null;
+  subscriptionStatus?: string;
+  customerName?: string;
+  amountHalala: number;
+  method: string;
+  paymentType?: string;
+  paymentTypeLabelAr?: string;
+  paymentStatus?: string;
+  reference?: string;
+  reviewReasons?: string[];
+};
 type Automatic = {
-  count: number; amountHalala: number; cashHalala: number; cardHalala: number;
-  moyasarHalala: number; unknownHalala: number; inferredPaymentDatesCount: number;
-  rows: { paymentId: string; subscriptionId: string | null; amountHalala: number; method: string }[];
+  count: number;
+  newSubscriptionsCount?: number;
+  paymentCount?: number;
+  renewalPaymentsCount?: number;
+  distinctSubscriptionsCount?: number;
+  orphanPaymentsCount?: number;
+  reviewPaymentsCount?: number;
+  issues?: { paymentId: string; reasons: string[] }[];
+  amountHalala: number;
+  grossCollectionsHalala?: number;
+  accountingNetHalala?: number;
+  refundsHalala?: number;
+  refundCount?: number;
+  cashHalala: number;
+  cardHalala: number;
+  moyasarHalala: number;
+  unknownHalala: number;
+  inferredPaymentDatesCount: number;
+  rows: PaymentRow[];
 };
 type Summary = {
   totalSalesHalala: number; appReceivablesHalala: number; localExpectedHalala: number;
@@ -204,34 +233,71 @@ function DailyClosingPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>2. الاشتراكات المسجلة تلقائيًا</CardTitle></CardHeader>
+            <CardHeader><CardTitle>2. تحصيل الاشتراكات — من النظام مباشرة</CardTitle></CardHeader>
             <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                عدد عمليات الدفع ليس بالضرورة عدد الاشتراكات. التفعيل الجديد يُحسب مرة لكل اشتراك مرتبط،
+                والتجديدات تظهر منفصلة. المبالغ بالريال بعد تحويلها من الهللات.
+              </p>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <Value label="اشتراكات مدفوعة" value={String(automatic?.count ?? 0)} />
-                <Value label="إجمالي الاشتراكات" value={moneySar(automatic?.amountHalala ?? 0)} />
-                <Value label="اشتراكات كاش" value={moneySar(automatic?.cashHalala ?? 0)} />
-                <Value label="اشتراكات شبكة" value={moneySar(automatic?.cardHalala ?? 0)} />
+                <Value label="اشتراكات جديدة (مميزة)" value={String(automatic?.count ?? 0)} />
+                <Value label="عدد عمليات الدفع" value={String(automatic?.paymentCount ?? automatic?.rows.length ?? 0)} />
+                <Value label="عمليات تجديد الاشتراكات" value={String(automatic?.renewalPaymentsCount ?? 0)} />
+                <Value label="إجمالي تحصيل الاشتراكات قبل الاسترداد" value={moneySar(automatic?.amountHalala ?? 0)} />
+                <Value label="ميسر / التطبيق" value={moneySar(automatic?.moyasarHalala ?? 0)} />
+                <Value label="تحصيل اشتراكات كاش" value={moneySar(automatic?.cashHalala ?? 0)} />
+                <Value label="تحصيل اشتراكات شبكة" value={moneySar(automatic?.cardHalala ?? 0)} />
+                <Value label="استردادات مثبتة محاسبيًا" value={moneySar(automatic?.refundsHalala ?? 0)}
+                  warning={(automatic?.refundsHalala ?? 0) > 0} />
               </div>
+              <Value label="صافي تحصيل الاشتراكات المحاسبي بعد الاستردادات" value={moneySar(automatic?.accountingNetHalala ?? automatic?.amountHalala ?? 0)} />
+              {(automatic?.refundsHalala ?? 0) > 0 && <p className="text-sm text-amber-700">
+                الاسترداد المسجل محاسبيًا لا يعني بالضرورة أن المبلغ خرج فعليًا من البنك أو الصندوق؛ راجع حالة التسوية في صفحة المحاسبة.
+              </p>}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="confirmed-count">العدد المؤكد من الكاشير (اختياري)</Label>
+                  <Label htmlFor="confirmed-count">الاشتراكات الجديدة المؤكدة من الكاشير (اختياري)</Label>
                   <Input id="confirmed-count" dir="ltr" type="number" min="0" step="1" placeholder={String(automatic?.count ?? 0)}
                     disabled={locked} value={form.confirmedCount} onChange={e => change("confirmedCount", e.target.value)} />
                 </div>
-                <Value label="فرق العدد" value={String(countDiff)} warning={countDiff !== 0} />
+                <Value label="فرق عدد الاشتراكات الجديدة" value={String(countDiff)} warning={countDiff !== 0} />
               </div>
               {(automatic?.rows.length ?? 0) > 0 && <div className="rounded-xl border p-3">
-                <p className="mb-2 font-medium">عمليات الدفع المسجلة</p>
-                <div className="max-h-56 space-y-2 overflow-auto text-sm">
-                  {automatic?.rows.map(row => <div key={row.paymentId} className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-                    <span dir="ltr" className="font-mono text-xs">{row.paymentId.slice(-10)}</span>
-                    <span>{row.method === "moyasar" ? "ميسر" : row.method === "cash" ? "كاش" : row.method === "card" ? "شبكة" : "غير محدد"}</span>
-                    <strong>{moneySar(row.amountHalala)}</strong>
+                <p className="mb-2 font-medium">تفاصيل حركات الدفع للمطابقة</p>
+                <div className="max-h-80 space-y-3 overflow-auto text-sm">
+                  {automatic?.rows.map(row => <div key={row.paymentId} className="space-y-1 border-b pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <strong>{row.paymentTypeLabelAr || (row.paymentType === "subscription_renewal" ? "تجديد اشتراك" : "عملية دفع اشتراك")}</strong>
+                      <strong>{moneySar(row.amountHalala)}</strong>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>{row.method === "moyasar" ? "ميسر" : row.method === "cash" ? "كاش" : row.method === "card" ? "شبكة" : "غير محدد"}</span>
+                      <span>{row.customerName || "العميل غير معروف"}</span>
+                      <span>حالة الاشتراك: {row.subscriptionStatus || "غير متاحة"}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span>رقم الاشتراك:</span>
+                      <code dir="ltr" className="select-all">{row.subscriptionId || "لا يوجد اشتراك مرتبط"}</code>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span>مرجع الدفع:</span>
+                      <code dir="ltr" className="select-all">{row.reference || row.paymentId}</code>
+                    </div>
+                    {(row.reviewReasons?.length ?? 0) > 0 && <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-amber-900">
+                      {row.reviewReasons?.map((reason, i) => <p key={i}>{reason}</p>)}
+                    </div>}
                   </div>)}
                 </div>
               </div>}
-              {(automatic?.unknownHalala ?? 0) > 0 && <p className="flex items-center gap-2 text-sm text-amber-700"><AlertTriangle className="size-4" /> يوجد دفع اشتراك غير مصنف: {moneySar(automatic?.unknownHalala ?? 0)}</p>}
-              {(automatic?.inferredPaymentDatesCount ?? 0) > 0 && <p className="text-sm text-amber-700">بعض المدفوعات لا تحتوي تاريخ تحصيل، واستُخدم تاريخ إنشائها مؤقتًا.</p>}
+              {(automatic?.reviewPaymentsCount ?? 0) > 0 && <p className="flex items-center gap-2 rounded-lg border border-amber-300 p-3 text-sm text-amber-800">
+                <AlertTriangle className="size-4 shrink-0" /> يوجد {automatic?.reviewPaymentsCount} حركة دفع تحتاج مراجعة وسببًا مكتوبًا قبل اعتماد التقفيلة.
+              </p>}
+              {(automatic?.unknownHalala ?? 0) > 0 && <p className="flex items-center gap-2 text-sm text-amber-700">
+                <AlertTriangle className="size-4" /> يوجد دفع اشتراك غير مصنف: {moneySar(automatic?.unknownHalala ?? 0)}
+              </p>}
+              {(automatic?.inferredPaymentDatesCount ?? 0) > 0 && <p className="text-sm text-amber-700">
+                بعض المدفوعات لا تحتوي تاريخ تحصيل، واستُخدم تاريخ إنشائها مؤقتًا.
+              </p>}
             </CardContent>
           </Card>
           <Card>
@@ -248,10 +314,11 @@ function DailyClosingPage() {
                 <Value label="التحصيل المتوقع في المطعم" value={moneySar(expected)} />
                 <Value label="فرق كاش + شبكة" value={moneySar(collected - expected)} warning={collected !== expected} />
                 <Value label="إجمالي مبيعات اليوم" value={moneySar(sales)} />
+                <Value label="المبيعات بعد الاستردادات المسجلة محاسبيًا" value={moneySar(sales - (automatic?.refundsHalala ?? 0))} />
                 <Value label="التحصيل + المستحقات" value={moneySar(receivedAndDue)} />
               </div>
               <Value label="فرق التقفيلة النهائي" value={moneySar(overallDifference)} warning={overallDifference !== 0} />
-              <p className="text-xs text-muted-foreground">مستحقات هنجرستيشن وكيتا ليست بالضرورة أموالًا وصلت للبنك اليوم. المبيعات ليست صافي الربح بعد العمولات والضرائب والمصاريف.</p>
+              <p className="text-xs text-muted-foreground">إجمالي المطابقة الأول يشمل التحصيل قبل خصم الاستردادات؛ لذلك عند وجود استرداد يُراجع تدفقه النقدي منفصلًا. مستحقات هنجرستيشن وكيتا ليست بالضرورة أموالًا وصلت للبنك اليوم. المبيعات ليست صافي الربح بعد العمولات والضرائب والمصاريف.</p>
             </CardContent>
           </Card>
           <Card>
