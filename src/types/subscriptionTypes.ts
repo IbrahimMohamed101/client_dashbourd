@@ -229,6 +229,7 @@ export interface SubscriptionUser {
 }
 
 export interface Subscription {
+  subscriptionOrigin?: import("@/lib/subscriptionOrigin").SubscriptionOrigin;
   _id: string;
   userId: string;
   planId: string;
