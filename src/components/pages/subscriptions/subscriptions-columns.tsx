@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Subscription } from "@/types/subscriptionTypes";
 import { Badge } from "@/components/ui/badge";
+import { subscriptionOriginLabel } from "@/lib/subscriptionOrigin";
 import { Button } from "@/components/ui/button";
 import { EyeIcon, History, ReceiptText, Settings2 } from "lucide-react";
 import {
@@ -76,6 +77,13 @@ export function getSubscriptionsColumns({
             </span>
           ) : null}
         </div>
+      ),
+    },
+    {
+      id: "subscriptionOrigin",
+      header: "مصدر الاشتراك",
+      cell: ({ row }) => (
+        <Badge variant="outline">{subscriptionOriginLabel(row.original.subscriptionOrigin)}</Badge>
       ),
     },
     {
