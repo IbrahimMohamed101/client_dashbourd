@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { Subscription } from "@/types/subscriptionTypes";
 import { hasEntitlementBatches } from "@/lib/subscriptionStackingPresentation";
+import { subscriptionOriginLabel } from "@/lib/subscriptionOrigin";
 
 interface SubscriptionHeaderProps {
   subscription: Subscription;
@@ -81,6 +82,7 @@ export function SubscriptionHeader({
               {statusLabel}
             </Badge>
             {hasBatches ? <Badge variant="outline">حاوية متعددة الباقات</Badge> : null}
+            <Badge variant="outline">مصدر الاشتراك: {subscriptionOriginLabel(subscription.subscriptionOrigin)}</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {subscription.userName || subscription.user?.fullName || "المشترك"}

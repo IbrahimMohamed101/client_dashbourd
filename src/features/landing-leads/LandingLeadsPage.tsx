@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { subscriptionOriginLabel, type SubscriptionOrigin } from "@/lib/subscriptionOrigin";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link2Icon, MessageCircleIcon, RefreshCcwIcon, UsersRoundIcon } from "lucide-react";
 import api from "@/lib/apis";
@@ -10,10 +12,19 @@ const STATUS = {
   new: "جديد — بانتظار التواصل",
   contacted: "تم التواصل",
   interested: "مهتم",
-  converted: "تم الاشتراك (تأكيد يدوي)",
+  converted: "تم الاشتراك (تحديد الموظف)",
   not_interested: "غير مهتم",
 } as const;
 type Status = keyof typeof STATUS;
+type VerifiedSubscription = {
+  subscriptionId: string;
+  displayId: string;
+  status: string;
+  source: SubscriptionOrigin;
+  subscriptionOrigin: SubscriptionOrigin;
+  activatedAt: string;
+  matchBasis: "same_phone_after_lead";
+};
 type Lead = {
   _id: string;
   requestId: string;
@@ -24,6 +35,7 @@ type Lead = {
   mealsPerDay: number;
   fulfillmentMethod?: "delivery" | "pickup" | "unspecified";
   status: Status;
+  verifiedSubscription?: VerifiedSubscription | null;
   staffNote: string;
   marketingConsent: boolean;
   source: string; campaign: string; medium: string; referrerHost: string;
@@ -68,8 +80,29 @@ function LeadCard({ lead }: { lead: Lead }) {
             <p className="mt-1 font-mono text-sm" dir="ltr">{lead.phone}</p>
             <p className="mt-1 text-xs text-muted-foreground">{created(lead.createdAt)}</p>
           </div>
-          <Badge variant={lead.status === "new" ? "default" : "secondary"}>{STATUS[lead.status]}</Badge>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={lead.status === "new" ? "default" : "secondary"}>{STATUS[lead.status]}</Badge>
+            {lead.verifiedSubscription && (
+              <Badge variant="outline">{["active", "frozen"].includes(lead.verifiedSubscription.status) ? "اشتراك فعلي مؤكد" : "سبق له الاشتراك"}</Badge>
+            )}
+          </div>
         </div>
+        {lead.verifiedSubscription ? (
+          <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold">{["active", "frozen"].includes(lead.verifiedSubscription.status) ? "العميل فعّل اشتراكًا بالفعل" : "العميل لديه اشتراك سابق"}</p>
+              <Link className="font-medium text-primary underline underline-offset-2" to="/subscriptions/$subscriptionId" params={{ subscriptionId: lead.verifiedSubscription.subscriptionId }}>
+                عرض الاشتراك {lead.verifiedSubscription.displayId}
+              </Link>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              المصدر: {subscriptionOriginLabel(lead.verifiedSubscription.source)} · تاريخ التفعيل: {created(lead.verifiedSubscription.activatedAt)} · حالة الاشتراك: {lead.verifiedSubscription.status === "canceled" ? "ملغي" : lead.verifiedSubscription.status === "expired" || lead.verifiedSubscription.status === "completed" ? "منتهي" : lead.verifiedSubscription.status === "frozen" ? "مجمّد" : "نشط"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">تم الربط بمطابقة رقم الجوال وتفعيل الاشتراك بعد الطلب، وليس إثباتًا لمصدر الزيارة.</p>
+          </div>
+        ) : lead.status === "converted" ? (
+          <p className="text-xs text-muted-foreground">«تم الاشتراك» هنا تحديث يدوي من الموظف؛ لم يتم العثور على تفعيل مؤكد بعد طلب الموقع.</p>
+        ) : null}
         <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
           <div className="rounded-lg bg-muted/50 p-2"><span className="block text-xs text-muted-foreground">الباقة</span><b>{lead.daysCount} يوم</b></div>
           <div className="rounded-lg bg-muted/50 p-2"><span className="block text-xs text-muted-foreground">الكمية</span><b>{lead.grams} جرام</b></div>
