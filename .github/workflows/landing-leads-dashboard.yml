@@ -4,6 +4,10 @@ on:
     paths:
       - "src/routes/_protected/landing-leads/**"
       - "src/features/landing-leads/**"
+      - "src/components/pages/subscriptions/**"
+      - "src/lib/subscriptionOrigin.ts"
+      - "src/types/subscriptionTypes.ts"
+      - "tests/subscriptionOrigin.test.ts"
       - "src/constants/NavLinksData.tsx"
       - "src/constants/routes.ts"
       - "tests/landingLeadAccess.test.ts"
@@ -15,6 +19,10 @@ on:
     paths:
       - "src/routes/_protected/landing-leads/**"
       - "src/features/landing-leads/**"
+      - "src/components/pages/subscriptions/**"
+      - "src/lib/subscriptionOrigin.ts"
+      - "src/types/subscriptionTypes.ts"
+      - "tests/subscriptionOrigin.test.ts"
       - "src/constants/NavLinksData.tsx"
       - "src/constants/routes.ts"
       - "tests/landingLeadAccess.test.ts"
@@ -32,4 +40,4 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
-      - run: npm run test -- tests/landingLeadAccess.test.ts tests/roleRoutes.test.ts tests/navPermissions.test.tsx
+      - run: npm run test -- tests/landingLeadAccess.test.ts tests/roleRoutes.test.ts tests/navPermissions.test.tsx tests/subscriptionOrigin.test.ts
