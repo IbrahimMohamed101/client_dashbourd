@@ -6,12 +6,21 @@ on:
       - "src/features/landing-leads/**"
       - "src/constants/NavLinksData.tsx"
       - "src/constants/routes.ts"
+      - "tests/landingLeadAccess.test.ts"
+      - "tests/roleRoutes.test.ts"
+      - "tests/navPermissions.test.tsx"
       - ".github/workflows/landing-leads-dashboard.yml"
   push:
     branches: [main]
     paths:
       - "src/routes/_protected/landing-leads/**"
       - "src/features/landing-leads/**"
+      - "src/constants/NavLinksData.tsx"
+      - "src/constants/routes.ts"
+      - "tests/landingLeadAccess.test.ts"
+      - "tests/roleRoutes.test.ts"
+      - "tests/navPermissions.test.tsx"
+      - ".github/workflows/landing-leads-dashboard.yml"
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -23,4 +32,4 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
-      - run: npm run test -- tests/landingLeadAccess.test.ts
+      - run: npm run test -- tests/landingLeadAccess.test.ts tests/roleRoutes.test.ts tests/navPermissions.test.tsx

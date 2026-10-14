@@ -15,6 +15,8 @@ import { test } from "vitest";
 
 test("roleRoutes.test", () => {
   const adminProtectedRoutes = [
+    "/daily-closing",
+    "/landing-leads",
     "/dashboard",
     "/operations",
     "/one-time-orders",
@@ -39,15 +41,19 @@ test("roleRoutes.test", () => {
   ];
 
   assert.deepEqual(SUPERADMIN_ROUTES, [
-    ...adminProtectedRoutes.slice(0, 6),
+    ...adminProtectedRoutes.slice(2, 8),
     "/customer-management",
-    ...adminProtectedRoutes.slice(6, 16),
+    ...adminProtectedRoutes.slice(8, 12),
+    "/daily-closing",
+    "/landing-leads",
+    ...adminProtectedRoutes.slice(12, 18),
     "/dashboard-users",
-    ...adminProtectedRoutes.slice(16),
+    ...adminProtectedRoutes.slice(18),
   ]);
   assert.deepEqual(ADMIN_ROUTES, adminProtectedRoutes);
 
   assert.deepEqual(CASHIER_ROUTES, [
+    "/daily-closing",
     "/manual-deduction",
     "/operations",
     "/one-time-orders",
@@ -77,6 +83,8 @@ test("roleRoutes.test", () => {
   assert.equal(COURIER_ROUTES.includes("/one-time-orders"), false);
 
   assert.deepEqual(RESTAURANT_ROUTES, [
+    "/daily-closing",
+    "/landing-leads",
     "/operations",
     "/one-time-orders",
     "/subscriptions",
