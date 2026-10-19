@@ -9,6 +9,7 @@ import { resolveAccountingRangePreset, validateAccountingRange, type AccountingD
 import { getTodayKSADate } from "@/utils/ksaDate";
 
 interface Bucket { key: string; count: number }
+interface Attribution { utm: number; referrer: number; unattributed: number; total: number; knownRate: number }
 interface LandingAnalyticsData {
   range: { from: string; to: string; days: number; timezone: string };
   kpis: {
@@ -18,6 +19,8 @@ interface LandingAnalyticsData {
   };
   daily: Array<{ date: string; views: number; ctaClicks: number; storeClicks: number }>;
   sources: Bucket[]; campaigns: Bucket[]; devices: Bucket[];
+  attribution?: Attribution; leadAttribution?: Attribution;
+  leadSources?: Bucket[]; leadStatuses?: Bucket[];
   ctas: Bucket[]; sections: Bucket[]; stores: Bucket[];
   reels: Bucket[]; referrers: Bucket[]; plans: Bucket[];
   note: string;
@@ -30,7 +33,12 @@ const locationLabels: Record<string,string> = {
   plans: "الباقات", final: "آخر الصفحة",
   ios: "iOS", android: "Android", desktop: "كمبيوتر",
   app_store: "App Store", google_play: "Google Play",
-  direct: "دخول مباشر",
+  direct: "غير محدد",
+  unattributed: "مصدر غير معروف (بدون UTM أو إحالة)",
+  unspecified: "غير محدد",
+  other_referral: "موقع مُحيل آخر",
+  new: "طلب جديد", contacted: "تم التواصل", interested: "مهتم",
+  converted: "محوّل يدويًا (ليس إثبات دفع)", not_interested: "غير مهتم",
 };
 function getLabel(key: string) { return locationLabels[key] || key || "غير محدد"; }
 
@@ -67,6 +75,9 @@ export function LandingAnalyticsReport() {
   const report = query.data;
   const cards = report ? [
     ["مشاهدات الصفحة", report.kpis.pageViews],
+    ["زيارات بروابط UTM موثقة", report.attribution?.utm ?? 0],
+    ["زيارات بمصدر مستنتج من الإحالة", report.attribution?.referrer ?? 0],
+    ["زيارات بمصدر غير معروف", report.attribution?.unattributed ?? 0],
     ["طلبات تواصل فريدة محفوظة", report.kpis.uniqueLeads],
     ["الجلسات التقريبية (تبويب المتصفح)", report.kpis.sessions],
     ["نقرات بدء الاشتراك", report.kpis.ctaClicks],
@@ -89,6 +100,7 @@ export function LandingAnalyticsReport() {
             زيارات ونقرات فعلية من موقع Basic Diet، محفوظة في الـBackend.
             الأرقام تبدأ من لحظة نشر التتبع، وليست تاريخية.
             نقر زر متجر التطبيق لا يعني تثبيت التطبيق أو شراء اشتراك.
+            غياب UTM والإحالة لا يثبت دخولًا مباشرًا؛ قد تكون بعض التطبيقات أخفت المُحيل.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -127,9 +139,17 @@ export function LandingAnalyticsReport() {
           <p className="text-sm text-muted-foreground">
             نقرات المتاجر لكل 100 مشاهدة: {fmt(report.kpis.storeClickRate)} — مؤشر اهتمام، وليس معدل تثبيت أو شراء.
           </p>
+          {report.attribution && (
+            <p className="text-sm text-muted-foreground">
+              نسبة مشاهدات الموقع ذات المصدر المعروف (UTM أو إحالة): {fmt(report.attribution.knownRate)}% — 
+              المصدر المستنتج من المُحيل تقديري، وليس إثباتًا لحملة إعلانية.
+            </p>
+          )}
           <div className="grid gap-3 lg:grid-cols-2">
-            <BucketTable title="مصادر الزيارات (UTM)" rows={report.sources} />
-            <BucketTable title="الحملات الإعلانية (UTM Campaign)" rows={report.campaigns} />
+            <BucketTable title="مصادر الزيارات (UTM أو إحالة)" rows={report.sources} />
+            <BucketTable title="الحملات المعلّمة برابط UTM" rows={report.campaigns} />
+            {report.leadSources && <BucketTable title="مصادر طلبات التواصل (UTM أو إحالة)" rows={report.leadSources} />}
+            {report.leadStatuses && <BucketTable title="حالة طلبات التواصل حسب الموظف (ليست إثبات دفع)" rows={report.leadStatuses} />}
             <BucketTable title="أماكن الضغط على ابدأ اشتراكك" rows={report.ctas} />
             <BucketTable title="النقرات حسب المتجر" rows={report.stores} />
             <BucketTable title="الأقسام الأكثر مشاهدة" rows={report.sections} />
