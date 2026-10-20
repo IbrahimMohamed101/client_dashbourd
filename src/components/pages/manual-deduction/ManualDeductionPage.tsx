@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AlertCircle, Phone, Package, PlusCircle, User } from "lucide-react";
 import {
@@ -47,6 +47,27 @@ import type { DeductionFormReturn, DeductionFormValues } from "./DeductionForm";
 
 const columnHelper = createColumnHelper<Subscription>();
 
+type ManualHandoff = { phone: string; subscriptionId: string };
+
+// Move between authorized Dashboard screens without putting phone numbers in URLs.
+function takeManualDeductionHandoff(): ManualHandoff | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.sessionStorage.getItem("basicdiet:manual-deduction-handoff");
+    window.sessionStorage.removeItem("basicdiet:manual-deduction-handoff");
+    if (!value) return null;
+    const parsed: unknown = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object") return null;
+    const data = parsed as Record<string, unknown>;
+    if (typeof data.phone !== "string" || typeof data.subscriptionId !== "string") return null;
+    if (data.phone.length < 8 || data.phone.length > 30) return null;
+    if (!/^[a-f0-9]{24}$/i.test(data.subscriptionId)) return null;
+    return { phone: data.phone, subscriptionId: data.subscriptionId };
+  } catch {
+    return null;
+  }
+}
+
 type ManualDeductionSubscription = Subscription & {
   remainingPremiumMeals?: number;
   remainingRegularMeals?: number;
@@ -74,7 +95,9 @@ function resolveDisplayRemainingMeals(subscription: ManualDeductionSubscription)
 }
 
 export default function ManualDeductionPage() {
-  const [searchPhone, setSearchPhone] = useState("");
+  const [handoff] = useState(takeManualDeductionHandoff);
+  const handoffUsed = useRef(false);
+  const [searchPhone, setSearchPhone] = useState(handoff?.phone ?? "");
   const [selectedSubscription, setSelectedSubscription] =
     useState<Subscription | null>(null);
   const queryClient = useQueryClient();
@@ -136,7 +159,17 @@ export default function ManualDeductionPage() {
     }
   );
 
+  useEffect(() => {
+    if (!handoff || !searchResponse || handoffUsed.current) return;
+    handoffUsed.current = true;
+    const target = subscriptions.find((sub) => sub.id === handoff.subscriptionId);
+    if (target && isManualDeductionAllowed(target) && target.balance?.balanced !== false) {
+      setSelectedSubscription(target);
+    }
+  }, [handoff, searchResponse, subscriptions]);
+
   const handleSearch = (phone: string) => {
+    handoffUsed.current = true;
     setSearchPhone(phone);
     setSelectedSubscription(null);
   };
@@ -430,6 +463,7 @@ export default function ManualDeductionPage() {
       </div>
 
       <CustomerSearch
+        initialPhone={handoff?.phone}
         onSearch={handleSearch}
         isSearching={isSearching}
         error={searchError}
