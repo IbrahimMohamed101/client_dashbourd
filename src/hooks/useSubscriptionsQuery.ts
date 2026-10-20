@@ -204,6 +204,10 @@ export const useManualDeductSubscriptionMutation = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] });
       queryClient.invalidateQueries({ queryKey: ["subscriptions-search"] });
+      queryClient.invalidateQueries({ queryKey: ["pickup-quick-day-deduction-options", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["pickup-quick-subscription-search"] });
+      queryClient.invalidateQueries({ queryKey: ["operations-board"] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions-summary"] });
       queryClient.invalidateQueries({
         queryKey: ["subscription-manual-deductions", variables.id],
       });
