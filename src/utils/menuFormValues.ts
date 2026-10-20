@@ -59,6 +59,15 @@ const firstNonEmptyString = (...values: Array<string | null | undefined>) => {
   return "";
 };
 
+const normalizeProteinFamilyFormValue = (
+  value?: string | null
+): MenuOptionSchemaInput["proteinFamilyKey"] => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return ["chicken", "beef", "fish", "eggs", "other"].includes(normalized)
+    ? (normalized as Exclude<MenuOptionSchemaInput["proteinFamilyKey"], undefined>)
+    : "";
+};
+
 const getProductPriceSar = (product?: ProductLikeRef | null) => {
   if (!product) return 0;
   const halala = product.priceHalala ?? product.price_halala;
@@ -153,6 +162,7 @@ export const getMenuOptionFormValues = (
   name: option?.name ?? emptyLocalizedText,
   description: option?.description ?? emptyLocalizedText,
   imageUrl: option?.imageUrl ?? "",
+  proteinFamilyKey: normalizeProteinFamilyFormValue(option?.proteinFamilyKey),
   extraPriceSar: halalaToRiyal(option?.extraPriceHalala ?? 0),
   extraWeightUnitGrams: option?.extraWeightUnitGrams ?? undefined,
   extraWeightPriceSar:

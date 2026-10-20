@@ -194,6 +194,8 @@ export interface MealPlannerCatalogCandidate {
   selectionType?: string;
   familyKey?: string;
   proteinFamilyKey?: string;
+  resolvedFamilyKey?: string;
+  familyResolutionSource?: string;
   displayCategoryKey?: string;
   isPremium?: boolean;
   priceHalala?: number | null;

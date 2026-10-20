@@ -36,6 +36,11 @@ const menuOptionSchema = z.object({
   }),
   imageFile: z.any().optional(),
   imageUrl: z.string().trim().optional(),
+  proteinFamilyKey: z
+    .enum(["chicken", "beef", "fish", "eggs", "other"])
+    .or(z.literal(""))
+    .optional()
+    .default(""),
   // User enters in SAR, we convert to halala on submit
   extraPriceSar: z.coerce
     .number({ message: "السعر الإضافي مطلوب" })

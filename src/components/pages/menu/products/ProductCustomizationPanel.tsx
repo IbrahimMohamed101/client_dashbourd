@@ -54,6 +54,26 @@ const displayStyleLabels: Record<string, string> = {
   stepper: "عداد",
 };
 
+const proteinFamilyLabels: Record<string, string> = {
+  chicken: "دجاج / Chicken",
+  beef: "لحم / Beef",
+  fish: "سمك / Fish",
+  eggs: "بيض / Eggs",
+  other: "أخرى / Other",
+};
+
+export function proteinFamilyLabel(option: {
+  proteinFamilyKey?: string;
+  resolvedFamilyKey?: string;
+}) {
+  const family = String(
+    option.proteinFamilyKey || option.resolvedFamilyKey || ""
+  ).trim().toLowerCase();
+  return family
+    ? `العائلة: ${proteinFamilyLabels[family] || family}`
+    : "التصنيف غير محدد";
+}
+
 export function ProductCustomizationPanel({
   productId,
   isCustomizable,
@@ -522,6 +542,10 @@ function ChooseOptionsDialog({
           imageUrl: libraryOption.imageUrl,
           defaultPricing: libraryOption.defaultPricing,
           nutrition: libraryOption.nutrition,
+          proteinFamilyKey: libraryOption.proteinFamilyKey,
+          displayCategoryKey: libraryOption.displayCategoryKey,
+          resolvedFamilyKey: libraryOption.resolvedFamilyKey,
+          familyResolutionSource: libraryOption.familyResolutionSource,
           status: { isActive: true, isVisible: true, isAvailable: true },
           sortOrder: libraryOption.sortOrder ?? 0,
         };
@@ -562,6 +586,11 @@ function ChooseOptionsDialog({
                       <span className="block text-xs text-muted-foreground">
                         {option.key}
                       </span>
+                      {group?.key === "proteins" ? (
+                        <span className="block text-xs text-muted-foreground">
+                          {proteinFamilyLabel(option)}
+                        </span>
+                      ) : null}
                     </span>
                     {checked ? <Check className="size-4 text-primary" /> : null}
                   </button>

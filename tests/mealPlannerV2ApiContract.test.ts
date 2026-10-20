@@ -140,9 +140,11 @@ describe("Meal Planner V2 API contract", () => {
           sourceGroupId: "group-1",
           optionRole: "protein",
           familyKey: "beef",
+          includeNotLinked: true,
           unassignedOnly: true,
           lang: "ar",
         },
+        signal: undefined,
       }
     );
   });

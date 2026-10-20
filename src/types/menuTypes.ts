@@ -557,6 +557,8 @@ export interface MenuOption {
   isVisible?: boolean;
   displayCategoryKey?: string;
   proteinFamilyKey?: string;
+  resolvedFamilyKey?: string;
+  familyResolutionSource?: string;
   premiumKey?: string;
   extraFeeHalala?: number;
   ruleTags?: string[];
