@@ -28,16 +28,18 @@ interface CustomerSearchProps {
   onSearch: (phone: string) => void;
   isSearching: boolean;
   error: unknown;
+  initialPhone?: string;
 }
 
 export const CustomerSearch: React.FC<CustomerSearchProps> = ({
   onSearch,
   isSearching,
   error,
+  initialPhone,
 }) => {
   const searchForm = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
-    defaultValues: { phone: DEFAULT_PHONE_PREFIX },
+    defaultValues: { phone: initialPhone || DEFAULT_PHONE_PREFIX },
   });
 
   const onSubmit = (values: SearchFormValues) => {
