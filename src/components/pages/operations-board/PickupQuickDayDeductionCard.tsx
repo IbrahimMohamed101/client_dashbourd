@@ -452,10 +452,10 @@ export function PickupQuickDayDeductionCard() {
                             <span>غير مستهلك: <strong>{deductibleMealsOf(batch)}</strong></span>
                           </div>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            هذه باقة غير مؤهلة لمسار خصم استلام الفرع. استخدم الخصم اليدوي بعد مراجعة ما تم تسليمه، ولا تكرر التسوية مع إجراء التوصيل.
+                            هذه الباقة غير مؤهلة لمسار خصم استلام الفرع. الخصم اليدوي يُوزع على الباقات حسب الاستحقاق؛ راجع الرصيد والعمليات السابقة قبل الحفظ، ولا تخصم نفس الاستلام عبر إجراء التوصيل أيضًا.
                           </p>
                           <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={openManualDeduction}>
-                            فتح الخصم اليدوي للباقة
+                            فتح الخصم اليدوي للاشتراك
                           </Button>
                         </div>
                       ))}
