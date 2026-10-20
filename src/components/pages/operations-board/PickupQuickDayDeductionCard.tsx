@@ -35,6 +35,7 @@ type QuickBatch = {
   planId: string;
   planName?: { ar?: string; en?: string } | string | null;
   status: string;
+  fulfillmentMethod?: string;
   mealsPerDay: number;
   proteinGrams: number;
   totalMeals: number;
@@ -52,6 +53,8 @@ type OptionsResponse = {
     subscriptionId: string;
     businessDate: string;
     batches: QuickBatch[];
+    // Non-pickup packages remain visible but cannot use pickup-only mutation.
+    manualOnlyBatches?: QuickBatch[];
   };
 };
 
@@ -128,6 +131,7 @@ export function PickupQuickDayDeductionCard() {
   });
 
   const batches = optionsQuery.data?.data?.batches ?? [];
+  const manualOnlyBatches = optionsQuery.data?.data?.manualOnlyBatches ?? [];
   const selectedBatch = batches.find((batch) => batch.id === selectedBatchId) ?? null;
   const selectedBatchDeductibleMeals = selectedBatch ? deductibleMealsOf(selectedBatch) : 0;
   const mealsToDeduct = selectedBatch ? days * selectedBatch.mealsPerDay : 0;
@@ -192,6 +196,8 @@ export function PickupQuickDayDeductionCard() {
           queryKey: ["pickup-quick-day-deduction-options", selectedSubscriptionId],
         }),
         queryClient.invalidateQueries({ queryKey: ["subscriptions-list"] }),
+        queryClient.invalidateQueries({ queryKey: ["subscriptions-search"] }),
+        queryClient.invalidateQueries({ queryKey: ["subscriptions-summary"] }),
         queryClient.invalidateQueries({ queryKey: ["operations-board"] }),
       ]);
     },
@@ -216,6 +222,23 @@ export function PickupQuickDayDeductionCard() {
     setLastSuccessSignature("");
     setConfirming(false);
     requestRef.current = null;
+  };
+
+  const openManualDeduction = () => {
+    if (!selectedSubscription) return;
+    // One-use browser session handoff. Keep customer phone out of URL/logs.
+    try {
+      window.sessionStorage.setItem(
+        "basicdiet:manual-deduction-handoff",
+        JSON.stringify({
+          phone: selectedSubscription.customer.phone,
+          subscriptionId: selectedSubscription.id,
+        })
+      );
+    } catch {
+      // The manual page still works with ordinary phone search.
+    }
+    window.location.assign("/manual-deduction");
   };
 
   return (
@@ -363,15 +386,15 @@ export function PickupQuickDayDeductionCard() {
               <p className="text-sm text-destructive">
                 {getApiErrorMessage(optionsQuery.error) || "تعذر تحميل الباقات"}
               </p>
-            ) : batches.length === 0 ? (
+            ) : batches.length === 0 && manualOnlyBatches.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                لا توجد باقة مؤهلة للخصم اليومي بعد استبعاد الوجبات المستلمة فعليًا.
+                لا توجد باقة ذات رصيد قابل للخصم حاليًا. راجع تفاصيل الرصيد وسجل الخصومات.
               </p>
             ) : (
               <div className="space-y-3">
-                <div>
+                {batches.length > 0 && <div>
                   <p className="mb-2 text-sm font-semibold">
-                    {batches.length > 1 ? "اختر الباقة التي سيُخصم منها" : "الباقة"}
+                    {batches.length > 1 ? "اختر باقة استلام الفرع التي سيُخصم منها" : "باقة استلام الفرع"}
                   </p>
                   <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                     {batches.map((batch) => {
@@ -405,7 +428,40 @@ export function PickupQuickDayDeductionCard() {
                       );
                     })}
                   </div>
-                </div>
+                </div>}
+
+                {manualOnlyBatches.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold">باقات أخرى متاحة — الخصم اليدوي</p>
+                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                      {manualOnlyBatches.map((batch) => (
+                        <div key={batch.id} className="rounded-xl border border-blue-200 bg-blue-50/40 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-semibold">{planNameOf(batch)}</span>
+                            <Badge variant="outline">
+                              {batch.fulfillmentMethod === "delivery" ? "توصيل" : "نوع الخدمة يحتاج مراجعة"}
+                            </Badge>
+                          </div>
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {batch.mealsPerDay} وجبة/يوم · {batch.proteinGrams}g
+                          </p>
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                            <span>المتاح: <strong>{batch.remainingMeals}</strong></span>
+                            <span>المحجوز: <strong>{batch.reservedMeals}</strong></span>
+                            <span>المستهلك: <strong>{batch.consumedMeals}</strong></span>
+                            <span>غير مستهلك: <strong>{deductibleMealsOf(batch)}</strong></span>
+                          </div>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            هذه باقة غير مؤهلة لمسار خصم استلام الفرع. استخدم الخصم اليدوي بعد مراجعة ما تم تسليمه، ولا تكرر التسوية مع إجراء التوصيل.
+                          </p>
+                          <Button type="button" variant="outline" size="sm" className="mt-3 w-full" onClick={openManualDeduction}>
+                            فتح الخصم اليدوي للباقة
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {selectedBatch && (
                   <div className="space-y-3 rounded-xl bg-muted/30 p-3">
