@@ -46,7 +46,7 @@ type Lead = {
 type LeadPage = { rows: Lead[]; total: number; page: number; pageSize: number };
 const displaySource = (lead: Lead) => lead.source || lead.referrerHost || "مباشر / غير معروف";
 const hasPlanChoice = (lead: Lead) => lead.planSelectionStatus !== "unselected" && lead.daysCount != null && lead.grams != null && lead.mealsPerDay != null;
-const requestedOffer = (lead: Lead) => /(?:^|\\|)offer15(?:\\||$)/.test(lead.content || "");
+const requestedOffer = (lead: Lead) => (lead.content || "").split("|").includes("offer15");
 const created = (date: string) => new Intl.DateTimeFormat("ar-SA", {
   dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh",
 }).format(new Date(date));
