@@ -15,12 +15,14 @@ interface LandingAnalyticsData {
   kpis: {
     pageViews: number; sessions: number; ctaClicks: number; uniqueLeads: number;
     storeClicks: number; storeClickRate: number;
+    leadFormOpens?: number; leadFormCompleted?: number; leadFormCompletionRate?: number;
     navClicks: number; sectionViews: number; faqOpens: number; reelClicks: number;
   };
   daily: Array<{ date: string; views: number; ctaClicks: number; storeClicks: number }>;
   sources: Bucket[]; campaigns: Bucket[]; devices: Bucket[];
   attribution?: Attribution; leadAttribution?: Attribution;
   leadSources?: Bucket[]; leadStatuses?: Bucket[];
+  leadOpensByPlacement?: Bucket[]; leadSubmissionsByPlacement?: Bucket[];
   ctas: Bucket[]; sections: Bucket[]; stores: Bucket[];
   reels: Bucket[]; referrers: Bucket[]; plans: Bucket[];
   note: string;
@@ -86,7 +88,9 @@ export function LandingAnalyticsReport() {
     ["مشاهدات الأقسام", report.kpis.sectionViews],
     ["فتح الأسئلة الشائعة", report.kpis.faqOpens],
     ["نقرات ريلز إنستجرام", report.kpis.reelClicks],
-  ] as const : [];
+  ] as Array<readonly [string, number]> : [];
+  if (report?.kpis.leadFormOpens != null) cards.push(["فتح نموذج التسجيل", report.kpis.leadFormOpens]);
+  if (report?.kpis.leadFormCompleted != null) cards.push(["إشارات إتمام نموذج التسجيل", report.kpis.leadFormCompleted]);
 
   return (
     <section dir="rtl" className="space-y-4" aria-label="تحليلات صفحة الهبوط">
@@ -139,6 +143,10 @@ export function LandingAnalyticsReport() {
           <p className="text-sm text-muted-foreground">
             نقرات المتاجر لكل 100 مشاهدة: {fmt(report.kpis.storeClickRate)} — مؤشر اهتمام، وليس معدل تثبيت أو شراء.
           </p>
+          {report.kpis.leadFormCompletionRate != null && <p className="text-sm text-muted-foreground">
+            إتمام النموذج مقابل مرات فتحه: {fmt(report.kpis.leadFormCompletionRate)}%.
+            أحداث المتصفح لا تمثل عملاء فريدين أو اشتراكات مدفوعة؛ راجع عدد طلبات التواصل المحفوظة.
+          </p>}
           {report.attribution && (
             <p className="text-sm text-muted-foreground">
               نسبة مشاهدات الموقع ذات المصدر المعروف (UTM أو إحالة): {fmt(report.attribution.knownRate)}% — 
@@ -150,6 +158,8 @@ export function LandingAnalyticsReport() {
             <BucketTable title="الحملات المعلّمة برابط UTM" rows={report.campaigns} />
             {report.leadSources && <BucketTable title="مصادر طلبات التواصل (UTM أو إحالة)" rows={report.leadSources} />}
             {report.leadStatuses && <BucketTable title="حالة طلبات التواصل حسب الموظف (ليست إثبات دفع)" rows={report.leadStatuses} />}
+            {report.leadOpensByPlacement && <BucketTable title="فتح التسجيل حسب موضع الزر" rows={report.leadOpensByPlacement} />}
+            {report.leadSubmissionsByPlacement && <BucketTable title="إتمام التسجيل حسب موضع الزر" rows={report.leadSubmissionsByPlacement} />}
             <BucketTable title="أماكن الضغط على ابدأ اشتراكك" rows={report.ctas} />
             <BucketTable title="النقرات حسب المتجر" rows={report.stores} />
             <BucketTable title="الأقسام الأكثر مشاهدة" rows={report.sections} />

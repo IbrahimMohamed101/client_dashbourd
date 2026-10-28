@@ -30,9 +30,11 @@ type Lead = {
   requestId: string;
   name: string;
   phone: string;
-  daysCount: number;
-  grams: number;
-  mealsPerDay: number;
+  daysCount: number | null;
+  grams: number | null;
+  mealsPerDay: number | null;
+  planSelectionStatus?: "selected" | "unselected";
+  content?: string;
   fulfillmentMethod?: "delivery" | "pickup" | "unspecified";
   status: Status;
   verifiedSubscription?: VerifiedSubscription | null;
@@ -43,6 +45,8 @@ type Lead = {
 };
 type LeadPage = { rows: Lead[]; total: number; page: number; pageSize: number };
 const displaySource = (lead: Lead) => lead.source || lead.referrerHost || "مباشر / غير معروف";
+const hasPlanChoice = (lead: Lead) => lead.planSelectionStatus !== "unselected" && lead.daysCount != null && lead.grams != null && lead.mealsPerDay != null;
+const requestedOffer = (lead: Lead) => (lead.content || "").split("|").includes("offer15");
 const created = (date: string) => new Intl.DateTimeFormat("ar-SA", {
   dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Riyadh",
 }).format(new Date(date));
@@ -82,6 +86,8 @@ function LeadCard({ lead }: { lead: Lead }) {
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant={lead.status === "new" ? "default" : "secondary"}>{STATUS[lead.status]}</Badge>
+            {!hasPlanChoice(lead) && <Badge variant="outline">لم يحدد باقة</Badge>}
+            {requestedOffer(lead) && <Badge variant="outline">مهتم بعرض الموقع 15%</Badge>}
             {lead.verifiedSubscription && (
               <Badge variant="outline">{["active", "frozen"].includes(lead.verifiedSubscription.status) ? "اشتراك فعلي مؤكد" : "سبق له الاشتراك"}</Badge>
             )}
@@ -104,9 +110,9 @@ function LeadCard({ lead }: { lead: Lead }) {
           <p className="text-xs text-muted-foreground">«تم الاشتراك» هنا تحديث يدوي من الموظف؛ لم يتم العثور على تفعيل مؤكد بعد طلب الموقع.</p>
         ) : null}
         <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-          <div className="rounded-lg bg-muted/50 p-2"><span className="block text-xs text-muted-foreground">الباقة</span><b>{lead.daysCount} يوم</b></div>
-          <div className="rounded-lg bg-muted/50 p-2"><span className="block text-xs text-muted-foreground">الكمية</span><b>{lead.grams} جرام</b></div>
-          <div className="rounded-lg bg-muted/50 p-2"><span className="block text-xs text-muted-foreground">وجبات يوميًا</span><b>{lead.mealsPerDay}</b></div>
+          <div className="rounded-lg bg-muted/50 p-2"><span className="block text-xs text-muted-foreground">الباقة</span><b>{hasPlanChoice(lead) ? `${lead.daysCount} يوم` : "لم يحدد باقة"}</b></div>
+          <div className="rounded-lg bg-muted/50 p-2"><span className="block text-xs text-muted-foreground">الكمية</span><b>{hasPlanChoice(lead) ? `${lead.grams} جرام` : "غير محدد"}</b></div>
+          <div className="rounded-lg bg-muted/50 p-2"><span className="block text-xs text-muted-foreground">وجبات يوميًا</span><b>{hasPlanChoice(lead) ? lead.mealsPerDay : "غير محدد"}</b></div>
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
           <span>المصدر: <strong className="text-foreground">{displaySource(lead)}</strong></span>
@@ -172,7 +178,7 @@ export function LandingLeadsPage() {
             </Button>
           </div>
           <p className="max-w-3xl text-sm text-muted-foreground">
-            أشخاص طلبوا التواصل بشأن باقة اختاروها من صفحة Basic Diet. الطلب مش اشتراك مدفوع.
+            طلبات تواصل من موقع Basic Diet، بباقة مختارة أو لطلب المساعدة في الاختيار. اهتمام العميل بعرض 15% لا يعني تأكيد الخصم أو تفعيل اشتراك.
             حالة «تم الاشتراك» هنا علامة متابعة يدوية وليست تأكيدًا من بوابة الدفع.
           </p>
         </CardHeader>
