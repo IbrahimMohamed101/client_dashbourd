@@ -4,8 +4,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerManagementPage } from "@/features/customer-management/CustomerManagementPage";
 import { RetentionSnapshotPage } from "@/features/retention/RetentionSnapshotPage";
 
+type CustomerManagementSearch = { userId?: string; panel?: "profile" };
+
 export const Route = createFileRoute("/_protected/customer-management/")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): CustomerManagementSearch => ({
     userId: typeof search.userId === "string" ? search.userId : undefined,
     panel: search.panel === "profile" ? "profile" as const : undefined,
   }),
