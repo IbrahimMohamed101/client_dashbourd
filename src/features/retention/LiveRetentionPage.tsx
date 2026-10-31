@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { LIVE_RETENTION_STATUSES, useLiveRetention, type RetentionFilterStatus } from "./liveRetentionApi";
+import { useLiveRetention, type RetentionFilterStatus } from "./liveRetentionApi";
 
 const STATUS_LABEL: Record<RetentionFilterStatus, string> = {
   all: "كل العملاء",
