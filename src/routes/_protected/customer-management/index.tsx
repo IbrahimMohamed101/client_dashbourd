@@ -30,7 +30,7 @@ function CustomerManagementRoute() {
   return (
     <div className="space-y-4 px-4 lg:px-6" dir="rtl">
       <Tabs value={tab} onValueChange={(value) => setTab(value as Panel)}>
-        <TabsList className="h-auto flex-wrap">
+        <TabsList className="h-auto max-w-full flex-wrap group-data-horizontal/tabs:h-auto">
           <TabsTrigger value="live">متابعة التجديدات الحالية</TabsTrigger>
           <TabsTrigger value="october">تدقيق أكتوبر 2026</TabsTrigger>
           <TabsTrigger value="profile">إدارة بيانات عميل</TabsTrigger>

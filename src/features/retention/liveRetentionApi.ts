@@ -43,7 +43,7 @@ export type LiveRetentionParams = {
 export async function fetchLiveRetention(params: LiveRetentionParams): Promise<LiveRetentionResponse> {
   const response = await api.get<{ status: boolean; data: LiveRetentionResponse }>(
     "/api/dashboard/customer-management/retention",
-    { params, headers: { "Cache-Control": "no-cache" } }
+    { params }
   );
   const data = response.data?.data;
   if (data?.mode !== "live_operational_preview" || !Array.isArray(data.rows)) {

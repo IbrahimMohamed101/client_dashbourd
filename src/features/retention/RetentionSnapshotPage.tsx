@@ -182,8 +182,8 @@ export function RetentionSnapshotPage({ onOpenProfile }: { onOpenProfile: () => 
       </Card>
 
       <p className="rounded-xl border border-dashed p-4 text-sm leading-7 text-muted-foreground">
-        المرحلة القادمة: ربط تقرير حيّ من Backend محمي مع قائمة العملاء المصرح بها، وتاريخ آخر استحقاق فعلي،
-        وStacking والتجميد والرصيد، وحالة التواصل وموافقة الرسائل. لا توجد قائمة أسماء أو أرقام
+        لمتابعة الحالة الحالية استخدم تبويب «متابعة التجديدات الحالية» المحمي بصلاحية Superadmin.
+        لا تمثل هذه اللقطة موافقة على الرسائل. لا توجد قائمة أسماء أو أرقام
         جوالات في لقطة GitHub؛ هذه الصفحة لا ترسل رسائل، ولا تنشئ حملات، ولا تغيّر اشتراكًا.
       </p>
     </section>

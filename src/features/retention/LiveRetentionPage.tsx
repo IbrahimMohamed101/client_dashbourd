@@ -34,7 +34,7 @@ export function LiveRetentionPage() {
     page, pageSize: 20, status, search,
   }), [page, search, status]);
   const query = useLiveRetention(params);
-  const result = query.data;
+  const result = query.isError ? undefined : query.data;
 
   return (
     <section className="space-y-5" aria-label="التجديدات الحالية" dir="rtl">
@@ -150,10 +150,10 @@ export function LiveRetentionPage() {
           )}
         </CardContent>
       </Card>
-      <RetentionFollowupDialog customer={selectedFollowup} onClose={() => setSelectedFollowup(null)} />
+      {selectedFollowup && <RetentionFollowupDialog key={selectedFollowup.id} customer={selectedFollowup} onClose={() => setSelectedFollowup(null)} />}
       <p className="text-xs text-muted-foreground">
         حفظ سجل المتابعة فقط؛ لا تُرسل رسائل تلقائية ولا يوجد هنا حقل موافقة تسويقية موثوق.
-        يجب سؤال العميل عن سبب عدم التجديد وتوثيق الإجابة في نظام منفصل بعد اعتماد صلاحياته.
+        سجّل سبب عدم التجديد كما ذكره العميل في سجل المتابعة، واحترم طلب عدم التواصل.
       </p>
     </section>
   );

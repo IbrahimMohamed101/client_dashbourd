@@ -51,11 +51,6 @@ export function RetentionFollowupDialog({ customer, onClose }: {
   const [requestId, setRequestId] = React.useState("");
   const [success, setSuccess] = React.useState("");
 
-  React.useEffect(() => {
-    setChannel("phone"); setOutcome("no_answer"); setReasonCode("unknown");
-    setNote(""); setRequestId(""); setSuccess("");
-  }, [customerId]);
-
   const history = useQuery({
     queryKey: ["retention-followups", customerId],
     queryFn: async () => {
@@ -80,7 +75,7 @@ export function RetentionFollowupDialog({ customer, onClose }: {
     },
     onSuccess: () => {
       setSuccess("تم حفظ نتيجة التواصل في سجل العميل.");
-      setNote(""); setRequestId("");
+      setNote("");
       void queryClient.invalidateQueries({ queryKey: ["retention-followups", customerId] });
       void queryClient.invalidateQueries({ queryKey: ["customer-retention-live"] });
     },
@@ -89,7 +84,7 @@ export function RetentionFollowupDialog({ customer, onClose }: {
   const fieldClass = "mt-1 h-10 w-full rounded-md border bg-background px-2 text-sm";
   return (
     <Dialog open={Boolean(customer)} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-xl" dir="rtl">
+      <DialogContent className="sm:max-w-xl" dir="rtl">
         <DialogHeader>
           <DialogTitle>تسجيل متابعة — {customer?.name || "العميل"}</DialogTitle>
           <DialogDescription>
@@ -98,19 +93,20 @@ export function RetentionFollowupDialog({ customer, onClose }: {
           </DialogDescription>
         </DialogHeader>
         {optedOut && <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">العميل طلب عدم التواصل. لا تسجل محاولة تسويق جديدة؛ السجل للعرض فقط.</p>}
-        <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); if (!optedOut) mutation.mutate(); }}>
+        <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); if (!optedOut && !history.isPending && !history.isError && !mutation.isPending && !success) mutation.mutate(); }}>
+          <fieldset disabled={optedOut || mutation.isPending || history.isPending || history.isError} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="retention-channel">وسيلة التواصل</Label>
               <select id="retention-channel" className={fieldClass} value={channel}
-                onChange={(event) => { setChannel(event.target.value); setRequestId(""); }}>
+                onChange={(event) => { setChannel(event.target.value); setRequestId(""); setSuccess(""); }}>
                 {Object.entries(CHANNEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </div>
             <div>
               <Label htmlFor="retention-outcome">النتيجة</Label>
               <select id="retention-outcome" className={fieldClass} value={outcome}
-                onChange={(event) => { setOutcome(event.target.value); setRequestId(""); }}>
+                onChange={(event) => { setOutcome(event.target.value); setRequestId(""); setSuccess(""); }}>
                 {Object.entries(OUTCOME).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </div>
@@ -118,16 +114,17 @@ export function RetentionFollowupDialog({ customer, onClose }: {
           <div>
             <Label htmlFor="retention-reason">سبب عدم التجديد حسب كلام العميل</Label>
             <select id="retention-reason" className={fieldClass} value={reasonCode}
-              onChange={(event) => { setReasonCode(event.target.value); setRequestId(""); }}>
+              onChange={(event) => { setReasonCode(event.target.value); setRequestId(""); setSuccess(""); }}>
               {Object.entries(REASON).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
           <div>
             <Label htmlFor="retention-notes">ملاحظات الموظف (بدون بيانات حساسة)</Label>
             <Textarea id="retention-notes" value={note} maxLength={500}
-              onChange={(event) => { setNote(event.target.value); setRequestId(""); }}
+              onChange={(event) => { setNote(event.target.value); setRequestId(""); setSuccess(""); }}
               placeholder="سجّل المعلومة التي أكدها العميل، وليس استنتاجًا" />
           </div>
+          </fieldset>
           {outcome === "do_not_contact" && (
             <p className="text-sm text-destructive">يجب احترام طلب عدم التواصل في أي حملة مستقبلية.</p>
           )}
@@ -139,7 +136,7 @@ export function RetentionFollowupDialog({ customer, onClose }: {
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>إغلاق</Button>
-            <Button type="submit" disabled={optedOut || mutation.isPending || (reasonCode === "other" && note.trim().length < 3)}>
+            <Button type="submit" disabled={optedOut || history.isPending || history.isError || Boolean(success) || mutation.isPending || (reasonCode === "other" && note.trim().length < 3)}>
               {mutation.isPending ? "جاري الحفظ..." : "حفظ المتابعة"}
             </Button>
           </DialogFooter>
