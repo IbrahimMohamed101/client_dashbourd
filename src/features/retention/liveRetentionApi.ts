@@ -9,6 +9,7 @@ export type RetentionFilterStatus = LiveRetentionStatus | "all";
 
 export type LiveRetentionRow = {
   userId: string;
+  doNotContact: boolean;
   name: string;
   phone: string;
   firstRecordedAt: string;

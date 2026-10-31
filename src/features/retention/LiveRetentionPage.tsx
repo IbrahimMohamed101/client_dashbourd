@@ -29,7 +29,7 @@ export function LiveRetentionPage() {
   const [draftSearch, setDraftSearch] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
-  const [selectedFollowup, setSelectedFollowup] = React.useState<{ id: string; name: string } | null>(null);
+  const [selectedFollowup, setSelectedFollowup] = React.useState<{ id: string; name: string; blocked: boolean } | null>(null);
   const params = React.useMemo(() => ({
     page, pageSize: 20, status, search,
   }), [page, search, status]);
@@ -108,7 +108,7 @@ export function LiveRetentionPage() {
                           <p className="font-medium">{row.name || "بدون اسم مسجل"}</p>
                           <p className="text-xs text-muted-foreground" dir="ltr">{row.phone || "غير متاح"}</p>
                         </td>
-                        <td className="p-3"><Badge variant="outline">{STATUS_LABEL[row.status]}</Badge></td>
+                        <td className="p-3"><Badge variant="outline">{STATUS_LABEL[row.status]}</Badge>{row.doNotContact && <p className="mt-1 text-xs font-semibold text-destructive">طلب عدم التواصل</p>}</td>
                         <td className="p-3">
                           {row.dueDate || "غير محدد"}
                           {row.dueDateIsLatestValidityBound && (
@@ -119,7 +119,7 @@ export function LiveRetentionPage() {
                         <td className="p-3">{formatTimestamp(row.lastRecordedAt)}</td>
                         <td className="p-3">
                           <div className="flex flex-wrap items-center gap-3">
-                            <Button type="button" size="sm" variant="outline" onClick={() => setSelectedFollowup({ id: row.userId, name: row.name })}>تسجيل متابعة</Button>
+                            <Button type="button" size="sm" variant="outline" onClick={() => setSelectedFollowup({ id: row.userId, name: row.name, blocked: row.doNotContact })}>{row.doNotContact ? "عرض السجل" : "تسجيل متابعة"}</Button>
                           <Link className="inline-flex items-center gap-1 text-primary underline underline-offset-2"
                             to="/customer-management" search={{ userId: row.userId, panel: "profile" }}>
                             ملف العميل <ArrowLeft className="size-3" />

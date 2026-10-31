@@ -39,7 +39,7 @@ const stamp = (value: string) => new Intl.DateTimeFormat("ar-SA", {
 }).format(new Date(value));
 
 export function RetentionFollowupDialog({ customer, onClose }: {
-  customer: { id: string; name: string } | null;
+  customer: { id: string; name: string; blocked: boolean } | null;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -68,6 +68,7 @@ export function RetentionFollowupDialog({ customer, onClose }: {
     staleTime: 10_000,
   });
 
+  const optedOut = Boolean(customer?.blocked || history.data?.some((event) => event.outcome === "do_not_contact"));
   const mutation = useMutation({
     mutationFn: async () => {
       const id = requestId || crypto.randomUUID();
@@ -81,6 +82,7 @@ export function RetentionFollowupDialog({ customer, onClose }: {
       setSuccess("تم حفظ نتيجة التواصل في سجل العميل.");
       setNote(""); setRequestId("");
       void queryClient.invalidateQueries({ queryKey: ["retention-followups", customerId] });
+      void queryClient.invalidateQueries({ queryKey: ["customer-retention-live"] });
     },
   });
 
@@ -95,7 +97,8 @@ export function RetentionFollowupDialog({ customer, onClose }: {
             ولا يؤكد التجديد إلا بعد مطابقته بسجلات الدفع.
           </DialogDescription>
         </DialogHeader>
-        <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); mutation.mutate(); }}>
+        {optedOut && <p role="alert" className="rounded-lg border border-destructive/30 p-3 text-sm text-destructive">العميل طلب عدم التواصل. لا تسجل محاولة تسويق جديدة؛ السجل للعرض فقط.</p>}
+        <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); if (!optedOut) mutation.mutate(); }}>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="retention-channel">وسيلة التواصل</Label>
@@ -136,7 +139,7 @@ export function RetentionFollowupDialog({ customer, onClose }: {
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>إغلاق</Button>
-            <Button type="submit" disabled={mutation.isPending || (reasonCode === "other" && note.trim().length < 3)}>
+            <Button type="submit" disabled={optedOut || mutation.isPending || (reasonCode === "other" && note.trim().length < 3)}>
               {mutation.isPending ? "جاري الحفظ..." : "حفظ المتابعة"}
             </Button>
           </DialogFooter>
