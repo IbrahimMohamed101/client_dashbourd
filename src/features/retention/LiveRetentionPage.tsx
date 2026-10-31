@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useLiveRetention, type RetentionFilterStatus } from "./liveRetentionApi";
+import { RetentionFollowupDialog } from "./RetentionFollowupDialog";
 
 const STATUS_LABEL: Record<RetentionFilterStatus, string> = {
   all: "كل العملاء",
@@ -28,6 +29,7 @@ export function LiveRetentionPage() {
   const [draftSearch, setDraftSearch] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [selectedFollowup, setSelectedFollowup] = React.useState<{ id: string; name: string } | null>(null);
   const params = React.useMemo(() => ({
     page, pageSize: 20, status, search,
   }), [page, search, status]);
@@ -116,10 +118,13 @@ export function LiveRetentionPage() {
                         <td className="p-3">{row.remainingAndReserved === null ? "—" : number(row.remainingAndReserved)}</td>
                         <td className="p-3">{formatTimestamp(row.lastPurchaseAt)}</td>
                         <td className="p-3">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Button type="button" size="sm" variant="outline" onClick={() => setSelectedFollowup({ id: row.userId, name: row.name })}>تسجيل متابعة</Button>
                           <Link className="inline-flex items-center gap-1 text-primary underline underline-offset-2"
                             to="/customer-management" search={{ userId: row.userId, panel: "profile" }}>
                             ملف العميل <ArrowLeft className="size-3" />
                           </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -145,8 +150,9 @@ export function LiveRetentionPage() {
           )}
         </CardContent>
       </Card>
+      <RetentionFollowupDialog customer={selectedFollowup} onClose={() => setSelectedFollowup(null)} />
       <p className="text-xs text-muted-foreground">
-        عرض ومراجعة فقط؛ لا تُرسل رسائل تلقائية ولا يوجد هنا حقل موافقة تسويقية موثوق.
+        حفظ سجل المتابعة فقط؛ لا تُرسل رسائل تلقائية ولا يوجد هنا حقل موافقة تسويقية موثوق.
         يجب سؤال العميل عن سبب عدم التجديد وتوثيق الإجابة في نظام منفصل بعد اعتماد صلاحياته.
       </p>
     </section>
