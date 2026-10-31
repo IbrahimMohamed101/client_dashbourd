@@ -90,7 +90,7 @@ export function LiveRetentionPage() {
               </form>
               <p className="text-xs leading-6 text-muted-foreground">
                 حالة <strong>«يحتاج مراجعة»</strong> تعني أن الرصيد أو موعد النفاد غير محسوم؛ لا تتواصل بعرض استعادة قبل التحقق.
-                الرصيد المعروض يشمل المتبقي والمحجوز، ولا يعني عدد وجبات مسلّمة.
+                الرصيد المعروض يشمل المتبقي والمحجوز، ولا يعني عدد وجبات مسلّمة. تاريخ تسجيل الاشتراك لا يثبت حصول دفع أو تجديد.
               </p>
               <div className="overflow-x-auto rounded-xl border">
                 <table className="w-full min-w-[830px] text-right text-sm">
@@ -98,7 +98,7 @@ export function LiveRetentionPage() {
                     <tr>
                       <th className="p-3">العميل</th><th className="p-3">الحالة</th>
                       <th className="p-3">موعد الاستحقاق</th>
-                      <th className="p-3">الرصيد</th><th className="p-3">آخر شراء</th><th className="p-3">الإجراء</th>
+                      <th className="p-3">الرصيد</th><th className="p-3">آخر سجل اشتراك</th><th className="p-3">الإجراء</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -116,7 +116,7 @@ export function LiveRetentionPage() {
                           )}
                         </td>
                         <td className="p-3">{row.remainingAndReserved === null ? "—" : number(row.remainingAndReserved)}</td>
-                        <td className="p-3">{formatTimestamp(row.lastPurchaseAt)}</td>
+                        <td className="p-3">{formatTimestamp(row.lastRecordedAt)}</td>
                         <td className="p-3">
                           <div className="flex flex-wrap items-center gap-3">
                             <Button type="button" size="sm" variant="outline" onClick={() => setSelectedFollowup({ id: row.userId, name: row.name })}>تسجيل متابعة</Button>
