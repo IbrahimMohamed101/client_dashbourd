@@ -11,9 +11,9 @@ export type LiveRetentionRow = {
   userId: string;
   name: string;
   phone: string;
-  firstPurchaseAt: string;
-  lastPurchaseAt: string;
-  purchaseEvents: number;
+  firstRecordedAt: string;
+  lastRecordedAt: string;
+  subscriptionRecordCount: number;
   status: LiveRetentionStatus;
   reason: string;
   dueDate: string | null;
