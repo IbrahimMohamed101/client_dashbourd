@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { AlertTriangle, Loader2, Printer, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -239,14 +240,15 @@ function DashedDivider() {
   return <div className="my-2 border-t border-dashed border-black" aria-hidden="true" />;
 }
 
-export function SubscriptionInvoiceDialog({
+export function SubscriptionInvoiceDialog(props: Props) {
+  return props.open ? <InvoiceDialogContent key={props.subscriptionId} {...props} /> : null;
+}
+
+function InvoiceDialogContent({
   subscriptionId,
   open,
   onOpenChange,
 }: Props) {
-  const [invoice, setInvoice] = useState<InvoiceData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [paymentSelection, setPaymentSelection] = useState<{
     subscriptionId: string;
     paymentId: string;
@@ -257,34 +259,24 @@ export function SubscriptionInvoiceDialog({
       ? paymentSelection.paymentId
       : null;
 
-  useEffect(() => {
-    if (!open || !subscriptionId) return;
-    let active = true;
-    setLoading(true);
-    setError(null);
-
-    const paymentQuery = requestedPaymentId
-      ? `?paymentId=${encodeURIComponent(requestedPaymentId)}`
-      : "";
-
-    api
-      .get<InvoiceResponse>(
-        `/api/dashboard/subscriptions/${subscriptionId}/invoice${paymentQuery}`
-      )
-      .then((response) => {
-        if (active) setInvoice(response.data.data);
-      })
-      .catch((err: unknown) => {
-        if (active) setError(getApiErrorMessage(err) || "تعذر تحميل الفاتورة");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [open, subscriptionId, requestedPaymentId]);
+  const invoiceQuery = useQuery({
+    queryKey: ["subscription-invoice", subscriptionId, requestedPaymentId],
+    queryFn: async ({ signal }) => {
+      const paymentQuery = requestedPaymentId ? `?paymentId=${encodeURIComponent(requestedPaymentId)}` : "";
+      const response = await api.get<InvoiceResponse>(
+        `/api/dashboard/subscriptions/${subscriptionId}/invoice${paymentQuery}`, { signal }
+      );
+      return response.data.data;
+    },
+    enabled: open && Boolean(subscriptionId),
+    retry: false,
+    gcTime: 0,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
+  const invoice = invoiceQuery.data;
+  const loading = invoiceQuery.isFetching;
+  const error = invoiceQuery.error ? getApiErrorMessage(invoiceQuery.error) || "تعذر تحميل الفاتورة" : null;
 
   useEffect(() => {
     if (!open) return;

@@ -99,8 +99,8 @@ describe("Meal Builder option picker attach-on-save fallback", () => {
 
     expect(rows.map((row) => row.optionId)).toEqual([
       "beef-option",
-      "chicken-option",
       "unclassified-option",
+      "chicken-option",
     ]);
     expect(rows.find((row) => row.optionId === "beef-option")).toMatchObject({
       attachable: true,

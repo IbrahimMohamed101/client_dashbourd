@@ -14,6 +14,8 @@ import {
 import { formatCustomerDateTime } from "../src/components/pages/users/user-auth-utils";
 import type { User } from "../src/types/userTypes";
 
+const directResetPostMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/apis", () => ({ default: { post: directResetPostMock } }));
 const navigateMock = vi.fn();
 const blockerMock = vi.fn();
 const toastMock = vi.fn();
@@ -401,19 +403,12 @@ describe("customer create credentials flow", () => {
 
 describe("reset password credentials flow", () => {
   it("uses the corrected shared dialog and displays sessions-revoked warning", async () => {
-    const mutation = makeResetMutation();
-    mutation.mutate.mockImplementation((_payload, options) => {
-      options.onSuccess({
-        userId: fakeUser.id,
-        phoneE164: fakeUser.phoneE164,
-        temporaryPassword: "Reset-Pass-12345!",
-        temporaryPasswordExpiresAt: fakeCredentials.expiresAt,
-        sessionsRevoked: true,
-      });
-      options.onSettled();
-    });
+    directResetPostMock.mockResolvedValue({ data: { data: {
+      userId: fakeUser.id, phoneE164: fakeUser.phoneE164,
+      password: "Reset-Pass-12345!", forcePasswordChange: false,
+      sessionsRevoked: true, directLoginReady: true,
+    } } });
     const onOpenChange = vi.fn();
-    resetPasswordMutationMock.mockReturnValue(mutation);
     renderWithQueryClient(
       <ResetPasswordDialog user={fakeUser} open onOpenChange={onOpenChange} />
     );
@@ -422,11 +417,12 @@ describe("reset password credentials flow", () => {
       (button) => button.textContent?.includes("تأكيد")
     );
     if (!confirmButton) throw new Error("Reset confirm button not found");
+    await userEvent.type(screen.getByLabelText(/سبب إعادة التعيين/), "طلب العميل إعادة التعيين");
     await userEvent.click(confirmButton);
 
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(screen.getByText("Reset-Pass-12345!")).toBeInTheDocument();
-    expect(screen.getByText(/إلغاء الجلسات السابقة/)).toBeInTheDocument();
+    expect(screen.getByText(/الجلسات القديمة أُلغيت/)).toBeInTheDocument();
   });
 
   it("does not persist temporary secrets to browser storage or query cache", () => {

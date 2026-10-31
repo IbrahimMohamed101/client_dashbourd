@@ -84,11 +84,10 @@ export function MealPlannerCardDialogV2({
 }) {
   const editing = Boolean(section);
   const initialCardType =
-    section && normalizeCardType(section) === "option_family"
-      ? "option_family"
-      : "direct_product";
+    section ? (normalizeCardType(section) === "option_family" ? "option_family" : "direct_product")
+      : creatableCardTypes(cardContract ?? catalog.cardContract)[0];
   const [initialValue] = useState<MealPlannerCardFormValue>(() =>
-    buildInitialValue(section, catalog)
+    buildInitialValue(section, { ...catalog, cardContract: cardContract ?? catalog.cardContract })
   );
   const [value, setValue] = useState<MealPlannerCardFormValue>(initialValue);
   const [formError, setFormError] = useState("");
@@ -123,7 +122,7 @@ export function MealPlannerCardDialogV2({
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
-  const allMenuGroups = menuGroupsQuery.data?.data.items || [];
+  const allMenuGroups = useMemo(() => menuGroupsQuery.data?.data.items || [], [menuGroupsQuery.data]);
   const usableGroupIds = useMemo(
     () => new Set(contexts.map((context) => String(context.sourceGroupId))),
     [contexts]
@@ -172,7 +171,7 @@ export function MealPlannerCardDialogV2({
 
   const dirty = JSON.stringify(value) !== JSON.stringify(initialValue);
   const supportedContext = Boolean(
-    selectedContext &&
+    selectedContext && selectedContext.eligible === true &&
       (selectedContext.optionRole === "protein" ||
         selectedContext.optionRole === "carbs") &&
       optionRoles.includes(selectedContext.optionRole)
@@ -608,9 +607,8 @@ function buildInitialValue(
   catalog: MealPlannerCatalogV2
 ): MealPlannerCardFormValue {
   const cardType =
-    section && normalizeCardType(section) === "option_family"
-      ? "option_family"
-      : "direct_product";
+    section ? (normalizeCardType(section) === "option_family" ? "option_family" : "direct_product")
+      : creatableCardTypes(catalog.cardContract)[0];
   const optionRole = section ? sectionOptionRole(section) || undefined : undefined;
   return {
     cardType,
@@ -636,7 +634,7 @@ function buildInitialValue(
   };
 }
 
-export function createInternalCardKey(
+function createInternalCardKey(
   cardType: "direct_product" | "option_family"
 ) {
   const token =

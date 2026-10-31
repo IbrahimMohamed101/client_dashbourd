@@ -7,7 +7,7 @@ import {
   buildSubscriptionCreationPayload,
   buildSubscriptionQuotePayload,
 } from "../src/utils/buildSubscriptionCreationPayload";
-import { isSelectablePremiumMeal } from "../src/components/pages/subscriptions/create/PremiumMealsSection";
+import { isSelectablePremiumMeal } from "../src/components/pages/subscriptions/create/premiumMealEligibility";
 import {
   getDeliverySlotSelectionValues,
   getSubscriptionFulfillmentResetValues,
@@ -15,6 +15,7 @@ import {
 import { normalizeSlots } from "../src/utils/fetchDeliveryOptions";
 
 const baseData = {
+  subscriptionMode: "standalone" as const,
   userId: "USER_ID",
   planId: "PLAN_ID",
   grams: 150,
@@ -108,7 +109,7 @@ describe("subscription creation contract", () => {
   });
 
   it("requires an explicit payment method", () => {
-    const { paymentMethod: _paymentMethod, ...withoutPayment } = baseData;
+    const withoutPayment = { ...baseData, paymentMethod: undefined };
     const result = createSubscriptionSchema.safeParse(withoutPayment);
 
     expect(result.success).toBe(false);

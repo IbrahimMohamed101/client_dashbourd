@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-const state = vi.hoisted(() => ({ data: {} as any }));
+const state = vi.hoisted(() => ({ data: {} as unknown }));
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: state.data, isFetching: false, isError: false, refetch: vi.fn() }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),

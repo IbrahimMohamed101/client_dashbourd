@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -748,7 +748,11 @@ function ManualDeductionsFallback({ rows }: { rows: SubscriptionTrackingManualDe
   );
 }
 
-export function SubscriptionTrackingExperienceV4({
+export function SubscriptionTrackingExperienceV4(props: Parameters<typeof SubscriptionTrackingExperienceV4Content>[0]) {
+  return <SubscriptionTrackingExperienceV4Content key={`${props.subscription?._id ?? ""}:${props.open}`} {...props} />;
+}
+
+function SubscriptionTrackingExperienceV4Content({
   subscription,
   open,
   onOpenChange,
@@ -758,11 +762,6 @@ export function SubscriptionTrackingExperienceV4({
   const [movementFilter, setMovementFilter] = useState<MovementFilter>("all");
   const subscriptionId = subscription?._id ?? "";
 
-  useEffect(() => {
-    setActiveTab("overview");
-    setTimelineFilter("all");
-    setMovementFilter("all");
-  }, [subscriptionId, open]);
 
   const detailsQuery = useSubscriptionDetailsQuery(subscriptionId);
   const trackingQuery = useSubscriptionTrackingQuery(subscriptionId);

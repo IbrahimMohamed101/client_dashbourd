@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
@@ -420,15 +420,15 @@ function MovementRow({ movement }: { movement: SubscriptionMealMovement }) {
   );
 }
 
-export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenChange }: Props) {
+export function SubscriptionTrackingExperienceV7(props: Parameters<typeof SubscriptionTrackingExperienceV7Content>[0]) {
+  return <SubscriptionTrackingExperienceV7Content key={`${props.subscription?._id ?? ""}:${props.open}`} {...props} />;
+}
+
+function SubscriptionTrackingExperienceV7Content({ subscription, open, onOpenChange }: Props) {
   const [tab, setTab] = useState<WorkspaceTab>("summary");
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
   const subscriptionId = subscription?._id ?? "";
 
-  useEffect(() => {
-    setTab("summary");
-    setDayFilter("all");
-  }, [subscriptionId, open]);
 
   const detailsQuery = useSubscriptionDetailsQuery(subscriptionId);
   const trackingQuery = useSubscriptionTrackingQuery(subscriptionId);
@@ -507,7 +507,7 @@ export function SubscriptionTrackingExperienceV7({ subscription, open, onOpenCha
   const balanceDifference = safeCount(summary?.balanceIntegrity?.difference ?? Math.abs(total - accounted));
   const unknownMeals = safeCount(coverage?.unknownMeals ?? summary?.unattributedConsumedMeals);
 
-  const days = tracking?.days ?? [];
+  const days = useMemo(() => tracking?.days ?? [], [tracking?.days]);
   const dayCounts = useMemo(
     () => Object.fromEntries(
       DAY_FILTERS.map((item) => [

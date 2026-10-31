@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -49,14 +49,18 @@ function formatDate(value: string | null) {
   }).format(date);
 }
 
-export function RefundSettlementModal({
+export function RefundSettlementModal(props: RefundSettlementModalProps) {
+  return <RefundSettlementContent key={`${props.subscriptionId}:${props.isOpen}`} {...props} />;
+}
+
+function RefundSettlementContent({
   subscriptionId,
   isOpen,
   onClose,
 }: RefundSettlementModalProps) {
   const queryClient = useQueryClient();
-  const [refundId, setRefundId] = useState("");
-  const [method, setMethod] = useState<RefundChannel>("moyasar");
+  const [refundChoice, setRefundId] = useState("");
+  const [methodChoice, setMethodChoice] = useState<{ refundId: string; method: RefundChannel } | null>(null);
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
   const [confirmed, setConfirmed] = useState(false);
@@ -80,30 +84,14 @@ export function RefundSettlementModal({
   );
 
   const selectedRefund = useMemo(
-    () => pendingRefunds.find((refund) => refund.id === refundId) || null,
-    [pendingRefunds, refundId]
+    () => pendingRefunds.find((refund) => refund.id === refundChoice) || pendingRefunds[0] || null,
+    [pendingRefunds, refundChoice]
   );
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setRefundId("");
-    setReference("");
-    setNote("");
-    setConfirmed(false);
-  }, [isOpen, subscriptionId]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    if (!refundId || !pendingRefunds.some((refund) => refund.id === refundId)) {
-      const first = pendingRefunds[0];
-      setRefundId(first?.id || "");
-      setMethod(first?.refundChannel || "moyasar");
-    }
-  }, [isOpen, pendingRefunds, refundId]);
-
-  useEffect(() => {
-    if (selectedRefund?.refundChannel) setMethod(selectedRefund.refundChannel);
-  }, [selectedRefund?.id, selectedRefund?.refundChannel]);
+  const refundId = selectedRefund?.id || "";
+  const method = methodChoice?.refundId === refundId
+    ? methodChoice.method : selectedRefund?.refundChannel || "moyasar";
+  const setMethod = (nextMethod: RefundChannel) => setMethodChoice({ refundId, method: nextMethod });
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -173,6 +161,7 @@ export function RefundSettlementModal({
                 value={refundId}
                 onChange={(event) => {
                   setRefundId(event.target.value);
+                  setMethodChoice(null);
                   setConfirmed(false);
                   setReference("");
                   setNote("");

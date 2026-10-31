@@ -130,7 +130,7 @@ export function PickupQuickDayDeductionCard() {
     },
   });
 
-  const batches = optionsQuery.data?.data?.batches ?? [];
+  const batches = React.useMemo(() => optionsQuery.data?.data?.batches ?? [], [optionsQuery.data]);
   const manualOnlyBatches = optionsQuery.data?.data?.manualOnlyBatches ?? [];
   const selectedBatch = batches.find((batch) => batch.id === selectedBatchId) ?? null;
   const selectedBatchDeductibleMeals = selectedBatch ? deductibleMealsOf(selectedBatch) : 0;

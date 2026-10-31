@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -493,17 +493,16 @@ function TimelineCard({ day }: { day: SubscriptionTrackingDay }) {
   );
 }
 
-export function SubscriptionTrackingExperienceV5({ subscription, open, onOpenChange }: Props) {
+export function SubscriptionTrackingExperienceV5(props: Parameters<typeof SubscriptionTrackingExperienceV5Content>[0]) {
+  return <SubscriptionTrackingExperienceV5Content key={`${props.subscription?._id ?? ""}:${props.open}`} {...props} />;
+}
+
+function SubscriptionTrackingExperienceV5Content({ subscription, open, onOpenChange }: Props) {
   const [tab, setTab] = useState<WorkspaceTab>("overview");
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const [movementFilter, setMovementFilter] = useState<MovementFilter>("all");
   const subscriptionId = subscription?._id ?? "";
 
-  useEffect(() => {
-    setTab("overview");
-    setTimelineFilter("all");
-    setMovementFilter("all");
-  }, [subscriptionId, open]);
 
   const detailsQuery = useSubscriptionDetailsQuery(subscriptionId);
   const trackingQuery = useSubscriptionTrackingQuery(subscriptionId);

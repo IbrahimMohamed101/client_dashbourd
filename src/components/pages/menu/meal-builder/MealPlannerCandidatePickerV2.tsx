@@ -29,7 +29,11 @@ import {
 } from "./mealPlannerV2Utils";
 import { mergeMenuOptionsWithPicker } from "./mealPlannerOptionGroupFlow";
 
-export function MealPlannerCandidatePickerV2({
+export function MealPlannerCandidatePickerV2(props: Parameters<typeof CandidatePickerContent>[0]) {
+  return <CandidatePickerContent key={JSON.stringify([props.type, props.sourceGroupId, props.productContextId, props.familyKey])} {...props} />;
+}
+
+function CandidatePickerContent({
   type,
   targetSectionKey,
   selectedIds,
@@ -69,11 +73,6 @@ export function MealPlannerCandidatePickerV2({
     return () => window.clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => {
-    setSearch("");
-    setDebouncedSearch("");
-    setCategory("all");
-  }, [type, sourceGroupId, productContextId, familyKey]);
 
   const contextReady =
     type === "product" || Boolean(productContextId && sourceGroupId && optionRole);

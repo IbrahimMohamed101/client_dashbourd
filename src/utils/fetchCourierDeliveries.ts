@@ -11,7 +11,7 @@ import type {
 type CourierDeliveryResponse = {
   status: boolean;
   data?: unknown[] | { items?: unknown[]; date?: string };
-  meta?: { date?: string; total?: number };
+  meta?: { date?: string; total?: number; readOnly?: boolean };
 };
 
 type CourierDto = Record<string, unknown>;
@@ -183,9 +183,9 @@ const normalizeCourierItem = (item: unknown): UnifiedQueueItem => {
   const addonCount = asNumber(record.addonCount) ?? 0;
   const premiumUpgradeCount = asNumber(record.premiumUpgradeCount) ?? 0;
   const normalizedActions = normalizeCourierActions(record.allowedActions);
-  const allowedActions = normalizedActions.length
-    ? normalizedActions
-    : fallbackCourierActionsFor(record, source);
+  const allowedActions = record.allowedActions === undefined
+    ? fallbackCourierActionsFor(record, source)
+    : normalizedActions;
   const addressSummary = formatAddress(address);
   const deliveryWindow = firstString(
     record.deliveryWindow,
@@ -302,7 +302,9 @@ export const fetchCourierDeliveryList = async (
     "/api/courier/deliveries/today",
     { params: { date } }
   );
-  const items = toItems(response.data).map(normalizeCourierItem);
+  const items = toItems(response.data).map((item) => normalizeCourierItem(
+    response.data.meta?.readOnly === true ? { ...asRecord(item), allowedActions: [] } : item
+  ));
   const firstDate = items.find((item) => item.context.date)?.context.date;
   const businessDate = responseBusinessDate(response.data) || firstDate || date;
 

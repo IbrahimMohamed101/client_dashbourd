@@ -9,6 +9,7 @@ import {
 
 function subscription(overrides: Partial<Subscription> = {}): Subscription {
   return {
+    status: "active",
     planName: "الباقة الأصلية",
     plan: { id: "plan-a", name: "الباقة الأصلية" },
     ...overrides,

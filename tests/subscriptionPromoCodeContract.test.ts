@@ -12,6 +12,7 @@ import {
 } from "../src/utils/subscriptionPromoQuote";
 
 const baseData = {
+  subscriptionMode: "standalone" as const,
   userId: "user-1",
   planId: "plan-1",
   grams: 150,
@@ -115,8 +116,9 @@ describe("subscription promo-code contract", () => {
     expect(source).toContain("السعر قبل الخصم");
     expect(source).toContain("قيمة الخصم");
     expect(source).toContain("السعر بعد الخصم");
-    expect(source).toContain(
-      "الخصم يُطبق على سعر الباقة فقط. الإضافات والوجبات المميزة ورسوم التوصيل تُضاف كاملة بعد الخصم."
-    );
+    const promoSection = readFileSync(new URL(
+      "../src/components/pages/subscriptions/create/PromoCodeSection.tsx", import.meta.url
+    ), "utf8");
+    expect(promoSection).toContain("الخصم يُطبق على سعر الباقة فقط. الإضافات والوجبات المميزة ورسوم التوصيل تُضاف كاملة بعد الخصم.");
   });
 });

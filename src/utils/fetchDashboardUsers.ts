@@ -47,7 +47,10 @@ export const isDashboardStaffRole = (
 
 export const normalizeDashboardStaffRoles = (
   _roles: unknown
-): DashboardStaffRole[] => [...ASSIGNABLE_DASHBOARD_STAFF_ROLES];
+): DashboardStaffRole[] => {
+  void _roles; // Preserve the local, supported staff-role allowlist.
+  return [...ASSIGNABLE_DASHBOARD_STAFF_ROLES];
+};
 
 const normalizeStaffUsersListResponse = (
   response: DashboardStaffUsersListResponse

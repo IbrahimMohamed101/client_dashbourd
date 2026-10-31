@@ -171,7 +171,9 @@ describe("Meal Builder composed option-group flow", () => {
 
   it("scopes attach-on-save protein options to the requested family", () => {
     const rows = mergeMenuOptionsWithPicker(menuOptions, [], [], "chicken");
-    expect(rows.map((row) => row.optionId)).toEqual(["option-chicken"]);
+    expect(rows.map((row) => row.optionId)).toEqual(["option-chicken", "option-fish"]);
+    expect(rows.find((row) => row.optionId === "option-fish")).toMatchObject({ assignable: false, attachable: false });
+    expect(candidateSelectable(rows.find((row) => row.optionId === "option-fish")!)).toBe(false);
     expect(rows[0]).toMatchObject({
       familyKey: "chicken",
       attachable: true,

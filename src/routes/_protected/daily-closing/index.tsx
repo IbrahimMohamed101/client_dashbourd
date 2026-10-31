@@ -130,12 +130,12 @@ function DailyClosingPage() {
   const { user } = useAuth();
   const canApprove = user?.role === "admin" || user?.role === "superadmin";
   const [date, setDate] = useState(getTodayKSADate());
-  const [form, setForm] = useState<FormState>(defaultForm);
+  const [formDraft, setForm] = useState<FormState>(defaultForm);
   const [returnReason, setReturnReason] = useState("");
   const [edited, setEdited] = useState(false);
   const [showPayments, setShowPayments] = useState(false);
-  const [showCountCorrection, setShowCountCorrection] = useState(false);
-  const [showExtraNotes, setShowExtraNotes] = useState(false);
+  const [countCorrectionChoice, setShowCountCorrection] = useState<boolean | null>(null);
+  const [extraNotesChoice, setShowExtraNotes] = useState<boolean | null>(null);
   const queryClient = useQueryClient();
   const key = ["daily-cash-closing", date];
   const query = useQuery({
@@ -146,13 +146,9 @@ function DailyClosingPage() {
   });
   const view = query.data;
   const locked = view?.status === "submitted" || view?.status === "approved";
-  useEffect(() => {
-    if (view && !edited) {
-      setForm(formFromView(view));
-      if (view.confirmedSubscriptionCount !== null) setShowCountCorrection(true);
-      if (view.notes) setShowExtraNotes(true);
-    }
-  }, [view, edited]);
+  const form = !edited && view ? formFromView(view) : formDraft;
+  const showCountCorrection = countCorrectionChoice ?? (view?.confirmedSubscriptionCount != null);
+  const showExtraNotes = extraNotesChoice ?? Boolean(view?.notes);
   useEffect(() => {
     if (!edited) return;
     const warnBeforeLeave = (event: BeforeUnloadEvent) => {
@@ -164,11 +160,11 @@ function DailyClosingPage() {
   }, [edited]);
   const change = (key: keyof FormState, value: string) => {
     setEdited(true);
-    setForm(f => ({ ...f, [key]: value }));
+    setForm({ ...form, [key]: value });
   };
   const updateOther = (next: (current: FormState["other"]) => FormState["other"]) => {
     setEdited(true);
-    setForm(f => ({ ...f, other: next(f.other) }));
+    setForm({ ...form, other: next(form.other) });
   };
   const changeDate = (nextDate: string) => {
     if (!nextDate || nextDate === date) return;
@@ -177,8 +173,8 @@ function DailyClosingPage() {
     setDate(nextDate);
     setForm(defaultForm);
     setShowPayments(false);
-    setShowCountCorrection(false);
-    setShowExtraNotes(false);
+    setShowCountCorrection(null);
+    setShowExtraNotes(null);
   };
   const action = useMutation({
     mutationFn: async (kind: "save" | "submit" | "approve" | "return") => {
@@ -192,6 +188,8 @@ function DailyClosingPage() {
     onSuccess: (value, kind) => {
       queryClient.setQueryData(key, value);
       setEdited(false);
+      setShowCountCorrection(null);
+      setShowExtraNotes(null);
       setReturnReason("");
       toast.success({ save: "تم حفظ المسودة", submit: "تم إرسال التقفيلة للمراجعة", approve: "تم اعتماد التقفيلة", return: "تمت إعادة التقفيلة للتعديل" }[kind]);
     },
@@ -490,7 +488,7 @@ function DailyClosingPage() {
                       </div>
                     </div>}
                     <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
-                      aria-expanded={showCountCorrection} onClick={() => setShowCountCorrection(v => !v)}>
+                      aria-expanded={showCountCorrection} onClick={() => setShowCountCorrection(!showCountCorrection)}>
                       عدد الاشتراكات عند الموظف مختلف؟
                       {showCountCorrection ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                     </button>
@@ -555,7 +553,7 @@ function DailyClosingPage() {
                       {reviewNeeded && !form.discrepancyReason.trim() && <p className="text-xs text-amber-700">اكتب سبب الاختلاف لتقدر ترسل التقفيلة للمراجعة.</p>}
                     </div>
                     <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                      aria-expanded={showExtraNotes} onClick={() => setShowExtraNotes(v => !v)}>
+                      aria-expanded={showExtraNotes} onClick={() => setShowExtraNotes(!showExtraNotes)}>
                       ملاحظات إضافية (اختياري) {showExtraNotes ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                     </button>
                     {showExtraNotes && <div className="space-y-2">

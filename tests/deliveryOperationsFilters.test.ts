@@ -24,6 +24,7 @@ function queueItem(
     type: overrides.type ?? "subscription",
     mode: overrides.mode ?? "delivery",
     reference: overrides.reference ?? overrides.id,
+    orderNumber: overrides.orderNumber,
     status: overrides.status,
     statusLabel: overrides.statusLabel ?? overrides.status,
     ui: overrides.ui ?? {},

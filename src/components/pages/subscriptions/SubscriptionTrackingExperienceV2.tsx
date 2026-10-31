@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -519,7 +519,11 @@ function ManualDeductions({ rows }: { rows: SubscriptionTrackingManualDeduction[
   );
 }
 
-export function SubscriptionTrackingExperienceV2({
+export function SubscriptionTrackingExperienceV2(props: Parameters<typeof SubscriptionTrackingExperienceV2Content>[0]) {
+  return <SubscriptionTrackingExperienceV2Content key={`${props.subscription?._id ?? ""}:${props.open}`} {...props} />;
+}
+
+function SubscriptionTrackingExperienceV2Content({
   subscription,
   open,
   onOpenChange,
@@ -527,9 +531,6 @@ export function SubscriptionTrackingExperienceV2({
   const [filter, setFilter] = useState<TimelineFilter>("all");
   const subscriptionId = subscription?._id ?? "";
 
-  useEffect(() => {
-    setFilter("all");
-  }, [subscriptionId, open]);
 
   const detailsQuery = useSubscriptionDetailsQuery(subscriptionId);
   const trackingQuery = useSubscriptionTrackingQuery(subscriptionId);

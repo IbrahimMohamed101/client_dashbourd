@@ -112,7 +112,7 @@ describe("Meal Planner V2 API contract", () => {
     );
   });
 
-  it("sends the complete Product + Group + Role context to the option picker", async () => {
+  it("uses the backend family-key picker route with explicit attach-on-save candidates", async () => {
     apiMock.get.mockResolvedValueOnce({
       data: {
         status: true,
@@ -133,13 +133,10 @@ describe("Meal Planner V2 API contract", () => {
     });
 
     expect(apiMock.get).toHaveBeenCalledWith(
-      "/api/dashboard/meal-builder/pickers/options",
+      "/api/dashboard/meal-builder/pickers/beef",
       {
         params: {
-          productContextId: "product-1",
-          sourceGroupId: "group-1",
-          optionRole: "protein",
-          familyKey: "beef",
+          includeNotLinked: true,
           unassignedOnly: true,
           lang: "ar",
         },

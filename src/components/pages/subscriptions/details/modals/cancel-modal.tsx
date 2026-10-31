@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -62,7 +62,11 @@ function formatDate(value: string | null) {
   }).format(date);
 }
 
-export function CancelModal({
+export function CancelModal(props: CancelModalProps) {
+  return <CancelModalContent key={`${props.subscriptionId}:${props.isOpen}`} {...props} />;
+}
+
+function CancelModalContent({
   subscriptionId,
   isOpen,
   onClose,
@@ -77,7 +81,7 @@ export function CancelModal({
   const [action, setAction] = useState<FinancialControlAction>("cancel");
   const [refundMode, setRefundMode] = useState<RefundMode>("full");
   const [refundChannel, setRefundChannel] = useState<RefundChannel>("moyasar");
-  const [paymentId, setPaymentId] = useState("");
+  const [paymentChoice, setPaymentId] = useState("");
   const [partialAmountSar, setPartialAmountSar] = useState("");
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
@@ -98,29 +102,11 @@ export function CancelModal({
     [preview?.payments]
   );
   const selectedPayment = useMemo(
-    () => refundablePayments.find((payment) => payment.paymentId === paymentId) || null,
-    [paymentId, refundablePayments]
+    () => refundablePayments.find((payment) => payment.paymentId === paymentChoice) || refundablePayments[0] || null,
+    [paymentChoice, refundablePayments]
   );
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setAction("cancel");
-    setRefundMode("full");
-    setRefundChannel("moyasar");
-    setPaymentId("");
-    setPartialAmountSar("");
-    setReason("");
-    setNote("");
-    setConfirmed(false);
-    setOperationKey(makeOperationKey());
-  }, [isOpen, subscriptionId]);
-
-  useEffect(() => {
-    if (!isOpen || !isSuperadmin) return;
-    if (!paymentId || !refundablePayments.some((payment) => payment.paymentId === paymentId)) {
-      setPaymentId(refundablePayments[0]?.paymentId || "");
-    }
-  }, [isOpen, isSuperadmin, paymentId, refundablePayments]);
+  const paymentId = selectedPayment?.paymentId || "";
 
   const resetOperationKey = () => {
     setOperationKey(makeOperationKey());

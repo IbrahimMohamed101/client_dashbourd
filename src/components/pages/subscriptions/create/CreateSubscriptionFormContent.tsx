@@ -187,11 +187,12 @@ export function CreateSubscriptionFormContent({
       : null
     : selectedUserHasActiveSubscription;
 
+  const preselectedActiveCount = preselectedUser?.activeSubscriptionsCount;
   useEffect(() => {
-    if (!userId || !preselectedUser) return;
+    if (!userId || preselectedActiveCount === undefined) return;
     form.setValue(
       "subscriptionMode",
-      preselectedUser.activeSubscriptionsCount > 0
+      preselectedActiveCount > 0
         ? "stack_into_current"
         : "standalone",
       {
@@ -200,7 +201,7 @@ export function CreateSubscriptionFormContent({
         shouldValidate: true,
       }
     );
-  }, [form, preselectedUser?.activeSubscriptionsCount, userId]);
+  }, [form, preselectedActiveCount, userId]);
 
   const handleUserSelected = useCallback(
     (user: User) => {
