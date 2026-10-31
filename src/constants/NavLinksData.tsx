@@ -115,7 +115,7 @@ export const NavLinksData = {
       icon: <Users />,
     },
     {
-      title: "إدارة بيانات العملاء",
+      title: "العملاء والتجديدات",
       url: "/customer-management",
       icon: <ContactRound />,
     },
