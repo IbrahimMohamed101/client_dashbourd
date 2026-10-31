@@ -29,7 +29,15 @@ Full tests: **370 passed, 0 failed, 0 skipped, 86 files**. This includes subscri
 
 Full ESLint: **0 errors / 0 warnings**. TypeScript (`npm run typecheck` and build-mode `tsc -b`): **PASS**. Production build targeting loopback backend: **PASS**.
 
-PR #62 compatibility: separate worktree validation pending.
+## Retention PR #62 compatibility
+
+Applied repair commit `09fd5a2` without conflicts in a separate disposable worktree on PR #62 head `bef2d00642e73bddd7aceb08b7fda43929d4c7e6` (combined commit `6a3c7a2`). Clean Node 20 install: **379 passed / 0 failed / 0 skipped**; full ESLint **0 errors / 0 warnings**; TypeScript and build **PASS**. The extra nine assertions belong to the retention feature.
+
+Ran the existing Playwright retention runner against the combined production build and backend PR #186's loopback-only QA app with disposable MongoMemoryServer and synthetic users. Both desktop (1440×1000) and mobile (390×844) passed login, search/filter/pagination, profile opening, follow-up save/replay/refresh, do-not-contact, historical October tab, error state and RTL/overflow checks. Anonymous access returned 401; all five non-superadmin roles returned 403 and redirected without issuing retention reads. Browser traffic was restricted to local hosts. Both QA servers were stopped afterward.
+
+Local synthetic evidence: `/tmp/dashboard-final-tests.json`, `/tmp/dashboard-compat-tests.json`, `/tmp/dashboard-final-checks.json`, `/tmp/dashboard-compat-checks.json`, `/tmp/dashboard-regression-compat-browser/results.json` (not customer data or committed logs).
+
+No remaining test, lint, build, TypeScript or retention-compatibility failures. This is review evidence; production deployment remains outside this change.
 
 `graphify update .` ran; it refused to replace the existing 4,133-node graph with a 2,711-node AST-only graph because previous chunk files are absent. Preserved the existing graph instead of forcing data loss. Build-generated route-tree churn is excluded from the repair.
 
