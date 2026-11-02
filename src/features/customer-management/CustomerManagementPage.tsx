@@ -81,6 +81,8 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
   const [draft, setDraft] = React.useState<CustomerManagementDraft>(EMPTY_DRAFT);
   const [reason, setReason] = React.useState("");
   const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [statusConfirmOpen, setStatusConfirmOpen] = React.useState(false);
+  const [nextIsActive, setNextIsActive] = React.useState(true);
   const [compensationQuantity, setCompensationQuantity] = React.useState("1");
   const [compensationReason, setCompensationReason] = React.useState("");
   const [compensationConfirmOpen, setCompensationConfirmOpen] = React.useState(false);
@@ -250,9 +252,12 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
               />
             </div>
 
-            <div className="max-h-[520px] space-y-2 overflow-y-auto pl-1">
+            <div className="max-h-[520px] space-y-1 overflow-y-auto pl-1">
               {usersQuery.isLoading ? (
-                <LoadingLine label="جاري تحميل العملاء..." />
+                <div className="space-y-2" role="status" aria-label="جاري تحميل العملاء">
+                  {[1, 2, 3, 4, 5].map((index) =>
+                    <div key={index} className="h-12 animate-pulse rounded-lg bg-muted" />)}
+                </div>
               ) : usersQuery.isError ? (
                 <p className="py-6 text-center text-sm text-destructive">
                   تعذر تحميل قائمة العملاء.
@@ -310,6 +315,62 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
                 </CardHeader>
               </Card>
 
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <UserRound className="size-4" />
+                    بيانات الحساب
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-5 md:grid-cols-2">
+                  <Field label="الاسم الكامل" icon={<UserRound className="size-4" />}>
+                    <Input
+                      value={draft.fullName}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, fullName: event.target.value }))
+                      }
+                      maxLength={120}
+                    />
+                  </Field>
+                  <Field label="رقم الجوال السعودي" icon={<Phone className="size-4" />}>
+                    <Input
+                      value={draft.phone}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, phone: event.target.value }))
+                      }
+                      dir="ltr"
+                      inputMode="tel"
+                      placeholder="+9665XXXXXXXX"
+                    />
+                  </Field>
+                  <Field label="البريد الإلكتروني" icon={<Mail className="size-4" />}>
+                    <Input
+                      value={draft.email}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, email: event.target.value }))
+                      }
+                      dir="ltr"
+                      type="email"
+                      placeholder="customer@example.com"
+                    />
+                  </Field>
+                  <div className="flex items-center justify-between rounded-xl border p-4">
+                    <div>
+                      <Label htmlFor="customer-active">حالة الحساب: {draft.isActive ? "نشط" : "معطّل"}</Label>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        الحساب غير النشط لا يستطيع تسجيل الدخول.
+                      </p>
+                    </div>
+                    <Switch
+                      id="customer-active"
+                      checked={draft.isActive}
+                      onCheckedChange={(checked) => { setNextIsActive(checked); setStatusConfirmOpen(true); }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {profile.activeSubscription ? (<>
               <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
                 <SubscriptionOverview subscription={profile.activeSubscription} />
 
@@ -373,78 +434,11 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
                 </Card>
               </div>
 
-              <CompensationHistoryCard
-                rows={profile.activeSubscription?.compensationHistory ?? []}
-              />
+              {profile.activeSubscription.compensationHistory.length > 0 &&
+                <CompensationHistoryCard rows={profile.activeSubscription.compensationHistory} />}
+              </>) : <p className="rounded-lg border p-3 text-sm text-muted-foreground">لا يوجد اشتراك نشط لهذا العميل.</p>}
 
-              <AccountMergeCard
-                profile={profile}
-                onMerged={async (targetId) => {
-                  setSelectedUserId(targetId);
-                  await queryClient.invalidateQueries({ queryKey: ["users"] });
-                  await queryClient.invalidateQueries({
-                    queryKey: ["customer-management", targetId],
-                  });
-                }}
-              />
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <UserRound className="size-4" />
-                    بيانات الحساب
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-5 md:grid-cols-2">
-                  <Field label="الاسم الكامل" icon={<UserRound className="size-4" />}>
-                    <Input
-                      value={draft.fullName}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, fullName: event.target.value }))
-                      }
-                      maxLength={120}
-                    />
-                  </Field>
-                  <Field label="رقم الجوال السعودي" icon={<Phone className="size-4" />}>
-                    <Input
-                      value={draft.phone}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, phone: event.target.value }))
-                      }
-                      dir="ltr"
-                      inputMode="tel"
-                      placeholder="+9665XXXXXXXX"
-                    />
-                  </Field>
-                  <Field label="البريد الإلكتروني" icon={<Mail className="size-4" />}>
-                    <Input
-                      value={draft.email}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, email: event.target.value }))
-                      }
-                      dir="ltr"
-                      type="email"
-                      placeholder="customer@example.com"
-                    />
-                  </Field>
-                  <div className="flex items-center justify-between rounded-xl border p-4">
-                    <div>
-                      <Label htmlFor="customer-active">حالة الحساب</Label>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        الحساب غير النشط لا يستطيع تسجيل الدخول.
-                      </p>
-                    </div>
-                    <Switch
-                      id="customer-active"
-                      checked={draft.isActive}
-                      onCheckedChange={(checked) =>
-                        setDraft((current) => ({ ...current, isActive: checked }))
-                      }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
+              {profile.activeSubscription && (<React.Fragment>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex flex-wrap items-center gap-2 text-base">
@@ -491,7 +485,8 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
                 </CardContent>
               </Card>
 
-              <Card>
+              </React.Fragment>)}
+              <Card className={pendingPayload ? "sticky bottom-2 z-20 border-primary bg-background shadow-xl" : ""}>
                 <CardContent className="space-y-4 pt-6">
                   <Field label="سبب التعديل — مطلوب لسجل التدقيق">
                     <Textarea
@@ -529,11 +524,46 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
                   </div>
                 </CardContent>
               </Card>
+              <details className="rounded-xl border border-amber-300/60 p-3">
+                <summary className="cursor-pointer text-sm font-semibold text-amber-800 dark:text-amber-300">إجراءات حساسة — دمج حساب مكرر</summary>
+                <div className="pt-3">
+              <AccountMergeCard
+                profile={profile}
+                onMerged={async (targetId) => {
+                  setSelectedUserId(targetId);
+                  await queryClient.invalidateQueries({ queryKey: ["users"] });
+                  await queryClient.invalidateQueries({
+                    queryKey: ["customer-management", targetId],
+                  });
+                }}
+              />
+
+                </div>
+              </details>
             </div>
           )}
         </div>
       </div>
 
+
+      <AlertDialog open={statusConfirmOpen} onOpenChange={setStatusConfirmOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{nextIsActive ? "تأكيد إعادة تنشيط الحساب" : "تأكيد تعطيل حساب العميل"}</AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              {nextIsActive
+                ? "سيصبح الحساب نشطًا بعد حفظ التغييرات مع تسجيل السبب."
+                : "تعطيل الحساب يمنع العميل من تسجيل الدخول. لن يُنفّذ إلا بعد حفظ التغييرات وتأكيدها."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogAction onClick={() => { setDraft((current) => ({ ...current, isActive: nextIsActive })); setStatusConfirmOpen(false); }}>
+              تأكيد تغيير الحالة
+            </AlertDialogAction>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
@@ -1076,16 +1106,16 @@ function formatCustomerDate(value: string | null) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium" }).format(date);
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Riyadh" }).format(date);
 }
 
 function formatCustomerDateTime(value: string | null) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("ar-SA", {
-    dateStyle: "medium",
-    timeStyle: "short",
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", timeZone: "Asia/Riyadh",
   }).format(date);
 }
 
@@ -1103,21 +1133,22 @@ function CustomerChoice({
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full rounded-xl border p-3 text-right transition-colors hover:bg-muted/60",
+        "w-full rounded-lg border px-3 py-2 text-right transition-colors hover:bg-muted/60",
         selected && "border-primary bg-primary/5 ring-1 ring-primary"
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate font-medium">{user.fullName || "عميل بدون اسم"}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate font-medium">{user.fullName || "عميل بدون اسم"}</p>
+            <span className={"shrink-0 rounded-full px-2 text-[11px] " + (user.isActive ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700")}>
+              {user.isActive ? "نشط" : "معطّل"}
+            </span>
+          </div>
           <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
             {user.phoneE164 || user.phone}
           </p>
-          {user.email ? (
-            <p className="mt-1 truncate text-xs text-muted-foreground" dir="ltr">
-              {user.email}
-            </p>
-          ) : null}
+
         </div>
         {selected ? <CheckCircle2 className="mt-1 size-4 shrink-0 text-primary" /> : null}
       </div>

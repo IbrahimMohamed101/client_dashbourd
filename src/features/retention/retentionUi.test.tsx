@@ -8,7 +8,10 @@ import { RetentionFollowupDialog } from "./RetentionFollowupDialog";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("@/lib/apis", () => ({ default: api }));
-vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }));
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+  useNavigate: () => vi.fn(),
+}));
 const customer = { id: "synthetic-user", name: "عميل صناعي", blocked: false };
 const live = {
   mode: "live_operational_preview", asOf: "2026-10-31T15:00:53Z", warnings: [],
@@ -38,6 +41,38 @@ describe("retention UI safety", () => {
     await screen.findByRole("alert", {}, { timeout: 4000 });
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.queryByText("190")).not.toBeInTheDocument();
+  });
+  it("shows the last recorded follow-up and visually distinct overdue priority", async () => {
+    api.get.mockResolvedValue({ data: { data: {
+      ...live, totals: { all: 1, overdue_14: 1 }, rows: [{
+        ...live.rows[0], status: "overdue_14", dueDate: "2026-10-01",
+        latestFollowup: {
+          createdAt: "2026-10-20T10:00:00Z", outcome: "callback_requested",
+          channel: "phone", actor: "staff@example.com",
+        },
+      }],
+    } } });
+    mount(<LiveRetentionPage />);
+    await screen.findByText("staff@example.com");
+    expect(screen.getAllByText("بعد مهلة 14 يومًا").length).toBeGreaterThan(0);
+    expect(screen.getByText(/متأخر 30 يوم/)).toBeInTheDocument();
+    expect(screen.getByText("طلب معاودة الاتصال")).toBeInTheDocument();
+  });
+  it("can navigate to page two using server-side pagination", async () => {
+    api.get.mockImplementation((_url, config) => {
+      const page = config?.params?.page || 1;
+      return Promise.resolve({ data: { data: {
+        ...live, pagination: { page, pageSize: 20, total: 21 }, rows: [{
+          ...live.rows[0], userId: page === 2 ? "page-two" : "page-one",
+          name: page === 2 ? "Second Customer" : "First Customer",
+        }],
+      } } });
+    });
+    mount(<LiveRetentionPage />);
+    await screen.findByText("First Customer");
+    fireEvent.click(screen.getAllByRole("button", { name: /التالي/ })[0]);
+    await screen.findByText("Second Customer");
+    expect(screen.queryByText("First Customer")).not.toBeInTheDocument();
   });
   it("blocks submission when follow-up history cannot be checked", async () => {
     api.get.mockRejectedValue(new Error("unavailable"));

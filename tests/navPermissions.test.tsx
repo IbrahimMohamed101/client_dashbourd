@@ -90,6 +90,7 @@ test("navPermissions.test", () => {
   assert.deepEqual(navMainUrlsForRole("superadmin"), [
     ...navMainUrlsForRole("admin"),
     "/customer-management",
+    "/retention-reports",
     "/dashboard-users",
   ]);
 
@@ -101,6 +102,8 @@ test("navPermissions.test", () => {
   assert.equal(navMainUrlsForRole("restaurant").includes("/dashboard-users"), false);
   assert.equal(navMainUrlsForRole("superadmin").includes("/dashboard-users"), true);
   assert.equal(navMainUrlsForRole("superadmin").includes("/customer-management"), true);
+  assert.equal(navMainUrlsForRole("superadmin").includes("/retention-reports"), true);
+  assert.equal(navMainUrlsForRole("admin").includes("/retention-reports"), false);
 
   assert.deepEqual(secondaryUrlsForRole("admin"), [
     "/settings",

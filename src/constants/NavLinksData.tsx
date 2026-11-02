@@ -110,7 +110,7 @@ export const NavLinksData = {
       icon: <MapPin />,
     },
     {
-      title: "المستخدمين",
+      title: "عملاء التطبيق",
       url: "/users",
       icon: <Users />,
     },
@@ -118,6 +118,11 @@ export const NavLinksData = {
       title: "العملاء والتجديدات",
       url: "/customer-management",
       icon: <ContactRound />,
+    },
+    {
+      title: "تقارير التجديد",
+      url: "/retention-reports",
+      icon: <ClipboardList />,
     },
     {
       title: "مستخدمو لوحة التحكم",
