@@ -370,7 +370,7 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
                 </CardContent>
               </Card>
 
-              {profile.activeSubscription && (
+              {profile.activeSubscription ? (<>
               <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
                 <SubscriptionOverview subscription={profile.activeSubscription} />
 
@@ -436,7 +436,7 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
 
               {profile.activeSubscription.compensationHistory.length > 0 &&
                 <CompensationHistoryCard rows={profile.activeSubscription.compensationHistory} />}
-              )}
+              </>) : <p className="rounded-lg border p-3 text-sm text-muted-foreground">لا يوجد اشتراك نشط لهذا العميل.</p>}
 
               <Card>
                 <CardHeader>
