@@ -93,7 +93,7 @@ const normalizeSearchText = (value: unknown) =>
     .replace(/[إأآ]/g, "ا")
     .replace(/ى/g, "ي")
     .replace(/ة/g, "ه")
-    .replace(/[+()\[\]{}.,،/\\:_–—-]+/g, " ")
+    .replace(/[+()[\]{}.,،/\\:_–—-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -213,7 +213,7 @@ function extractNeighborhoodFromAddress(address: UnknownRecord | null): string |
     }
 
     const englishMatch = candidate.match(
-      /\b(?:district|neighbou?rhood)\s*[:\-]?\s*([^,;|/\\\-–—]{2,45})/i
+      /\b(?:district|neighbou?rhood)\s*[:-]?\s*([^,;|/\\\-–—]{2,45})/i
     );
     if (englishMatch?.[1]) {
       const area = cleanExtractedArea(englishMatch[1]);
@@ -529,7 +529,7 @@ export function matchesDeliverySearch(
     address?.line2,
     address?.district,
     address?.street,
-    address?.building,
+    address?.building ? `مبنى ${address.building}` : null,
     address?.floor,
     address?.apartment,
     address?.city,

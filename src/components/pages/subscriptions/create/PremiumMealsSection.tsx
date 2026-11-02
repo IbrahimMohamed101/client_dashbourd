@@ -26,26 +26,8 @@ interface PremiumMealsSectionProps {
   onPriceChange?: (price: { halala: number; currency?: string }) => void;
 }
 
-export interface BuilderPremiumMeal {
-  id: string;
-  configId?: string | null;
-  sourceId?: string | null;
-  premiumKey: string;
-  sourceModel?: string;
-  sourceType?: string;
-  kind?: string;
-  selectionType?: string;
-  name: { ar?: string; en?: string } | string;
-  imageUrl?: string;
-  extraFeeHalala?: number;
-  priceHalala?: number;
-  currency?: string;
-  isActive?: boolean;
-  availableForSubscription?: boolean;
-  health?: string;
-  issueCode?: string | null;
-  legacy?: boolean;
-}
+import { isSelectablePremiumMeal, type BuilderPremiumMeal } from "./premiumMealEligibility";
+export type { BuilderPremiumMeal } from "./premiumMealEligibility";
 
 interface BuilderPremiumMealsResponse {
   status: boolean;
@@ -57,15 +39,6 @@ const fetchBuilderPremiumMeals = async (): Promise<BuilderPremiumMealsResponse> 
   return response.data;
 };
 
-export function isSelectablePremiumMeal(meal: BuilderPremiumMeal): boolean {
-  return (
-    typeof meal.premiumKey === "string" &&
-    meal.premiumKey.trim().length > 0 &&
-    meal.isActive !== false &&
-    meal.availableForSubscription !== false &&
-    (!meal.health || meal.health === "ready")
-  );
-}
 
 const getMealName = (meal: BuilderPremiumMeal) =>
   typeof meal.name === "string" ? meal.name : meal.name.ar || meal.name.en || "";

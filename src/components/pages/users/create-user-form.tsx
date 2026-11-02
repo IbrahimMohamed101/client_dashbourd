@@ -57,7 +57,6 @@ export function CreateUserForm() {
   const resetCreateCustomerMutation = createCustomer.reset;
   const isActive = watch("isActive");
   const phoneValue = watch("phoneE164");
-  const phoneRegistration = register("phoneE164");
   const isCreating = createCustomer.isPending || isSubmitLocked;
   const protectedState =
     isCreating || Boolean(credentials) || malformedSuccessOpen;
@@ -208,9 +207,7 @@ export function CreateUserForm() {
                   placeholder="+966566796659"
                   maxLength={16}
                   disabled={isCreating}
-                  name={phoneRegistration.name}
-                  ref={phoneRegistration.ref}
-                  onBlur={phoneRegistration.onBlur}
+                  {...register("phoneE164")}
                   value={phoneValue}
                   onChange={(event) => {
                     const nextValue = sanitizeSaudiPhoneInput(event.target.value);

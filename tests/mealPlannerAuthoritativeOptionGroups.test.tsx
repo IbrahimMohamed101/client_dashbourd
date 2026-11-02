@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
+import { renderMealPlanner as render } from "./helpers/mealPlannerRender";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,7 +21,7 @@ vi.mock(
     MealPlannerCandidatePickerV2: ({
       type,
       targetSectionKey,
-      seedCandidates = [],
+      menuOptions = [],
       selectedIds,
       productContextId,
       sourceGroupId,
@@ -30,13 +31,15 @@ vi.mock(
     }: {
       type: "product" | "option";
       targetSectionKey?: string;
-      seedCandidates?: Array<{
+      menuOptions?: Array<{
         id: string;
         optionId?: string;
         productId?: string;
         name?: { ar?: string; en?: string };
         label?: string;
         assignable?: boolean;
+        isActive?: boolean;
+        proteinFamilyKey?: string;
       }>;
       selectedIds: string[];
       productContextId?: string;
@@ -55,7 +58,7 @@ vi.mock(
             familyKey: familyKey || null,
           })}
         </output>
-        {seedCandidates.map((candidate) => {
+        {menuOptions.filter((candidate) => !familyKey || candidate.proteinFamilyKey === familyKey).map((candidate) => {
           const id = String(
             candidate.optionId || candidate.productId || candidate.id
           );
@@ -64,7 +67,7 @@ vi.mock(
             <button
               key={id}
               type="button"
-              disabled={!selected && candidate.assignable !== true}
+              disabled={!selected && candidate.isActive === false}
               aria-pressed={selected}
               onClick={() =>
                 onChange(
@@ -240,20 +243,20 @@ describe("MealPlannerBuilderGroupSelector", () => {
   it("renders Product → Group details and disables Backend-ineligible groups", () => {
     render(
       <MealPlannerBuilderGroupSelector
-        groups={[proteinGroup, ineligibleGroup]}
+        menuGroups={[proteinGroup, ineligibleGroup].map((g) => ({ ...g.group, id: g.sourceGroupId }))}
+        builderGroups={[proteinGroup, ineligibleGroup]}
         onSelect={vi.fn()}
       />
     );
 
-    expect(screen.getByText("وجبة بيسك ← البروتين")).toBeInTheDocument();
-    expect(screen.getByText(/3 خيارات/)).toBeInTheDocument();
-    expect(screen.getByText(/2 قابلة للاختيار/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /البروتين.*متاح للاختيار/ })).toBeEnabled();
 
     const disabled = screen.getByRole("button", {
-      name: /وجبة غير جاهزة ← البروتين/,
+      name: /البروتين.*غير مدعوم حاليًا/,
     });
     expect(disabled).toBeDisabled();
-    expect(screen.getByText("المنتج غير جاهز للاشتراكات")).toBeInTheDocument();
+    expect(ineligibleGroup.eligible).toBe(false); // Rendering must not mutate the backend catalog.
+    expect(screen.getByText("لا يوجد سياق منتج مرتبط بهذه المجموعة في Meal Builder")).toBeInTheDocument();
   });
 });
 
@@ -277,7 +280,7 @@ describe("authoritative option-family create dialog", () => {
       screen.getByRole("button", { name: /خيارات وجبة مركبة/ })
     );
     await user.click(
-      screen.getByRole("button", { name: /وجبة بيسك ← البروتين/ })
+      screen.getByRole("button", { name: /البروتين.*متاح للاختيار/ })
     );
 
     expect(screen.getByRole("button", { name: "فيليه سمك" })).toBeEnabled();
@@ -292,9 +295,8 @@ describe("authoritative option-family create dialog", () => {
       '"sourceGroupId":"group-proteins"'
     );
 
-    await user.type(screen.getByPlaceholderText("مثال: وجبات جاهزة"), "سمك");
-    await user.type(screen.getByPlaceholderText("Example: Ready Meals"), "Fish");
-    await user.type(screen.getByPlaceholderText("ready_meals"), "fish_options");
+    await user.type(screen.getByLabelText("الاسم العربي"), "سمك");
+    await user.type(screen.getByLabelText("الاسم الإنجليزي"), "Fish");
     await user.click(screen.getByRole("button", { name: "فيليه سمك" }));
     await user.click(screen.getByRole("button", { name: "إنشاء الكارت" }));
 
@@ -330,9 +332,10 @@ describe("authoritative option-family create dialog", () => {
       screen.getByRole("button", { name: /خيارات وجبة مركبة/ })
     );
     await user.click(
-      screen.getByRole("button", { name: /وجبة بيسك ← البروتين/ })
+      screen.getByRole("button", { name: /البروتين.*متاح للاختيار/ })
     );
-    await user.click(screen.getByRole("button", { name: "سمك" }));
+    await user.click(screen.getByRole("combobox", { name: "عائلة البروتين" }));
+    await user.click(screen.getByRole("option", { name: "fish", exact: true }));
 
     expect(screen.getByRole("button", { name: "فيليه سمك" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "شرائح لحم" })).not.toBeInTheDocument();
@@ -356,7 +359,7 @@ describe("authoritative option-family create dialog", () => {
       />
     );
     await user.click(
-      screen.getByRole("button", { name: /وجبة بيسك ← النشويات/ })
+      screen.getByRole("button", { name: /النشويات.*متاح للاختيار/ })
     );
 
     expect(

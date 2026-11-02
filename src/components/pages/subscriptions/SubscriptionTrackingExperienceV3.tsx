@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -600,7 +600,11 @@ function TimelineDay({ day }: { day: SubscriptionTrackingDay }) {
   );
 }
 
-export function SubscriptionTrackingExperienceV3({
+export function SubscriptionTrackingExperienceV3(props: Parameters<typeof SubscriptionTrackingExperienceV3Content>[0]) {
+  return <SubscriptionTrackingExperienceV3Content key={`${props.subscription?._id ?? ""}:${props.open}`} {...props} />;
+}
+
+function SubscriptionTrackingExperienceV3Content({
   subscription,
   open,
   onOpenChange,
@@ -609,10 +613,6 @@ export function SubscriptionTrackingExperienceV3({
   const [movementFilter, setMovementFilter] = useState<MovementFilter>("all");
   const subscriptionId = subscription?._id ?? "";
 
-  useEffect(() => {
-    setTimelineFilter("all");
-    setMovementFilter("all");
-  }, [subscriptionId, open]);
 
   const detailsQuery = useSubscriptionDetailsQuery(subscriptionId);
   const trackingQuery = useSubscriptionTrackingQuery(subscriptionId);

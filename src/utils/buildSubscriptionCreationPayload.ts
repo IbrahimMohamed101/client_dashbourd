@@ -104,7 +104,8 @@ export function buildSubscriptionCreationPayload(
 export function buildSubscriptionQuotePayload(
   data: CreateSubscriptionSchemaType
 ): SubscriptionQuotePayload {
-  const { payment: _payment, ...quotePayload } =
-    buildSubscriptionCreationPayload(data);
+  const payload = buildSubscriptionCreationPayload(data);
+  const { payment, ...quotePayload } = payload;
+  void payment; // Quotes deliberately exclude payment instructions.
   return quotePayload;
 }

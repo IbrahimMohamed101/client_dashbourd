@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
+import { renderMealPlanner as render, testMealPlannerCatalog } from "./helpers/mealPlannerRender";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -26,6 +27,11 @@ vi.mock(
   })
 );
 
+vi.mock("../src/components/pages/menu/meal-builder/MealPlannerMenuProductPicker", () => ({
+  MealPlannerMenuProductPicker: ({ onChange }: { onChange: (ids: string[]) => void }) =>
+    <button type="button" onClick={() => onChange(["product-1"])}>اختيار عنصر تجريبي</button>,
+}));
+
 import { MealPlannerCardDialogV2 } from "../src/components/pages/menu/meal-builder/MealPlannerCardDialogV2";
 import { MealPlannerCardGridV2 } from "../src/components/pages/menu/meal-builder/MealPlannerCardGridV2";
 import type {
@@ -36,9 +42,7 @@ import type {
 afterEach(() => cleanup());
 
 const emptyCatalog: MealPlannerCatalogV2 = {
-  products: [],
-  optionGroups: [],
-  options: [],
+  ...testMealPlannerCatalog,
   searchFacets: {
     proteinFamilies: ["beef"],
   },
@@ -56,7 +60,7 @@ describe("Meal Planner V2 components", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /منتجات كاملة/ })
+      screen.getByRole("button", { name: /منتجات المنيو/ })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /خيارات وجبة مركبة/ })
@@ -65,7 +69,7 @@ describe("Meal Planner V2 components", () => {
     expect(screen.queryByText(/system_premium/i)).not.toBeInTheDocument();
   });
 
-  it("reads creatable card types and option roles from cardContract", () => {
+  it("reads creatable card types and option roles from cardContract", async () => {
     render(
       <MealPlannerCardDialogV2
         catalog={emptyCatalog}
@@ -84,15 +88,15 @@ describe("Meal Planner V2 components", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: /منتجات كاملة/ })
+      screen.queryByRole("button", { name: /منتجات المنيو/ })
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /خيارات وجبة مركبة/ })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("combobox", { name: "نوع الخيارات" })
-    ).toHaveTextContent("خيارات كارب");
-    expect(screen.queryByText("خيارات بروتين")).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: /النشويات.*متاح للاختيار/ }));
+    expect(screen.getByRole("combobox", { name: "دور الخيارات" })).toHaveTextContent("كارب");
+    expect(screen.getByRole("combobox", { name: "دور الخيارات" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "إنشاء الكارت" })).toBeDisabled();
   });
 
   it("submits a direct card using the canonical full_meal_product payload", async () => {
@@ -110,14 +114,13 @@ describe("Meal Planner V2 components", () => {
     );
 
     await user.type(
-      screen.getByPlaceholderText("مثال: وجبات جاهزة"),
+      screen.getByLabelText("الاسم العربي"),
       "ساندويتشات"
     );
     await user.type(
-      screen.getByPlaceholderText("Example: Ready Meals"),
+      screen.getByLabelText("الاسم الإنجليزي"),
       "Sandwiches"
     );
-    await user.type(screen.getByPlaceholderText("ready_meals"), "sandwiches");
     await user.click(
       screen.getByRole("button", { name: "اختيار عنصر تجريبي" })
     );
@@ -151,10 +154,10 @@ describe("Meal Planner V2 components", () => {
       screen.getByRole("button", { name: /خيارات وجبة مركبة/ })
     );
 
-    expect(screen.getByText("نوع الخيارات")).toBeInTheDocument();
-    expect(screen.getByText("المنتج الأساسي")).toBeInTheDocument();
-    expect(screen.getByText("مجموعة الخيارات")).toBeInTheDocument();
-    expect(screen.getByText("عائلة البروتين")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: /البروتين.*متاح للاختيار/ }));
+    expect(screen.getByRole("combobox", { name: "دور الخيارات" })).toHaveTextContent("بروتين");
+    expect(screen.getByText("المجموعة المحددة: البروتين")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "عائلة البروتين" })).toBeInTheDocument();
   });
 
   it("renders contradictory historical sandwich metadata as a complete direct meal", () => {

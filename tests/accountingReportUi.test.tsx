@@ -67,7 +67,7 @@ test("accounting report renders RTL fallback cards and legacy customer rows", ()
   );
 
   expect(container.querySelector("section[dir='rtl']")).not.toBeNull();
-  expect(screen.getAllByText("إجمالي التحصيل").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("إجمالي تحصيل الاشتراكات").length).toBeGreaterThan(0);
   expect(screen.getAllByText("صافي الحركة").length).toBeGreaterThan(0);
   expect(screen.getByText("عميل قديم")).toBeInTheDocument();
   expect(screen.getByText("لوحة التحكم")).toBeInTheDocument();

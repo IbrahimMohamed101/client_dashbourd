@@ -41,6 +41,7 @@ export const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginCredentials) => login(credentials),
     onSuccess: (data: AuthResponse) => {
+      queryClient.clear();
       persistDashboardSession(data);
       queryClient.setQueryData(sessionQueryOptions.queryKey, data);
 
@@ -79,8 +80,7 @@ export const useAuth = () => {
       Cookies.remove("dashboardToken");
     },
     onSuccess: () => {
-      queryClient.setQueryData(sessionQueryOptions.queryKey, undefined);
-      queryClient.removeQueries({ queryKey: sessionQueryOptions.queryKey });
+      queryClient.clear();
 
       ToastMessage("تم تسجيل الخروج بنجاح", "success");
 

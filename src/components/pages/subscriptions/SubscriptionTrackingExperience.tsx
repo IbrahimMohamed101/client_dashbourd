@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -588,7 +588,11 @@ function ManualDeductionsPanel({
   );
 }
 
-export function SubscriptionTrackingExperience({
+export function SubscriptionTrackingExperience(props: Parameters<typeof SubscriptionTrackingExperienceContent>[0]) {
+  return <SubscriptionTrackingExperienceContent key={`${props.subscription?._id ?? ""}:${props.open}`} {...props} />;
+}
+
+function SubscriptionTrackingExperienceContent({
   subscription,
   open,
   onOpenChange,
@@ -596,9 +600,6 @@ export function SubscriptionTrackingExperience({
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const subscriptionId = subscription?._id ?? "";
 
-  useEffect(() => {
-    setTimelineFilter("all");
-  }, [subscriptionId, open]);
 
   const {
     data: detailResponse,

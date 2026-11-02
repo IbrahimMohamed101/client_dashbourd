@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangleIcon,
   CalendarRangeIcon,
@@ -448,7 +448,7 @@ function SubscriptionAuditPage() {
   const [draftTo, setDraftTo] = useState(today);
   const [from, setFrom] = useState(initialFrom);
   const [to, setTo] = useState(today);
-  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState(today);
+  const [deliveryDateChoice, setSelectedDeliveryDate] = useState(today);
   const [deliveryRowFilter, setDeliveryRowFilter] = useState<DeliveryRowFilter>("all");
   const [fulfillment, setFulfillment] = useState<FulfillmentFilter>("all");
   const [risk, setRisk] = useState<RiskFilter>("all");
@@ -461,14 +461,10 @@ function SubscriptionAuditPage() {
   });
 
   const report = reportQuery.data;
-  const dailyDeliveryOperations = report?.dailyDeliveryOperations || [];
+  const dailyDeliveryOperations = useMemo(() => report?.dailyDeliveryOperations || [], [report?.dailyDeliveryOperations]);
 
-  useEffect(() => {
-    if (dailyDeliveryOperations.length === 0) return;
-    if (!dailyDeliveryOperations.some((row) => row.date === selectedDeliveryDate)) {
-      setSelectedDeliveryDate(dailyDeliveryOperations[dailyDeliveryOperations.length - 1].date);
-    }
-  }, [dailyDeliveryOperations, selectedDeliveryDate]);
+  const selectedDeliveryDate = dailyDeliveryOperations.some((row) => row.date === deliveryDateChoice)
+    ? deliveryDateChoice : dailyDeliveryOperations.at(-1)?.date || "";
 
   const selectedDeliveryDay = useMemo(
     () => dailyDeliveryOperations.find((row) => row.date === selectedDeliveryDate)

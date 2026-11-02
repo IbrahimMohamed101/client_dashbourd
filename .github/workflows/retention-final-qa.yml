@@ -1,0 +1,45 @@
+name: Retention final QA
+on:
+  pull_request:
+    paths:
+      - 'src/features/retention/**'
+      - 'src/routes/_protected/customer-management/**'
+      - 'src/hooks/useAuth.ts'
+      - 'scripts/retention-browser-qa.mjs'
+      - 'package*.json'
+      - '.github/workflows/retention-final-qa.yml'
+permissions:
+  contents: read
+jobs:
+  focused-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run test:retention
+      - run: npx eslint src/features/retention src/hooks/useAuth.ts src/routes/_protected/customer-management/index.tsx
+  full-dashboard-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test -- --maxWorkers=2
+  full-dashboard-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run lint

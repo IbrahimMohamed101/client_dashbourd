@@ -226,6 +226,12 @@ export function assertCatalogResponse(value: unknown): {
     throw new Error("Meal Planner authoring catalog contract mismatch");
   }
   const data = value.data;
+  const authoring = isRecord(data.authoring) ? data.authoring : null;
+  const version = data.authoringContractVersion ?? authoring?.contractVersion;
+  if (version !== undefined && version !== "dashboard_meal_builder_authoring.v1") {
+    throw new Error("Meal Planner authoring version mismatch");
+  }
+  if (authoring?.complete === false) throw new Error("Meal Planner catalog is incomplete");
   if (!Array.isArray(data.products) || !Array.isArray(data.optionGroups)) {
     throw new Error("Meal Planner catalog is incomplete");
   }
