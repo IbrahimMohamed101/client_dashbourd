@@ -15,7 +15,7 @@ const categories = [
   { title: "انتهى في أكتوبر دون تجديد", count: snapshot.statuses.expiredInOctober, color: "bg-amber-500", detail: "بعضهم كان داخل المهلة" },
   { title: "انتهى قبل أكتوبر ولم يعد", count: snapshot.statuses.expiredBeforeOctober, color: "bg-rose-500", detail: "انتهى قبل الفترة" },
   { title: "ملغي دون عودة", count: snapshot.statuses.canceledNoReturn, color: "bg-slate-400", detail: "إلغاء موثق" },
-  { title: "حالة غير محسومة", count: snapshot.statuses.requiresReview, color: "bg-orange-500", detail: "لا تُحسب كفاقد مؤكد" },
+  { title: "حالة غير محسومة", count: snapshot.statuses.requiresReview, color: "bg-violet-500", detail: "لا تُحسب كفاقد مؤكد" },
 ] as const;
 const priorities = [
   { title: "خارج مهلة 14 يومًا", count: summary.beyondGrace14NoRepeat, filter: "overdue_14" as const, note: "الأرقام التاريخية لا تعني أن نفس العملاء في الحالة الحالية.", icon: AlertTriangle },
@@ -78,9 +78,11 @@ export function RetentionSnapshotPage() {
       <Card>
         <CardHeader><CardTitle className="text-base">توزيع {number(snapshot.oldCustomers)} عميلًا عند قطع التقرير</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div role="img" aria-label="توزيع العملاء حسب حالة أكتوبر" className="flex h-8 overflow-hidden rounded-lg" dir="ltr">
+          {/* No dir="ltr" here: in RTL the bar starts from the right, matching the legend's reading order. */}
+          <div role="img" aria-label="توزيع العملاء حسب حالة أكتوبر" className="flex h-8 overflow-hidden rounded-lg">
             {categories.map((item) => <div key={item.title} className={item.color}
-              style={{ width: (100 * item.count / snapshot.oldCustomers) + "%" }} title={item.title + ": " + number(item.count)} />)}
+              style={{ width: (100 * item.count / snapshot.oldCustomers) + "%" }}
+              title={item.title + ": " + number(item.count) + " (" + percent(item.count / snapshot.oldCustomers) + ")"} />)}
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {categories.map((item) => (
@@ -88,7 +90,10 @@ export function RetentionSnapshotPage() {
                 <div className="flex items-start gap-2">
                   <span className={"mt-1 inline-block size-3 shrink-0 rounded-sm " + item.color} />
                   <div className="min-w-0 flex-1"><p className="font-semibold text-[13px]">{item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div>
-                  <strong className="text-xl tabular-nums">{number(item.count)}</strong>
+                  <div className="text-left">
+                    <strong className="block text-xl tabular-nums">{number(item.count)}</strong>
+                    <span className="text-xs tabular-nums text-muted-foreground">{percent(item.count / snapshot.oldCustomers)}</span>
+                  </div>
                 </div>
               </div>
             ))}
