@@ -26,6 +26,17 @@ function mount(element: React.ReactNode) {
 afterEach(cleanup);
 beforeEach(() => { vi.resetAllMocks(); });
 describe("retention UI safety", () => {
+  it("offers a safe WhatsApp chat for a Saudi mobile number", async () => {
+    api.get.mockResolvedValue({ data: { data: {
+      ...live, rows: [{ ...live.rows[0], phone: "0551234567" }],
+    } } });
+    mount(<LiveRetentionPage />);
+    const link = await screen.findByRole("link", { name: "فتح واتساب مع عميل صناعي" });
+    expect(screen.getByText("+966 55 123 4567")).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "https://wa.me/966551234567");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("table").closest('[data-slot="card"]')).toHaveClass("overflow-visible");
+  });
   it("hides cached customer data after a failed live refresh", async () => {
     api.get.mockResolvedValueOnce({ data: { data: live } }).mockRejectedValue(new Error("unavailable"));
     mount(<LiveRetentionPage />);
