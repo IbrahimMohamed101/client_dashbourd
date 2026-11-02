@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   fetchLiveRetention, useLiveRetention, type LiveRetentionRow,
   type RetentionFilterStatus,
@@ -312,13 +313,16 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                             onClick={() => setSelectedFollowup({ id: row.userId, name: row.name, blocked: row.doNotContact })}>
                             {row.doNotContact ? "عرض السجل" : "تسجيل متابعة"}
                           </Button>
-                          <details className="relative" onClick={(event) => event.stopPropagation()}>
-                            <summary title="إجراءات أخرى" aria-label="إجراءات أخرى" className="flex size-8 cursor-pointer list-none items-center justify-center rounded-md border hover:bg-muted">
-                              <MoreHorizontal className="size-4" /></summary>
-                            <div className="absolute left-0 z-20 min-w-36 rounded-lg border bg-background p-2 shadow-lg">
-                              <button type="button" className="block w-full rounded p-2 text-right hover:bg-muted" onClick={() => openProfile(row.userId)}>ملف العميل</button>
-                            </div>
-                          </details>
+                          <DropdownMenu dir="rtl">
+                            <DropdownMenuTrigger asChild>
+                              <Button type="button" variant="outline" size="icon" aria-label="إجراءات أخرى">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => openProfile(row.userId)}>فتح ملف العميل</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>;
