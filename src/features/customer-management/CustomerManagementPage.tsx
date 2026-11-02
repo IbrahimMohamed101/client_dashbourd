@@ -438,6 +438,7 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
                 <CompensationHistoryCard rows={profile.activeSubscription.compensationHistory} />}
               </>) : <p className="rounded-lg border p-3 text-sm text-muted-foreground">لا يوجد اشتراك نشط لهذا العميل.</p>}
 
+              {profile.activeSubscription && (<React.Fragment>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex flex-wrap items-center gap-2 text-base">
@@ -484,6 +485,7 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
                 </CardContent>
               </Card>
 
+              </React.Fragment>)}
               <Card className={pendingPayload ? "sticky bottom-2 z-20 border-primary bg-background shadow-xl" : ""}>
                 <CardContent className="space-y-4 pt-6">
                   <Field label="سبب التعديل — مطلوب لسجل التدقيق">
