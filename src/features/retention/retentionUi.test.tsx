@@ -8,7 +8,10 @@ import { RetentionFollowupDialog } from "./RetentionFollowupDialog";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("@/lib/apis", () => ({ default: api }));
-vi.mock("@tanstack/react-router", () => ({ Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }));
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+  useNavigate: () => vi.fn(),
+}));
 const customer = { id: "synthetic-user", name: "عميل صناعي", blocked: false };
 const live = {
   mode: "live_operational_preview", asOf: "2026-10-31T15:00:53Z", warnings: [],
