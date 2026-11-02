@@ -216,7 +216,7 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
             <ContactRound className="size-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">إدارة بيانات العملاء</h1>
+            <h2 className="text-2xl font-bold tracking-tight">إدارة بيانات العملاء</h2>
             <p className="text-sm text-muted-foreground">
               تعديل بيانات الحساب والعنوان للسوبر أدمين فقط مع تسجيل كل تغيير.
             </p>
@@ -1224,7 +1224,7 @@ function EmptySelection() {
     <Card>
       <CardContent className="py-20 text-center">
         <ContactRound className="mx-auto size-10 text-muted-foreground" />
-        <h2 className="mt-4 font-semibold">اختر عميلًا للبدء</h2>
+        <h3 className="mt-4 font-semibold">اختر عميلًا للبدء</h3>
         <p className="mt-2 text-sm text-muted-foreground">
           ابحث بالاسم أو رقم الجوال أو البريد ثم اختر العميل من القائمة.
         </p>
