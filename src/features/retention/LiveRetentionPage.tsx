@@ -271,7 +271,7 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
             {pager}
             {/* One scroller only: the page scrolls vertically (sticky header). Horizontal scroll is kept
                 for narrow screens and dropped from xl up, where the table fits and sticky needs the page as scroller. */}
-            <div aria-busy={isUpdating}
+            <div aria-busy={isUpdating} inert={isUpdating}
               className={"overflow-x-auto rounded-xl border transition-opacity xl:overflow-visible " + (isUpdating ? "pointer-events-none opacity-50" : "")}>
               <table className="w-full min-w-[1120px] text-right text-[13px] leading-6">
                 <thead className="sticky top-0 z-10 bg-muted text-foreground [&_th:first-child]:rounded-tr-xl [&_th:last-child]:rounded-tl-xl">
