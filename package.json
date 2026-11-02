@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test:retention:browser": "node scripts/retention-browser-qa.mjs",
-    "test:retention": "vitest run --maxWorkers=2 src/features/retention tests/roleRoutes.test.ts tests/navPermissions.test.tsx"
+    "test:retention": "vitest run --maxWorkers=2 src/features/retention tests/roleRoutes.test.ts tests/navPermissions.test.tsx",
+    "build:pos": "vite build -c vite.pos.config.ts",
+    "preview:pos": "vite preview -c vite.pos.config.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
