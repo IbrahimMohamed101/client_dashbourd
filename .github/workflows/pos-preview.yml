@@ -20,9 +20,9 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: TypeScript verification
-        run: npx tsc -b
-      - name: Build POS only
+      - name: Generate dashboard route types and run TypeScript checks
+        run: npm run build
+      - name: Build POS independently
         run: npm run build:pos
       - name: Check isolated output
         run: |
