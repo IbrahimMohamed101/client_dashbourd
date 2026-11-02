@@ -7,11 +7,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   fetchLiveRetention, useLiveRetention, type LiveRetentionRow,
   type RetentionFilterStatus,
 } from "./liveRetentionApi";
+import { RetentionDateField } from "./RetentionDateField";
 import { RetentionFollowupDialog } from "./RetentionFollowupDialog";
 
 const STATUS_LABEL: Record<RetentionFilterStatus, string> = {
@@ -78,6 +80,9 @@ const phoneDisplay = (value: string) => {
   if (/^5\d{8}$/.test(local)) return "+966 " + local.slice(0, 2) + " " + local.slice(2, 5) + " " + local.slice(5);
   return value || "غير متاح";
 };
+// A real customer phone is digits only (optionally with +, spaces or dashes). Anything else
+// (for example an automation/test record whose "phone" is a slug) must not look like a contact.
+const isPhoneLike = (value: string) => /^\+?\d{8,15}$/.test(value.replace(/[\s-]/g, ""));
 const csvCell = (value: unknown) => {
   const raw = String(value ?? "");
   const safe = /^[\s]*[=+\-@\t\r]/.test(raw) ? "'" + raw : raw;
@@ -121,12 +126,21 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
   }), [page, pageSize, status, search, uncontactedOnly, dueFrom, dueTo]);
   const query = useLiveRetention(params);
   const result = query.isError ? undefined : query.data;
+  // While a new filter/page is loading, `result` still holds the previous response (placeholder data).
+  // Keep the controls mounted, but never let those stale rows be acted on.
+  const isUpdating = query.isPlaceholderData;
   const today = result ? saudiDay(result.asOf) : saudiDay(new Date().toISOString());
   const pages = result ? Math.max(1, Math.ceil(result.pagination.total / pageSize)) : 1;
   const openProfile = (userId: string) => void navigate({
     to: "/customer-management", search: { userId, panel: "profile" },
   });
   const changeStatus = (next: RetentionFilterStatus) => { setStatus(next); setPage(1); };
+  const copyPhone = (row: LiveRetentionRow) => {
+    void navigator.clipboard.writeText(row.phone).then(() => {
+      setCopiedPhone(row.userId);
+      window.setTimeout(() => setCopiedPhone((current) => (current === row.userId ? "" : current)), 2000);
+    }).catch(() => setCopiedPhone(""));
+  };
 
   const exportCsv = async () => {
     setExportError("");
@@ -190,7 +204,14 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {query.isLoading && <p role="status" className="animate-pulse rounded-xl bg-muted p-6 text-sm">جاري تحميل بيانات التجديدات...</p>}
+          {query.isLoading && <div role="status" aria-label="جاري تحميل بيانات التجديدات" className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-6">
+              {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-[74px] rounded-xl" />)}
+            </div>
+            <div className="space-y-2">
+              {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-12 rounded-lg" />)}
+            </div>
+          </div>}
           {query.isError && <div role="alert" className="rounded-xl border border-destructive/40 p-4 text-sm text-destructive">تعذر تحميل البيانات الحالية. تأكد من اتصال الخدمة وصلاحية العرض. لن تُعرض أرقام تاريخية بدلًا منها.</div>}
           {result && <>
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -198,15 +219,16 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                 <button key={key} type="button" aria-pressed={status === key} onClick={() => changeStatus(key)}
                   className={"rounded-xl border p-3 text-right transition hover:shadow-sm focus-visible:outline-2 focus-visible:outline-primary " +
                     (status === key ? "ring-2 ring-primary " : "") + STATUS_STYLE[key]}>
-                  <span className="flex items-center gap-1.5 text-[13px] font-semibold">{statusIcon(key)}{STATUS_LABEL[key]} <span className="mr-auto text-[11px] opacity-75">عرض</span></span>
+                  <span className="flex items-center gap-1.5 text-[13px] font-semibold">{statusIcon(key)}{STATUS_LABEL[key]}</span>
                   <span className="mt-2 block text-2xl font-bold tabular-nums">{number(result.totals[key] ?? 0)}</span>
                 </button>
               ))}
             </div>
             <div className="flex gap-2 text-[13px]">
-              {(["scheduled", "canceled"] as const).map((key) => <button key={key} type="button"
-                onClick={() => changeStatus(key)} className={"rounded-lg border px-3 py-2 hover:border-primary " + (status === key ? "border-primary bg-primary/5" : "")}>
-                {STATUS_LABEL[key]} · {number(result.totals[key] ?? 0)}
+              {(["scheduled", "canceled"] as const).map((key) => <button key={key} type="button" aria-pressed={status === key}
+                onClick={() => changeStatus(key)} className={"inline-flex items-center gap-2 rounded-full border px-3 py-1.5 hover:border-primary " + (status === key ? "border-primary bg-primary/10 font-semibold ring-1 ring-primary" : "text-muted-foreground")}>
+                {STATUS_LABEL[key]}
+                <span className="rounded-full bg-muted px-2 text-[12px] tabular-nums text-foreground">{number(result.totals[key] ?? 0)}</span>
               </button>)}
             </div>
             {status === "review" && <div role="alert" className="rounded-xl border border-amber-400 bg-amber-50 p-3 text-[13px] leading-6 text-amber-950 dark:bg-amber-950 dark:text-amber-100">
@@ -223,14 +245,16 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                 <input type="checkbox" checked={uncontactedOnly} onChange={(event) => { setUncontactedOnly(event.target.checked); setPage(1); }} />
                 لم تتم متابعته
               </label>
-              <label className="flex items-center gap-1 text-[13px]">الاستحقاق من
-                <Input aria-label="الاستحقاق من" className="w-36" type="date" value={dueFrom} max={dueTo || undefined}
-                  onChange={(event) => { setDueFrom(event.target.value); setPage(1); }} />
-              </label>
-              <label className="flex items-center gap-1 text-[13px]">إلى
-                <Input aria-label="الاستحقاق إلى" className="w-36" type="date" min={dueFrom || undefined} value={dueTo}
-                  onChange={(event) => { setDueTo(event.target.value); setPage(1); }} />
-              </label>
+              <div className="flex items-center gap-1 text-[13px]">
+                <span>الاستحقاق من</span>
+                <RetentionDateField label="الاستحقاق من" value={dueFrom} max={dueTo || undefined}
+                  onChange={(next) => { setDueFrom(next); setPage(1); }} />
+              </div>
+              <div className="flex items-center gap-1 text-[13px]">
+                <span>إلى</span>
+                <RetentionDateField label="الاستحقاق إلى" value={dueTo} min={dueFrom || undefined}
+                  onChange={(next) => { setDueTo(next); setPage(1); }} />
+              </div>
               <label className="flex items-center gap-1 text-[13px]">الصفوف
                 <select aria-label="عدد الصفوف" className="h-10 rounded-md border bg-background px-2" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}>
                   {[10, 20, 50].map((size) => <option value={size} key={size}>{size}</option>)}
@@ -239,15 +263,18 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
               <Button type="button" variant="outline" onClick={() => {
                 setDraftSearch(""); setSearch(""); setStatus("all"); setPage(1); setDueFrom(""); setDueTo(""); setUncontactedOnly(false);
               }}>مسح</Button>
-              <Button type="button" variant="outline" disabled={exporting || !result.pagination.total} onClick={() => void exportCsv()}>
+              <Button type="button" variant="outline" disabled={exporting || isUpdating || !result.pagination.total} onClick={() => void exportCsv()}>
                 <Download className="size-4" /> {exporting ? "جاري التصدير..." : "تصدير CSV"}
               </Button>
             </div>
             {exportError && <p role="alert" className="text-[13px] text-destructive">{exportError}</p>}
             {pager}
-            <div className="max-h-[70vh] overflow-auto rounded-xl border">
+            {/* One scroller only: the page scrolls vertically (sticky header). Horizontal scroll is kept
+                for narrow screens and dropped from xl up, where the table fits and sticky needs the page as scroller. */}
+            <div aria-busy={isUpdating} inert={isUpdating}
+              className={"overflow-x-auto rounded-xl border transition-opacity xl:overflow-visible " + (isUpdating ? "pointer-events-none opacity-50" : "")}>
               <table className="w-full min-w-[1120px] text-right text-[13px] leading-6">
-                <thead className="sticky top-0 z-10 bg-muted text-foreground">
+                <thead className="sticky top-0 z-10 bg-muted text-foreground [&_th:first-child]:rounded-tr-xl [&_th:last-child]:rounded-tl-xl">
                   <tr>
                     <th scope="col" className="p-3">العميل</th>
                     <th scope="col" className="p-3">الحالة</th>
@@ -271,12 +298,17 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                         <Link to="/customer-management" search={{ userId: row.userId, panel: "profile" }}
                           onClick={(event) => event.stopPropagation()} className="font-semibold text-foreground hover:underline">{displayName(row.name)}</Link>
                         <div className="mt-1 flex items-center gap-2">
-                          <span className="whitespace-nowrap text-muted-foreground" dir="ltr">{phoneDisplay(row.phone)}</span>
-                          {row.phone && <button aria-label={"نسخ رقم جوال " + displayName(row.name)} type="button" title="نسخ الجوال"
-                            onClick={(event) => { event.stopPropagation(); void navigator.clipboard.writeText(row.phone).then(() => { setCopiedPhone(row.userId); }).catch(() => setCopiedPhone("")); }}
-                            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-                            {copiedPhone === row.userId ? <Check className="size-4" /> : <Copy className="size-4" />}
-                          </button>}
+                          {isPhoneLike(row.phone) ? <>
+                            <span className="whitespace-nowrap text-muted-foreground" dir="ltr">{phoneDisplay(row.phone)}</span>
+                            <button aria-label={"نسخ رقم جوال " + displayName(row.name)} type="button" title="نسخ الجوال"
+                              onClick={(event) => { event.stopPropagation(); copyPhone(row); }}
+                              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+                              {copiedPhone === row.userId ? <Check className="size-4" /> : <Copy className="size-4" />}
+                            </button>
+                          </> : <span className="rounded-md border border-dashed border-amber-400 px-2 text-[12px] text-amber-800 dark:text-amber-300"
+                            title={"قيمة الجوال المسجلة ليست رقمًا صالحًا: " + (row.phone || "فارغة")}>
+                            رقم غير صالح — راجع السجل
+                          </span>}
                         </div>
                       </td>
                       <td className="p-3 align-top">
@@ -293,8 +325,9 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                         {row.dueDateIsLatestValidityBound && <p className="text-muted-foreground" title="قد ينفد الرصيد قبل هذا التاريخ">حد الصلاحية المتوقع</p>}
                       </td>
                       <td className="p-3 align-top">
-                        <span className={"whitespace-nowrap font-semibold tabular-nums " +
-                          (row.remainingAndReserved === 0 ? "text-red-700 dark:text-red-300" : "")}>
+                        {/* Red is reserved for the status chip and "overdue"; a zero balance is the expected state for overdue rows. */}
+                        <span className={"whitespace-nowrap tabular-nums " +
+                          (row.remainingAndReserved === null || row.remainingAndReserved === 0 ? "text-muted-foreground" : "font-semibold")}>
                           {row.remainingAndReserved === null ? "غير معلوم" : number(row.remainingAndReserved) + " وجبة"}
                         </span>
                       </td>
@@ -305,7 +338,7 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                           <strong>{OUTCOMES[row.latestFollowup.outcome] || row.latestFollowup.outcome}</strong>
                           <p className="tabular-nums text-muted-foreground">{date(row.latestFollowup.createdAt)}</p>
                           <p className="max-w-52 truncate text-muted-foreground" title={row.latestFollowup.actor}>{row.latestFollowup.actor}</p>
-                        </> : <span className="font-medium text-amber-800 dark:text-amber-300">لم تتم متابعته</span>}
+                        </> : <span className="text-muted-foreground">— لم تتم متابعته</span>}
                       </td>
                       <td className="p-3 align-top">
                         <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
@@ -321,6 +354,10 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onSelect={() => openProfile(row.userId)}>فتح ملف العميل</DropdownMenuItem>
+                              <DropdownMenuItem disabled={!isPhoneLike(row.phone)} onSelect={() => copyPhone(row)}>نسخ رقم الجوال</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => setSelectedFollowup({ id: row.userId, name: row.name, blocked: row.doNotContact })}>
+                                سجل المتابعات
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
