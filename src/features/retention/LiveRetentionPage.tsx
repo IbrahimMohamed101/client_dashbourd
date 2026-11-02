@@ -183,7 +183,7 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
             <div className="flex flex-wrap items-center gap-2">
               {result && <span className="rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium">آخر تحديث: {date(result.asOf)} · {clock(result.asOf)}</span>}
               <Button type="button" variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}>
-                <RefreshCw className={"size-4 " + (query.isFetching ? "animate-spin" : "")} /> تحديث
+                <RefreshCw className={"size-4 " + (query.isFetching ? "animate-spin" : "")} /> تحديث البيانات
               </Button>
             </div>
           </div>
