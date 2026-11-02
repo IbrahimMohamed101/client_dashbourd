@@ -245,7 +245,7 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
             </div>
             {exportError && <p role="alert" className="text-[13px] text-destructive">{exportError}</p>}
             {pager}
-            <div className="overflow-x-auto rounded-xl border">
+            <div className="max-h-[70vh] overflow-auto rounded-xl border">
               <table className="w-full min-w-[1120px] text-right text-[13px] leading-6">
                 <thead className="sticky top-0 z-10 bg-muted text-foreground">
                   <tr>
