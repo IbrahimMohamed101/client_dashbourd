@@ -43,6 +43,7 @@ test("roleRoutes.test", () => {
   assert.deepEqual(SUPERADMIN_ROUTES, [
     ...adminProtectedRoutes.slice(2, 8),
     "/customer-management",
+    "/retention-reports",
     ...adminProtectedRoutes.slice(8, 12),
     "/daily-closing",
     "/landing-leads",
@@ -114,6 +115,9 @@ test("roleRoutes.test", () => {
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/users/user-1"), true);
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/dashboard-users"), true);
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/customer-management"), true);
+  assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/retention-reports"), true);
+  assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/retention-reports"), false);
+  assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/retention-reports"), false);
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/one-time-orders"), true);
   assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/operations"), true);
   assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/one-time-orders"), true);
