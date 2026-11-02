@@ -60,6 +60,8 @@ export function RetentionDateField({ label, value, onChange, min, max }: Retenti
         </PopoverTrigger>
         <PopoverContent align="start" className="w-auto p-0">
           <Calendar mode="single" dir="rtl" locale={arSA} selected={selected}
+            className="[--cell-size:2.5rem] text-sm"
+            classNames={{ weekday: "flex-1 rounded-md text-sm font-medium text-muted-foreground select-none" }}
             defaultMonth={selected ?? minDate ?? maxDate} disabled={disabled}
             onSelect={(next) => { onChange(next ? toValue(next) : ""); setOpen(false); }} />
         </PopoverContent>
