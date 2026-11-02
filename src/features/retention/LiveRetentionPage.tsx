@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle, CalendarClock, Check, ChevronLeft, ClipboardList, Clock3,
-  Copy, Download, MoreHorizontal, RefreshCw, Search, ShieldAlert, UserRoundCheck,
+  Copy, Download, MoreHorizontal, RefreshCw, Search, ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
