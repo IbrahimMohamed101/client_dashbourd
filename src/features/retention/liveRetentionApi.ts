@@ -20,6 +20,7 @@ export type LiveRetentionRow = {
   dueDate: string | null;
   dueDateIsLatestValidityBound: boolean;
   remainingAndReserved: number | null;
+  latestFollowup?: { createdAt: string; outcome: string; channel: string; actor: string } | null;
 };
 
 export type LiveRetentionResponse = {
@@ -38,6 +39,9 @@ export type LiveRetentionParams = {
   pageSize: number;
   status: RetentionFilterStatus;
   search: string;
+  uncontactedOnly?: boolean;
+  dueFrom?: string;
+  dueTo?: string;
 };
 
 export async function fetchLiveRetention(params: LiveRetentionParams): Promise<LiveRetentionResponse> {
