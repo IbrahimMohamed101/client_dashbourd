@@ -12,6 +12,8 @@ export const routeTranslations: Record<string, string> = {
   accounting: "المحاسبة",
   "promo-codes": "أكواد الخصم",
   "dashboard-users": "مستخدمو لوحة التحكم",
+  "customer-management": "العملاء والتجديدات",
+  "retention-reports": "تقارير تجديد العملاء",
   create: "إضافة جديد",
   update: "تعديل",
   edit: "تعديل",
