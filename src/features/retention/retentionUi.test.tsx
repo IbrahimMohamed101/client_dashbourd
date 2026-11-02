@@ -26,6 +26,14 @@ function mount(element: React.ReactNode) {
 afterEach(cleanup);
 beforeEach(() => { vi.resetAllMocks(); });
 describe("retention UI safety", () => {
+  it("does not offer WhatsApp for unverified renewal eligibility", async () => {
+    api.get.mockResolvedValue({ data: { data: { ...live, rows: [{
+      ...live.rows[0], phone: "0551234567", status: "review",
+    }] } } });
+    mount(<LiveRetentionPage />);
+    await screen.findByText(customer.name);
+    expect(screen.queryByRole("link", { name: /فتح واتساب/ })).not.toBeInTheDocument();
+  });
   it("omits WhatsApp for a suppressed customer", async () => {
     api.get.mockResolvedValue({ data: { data: { ...live, rows: [{
       ...live.rows[0], phone: "0551234567", doNotContact: true,
