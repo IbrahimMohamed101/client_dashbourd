@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle, CalendarClock, Check, ChevronLeft, ClipboardList, Clock3,
-  Copy, Download, MoreHorizontal, RefreshCw, Search, ShieldAlert,
+  Copy, Download, MessageCircle, MoreHorizontal, RefreshCw, Search, ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,6 +83,17 @@ const phoneDisplay = (value: string) => {
 // A real customer phone is digits only (optionally with +, spaces or dashes). Anything else
 // (for example an automation/test record whose "phone" is a slug) must not look like a contact.
 const isPhoneLike = (value: string) => /^\+?\d{8,15}$/.test(value.replace(/[\s-]/g, ""));
+// WhatsApp needs an international number without "+". Do not guess a country code for
+// unknown local numbers, and never build a link from synthetic/test phone strings.
+const whatsappNumber = (value: string): string | null => {
+  const phone = value.trim().replace(/[\s-]/g, "");
+  if (/^05\d{8}$/.test(phone)) return "966" + phone.slice(1);
+  if (/^5\d{8}$/.test(phone)) return "966" + phone;
+  if (/^\+?9665\d{8}$/.test(phone)) return phone.replace(/^\+/, "");
+  if (/^009665\d{8}$/.test(phone)) return phone.slice(2);
+  if (/^\+[1-9]\d{7,14}$/.test(phone)) return phone.slice(1);
+  return null;
+};
 const csvCell = (value: unknown) => {
   const raw = String(value ?? "");
   const safe = /^[\s]*[=+\-@\t\r]/.test(raw) ? "'" + raw : raw;
@@ -188,7 +199,8 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
 
   return (
     <section className="space-y-4 pb-8" dir="rtl" aria-label="التجديدات الحالية">
-      <Card className="rounded-2xl">
+      {/* The Card component defaults to overflow-hidden, which blocks the viewport sticky header. */}
+      <Card className="overflow-visible rounded-2xl">
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -289,6 +301,10 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                   {result.rows.map((row) => {
                     const elapsed = row.dueDate ? daysBetween(row.dueDate, today) : null;
                     const since = daysBetween(saudiDay(row.lastRecordedAt), today);
+                    const whatsapp = whatsappNumber(row.phone);
+                    // Historical opt-outs and unverified eligibility must not get a contact shortcut.
+                    const canMessage = whatsapp && !row.doNotContact
+                      && row.latestFollowup?.outcome !== "do_not_contact" && row.status !== "review";
                     return <tr key={row.userId} tabIndex={0}
                       aria-label={"فتح ملف " + displayName(row.name)}
                       onClick={() => openProfile(row.userId)}
@@ -299,12 +315,21 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                           onClick={(event) => event.stopPropagation()} className="font-semibold text-foreground hover:underline">{displayName(row.name)}</Link>
                         <div className="mt-1 flex items-center gap-2">
                           {isPhoneLike(row.phone) ? <>
-                            <span className="whitespace-nowrap text-muted-foreground" dir="ltr">{phoneDisplay(row.phone)}</span>
+                            <span className="whitespace-nowrap text-sm font-semibold text-foreground" dir="ltr">{phoneDisplay(row.phone)}</span>
                             <button aria-label={"نسخ رقم جوال " + displayName(row.name)} type="button" title="نسخ الجوال"
                               onClick={(event) => { event.stopPropagation(); copyPhone(row); }}
                               className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
                               {copiedPhone === row.userId ? <Check className="size-4" /> : <Copy className="size-4" />}
                             </button>
+                            {canMessage && (
+                              <a href={"https://wa.me/" + whatsapp} target="_blank" rel="noopener noreferrer"
+                                aria-label={"فتح واتساب مع " + displayName(row.name)}
+                                title="فتح محادثة واتساب (لا تُرسل رسالة تلقائيًا)"
+                                onClick={(event) => event.stopPropagation()}
+                                className="inline-flex items-center gap-1 rounded-md border border-emerald-300 px-2 py-1 text-[12px] font-semibold text-emerald-800 transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-primary dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-950">
+                                <MessageCircle className="size-4" /> واتساب
+                              </a>
+                            )}
                           </> : <span className="rounded-md border border-dashed border-amber-400 px-2 text-[12px] text-amber-800 dark:text-amber-300"
                             title={"قيمة الجوال المسجلة ليست رقمًا صالحًا: " + (row.phone || "فارغة")}>
                             رقم غير صالح — راجع السجل
@@ -319,7 +344,10 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                         </p>}
                       </td>
                       <td className="p-3 align-top">
-                        <strong className="whitespace-nowrap tabular-nums">{date(row.dueDate)}</strong>
+                        <strong className={"whitespace-nowrap tabular-nums " +
+                          (!row.dueDate && row.status === "review" ? "text-amber-950 dark:text-amber-200" : "")}>
+                          {date(row.dueDate)}
+                        </strong>
                         {elapsed !== null && row.status === "overdue_14" && <p className="font-semibold text-red-700 dark:text-red-300">متأخر {number(Math.max(0, elapsed))} يوم</p>}
                         {elapsed !== null && (row.status === "due_soon" || row.status === "active") && elapsed < 0 && <p className="text-muted-foreground">متبقي {number(-elapsed)} يوم</p>}
                         {row.dueDateIsLatestValidityBound && <p className="text-muted-foreground" title="قد ينفد الرصيد قبل هذا التاريخ">حد الصلاحية المتوقع</p>}
@@ -327,7 +355,10 @@ export function LiveRetentionPage({ initialStatus = "all" }: { initialStatus?: R
                       <td className="p-3 align-top">
                         {/* Red is reserved for the status chip and "overdue"; a zero balance is the expected state for overdue rows. */}
                         <span className={"whitespace-nowrap tabular-nums " +
-                          (row.remainingAndReserved === null || row.remainingAndReserved === 0 ? "text-muted-foreground" : "font-semibold")}>
+                          (row.remainingAndReserved === null && row.status === "review"
+                            ? "font-semibold text-amber-950 dark:text-amber-200"
+                            : row.remainingAndReserved === null || row.remainingAndReserved === 0
+                              ? "text-muted-foreground" : "font-semibold")}>
                           {row.remainingAndReserved === null ? "غير معلوم" : number(row.remainingAndReserved) + " وجبة"}
                         </span>
                       </td>
