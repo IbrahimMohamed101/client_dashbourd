@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import api from "@/lib/apis";
 
 export const LIVE_RETENTION_STATUSES = [
@@ -61,6 +61,9 @@ export function useLiveRetention(params: LiveRetentionParams) {
     queryKey: ["customer-retention-live", params],
     queryFn: () => fetchLiveRetention(params),
     staleTime: 30_000,
+    // Keep the previous page on screen while a new filter/page loads so the cards and
+    // filters do not unmount. Callers must treat `isPlaceholderData` rows as stale.
+    placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
     retry: 1,
   });
