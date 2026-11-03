@@ -16,6 +16,7 @@ import {
 } from "@/utils/buildSubscriptionCreationPayload";
 import { fetchSubscriptionQuote } from "@/utils/fetchSubscriptionsData";
 import {
+  isConfirmedAppliedPromo,
   readAppliedPromoQuote,
   shouldClearAppliedPromo,
   type AppliedPromoQuote,
@@ -286,7 +287,11 @@ export function CreateSubscriptionFormContent({
       "addons",
       "delivery",
     ];
-    if (!(await form.trigger(fields))) return;
+    if (!(await form.trigger(fields))) {
+      setAppliedPromo(null);
+      setPromoError("أكمل بيانات العميل والباقة والتوصيل أو فرع الاستلام المطلوبة أولًا، ثم اضغط تطبيق الكود.");
+      return;
+    }
 
     try {
       setIsApplyingPromo(true);
@@ -297,9 +302,9 @@ export function CreateSubscriptionFormContent({
       });
       const response = await fetchSubscriptionQuote(quotePayload);
       const parsed = readAppliedPromoQuote(response, promoCode);
-      if (!parsed) {
+      if (!isConfirmedAppliedPromo(parsed, promoCode)) {
         setAppliedPromo(null);
-        setPromoError("لم يُرجع الخادم تفاصيل الخصم المطبّق.");
+        setPromoError("لم يتم تأكيد خصم فعلي لهذا الكود على الباقة المختارة. راجع شروط الكود ولا تسجل الدفع قبل ظهور السعر بعد الخصم.");
         return;
       }
       setAppliedPromo(parsed);
@@ -337,6 +342,18 @@ export function CreateSubscriptionFormContent({
       setIsValidatingPrice(true);
       const quoteResponse = await fetchSubscriptionQuote(quotePayload);
       setPaymentOptions(readPaymentMethodOptions(quoteResponse));
+      const requestedPromoCode = normalizePromoCode(data.promoCode);
+      if (requestedPromoCode) {
+        const confirmedPromo = readAppliedPromoQuote(quoteResponse, requestedPromoCode);
+        if (!isConfirmedAppliedPromo(confirmedPromo, requestedPromoCode)) {
+          setAppliedPromo(null);
+          setPromoError("لم يتم تأكيد الخصم على عرض السعر النهائي. لن يتم تسجيل الاشتراك أو تحصيل المبلغ بدون الخصم المطلوب.");
+          ToastMessage("لم يتم تأكيد الخصم. راجع شروط الكود وأعد تطبيقه قبل الدفع.", "error");
+          setIsValidatingPrice(false);
+          return;
+        }
+        setAppliedPromo(confirmedPromo);
+      }
       setIsValidatingPrice(false);
 
       const response = await mutateAsync(createPayload);
