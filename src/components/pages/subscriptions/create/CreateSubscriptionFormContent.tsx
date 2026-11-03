@@ -349,6 +349,7 @@ export function CreateSubscriptionFormContent({
           setAppliedPromo(null);
           setPromoError("لم يتم تأكيد الخصم على عرض السعر النهائي. لن يتم تسجيل الاشتراك أو تحصيل المبلغ بدون الخصم المطلوب.");
           ToastMessage("لم يتم تأكيد الخصم. راجع شروط الكود وأعد تطبيقه قبل الدفع.", "error");
+          setIsValidatingPrice(false);
           return;
         }
         setAppliedPromo(confirmedPromo);
