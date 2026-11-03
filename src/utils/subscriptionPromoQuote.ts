@@ -96,6 +96,17 @@ export function readAppliedPromoQuote(
   };
 }
 
+export function isConfirmedAppliedPromo(
+  appliedPromo: AppliedPromoQuote | null,
+  requestedCode: string
+): appliedPromo is AppliedPromoQuote {
+  return Boolean(
+    appliedPromo &&
+      appliedPromo.discountHalala > 0 &&
+      appliedPromo.code.trim().toUpperCase() === requestedCode.trim().toUpperCase()
+  );
+}
+
 export function shouldClearAppliedPromo(changedField: string | undefined) {
   return Boolean(changedField && changedField !== "paymentMethod");
 }
