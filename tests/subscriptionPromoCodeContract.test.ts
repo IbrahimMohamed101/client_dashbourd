@@ -7,6 +7,7 @@ import {
   normalizePromoCode,
 } from "../src/utils/buildSubscriptionCreationPayload";
 import {
+  isConfirmedAppliedPromo,
   readAppliedPromoQuote,
   shouldClearAppliedPromo,
 } from "../src/utils/subscriptionPromoQuote";
@@ -81,6 +82,51 @@ describe("subscription promo-code contract", () => {
       totalHalala: 90000,
       currency: "SAR",
     });
+  });
+
+  it("requires a matching promo code and a positive server-confirmed discount", () => {
+    const confirmed = readAppliedPromoQuote(
+      {
+        data: {
+          appliedPromo: { code: "BASIC15" },
+          breakdown: {
+            discountHalala: 1500,
+            totalHalala: 8500,
+            grossTotalHalala: 10000,
+          },
+        },
+      },
+      "BASIC15"
+    );
+    expect(isConfirmedAppliedPromo(confirmed, "BASIC15")).toBe(true);
+    expect(isConfirmedAppliedPromo(confirmed, "KSA96")).toBe(false);
+
+    const zeroDiscount = readAppliedPromoQuote(
+      {
+        data: {
+          appliedPromo: { code: "BASIC15", isApplied: true },
+          breakdown: { discountHalala: 0, totalHalala: 10000 },
+        },
+      },
+      "BASIC15"
+    );
+    expect(isConfirmedAppliedPromo(zeroDiscount, "BASIC15")).toBe(false);
+    expect(isConfirmedAppliedPromo(null, "BASIC15")).toBe(false);
+  });
+
+  it("does not create a cashier subscription if the last quote lacks the requested discount", () => {
+    const source = readFileSync(
+      new URL(
+        "../src/components/pages/subscriptions/create/CreateSubscriptionFormContent.tsx",
+        import.meta.url
+      ),
+      "utf8"
+    );
+    expect(source).toContain("أكمل بيانات العميل والباقة والتوصيل");
+    expect(source).toContain("if (!isConfirmedAppliedPromo(confirmedPromo, requestedPromoCode))");
+    expect(source.indexOf("if (!isConfirmedAppliedPromo(confirmedPromo, requestedPromoCode))")).toBeLessThan(
+      source.indexOf("await mutateAsync(createPayload)")
+    );
   });
 
   it("clears applied pricing for subscription and promo changes, but not payment", () => {
