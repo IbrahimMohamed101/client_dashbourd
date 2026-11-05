@@ -33,6 +33,7 @@ jobs:
       - name: Start synthetic local POS UI and check four viewports
         env:
           VITE_POS_PREVIEW: "true"
+          VITE_BACKEND_URL: ""
           POS_QA_URL: http://127.0.0.1:4173
           POS_QA_EVIDENCE: /tmp/basicdiet-pos-ux-a
         run: |
