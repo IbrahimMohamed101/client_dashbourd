@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Minus, Plus, Search, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Dialog,
   DialogContent,
@@ -145,7 +146,11 @@ function ProductOptions({
   );
 }
 
-export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
+export function PosWorkspace({ catalog, operatorName = "موظف", navigation }: {
+  catalog: PublishedPosCatalog;
+  operatorName?: string;
+  navigation?: ReactNode;
+}) {
   const [channel, setChannel] = useState<Channel>("restaurant");
   const [pendingChannel, setPendingChannel] = useState<Channel | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
@@ -319,95 +324,65 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
 
   return (
     <div
+      data-testid="pos-sale-viewport"
       dir="rtl"
-      className="flex min-w-0 flex-col gap-4 px-3 sm:px-4 lg:h-[calc(100dvh-var(--header-height)-4rem)] lg:min-h-[29rem] lg:px-6"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background"
     >
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">نقطة البيع</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            منيو الكاشير · نسخة {catalog.revision} · وضع التجربة
-          </p>
-        </div>
-        <div
-          role="group"
-          aria-label="قناة البيع"
-          className="flex flex-wrap gap-2"
-        >
+      <header aria-label="شريط البيع"
+        className="flex h-16 max-h-16 min-h-16 shrink-0 items-center gap-2 overflow-hidden border-b bg-card px-2 sm:px-3">
+        <SidebarTrigger aria-label="فتح القائمة الجانبية" className="size-12 shrink-0" />
+        <img src="/logo.png" alt="بيسك دايت" className="hidden size-10 shrink-0 object-contain sm:block" />
+        <div role="group" aria-label="قناة البيع"
+          className="flex min-w-0 max-w-[30vw] shrink-0 gap-2 overflow-x-auto whitespace-nowrap py-1 lg:max-w-[25vw]">
           {channels.map((option) => (
-            <Button
-              key={option.id}
-              type="button"
-              variant={channel === option.id ? "default" : "outline"}
+            <Button key={option.id} type="button"
+              variant={channel === option.id ? "secondary" : "outline"}
               aria-pressed={channel === option.id}
               disabled={staleCart}
-              className="min-h-12 px-3"
+              className={"min-h-12 shrink-0 border-2 px-3 text-sm " +
+                (channel === option.id ? "border-primary font-bold" : "border-transparent")}
               onClick={() => chooseChannel(option.id)}
             >
               {option.label}
             </Button>
           ))}
-          {itemCount > 0 && (
-            <Button asChild variant="outline" className="min-h-12 lg:hidden">
-              <a href="#pos-cart">السلة ({itemCount})</a>
-            </Button>
-          )}
         </div>
-      </header>
-      <section aria-label="معلومات الطلب التجريبي" className="rounded-xl border bg-card p-3">
-        {channel === "restaurant" ? (
-          <label className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-semibold">نوع الطلب</span>
-            <select
-              aria-label="نوع طلب المطعم"
-              className="min-h-11 rounded-lg border bg-background px-3"
-              value={serviceMode}
-              onChange={(event) =>
-                setServiceMode(event.target.value as "dine-in" | "takeaway" | "delivery")
-              }
-            >
-              <option value="dine-in">محلي</option>
-              <option value="takeaway">سفري</option>
-              <option value="delivery">توصيل</option>
-            </select>
-            <span className="text-xs text-muted-foreground">نوع الطلب لا يغيّر قائمة الأسعار.</span>
-          </label>
-        ) : (
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="grid min-w-48 flex-1 gap-1 text-sm">
-              الرقم الخارجي للتطبيق (اختياري)
-              <Input
-                aria-label="الرقم الخارجي لطلب التطبيق"
-                value={externalOrderNumber}
-                maxLength={60}
-                placeholder="يمكن تركه فارغًا"
-                onChange={(event) => setExternalOrderNumber(event.target.value)}
-              />
-            </label>
-            <div role="group" aria-label="حالة دفع طلب التطبيق" className="flex gap-2">
-              <Button
-                type="button"
-                variant={appPaymentStatus === "paid" ? "default" : "outline"}
-                aria-pressed={appPaymentStatus === "paid"}
-                onClick={() => setAppPaymentStatus("paid")}
+        {channel === "restaurant" && (
+          <div role="group" aria-label="نوع طلب المطعم"
+            className="flex shrink-0 gap-1 rounded-lg border p-0.5">
+            {([
+              ["dine-in", "محلي"],
+              ["takeaway", "سفري"],
+              ["delivery", "توصيل"],
+            ] as const).map(([mode, label]) => (
+              <Button key={mode} type="button"
+                variant={serviceMode === mode ? "secondary" : "ghost"}
+                aria-pressed={serviceMode === mode}
+                className={"min-h-11 shrink-0 px-2 text-sm " +
+                  (serviceMode === mode ? "border border-primary font-semibold" : "")}
+                onClick={() => setServiceMode(mode)}
               >
-                مدفوع
+                {label}
               </Button>
-              <Button
-                type="button"
-                variant={appPaymentStatus === "cash" ? "default" : "outline"}
-                aria-pressed={appPaymentStatus === "cash"}
-                onClick={() => setAppPaymentStatus("cash")}
-              >
-                كاش
-              </Button>
-            </div>
-            <p className="w-full text-xs text-muted-foreground">
-              معاينة فقط: لا يُسجّل بيع أو تحصيل، وكاش التطبيقات لا يُضاف لدرج المطعم.
-            </p>
+            ))}
           </div>
         )}
-      </section>
+        <div className="relative min-w-24 flex-1">
+          <Search aria-hidden="true"
+            className="pointer-events-none absolute start-3 top-3.5 size-5 text-muted-foreground" />
+          <Input type="search" aria-label="ابحث عن صنف" placeholder="بحث"
+            className="h-12 w-full ps-10"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              if (event.target.value) setCategory(null);
+            }}
+          />
+        </div>
+        <span className="hidden max-w-32 shrink-0 truncate text-sm text-muted-foreground xl:inline"
+          title={operatorName}>{operatorName}</span>
+        {navigation}
+      </header>
       {staleCart && (
         <section role="status" aria-label="مراجعة اختلاف أسعار المنيو"
           className="grid shrink-0 gap-3 rounded-xl border bg-card p-4 text-sm">
