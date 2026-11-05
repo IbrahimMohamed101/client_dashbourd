@@ -2,13 +2,17 @@ name: POS Staging UI Validation
 on:
   push:
     branches:
-      - codex/pos-ux-fast-catalog-20261105
+      - codex/pos-staging-preview
+      - codex/cashier-restaurant-ui-staging-20261105
   pull_request:
     branches:
       - codex/pos-staging-preview
     paths:
       - "src/features/pos/**"
       - "src/routes/_protected/pos/**"
+      - "src/constants/routes.ts"
+      - "tests/roleRoutes.test.ts"
+      - "src/lib/authMiddleware.ts"
       - ".github/workflows/pos-staging-ui-validation.yml"
 
 permissions:
