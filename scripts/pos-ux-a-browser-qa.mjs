@@ -71,7 +71,16 @@ try {
     });
     await page.goto(base + "/pos", { waitUntil: "domcontentloaded" });
     const sale = page.getByTestId("pos-sale-viewport");
-    await sale.waitFor();
+    try {
+      await sale.waitFor({ timeout: 14000 });
+    } catch (error) {
+      console.error("POS QA diagnostic", JSON.stringify({
+        url: page.url(), viewport, errors,
+        text: (await page.locator("body").innerText()).slice(0, 1600),
+      }));
+      await page.screenshot({ path: destination + "/failed-" + viewport.width + "x" + viewport.height + ".png" });
+      throw error;
+    }
     const cart = page.getByRole("complementary", { name: "السلة التجريبية" });
     const pay = cart.getByRole("button", { name: "الدفع غير متاح في المعاينة" });
     await pay.waitFor();
