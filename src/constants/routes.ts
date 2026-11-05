@@ -138,7 +138,7 @@ const isRouteMatch = (routes: string[], pathName: string) =>
 
 const canRoleAccessRoute = (role: UserRole | undefined, pathName: string) => {
   if (!role) return false;
-  if (isPosPreviewPath(pathName)) return canAccessPosPreview(role);
+  if (isPosPreviewPath(pathName)) return canAccessPosPreview(role, pathName);
   if (isRouteMatch(ROLE_DENIED_ROUTES[role] ?? [], pathName)) return false;
   return isRouteMatch(ROLE_ROUTES[role] ?? [], pathName);
 };

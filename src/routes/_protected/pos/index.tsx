@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PosWorkspace } from "@/features/pos/PosWorkspace";
+import { PosSalePage } from "@/features/pos/PosSalePage";
 
 export const Route = createFileRoute("/_protected/pos/")({
-  component: PosWorkspace,
+  component: PosSalePage,
 });

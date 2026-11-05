@@ -3,11 +3,18 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { PosWorkspace } from "./PosWorkspace";
+import { categories, previewProducts } from "./previewCatalog";
+
+const catalog = {
+  revision: 1,
+  categories: [...categories],
+  products: previewProducts,
+};
 
 describe("POS preview workspace", () => {
   it("opens on categories and reprices a configured item only after confirmation", async () => {
     const user = userEvent.setup();
-    render(<PosWorkspace />);
+    render(<PosWorkspace catalog={catalog} />);
     expect(
       screen.queryByRole("button", { name: "دجاج بالزبدة" })
     ).not.toBeInTheDocument();
@@ -33,7 +40,9 @@ describe("POS preview workspace", () => {
     expect(confirmation.getByText(/الإجمالي الحالي/)).toHaveTextContent(
       /37\.00.*42\.00/
     );
-    expect(cart.getByRole("listitem", { hidden: true })).toHaveTextContent("37.00");
+    expect(cart.getByRole("listitem", { hidden: true })).toHaveTextContent(
+      "37.00"
+    );
     await user.click(
       confirmation.getByRole("button", { name: "تأكيد تغيير القناة" })
     );
@@ -45,7 +54,7 @@ describe("POS preview workspace", () => {
 
   it("blocks switching channels when the selected size has no price in the destination", async () => {
     const user = userEvent.setup();
-    render(<PosWorkspace />);
+    render(<PosWorkspace catalog={catalog} />);
     await user.type(screen.getByRole("searchbox"), "تكا");
     await user.click(screen.getByRole("button", { name: "دجاج تكا" }));
     await user.click(screen.getByRole("button", { name: /200 جم/ }));
@@ -64,5 +73,17 @@ describe("POS preview workspace", () => {
       "aria-pressed",
       "true"
     );
+  });
+
+  it("stops mixing prices when a new catalog is published during a sale preview", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<PosWorkspace catalog={catalog} />);
+    await user.type(screen.getByRole("searchbox"), "مياه");
+    await user.click(screen.getByRole("button", { name: "مياه" }));
+    rerender(<PosWorkspace catalog={{ ...catalog, revision: 2 }} />);
+    expect(screen.getByRole("status")).toHaveTextContent("اتنشر منيو جديد");
+    expect(screen.getByRole("button", { name: "مياه" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "ابدأ سلة جديدة" }));
+    expect(screen.getByRole("button", { name: "مياه" })).toBeEnabled();
   });
 });

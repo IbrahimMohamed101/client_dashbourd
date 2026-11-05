@@ -40,6 +40,7 @@ import { Route as ProtectedAddonsIndexRouteImport } from './routes/_protected/ad
 import { Route as ProtectedAccountingIndexRouteImport } from './routes/_protected/accounting/index'
 import { Route as ProtectedUsersCreateRouteImport } from './routes/_protected/users/create'
 import { Route as ProtectedSubscriptionsCreateRouteImport } from './routes/_protected/subscriptions/create'
+import { Route as ProtectedPosMenuRouteImport } from './routes/_protected/pos/menu'
 import { Route as ProtectedPackagesCreateRouteImport } from './routes/_protected/packages/create'
 import { Route as ProtectedOneTimeOrdersOrderIdRouteImport } from './routes/_protected/one-time-orders/$orderId'
 import { Route as ProtectedAddonsCreateRouteImport } from './routes/_protected/addons/create'
@@ -228,6 +229,11 @@ const ProtectedSubscriptionsCreateRoute =
     path: '/subscriptions/create',
     getParentRoute: () => ProtectedRouteRoute,
   } as any)
+const ProtectedPosMenuRoute = ProtectedPosMenuRouteImport.update({
+  id: '/pos/menu',
+  path: '/pos/menu',
+  getParentRoute: () => ProtectedRouteRoute,
+} as any)
 const ProtectedPackagesCreateRoute = ProtectedPackagesCreateRouteImport.update({
   id: '/packages/create',
   path: '/packages/create',
@@ -329,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/addons/create': typeof ProtectedAddonsCreateRoute
   '/one-time-orders/$orderId': typeof ProtectedOneTimeOrdersOrderIdRoute
   '/packages/create': typeof ProtectedPackagesCreateRoute
+  '/pos/menu': typeof ProtectedPosMenuRoute
   '/subscriptions/create': typeof ProtectedSubscriptionsCreateRoute
   '/users/create': typeof ProtectedUsersCreateRoute
   '/accounting/': typeof ProtectedAccountingIndexRoute
@@ -377,6 +384,7 @@ export interface FileRoutesByTo {
   '/addons/create': typeof ProtectedAddonsCreateRoute
   '/one-time-orders/$orderId': typeof ProtectedOneTimeOrdersOrderIdRoute
   '/packages/create': typeof ProtectedPackagesCreateRoute
+  '/pos/menu': typeof ProtectedPosMenuRoute
   '/subscriptions/create': typeof ProtectedSubscriptionsCreateRoute
   '/users/create': typeof ProtectedUsersCreateRoute
   '/accounting': typeof ProtectedAccountingIndexRoute
@@ -427,6 +435,7 @@ export interface FileRoutesById {
   '/_protected/addons/create': typeof ProtectedAddonsCreateRoute
   '/_protected/one-time-orders/$orderId': typeof ProtectedOneTimeOrdersOrderIdRoute
   '/_protected/packages/create': typeof ProtectedPackagesCreateRoute
+  '/_protected/pos/menu': typeof ProtectedPosMenuRoute
   '/_protected/subscriptions/create': typeof ProtectedSubscriptionsCreateRoute
   '/_protected/users/create': typeof ProtectedUsersCreateRoute
   '/_protected/accounting/': typeof ProtectedAccountingIndexRoute
@@ -477,6 +486,7 @@ export interface FileRouteTypes {
     | '/addons/create'
     | '/one-time-orders/$orderId'
     | '/packages/create'
+    | '/pos/menu'
     | '/subscriptions/create'
     | '/users/create'
     | '/accounting/'
@@ -525,6 +535,7 @@ export interface FileRouteTypes {
     | '/addons/create'
     | '/one-time-orders/$orderId'
     | '/packages/create'
+    | '/pos/menu'
     | '/subscriptions/create'
     | '/users/create'
     | '/accounting'
@@ -574,6 +585,7 @@ export interface FileRouteTypes {
     | '/_protected/addons/create'
     | '/_protected/one-time-orders/$orderId'
     | '/_protected/packages/create'
+    | '/_protected/pos/menu'
     | '/_protected/subscriptions/create'
     | '/_protected/users/create'
     | '/_protected/accounting/'
@@ -841,6 +853,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedSubscriptionsCreateRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
+    '/_protected/pos/menu': {
+      id: '/_protected/pos/menu'
+      path: '/pos/menu'
+      fullPath: '/pos/menu'
+      preLoaderRoute: typeof ProtectedPosMenuRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
     '/_protected/packages/create': {
       id: '/_protected/packages/create'
       path: '/packages/create'
@@ -961,6 +980,7 @@ interface ProtectedRouteRouteChildren {
   ProtectedAddonsCreateRoute: typeof ProtectedAddonsCreateRoute
   ProtectedOneTimeOrdersOrderIdRoute: typeof ProtectedOneTimeOrdersOrderIdRoute
   ProtectedPackagesCreateRoute: typeof ProtectedPackagesCreateRoute
+  ProtectedPosMenuRoute: typeof ProtectedPosMenuRoute
   ProtectedSubscriptionsCreateRoute: typeof ProtectedSubscriptionsCreateRoute
   ProtectedUsersCreateRoute: typeof ProtectedUsersCreateRoute
   ProtectedAccountingIndexRoute: typeof ProtectedAccountingIndexRoute
@@ -1009,6 +1029,7 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedAddonsCreateRoute: ProtectedAddonsCreateRoute,
   ProtectedOneTimeOrdersOrderIdRoute: ProtectedOneTimeOrdersOrderIdRoute,
   ProtectedPackagesCreateRoute: ProtectedPackagesCreateRoute,
+  ProtectedPosMenuRoute: ProtectedPosMenuRoute,
   ProtectedSubscriptionsCreateRoute: ProtectedSubscriptionsCreateRoute,
   ProtectedUsersCreateRoute: ProtectedUsersCreateRoute,
   ProtectedAccountingIndexRoute: ProtectedAccountingIndexRoute,

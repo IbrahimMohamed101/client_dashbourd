@@ -6,10 +6,15 @@ const stagingApiOrigins = new Set([
 ]);
 
 export function isPosPreviewPath(path: string) {
-  return path === "/pos" || path === "/pos/";
+  return (
+    path === "/pos" ||
+    path === "/pos/" ||
+    path === "/pos/menu" ||
+    path === "/pos/menu/"
+  );
 }
 
-export function canAccessPosPreview(role: UserRole) {
+export function canAccessPosPreview(role: UserRole, path = "/pos") {
   if (import.meta.env.VITE_POS_PREVIEW !== "true") return false;
 
   // In a deployed build, hide the preview if the shared API is not Staging.
@@ -23,7 +28,7 @@ export function canAccessPosPreview(role: UserRole) {
   }
 
   return (
-    role === UserRoles.CASHIER ||
+    (role === UserRoles.CASHIER && (path === "/pos" || path === "/pos/")) ||
     role === UserRoles.ADMIN ||
     role === UserRoles.SUPERADMIN
   );

@@ -41,6 +41,11 @@ export const NavLinksData = {
       icon: <ReceiptText />,
     },
     {
+      title: "منيو الكاشير",
+      url: "/pos/menu",
+      icon: <BookOpen />,
+    },
+    {
       title: "المدفوعات",
       url: "/payments",
       icon: <CreditCard />,

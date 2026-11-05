@@ -14,8 +14,8 @@ export const categories = [
   { id: "addons", label: "الإضافات" },
 ] as const;
 
-export type Category = (typeof categories)[number]["id"];
-type Prices = Record<Channel, number | null>;
+export type Category = string;
+export type Prices = Record<Channel, number | null>;
 export type Variant = { id: string; label: string; prices: Prices };
 export type Addon = { id: string; name: string; prices: Prices };
 export type Product = {
@@ -24,6 +24,12 @@ export type Product = {
   category: Category;
   variants: Variant[];
   hasAddons?: boolean;
+  active?: boolean;
+};
+
+export type Catalog = {
+  categories: { id: string; label: string }[];
+  products: Product[];
 };
 
 function prices(

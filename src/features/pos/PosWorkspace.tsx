@@ -11,11 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  categories,
   channels,
   formatPreviewAmount,
-  previewAddons,
-  previewProducts,
   previewUnitPrice,
   type Addon,
   type Category,
@@ -23,6 +20,7 @@ import {
   type Product,
   type Variant,
 } from "./previewCatalog";
+import type { PublishedPosCatalog } from "./catalogApi";
 
 type Selection = { product: Product; variant: Variant; addons: Addon[] };
 type CartLine = Selection & { id: string; quantity: number };
@@ -40,11 +38,13 @@ function cartTotal(cart: CartLine[], channel: Channel) {
 function ProductOptions({
   product,
   channel,
+  availableAddons,
   onClose,
   onAdd,
 }: {
   product: Product;
   channel: Channel;
+  availableAddons: Addon[];
   onClose: () => void;
   onAdd: (selection: Selection) => void;
 }) {
@@ -92,10 +92,10 @@ function ProductOptions({
             </Button>
           ))}
         </div>
-        {product.hasAddons && (
+        {product.hasAddons && availableAddons.length > 0 && (
           <fieldset className="grid gap-2">
             <legend className="mb-2 font-semibold">الإضافات الاختيارية</legend>
-            {previewAddons.map((addon) => {
+            {availableAddons.map((addon) => {
               const price = addon.prices[channel];
               const selected = addons.includes(addon);
               return (
@@ -143,28 +143,41 @@ function ProductOptions({
   );
 }
 
-export function PosWorkspace() {
+export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
   const [channel, setChannel] = useState<Channel>("restaurant");
   const [pendingChannel, setPendingChannel] = useState<Channel | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
   const [search, setSearch] = useState("");
   const [product, setProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [cartRevision, setCartRevision] = useState(catalog.revision);
 
+  const { categories, products } = catalog;
+  const availableAddons = products
+    .filter((item) => item.category === "addons")
+    .map(({ id, name, variants }) => ({
+      id,
+      name,
+      prices: variants[0].prices,
+    }));
+  const staleCart = cart.length > 0 && cartRevision !== catalog.revision;
+  const itemCount = cart.reduce((count, line) => count + line.quantity, 0);
   const total = cartTotal(cart, channel);
   const nextTotal = pendingChannel ? cartTotal(cart, pendingChannel) : null;
   const searchTerm = search.trim();
   const visibleProducts = searchTerm
-    ? previewProducts.filter((item) => item.name.includes(searchTerm))
-    : previewProducts.filter((item) => item.category === category);
+    ? products.filter((item) => item.name.includes(searchTerm))
+    : products.filter((item) => item.category === category);
 
   function chooseChannel(next: Channel) {
-    if (next === channel) return;
+    if (next === channel || staleCart) return;
     if (cart.length) setPendingChannel(next);
     else setChannel(next);
   }
 
   function addToCart(selection: Selection) {
+    if (staleCart) return;
+    if (!cart.length) setCartRevision(catalog.revision);
     const { product, variant, addons } = selection;
     const id = [
       product.id,
@@ -213,7 +226,7 @@ export function PosWorkspace() {
         <div>
           <h1 className="text-2xl font-bold">نقطة البيع</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            معاينة تجريبية للأصناف والأسعار والسلة
+            منيو الكاشير · نسخة {catalog.revision} · وضع التجربة
           </p>
         </div>
         <div
@@ -227,14 +240,39 @@ export function PosWorkspace() {
               type="button"
               variant={channel === option.id ? "default" : "outline"}
               aria-pressed={channel === option.id}
+              disabled={staleCart}
               className="min-h-12 px-3"
               onClick={() => chooseChannel(option.id)}
             >
               {option.label}
             </Button>
           ))}
+          {itemCount > 0 && (
+            <Button asChild variant="outline" className="min-h-12 lg:hidden">
+              <a href="#pos-cart">السلة ({itemCount})</a>
+            </Button>
+          )}
         </div>
       </header>
+      {staleCart && (
+        <div
+          role="status"
+          className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm"
+        >
+          اتنشر منيو جديد. ابدأ سلة جديدة لاستخدام الأسعار المحدثة.
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setProduct(null);
+              setPendingChannel(null);
+              setCart([]);
+            }}
+          >
+            ابدأ سلة جديدة
+          </Button>
+        </div>
+      )}
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,21rem)]">
         <section
           aria-label="الكتالوج التجريبي"
@@ -284,6 +322,12 @@ export function PosWorkspace() {
                       type="button"
                       variant="outline"
                       className="h-auto min-h-20 px-2 text-center text-sm whitespace-normal"
+                      disabled={
+                        staleCart ||
+                        item.variants.every(
+                          (variant) => variant.prices[channel] === null
+                        )
+                      }
                       onClick={() => chooseProduct(item)}
                     >
                       {item.name}
@@ -310,6 +354,7 @@ export function PosWorkspace() {
         </section>
 
         <aside
+          id="pos-cart"
           aria-label="السلة التجريبية"
           className="flex min-h-0 min-w-0 flex-col gap-3 rounded-2xl border bg-card p-4"
         >
@@ -319,6 +364,22 @@ export function PosWorkspace() {
               className="size-5 text-primary"
             />
             <h2 className="font-bold">السلة التجريبية</h2>
+            <span
+              className="rounded-full bg-muted px-2 text-sm"
+              aria-label="عدد الأصناف"
+            >
+              {itemCount}
+            </span>
+            {cart.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="ms-auto min-h-10"
+                onClick={() => setCart([])}
+              >
+                مسح السلة
+              </Button>
+            )}
           </div>
           <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
             {cart.length === 0 ? (
@@ -355,6 +416,7 @@ export function PosWorkspace() {
                           variant="outline"
                           className="size-12"
                           aria-label={`زِد كمية ${name}`}
+                          disabled={staleCart}
                           onClick={() => changeQuantity(line.id, 1)}
                         >
                           <Plus />
@@ -394,53 +456,56 @@ export function PosWorkspace() {
           </div>
         </aside>
       </div>
-      {product && (
+      {product && !staleCart && (
         <ProductOptions
           product={product}
           channel={channel}
+          availableAddons={availableAddons}
           onClose={() => setProduct(null)}
           onAdd={addToCart}
         />
       )}
-      <Dialog
-        open={pendingChannel !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingChannel(null);
-        }}
-      >
-        <DialogContent dir="rtl" className="text-right">
-          <DialogHeader>
-            <DialogTitle>تغيير قناة البيع</DialogTitle>
-            <DialogDescription>
-              {nextTotal === null
-                ? "بعض الأصناف غير مسعّرة في القناة الجديدة. أزلها من السلة قبل التغيير."
-                : `الإجمالي الحالي ${formatPreviewAmount(total ?? 0)}، والجديد ${formatPreviewAmount(nextTotal)}.`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-12"
-              onClick={() => setPendingChannel(null)}
-            >
-              إلغاء
-            </Button>
-            <Button
-              type="button"
-              className="min-h-12"
-              disabled={nextTotal === null}
-              onClick={() => {
-                if (!pendingChannel || nextTotal === null) return;
-                setChannel(pendingChannel);
-                setPendingChannel(null);
-              }}
-            >
-              تأكيد تغيير القناة
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {pendingChannel && !staleCart && (
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setPendingChannel(null);
+          }}
+        >
+          <DialogContent dir="rtl" className="text-right">
+            <DialogHeader>
+              <DialogTitle>تغيير قناة البيع</DialogTitle>
+              <DialogDescription>
+                {nextTotal === null
+                  ? "بعض الأصناف غير مسعّرة في القناة الجديدة. أزلها من السلة قبل التغيير."
+                  : `الإجمالي الحالي ${formatPreviewAmount(total ?? 0)}، والجديد ${formatPreviewAmount(nextTotal)}.`}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-12"
+                onClick={() => setPendingChannel(null)}
+              >
+                إلغاء
+              </Button>
+              <Button
+                type="button"
+                className="min-h-12"
+                disabled={nextTotal === null}
+                onClick={() => {
+                  if (!pendingChannel || nextTotal === null) return;
+                  setChannel(pendingChannel);
+                  setPendingChannel(null);
+                }}
+              >
+                تأكيد تغيير القناة
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
