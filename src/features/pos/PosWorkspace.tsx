@@ -360,10 +360,7 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
                     onClick={() => chooseProduct(item)}
                   >
                     <span className="font-semibold">{item.name}</span>
-                    <span
-                      aria-hidden="true"
-                      className="text-xs text-muted-foreground"
-                    >
+                    <span className="text-xs text-muted-foreground">
                       {startingPrice === null
                         ? "غير مسعّر"
                         : item.variants.length > 1
