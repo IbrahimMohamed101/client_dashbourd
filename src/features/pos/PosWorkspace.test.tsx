@@ -213,8 +213,8 @@ describe("POS preview workspace", () => {
     rerender(<PosWorkspace catalog={updated} />);
     const review = within(screen.getByRole("status", { name: "مراجعة اختلاف أسعار المنيو" }));
     expect(review.getByText(/السلة محفوظة للمراجعة/)).toBeInTheDocument();
-    expect(review.getByText(/القديم:/)).toHaveTextContent(/3\.00/);
-    expect(review.getByText(/القديم:/)).toHaveTextContent(/4\.50/);
+    expect(review.getByText(/الجديد:/)).toHaveTextContent(/3\.00/);
+    expect(review.getByText(/الجديد:/)).toHaveTextContent(/4\.50/);
     expect(within(screen.getByRole("region", { name: "الكتالوج التجريبي" })).getByRole("button", { name: /مياه/ })).toBeDisabled();
     await user.click(review.getByRole("button", { name: "تأكيد الأسعار الجديدة" }));
     expect(within(screen.getByRole("region", { name: "الكتالوج التجريبي" })).getByRole("button", { name: /مياه/ })).toBeEnabled();
