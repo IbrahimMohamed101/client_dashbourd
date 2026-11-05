@@ -1,9 +1,18 @@
 // @vitest-environment jsdom
+import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PosOperationsShell } from "./PosOperationsShell";
 import { categories, previewProducts } from "./previewCatalog";
+
+// This shell test does not mount a real TanStack Router. Use an anchor for
+// its navigation link while route-authorization tests verify the true router.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
+    <a href={to} {...props}>{children}</a>
+  ),
+}));
 
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
