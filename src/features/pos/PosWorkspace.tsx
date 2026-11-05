@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  channels,
+  channels as defaultChannels,
   formatPreviewAmount,
   previewUnitPrice,
   type Addon,
@@ -22,6 +22,7 @@ import {
 } from "./previewCatalog";
 import type { PublishedPosCatalog } from "./catalogApi";
 import { fetchPosQuote, type PosQuote } from "./quoteApi";
+import { parseApiError } from "@/lib/apiErrors";
 
 type Selection = { product: Product; variant: Variant; addons: Addon[] };
 type CartLine = Selection & { id: string; quantity: number };
@@ -80,13 +81,13 @@ function ProductOptions({
               type="button"
               variant={variant === option ? "default" : "outline"}
               aria-pressed={variant === option}
-              disabled={option.prices[channel] === null}
+              disabled={option.prices[channel] == null}
               className="h-auto min-h-14 flex-col gap-1 py-2 whitespace-normal"
               onClick={() => setVariant(option)}
             >
               {option.label}
               <span className="text-xs">
-                {option.prices[channel] === null
+                {option.prices[channel] == null
                   ? "غير مسعّر"
                   : formatPreviewAmount(option.prices[channel])}
               </span>
@@ -105,7 +106,7 @@ function ProductOptions({
                   type="button"
                   variant={selected ? "secondary" : "outline"}
                   aria-pressed={selected}
-                  disabled={price === null}
+                  disabled={price == null}
                   className="min-h-12 justify-between"
                   onClick={() =>
                     setAddons((current) =>
@@ -117,7 +118,7 @@ function ProductOptions({
                 >
                   {addon.name}
                   <span>
-                    {price === null ? "غير مسعّر" : formatPreviewAmount(price)}
+                    {price == null ? "غير مسعّر" : formatPreviewAmount(price)}
                   </span>
                 </Button>
               );
@@ -160,6 +161,7 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
   const [quoteLoading, setQuoteLoading] = useState(false);
 
   const { categories, products } = catalog;
+  const channels = catalog.channels ?? defaultChannels;
   const availableAddons = products
     .filter((item) => item.category === "addons")
     .map(({ id, name, variants }) => ({
@@ -192,15 +194,72 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
     try {
       const data = await fetchPosQuote(quoteRequest);
       setQuoteReview({ key, data });
-    } catch {
+    } catch (cause) {
+      const error = parseApiError(cause);
+      const messages: Record<string, string> = {
+        POS_CATALOG_CONFLICT: "تم نشر منيو أحدث. حدّث الصفحة وراجع السعر القديم والجديد قبل الاعتماد.",
+        POS_PRICE_UNAVAILABLE: "الصنف أو الإضافة غير مسعّرة في هذه القناة؛ غيّر القناة أو احذفها.",
+        POS_PRODUCT_UNAVAILABLE: "صنف أو حجم في السلة لم يعد متاحًا. راجع المنيو المنشور.",
+        POS_ADDON_UNAVAILABLE: "إضافة في السلة لم تعد متاحة لهذا الصنف.",
+        POS_QUOTE_INVALID: "راجع الأحجام والكميات وأصناف السلة.",
+      };
       setQuoteReview(null);
       setQuoteFailure({
         key,
-        message: "تعذر مراجعة الأسعار من Staging. لا تُعتمد الأسعار قبل عودة الخدمة.",
+        message: messages[error.code ?? ""] ?? (
+          error.status === 401 || error.status === 403
+            ? "الجلسة أو الصلاحيات غير صالحة. سجّل الدخول مرة أخرى."
+            : "تعذر الاتصال بتسعير Staging. لم يتم تسجيل أي عملية بيع."
+        ),
       });
     } finally {
       setQuoteLoading(false);
     }
+  }
+
+  const revisedLines = staleCart
+    ? cart.map((line) => {
+        const revisedProduct = products.find((item) => item.id === line.product.id);
+        const revisedVariant = revisedProduct?.variants.find((item) => item.id === line.variant.id);
+        const revisedAddons = line.addons.map((addon) => {
+          const updated = products.find((item) => item.id === addon.id && item.category === "addons");
+          return updated && updated.variants.length === 1
+            ? { id: updated.id, name: updated.name, prices: updated.variants[0].prices }
+            : null;
+        });
+        const valid = Boolean(
+          revisedProduct && revisedVariant && revisedVariant.prices[channel] != null
+          && revisedAddons.every((addon) => addon && addon.prices[channel] != null
+            && (revisedProduct?.allowedAddonIds === undefined || revisedProduct.allowedAddonIds.includes(addon.id)))
+          && (!line.addons.length || revisedProduct?.hasAddons)
+        );
+        const nextSelection: Selection | null = valid && revisedProduct && revisedVariant
+          ? { product: revisedProduct, variant: revisedVariant, addons: revisedAddons as Addon[] }
+          : null;
+        const oldUnit = previewUnitPrice(line.variant, line.addons, channel);
+        const newUnit = nextSelection
+          ? previewUnitPrice(nextSelection.variant, nextSelection.addons, channel)
+          : null;
+        return { line, oldUnit, newUnit, nextSelection };
+      })
+    : [];
+  const canAcceptReprice = staleCart
+    && channels.some((item) => item.id === channel)
+    && revisedLines.every(({ nextSelection }) => nextSelection !== null);
+  const revisedTotal = canAcceptReprice
+    ? revisedLines.reduce((sum, { line, newUnit }) => sum + (newUnit ?? 0) * line.quantity, 0)
+    : null;
+  function acceptReprice() {
+    if (!canAcceptReprice) return;
+    setCart(revisedLines.map(({ line, nextSelection }) => ({
+      ...line,
+      ...nextSelection!,
+    })));
+    setCartRevision(catalog.revision);
+    setProduct(null);
+    setPendingChannel(null);
+    setQuoteReview(null);
+    setQuoteFailure(null);
   }
 
   const searchTerm = search.trim();
@@ -240,7 +299,7 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
     if (
       item.variants.length === 1 &&
       !item.hasAddons &&
-      variant.prices[channel] !== null
+      variant.prices[channel] != null
     ) {
       addToCart({ product: item, variant, addons: [] });
     } else {
@@ -350,23 +409,42 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
         )}
       </section>
       {staleCart && (
-        <div
-          role="status"
-          className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm"
-        >
-          اتنشر منيو جديد. ابدأ سلة جديدة لاستخدام الأسعار المحدثة.
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setProduct(null);
-              setPendingChannel(null);
-              setCart([]);
-            }}
-          >
-            ابدأ سلة جديدة
-          </Button>
-        </div>
+        <section role="status" aria-label="مراجعة اختلاف أسعار المنيو"
+          className="grid shrink-0 gap-3 rounded-xl border bg-card p-4 text-sm">
+          <div>
+            <h2 className="font-bold">تم نشر منيو جديد — السلة محفوظة للمراجعة</h2>
+            <p className="mt-1 text-muted-foreground">نسخة السلة {cartRevision}، والنسخة الجديدة {catalog.revision}. لازم تؤكد الأسعار الجديدة قبل المتابعة.</p>
+          </div>
+          <div className="max-h-48 space-y-2 overflow-auto">
+            {revisedLines.map(({ line, oldUnit, newUnit }) => (
+              <div key={line.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 last:border-0">
+                <span className="font-semibold">{line.product.name} · {line.variant.label} × {line.quantity}</span>
+                <span className="text-xs">
+                  القديم: {oldUnit == null ? "غير متاح" : formatPreviewAmount(oldUnit * line.quantity)}
+                  {" — "}الجديد: {newUnit == null ? "لم يعد متاحًا" : formatPreviewAmount(newUnit * line.quantity)}
+                </span>
+                {newUnit === null && (
+                  <Button size="sm" variant="outline" onClick={() => setCart((list) => list.filter((item) => item.id !== line.id))}>
+                    حذف الصنف غير المتاح
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-between gap-3 font-semibold">
+            <span>إجمالي السلة القديم: {total == null ? "غير متاح" : formatPreviewAmount(total)}</span>
+            <span>الجديد: {revisedTotal === null ? "يحتوي أصنافًا غير متاحة" : formatPreviewAmount(revisedTotal)}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" disabled={!canAcceptReprice} onClick={acceptReprice} className="min-h-11">
+              تأكيد الأسعار الجديدة
+            </Button>
+            <Button type="button" variant="outline" className="min-h-11"
+              onClick={() => { setProduct(null); setPendingChannel(null); setCart([]); }}>
+              إلغاء السلة
+            </Button>
+          </div>
+        </section>
       )}
       <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,21rem)]">
         <section
@@ -439,7 +517,7 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
               {visibleProducts.map((item) => {
                 const pricedVariants = item.variants
                   .map((variant) => variant.prices[channel])
-                  .filter((value): value is number => value !== null);
+                  .filter((value): value is number => typeof value === "number");
                 const startingPrice = pricedVariants.length
                   ? Math.min(...pricedVariants)
                   : null;
@@ -603,7 +681,9 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
         <ProductOptions
           product={product}
           channel={channel}
-          availableAddons={availableAddons}
+          availableAddons={availableAddons.filter((addon) =>
+            product.allowedAddonIds === undefined || product.allowedAddonIds.includes(addon.id)
+          )}
           onClose={() => setProduct(null)}
           onAdd={addToCart}
         />

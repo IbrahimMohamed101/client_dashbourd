@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { UserRoles } from "@/types/auth";
-import { channels } from "./previewCatalog";
+import { channels as defaultChannels } from "./previewCatalog";
 import type { PublishedPosCatalog } from "./catalogApi";
 import { PosWorkspace } from "./PosWorkspace";
 
@@ -91,6 +91,7 @@ function OverviewView({ catalog, onSale }: {
   onSale: () => void;
 }) {
   const active = catalog.products.filter((item) => item.active).length;
+  const channels = catalog.channels ?? defaultChannels;
   return (
     <section aria-labelledby="pos-overview-title" className="space-y-5">
       <PageHeader
@@ -101,7 +102,7 @@ function OverviewView({ catalog, onSale }: {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric label="أصناف المنيو" value={String(catalog.products.length)} hint={"النسخة المنشورة " + catalog.revision} />
         <Metric label="الأصناف الظاهرة" value={String(active)} hint="من كتالوج الكاشير فقط" />
-        <Metric label="قنوات الأسعار" value={String(channels.length)} hint="المطعم · HungerStation · Keeta" />
+        <Metric label="قنوات الأسعار" value={String(channels.length)} hint={channels.map((item) => item.label).join(" · ")} />
         <Metric label="مبيعات اليوم" value="—" hint="يتطلب API مبيعات موثقًا" />
       </div>
       <PreviewNotice>
@@ -128,7 +129,8 @@ function OverviewView({ catalog, onSale }: {
   );
 }
 
-function OrdersView({ onSale }: { onSale: () => void }) {
+function OrdersView({ onSale, catalog }: { onSale: () => void; catalog: PublishedPosCatalog }) {
+  const channels = catalog.channels ?? defaultChannels;
   const [search, setSearch] = useState("");
   const [channel, setChannel] = useState("all");
   const [status, setStatus] = useState("all");
@@ -372,7 +374,7 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
       </div>
       {view === "sale" && <PosWorkspace catalog={catalog} />}
       {view === "overview" && <OverviewView catalog={catalog} onSale={() => setView("sale")} />}
-      {view === "orders" && <OrdersView onSale={() => setView("sale")} />}
+      {view === "orders" && <OrdersView catalog={catalog} onSale={() => setView("sale")} />}
       {view === "subscriptions" && <SubscriptionView />}
       {view === "closing" && <ClosingView />}
       {view === "settings" && <SettingsView />}
