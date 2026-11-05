@@ -105,6 +105,8 @@ function CatalogEditor({
   const [dirty, setDirty] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [error, setError] = useState("");
+  const [editorView, setEditorView] = useState<"individual" | "bulk">("individual");
+  const [bulkChannel, setBulkChannel] = useState<Channel>("restaurant");
   const product =
     edit.products.find((item) => item.id === selection) ?? edit.products[0];
   const category =
@@ -211,6 +213,28 @@ function CatalogEditor({
           </Button>
         </div>
       </div>
+      <div
+        role="group"
+        aria-label="طريقة تعديل منيو الكاشير"
+        className="flex flex-wrap gap-2"
+      >
+        <Button
+          type="button"
+          variant={editorView === "individual" ? "default" : "outline"}
+          aria-pressed={editorView === "individual"}
+          onClick={() => setEditorView("individual")}
+        >
+          تعديل صنف
+        </Button>
+        <Button
+          type="button"
+          variant={editorView === "bulk" ? "default" : "outline"}
+          aria-pressed={editorView === "bulk"}
+          onClick={() => setEditorView("bulk")}
+        >
+          جدول الأسعار
+        </Button>
+      </div>
       {error && (
         <div
           role="alert"
@@ -222,6 +246,90 @@ function CatalogEditor({
           </Button>
         </div>
       )}
+      {editorView === "bulk" ? (
+        <section className="grid gap-4 rounded-xl border bg-card p-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-bold">جدول الأسعار الجماعي</h2>
+              <p className="text-sm text-muted-foreground">
+                أسعار مستقلة حسب القناة والحجم. اترك السعر فارغًا إذا كان الصنف غير متاح في القناة.
+                جميع التعديلات تحفظ كمسودة، ولا تظهر للكاشير قبل النشر.
+              </p>
+            </div>
+            <label className="grid min-w-48 gap-1 text-sm">
+              قناة البيع
+              <select
+                className={selectStyle}
+                value={bulkChannel}
+                onChange={(event) => setBulkChannel(event.target.value as Channel)}
+              >
+                {channels.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="max-h-[65dvh] overflow-auto rounded-xl border">
+            <table className="w-full min-w-[38rem] border-collapse text-right text-sm">
+              <thead className="sticky top-0 bg-muted">
+                <tr>
+                  <th className="p-3">الصنف</th>
+                  <th className="p-3">الحجم</th>
+                  <th className="p-3">التوفر</th>
+                  <th className="p-3">السعر بالريال · {channels.find((item) => item.id === bulkChannel)?.label}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {edit.products.flatMap((item) =>
+                  item.variants.map((variant) => (
+                    <tr key={`${item.id}/${variant.id}`} className="border-t">
+                      <td className="p-3 font-semibold">{item.name}</td>
+                      <td className="p-3">{variant.label}</td>
+                      <td className="p-3">{item.active ? "ظاهر" : "مخفي"}</td>
+                      <td className="p-2">
+                        <Input
+                          aria-label={`سعر ${item.name} ${variant.label} في ${bulkChannel}`}
+                          className="min-h-11 w-full"
+                          dir="ltr"
+                          inputMode="decimal"
+                          placeholder="غير مسعّر"
+                          value={variant.prices[bulkChannel]}
+                          disabled={busy}
+                          onChange={(event) =>
+                            update({
+                              ...edit,
+                              products: edit.products.map((entry) =>
+                                entry.id !== item.id
+                                  ? entry
+                                  : {
+                                      ...entry,
+                                      variants: entry.variants.map((size) =>
+                                        size.id !== variant.id
+                                          ? size
+                                          : {
+                                              ...size,
+                                              prices: {
+                                                ...size.prices,
+                                                [bulkChannel]: event.target.value,
+                                              },
+                                            }
+                                      ),
+                                    }
+                              ),
+                            })
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : (
       <fieldset
         disabled={busy}
         className="grid min-w-0 gap-4 lg:grid-cols-[minmax(14rem,20rem)_minmax(0,1fr)]"
@@ -447,6 +555,7 @@ function CatalogEditor({
           )}
         </section>
       </fieldset>
+      )}
       {confirm && data.draft && (
         <Dialog
           open
