@@ -358,7 +358,7 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
             <span className="hidden sm:inline">الأقسام</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-56" dir="rtl">
+        <DropdownMenuContent align="end" className="min-w-56 text-right">
           {navigation.map(({ id, label, icon: Icon }) => (
             <DropdownMenuItem
               key={id}
