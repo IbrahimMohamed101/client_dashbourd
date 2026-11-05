@@ -358,7 +358,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
               <Button key={mode} type="button"
                 variant={serviceMode === mode ? "secondary" : "ghost"}
                 aria-pressed={serviceMode === mode}
-                className={"min-h-11 shrink-0 px-2 text-sm " +
+                className={"min-h-12 shrink-0 px-2 text-sm " +
                   (serviceMode === mode ? "border border-primary font-semibold" : "")}
                 onClick={() => setServiceMode(mode)}
               >
@@ -421,10 +421,10 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
           </div>
         </section>
       )}
-      <div className="grid min-h-0 flex-1 gap-2 overflow-hidden p-2 md:grid-cols-[minmax(0,1fr)_minmax(22.5rem,25rem)]">
+      <div className="grid min-h-0 flex-1 gap-1 overflow-hidden p-0 md:grid-cols-[minmax(0,1fr)_minmax(22.5rem,25rem)]">
         <section
           aria-label="الكتالوج التجريبي"
-          className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border bg-card p-2"
+          className="flex min-h-0 min-w-0 flex-col gap-1 overflow-hidden rounded-2xl border bg-card p-1"
         >
           <div
             role="group"
@@ -458,18 +458,14 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                 {item.label}
               </Button>
             ))}
-          </div>
-          <div className="flex shrink-0 items-center justify-between gap-2">
-            <h2 className="font-bold">
-              {searchTerm
-                ? "نتائج البحث"
-                : (categories.find((item) => item.id === category)?.label ??
-                  "الأصناف")}
-            </h2>
-            <span role="status" className="text-sm text-muted-foreground">
+            <span role="status" className="shrink-0 self-center px-2 text-sm text-muted-foreground">
               {visibleProducts.length} صنف
             </span>
           </div>
+          <h2 className="sr-only">
+            {searchTerm ? "نتائج البحث" :
+              (categories.find((item) => item.id === category)?.label ?? "الأصناف")}
+          </h2>
           <div className="min-h-0 overflow-auto overscroll-contain">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
               {visibleProducts.map((item) => {
@@ -529,7 +525,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
               <Button
                 type="button"
                 variant="ghost"
-                className="ms-auto min-h-10"
+                className="ms-auto min-h-12"
                 onClick={() => setCart([])}
               >
                 مسح السلة
