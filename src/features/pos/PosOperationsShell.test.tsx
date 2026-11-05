@@ -23,7 +23,8 @@ describe("POS operations dashboard Staging shell", () => {
     expect(screen.getByRole("navigation", { name: "أقسام نقطة البيع" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "ابحث عن صنف" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
-    expect(screen.queryByRole("link", { name: /منيو الكاشير والأسعار/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /منيو الكاشير والأسعار/ }))
+      .toHaveAttribute("href", "/pos/menu");
   });
 
   it("uses the published catalog for overview numbers and no fabricated sales", async () => {
