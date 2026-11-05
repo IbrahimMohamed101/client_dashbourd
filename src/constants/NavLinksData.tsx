@@ -15,6 +15,7 @@ import {
   MapPin,
   MinusCircle,
   PlusSquare,
+  ReceiptText,
   Settings2Icon,
   ShieldCheck,
   ShieldUser,
@@ -33,6 +34,11 @@ export const NavLinksData = {
       title: "لوحة التحكم",
       url: "/dashboard",
       icon: <LayoutDashboardIcon />,
+    },
+    {
+      title: "نقطة البيع",
+      url: "/pos",
+      icon: <ReceiptText />,
     },
     {
       title: "المدفوعات",

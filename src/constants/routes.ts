@@ -1,5 +1,6 @@
 import { UserRoles } from "@/types/auth";
 import type { UserRole } from "@/types/auth";
+import { canAccessPosPreview, isPosPreviewPath } from "@/features/pos/posAccess";
 
 const SUPERADMIN_ROUTES = [
   "/dashboard",
@@ -137,6 +138,7 @@ const isRouteMatch = (routes: string[], pathName: string) =>
 
 const canRoleAccessRoute = (role: UserRole | undefined, pathName: string) => {
   if (!role) return false;
+  if (isPosPreviewPath(pathName)) return canAccessPosPreview(role);
   if (isRouteMatch(ROLE_DENIED_ROUTES[role] ?? [], pathName)) return false;
   return isRouteMatch(ROLE_ROUTES[role] ?? [], pathName);
 };

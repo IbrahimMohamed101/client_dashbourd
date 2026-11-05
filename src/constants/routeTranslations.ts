@@ -1,5 +1,6 @@
 export const routeTranslations: Record<string, string> = {
   dashboard: "لوحة التحكم",
+  pos: "نقطة البيع",
   packages: "الباقات",
   "one-time-orders": "الطلبات",
   operations: "لوحة العمليات",

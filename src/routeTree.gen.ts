@@ -17,10 +17,12 @@ import { Route as ProtectedUsersIndexRouteImport } from './routes/_protected/use
 import { Route as ProtectedSubscriptionsIndexRouteImport } from './routes/_protected/subscriptions/index'
 import { Route as ProtectedSubscriptionAuditIndexRouteImport } from './routes/_protected/subscription-audit/index'
 import { Route as ProtectedSettingsIndexRouteImport } from './routes/_protected/settings/index'
+import { Route as ProtectedRetentionReportsIndexRouteImport } from './routes/_protected/retention-reports/index'
 import { Route as ProtectedRestaurantHoursIndexRouteImport } from './routes/_protected/restaurant-hours/index'
 import { Route as ProtectedPromoCodesIndexRouteImport } from './routes/_protected/promo-codes/index'
 import { Route as ProtectedProfileIndexRouteImport } from './routes/_protected/profile/index'
 import { Route as ProtectedPremiumMealsIndexRouteImport } from './routes/_protected/premium-meals/index'
+import { Route as ProtectedPosIndexRouteImport } from './routes/_protected/pos/index'
 import { Route as ProtectedPickupBranchesIndexRouteImport } from './routes/_protected/pickup-branches/index'
 import { Route as ProtectedPaymentsIndexRouteImport } from './routes/_protected/payments/index'
 import { Route as ProtectedPackagesIndexRouteImport } from './routes/_protected/packages/index'
@@ -29,8 +31,10 @@ import { Route as ProtectedOneTimeOrdersIndexRouteImport } from './routes/_prote
 import { Route as ProtectedNotificationsIndexRouteImport } from './routes/_protected/notifications/index'
 import { Route as ProtectedMenuIndexRouteImport } from './routes/_protected/menu/index'
 import { Route as ProtectedManualDeductionIndexRouteImport } from './routes/_protected/manual-deduction/index'
+import { Route as ProtectedLandingLeadsIndexRouteImport } from './routes/_protected/landing-leads/index'
 import { Route as ProtectedDeliveryIndexRouteImport } from './routes/_protected/delivery/index'
 import { Route as ProtectedDashboardUsersIndexRouteImport } from './routes/_protected/dashboard-users/index'
+import { Route as ProtectedDailyClosingIndexRouteImport } from './routes/_protected/daily-closing/index'
 import { Route as ProtectedCustomerManagementIndexRouteImport } from './routes/_protected/customer-management/index'
 import { Route as ProtectedAddonsIndexRouteImport } from './routes/_protected/addons/index'
 import { Route as ProtectedAccountingIndexRouteImport } from './routes/_protected/accounting/index'
@@ -94,6 +98,12 @@ const ProtectedSettingsIndexRoute = ProtectedSettingsIndexRouteImport.update({
   path: '/settings/',
   getParentRoute: () => ProtectedRouteRoute,
 } as any)
+const ProtectedRetentionReportsIndexRoute =
+  ProtectedRetentionReportsIndexRouteImport.update({
+    id: '/retention-reports/',
+    path: '/retention-reports/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
 const ProtectedRestaurantHoursIndexRoute =
   ProtectedRestaurantHoursIndexRouteImport.update({
     id: '/restaurant-hours/',
@@ -117,6 +127,11 @@ const ProtectedPremiumMealsIndexRoute =
     path: '/premium-meals/',
     getParentRoute: () => ProtectedRouteRoute,
   } as any)
+const ProtectedPosIndexRoute = ProtectedPosIndexRouteImport.update({
+  id: '/pos/',
+  path: '/pos/',
+  getParentRoute: () => ProtectedRouteRoute,
+} as any)
 const ProtectedPickupBranchesIndexRoute =
   ProtectedPickupBranchesIndexRouteImport.update({
     id: '/pickup-branches/',
@@ -162,6 +177,12 @@ const ProtectedManualDeductionIndexRoute =
     path: '/manual-deduction/',
     getParentRoute: () => ProtectedRouteRoute,
   } as any)
+const ProtectedLandingLeadsIndexRoute =
+  ProtectedLandingLeadsIndexRouteImport.update({
+    id: '/landing-leads/',
+    path: '/landing-leads/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
 const ProtectedDeliveryIndexRoute = ProtectedDeliveryIndexRouteImport.update({
   id: '/delivery/',
   path: '/delivery/',
@@ -171,6 +192,12 @@ const ProtectedDashboardUsersIndexRoute =
   ProtectedDashboardUsersIndexRouteImport.update({
     id: '/dashboard-users/',
     path: '/dashboard-users/',
+    getParentRoute: () => ProtectedRouteRoute,
+  } as any)
+const ProtectedDailyClosingIndexRoute =
+  ProtectedDailyClosingIndexRouteImport.update({
+    id: '/daily-closing/',
+    path: '/daily-closing/',
     getParentRoute: () => ProtectedRouteRoute,
   } as any)
 const ProtectedCustomerManagementIndexRoute =
@@ -307,8 +334,10 @@ export interface FileRoutesByFullPath {
   '/accounting/': typeof ProtectedAccountingIndexRoute
   '/addons/': typeof ProtectedAddonsIndexRoute
   '/customer-management/': typeof ProtectedCustomerManagementIndexRoute
+  '/daily-closing/': typeof ProtectedDailyClosingIndexRoute
   '/dashboard-users/': typeof ProtectedDashboardUsersIndexRoute
   '/delivery/': typeof ProtectedDeliveryIndexRoute
+  '/landing-leads/': typeof ProtectedLandingLeadsIndexRoute
   '/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
   '/menu/': typeof ProtectedMenuIndexRoute
   '/notifications/': typeof ProtectedNotificationsIndexRoute
@@ -317,10 +346,12 @@ export interface FileRoutesByFullPath {
   '/packages/': typeof ProtectedPackagesIndexRoute
   '/payments/': typeof ProtectedPaymentsIndexRoute
   '/pickup-branches/': typeof ProtectedPickupBranchesIndexRoute
+  '/pos/': typeof ProtectedPosIndexRoute
   '/premium-meals/': typeof ProtectedPremiumMealsIndexRoute
   '/profile/': typeof ProtectedProfileIndexRoute
   '/promo-codes/': typeof ProtectedPromoCodesIndexRoute
   '/restaurant-hours/': typeof ProtectedRestaurantHoursIndexRoute
+  '/retention-reports/': typeof ProtectedRetentionReportsIndexRoute
   '/settings/': typeof ProtectedSettingsIndexRoute
   '/subscription-audit/': typeof ProtectedSubscriptionAuditIndexRoute
   '/subscriptions/': typeof ProtectedSubscriptionsIndexRoute
@@ -351,8 +382,10 @@ export interface FileRoutesByTo {
   '/accounting': typeof ProtectedAccountingIndexRoute
   '/addons': typeof ProtectedAddonsIndexRoute
   '/customer-management': typeof ProtectedCustomerManagementIndexRoute
+  '/daily-closing': typeof ProtectedDailyClosingIndexRoute
   '/dashboard-users': typeof ProtectedDashboardUsersIndexRoute
   '/delivery': typeof ProtectedDeliveryIndexRoute
+  '/landing-leads': typeof ProtectedLandingLeadsIndexRoute
   '/manual-deduction': typeof ProtectedManualDeductionIndexRoute
   '/menu': typeof ProtectedMenuIndexRoute
   '/notifications': typeof ProtectedNotificationsIndexRoute
@@ -361,10 +394,12 @@ export interface FileRoutesByTo {
   '/packages': typeof ProtectedPackagesIndexRoute
   '/payments': typeof ProtectedPaymentsIndexRoute
   '/pickup-branches': typeof ProtectedPickupBranchesIndexRoute
+  '/pos': typeof ProtectedPosIndexRoute
   '/premium-meals': typeof ProtectedPremiumMealsIndexRoute
   '/profile': typeof ProtectedProfileIndexRoute
   '/promo-codes': typeof ProtectedPromoCodesIndexRoute
   '/restaurant-hours': typeof ProtectedRestaurantHoursIndexRoute
+  '/retention-reports': typeof ProtectedRetentionReportsIndexRoute
   '/settings': typeof ProtectedSettingsIndexRoute
   '/subscription-audit': typeof ProtectedSubscriptionAuditIndexRoute
   '/subscriptions': typeof ProtectedSubscriptionsIndexRoute
@@ -397,8 +432,10 @@ export interface FileRoutesById {
   '/_protected/accounting/': typeof ProtectedAccountingIndexRoute
   '/_protected/addons/': typeof ProtectedAddonsIndexRoute
   '/_protected/customer-management/': typeof ProtectedCustomerManagementIndexRoute
+  '/_protected/daily-closing/': typeof ProtectedDailyClosingIndexRoute
   '/_protected/dashboard-users/': typeof ProtectedDashboardUsersIndexRoute
   '/_protected/delivery/': typeof ProtectedDeliveryIndexRoute
+  '/_protected/landing-leads/': typeof ProtectedLandingLeadsIndexRoute
   '/_protected/manual-deduction/': typeof ProtectedManualDeductionIndexRoute
   '/_protected/menu/': typeof ProtectedMenuIndexRoute
   '/_protected/notifications/': typeof ProtectedNotificationsIndexRoute
@@ -407,10 +444,12 @@ export interface FileRoutesById {
   '/_protected/packages/': typeof ProtectedPackagesIndexRoute
   '/_protected/payments/': typeof ProtectedPaymentsIndexRoute
   '/_protected/pickup-branches/': typeof ProtectedPickupBranchesIndexRoute
+  '/_protected/pos/': typeof ProtectedPosIndexRoute
   '/_protected/premium-meals/': typeof ProtectedPremiumMealsIndexRoute
   '/_protected/profile/': typeof ProtectedProfileIndexRoute
   '/_protected/promo-codes/': typeof ProtectedPromoCodesIndexRoute
   '/_protected/restaurant-hours/': typeof ProtectedRestaurantHoursIndexRoute
+  '/_protected/retention-reports/': typeof ProtectedRetentionReportsIndexRoute
   '/_protected/settings/': typeof ProtectedSettingsIndexRoute
   '/_protected/subscription-audit/': typeof ProtectedSubscriptionAuditIndexRoute
   '/_protected/subscriptions/': typeof ProtectedSubscriptionsIndexRoute
@@ -443,8 +482,10 @@ export interface FileRouteTypes {
     | '/accounting/'
     | '/addons/'
     | '/customer-management/'
+    | '/daily-closing/'
     | '/dashboard-users/'
     | '/delivery/'
+    | '/landing-leads/'
     | '/manual-deduction/'
     | '/menu/'
     | '/notifications/'
@@ -453,10 +494,12 @@ export interface FileRouteTypes {
     | '/packages/'
     | '/payments/'
     | '/pickup-branches/'
+    | '/pos/'
     | '/premium-meals/'
     | '/profile/'
     | '/promo-codes/'
     | '/restaurant-hours/'
+    | '/retention-reports/'
     | '/settings/'
     | '/subscription-audit/'
     | '/subscriptions/'
@@ -487,8 +530,10 @@ export interface FileRouteTypes {
     | '/accounting'
     | '/addons'
     | '/customer-management'
+    | '/daily-closing'
     | '/dashboard-users'
     | '/delivery'
+    | '/landing-leads'
     | '/manual-deduction'
     | '/menu'
     | '/notifications'
@@ -497,10 +542,12 @@ export interface FileRouteTypes {
     | '/packages'
     | '/payments'
     | '/pickup-branches'
+    | '/pos'
     | '/premium-meals'
     | '/profile'
     | '/promo-codes'
     | '/restaurant-hours'
+    | '/retention-reports'
     | '/settings'
     | '/subscription-audit'
     | '/subscriptions'
@@ -532,8 +579,10 @@ export interface FileRouteTypes {
     | '/_protected/accounting/'
     | '/_protected/addons/'
     | '/_protected/customer-management/'
+    | '/_protected/daily-closing/'
     | '/_protected/dashboard-users/'
     | '/_protected/delivery/'
+    | '/_protected/landing-leads/'
     | '/_protected/manual-deduction/'
     | '/_protected/menu/'
     | '/_protected/notifications/'
@@ -542,10 +591,12 @@ export interface FileRouteTypes {
     | '/_protected/packages/'
     | '/_protected/payments/'
     | '/_protected/pickup-branches/'
+    | '/_protected/pos/'
     | '/_protected/premium-meals/'
     | '/_protected/profile/'
     | '/_protected/promo-codes/'
     | '/_protected/restaurant-hours/'
+    | '/_protected/retention-reports/'
     | '/_protected/settings/'
     | '/_protected/subscription-audit/'
     | '/_protected/subscriptions/'
@@ -629,6 +680,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedSettingsIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
+    '/_protected/retention-reports/': {
+      id: '/_protected/retention-reports/'
+      path: '/retention-reports'
+      fullPath: '/retention-reports/'
+      preLoaderRoute: typeof ProtectedRetentionReportsIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
     '/_protected/restaurant-hours/': {
       id: '/_protected/restaurant-hours/'
       path: '/restaurant-hours'
@@ -655,6 +713,13 @@ declare module '@tanstack/react-router' {
       path: '/premium-meals'
       fullPath: '/premium-meals/'
       preLoaderRoute: typeof ProtectedPremiumMealsIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/pos/': {
+      id: '/_protected/pos/'
+      path: '/pos'
+      fullPath: '/pos/'
+      preLoaderRoute: typeof ProtectedPosIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/pickup-branches/': {
@@ -713,6 +778,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProtectedManualDeductionIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
+    '/_protected/landing-leads/': {
+      id: '/_protected/landing-leads/'
+      path: '/landing-leads'
+      fullPath: '/landing-leads/'
+      preLoaderRoute: typeof ProtectedLandingLeadsIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
     '/_protected/delivery/': {
       id: '/_protected/delivery/'
       path: '/delivery'
@@ -725,6 +797,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard-users'
       fullPath: '/dashboard-users/'
       preLoaderRoute: typeof ProtectedDashboardUsersIndexRouteImport
+      parentRoute: typeof ProtectedRouteRoute
+    }
+    '/_protected/daily-closing/': {
+      id: '/_protected/daily-closing/'
+      path: '/daily-closing'
+      fullPath: '/daily-closing/'
+      preLoaderRoute: typeof ProtectedDailyClosingIndexRouteImport
       parentRoute: typeof ProtectedRouteRoute
     }
     '/_protected/customer-management/': {
@@ -887,8 +966,10 @@ interface ProtectedRouteRouteChildren {
   ProtectedAccountingIndexRoute: typeof ProtectedAccountingIndexRoute
   ProtectedAddonsIndexRoute: typeof ProtectedAddonsIndexRoute
   ProtectedCustomerManagementIndexRoute: typeof ProtectedCustomerManagementIndexRoute
+  ProtectedDailyClosingIndexRoute: typeof ProtectedDailyClosingIndexRoute
   ProtectedDashboardUsersIndexRoute: typeof ProtectedDashboardUsersIndexRoute
   ProtectedDeliveryIndexRoute: typeof ProtectedDeliveryIndexRoute
+  ProtectedLandingLeadsIndexRoute: typeof ProtectedLandingLeadsIndexRoute
   ProtectedManualDeductionIndexRoute: typeof ProtectedManualDeductionIndexRoute
   ProtectedMenuIndexRoute: typeof ProtectedMenuIndexRoute
   ProtectedNotificationsIndexRoute: typeof ProtectedNotificationsIndexRoute
@@ -897,10 +978,12 @@ interface ProtectedRouteRouteChildren {
   ProtectedPackagesIndexRoute: typeof ProtectedPackagesIndexRoute
   ProtectedPaymentsIndexRoute: typeof ProtectedPaymentsIndexRoute
   ProtectedPickupBranchesIndexRoute: typeof ProtectedPickupBranchesIndexRoute
+  ProtectedPosIndexRoute: typeof ProtectedPosIndexRoute
   ProtectedPremiumMealsIndexRoute: typeof ProtectedPremiumMealsIndexRoute
   ProtectedProfileIndexRoute: typeof ProtectedProfileIndexRoute
   ProtectedPromoCodesIndexRoute: typeof ProtectedPromoCodesIndexRoute
   ProtectedRestaurantHoursIndexRoute: typeof ProtectedRestaurantHoursIndexRoute
+  ProtectedRetentionReportsIndexRoute: typeof ProtectedRetentionReportsIndexRoute
   ProtectedSettingsIndexRoute: typeof ProtectedSettingsIndexRoute
   ProtectedSubscriptionAuditIndexRoute: typeof ProtectedSubscriptionAuditIndexRoute
   ProtectedSubscriptionsIndexRoute: typeof ProtectedSubscriptionsIndexRoute
@@ -931,8 +1014,10 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedAccountingIndexRoute: ProtectedAccountingIndexRoute,
   ProtectedAddonsIndexRoute: ProtectedAddonsIndexRoute,
   ProtectedCustomerManagementIndexRoute: ProtectedCustomerManagementIndexRoute,
+  ProtectedDailyClosingIndexRoute: ProtectedDailyClosingIndexRoute,
   ProtectedDashboardUsersIndexRoute: ProtectedDashboardUsersIndexRoute,
   ProtectedDeliveryIndexRoute: ProtectedDeliveryIndexRoute,
+  ProtectedLandingLeadsIndexRoute: ProtectedLandingLeadsIndexRoute,
   ProtectedManualDeductionIndexRoute: ProtectedManualDeductionIndexRoute,
   ProtectedMenuIndexRoute: ProtectedMenuIndexRoute,
   ProtectedNotificationsIndexRoute: ProtectedNotificationsIndexRoute,
@@ -941,10 +1026,12 @@ const ProtectedRouteRouteChildren: ProtectedRouteRouteChildren = {
   ProtectedPackagesIndexRoute: ProtectedPackagesIndexRoute,
   ProtectedPaymentsIndexRoute: ProtectedPaymentsIndexRoute,
   ProtectedPickupBranchesIndexRoute: ProtectedPickupBranchesIndexRoute,
+  ProtectedPosIndexRoute: ProtectedPosIndexRoute,
   ProtectedPremiumMealsIndexRoute: ProtectedPremiumMealsIndexRoute,
   ProtectedProfileIndexRoute: ProtectedProfileIndexRoute,
   ProtectedPromoCodesIndexRoute: ProtectedPromoCodesIndexRoute,
   ProtectedRestaurantHoursIndexRoute: ProtectedRestaurantHoursIndexRoute,
+  ProtectedRetentionReportsIndexRoute: ProtectedRetentionReportsIndexRoute,
   ProtectedSettingsIndexRoute: ProtectedSettingsIndexRoute,
   ProtectedSubscriptionAuditIndexRoute: ProtectedSubscriptionAuditIndexRoute,
   ProtectedSubscriptionsIndexRoute: ProtectedSubscriptionsIndexRoute,
