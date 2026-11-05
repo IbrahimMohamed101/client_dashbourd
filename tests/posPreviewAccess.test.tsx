@@ -23,9 +23,10 @@ describe("POS preview access", () => {
       "https://basicdiet145-staging-2882.up.railway.app"
     );
 
-    for (const role of ["cashier", "admin", "superadmin"] as const) {
+    for (const role of ["cashier", "restaurant", "admin", "superadmin"] as const) {
       expect(canRoleAccessRoute(role, "/pos")).toBe(true);
       expect(canRoleAccessRoute(role, "/pos/")).toBe(true);
+      expect(canRoleAccessRoute(role, "/pos/menu")).toBe(true);
       expect(filterNavItemsForRole(NavLinksData.navMain, role)).toContainEqual(
         expect.objectContaining({ url: "/pos" })
       );
@@ -34,7 +35,6 @@ describe("POS preview access", () => {
     for (const role of [
       "kitchen",
       "courier",
-      "restaurant",
       undefined,
     ] as const) {
       expect(canRoleAccessRoute(role, "/pos")).toBe(false);
@@ -44,6 +44,7 @@ describe("POS preview access", () => {
     }
 
     expect(canRoleAccessRoute("cashier", "/pos/orders")).toBe(false);
+    expect(canRoleAccessRoute("kitchen", "/pos/menu")).toBe(false);
   });
 
   it("rejects a deployed preview connected to the production API", () => {

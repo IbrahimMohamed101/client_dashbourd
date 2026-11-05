@@ -22,3 +22,16 @@ The owner authorized POS work in isolated Staging on 2026-11-05 and subsequently
 3. Staging JWT secrets differ from Production and real provider credentials do not reach Staging.
 4. Dataset has an allowlisted source inventory and anonymization process with zero live personal information.
 5. No merge to main or Production deployment without a new explicit directive.
+
+
+## D-087 — Cashier has the same operational permissions as restaurant (Staging only)
+
+Owner instruction, 2026-11-05: Cashier operates the branch and may manage the cashier POS menu with the same privileges as the restaurant role.
+
+- Cashier and restaurant share the same permitted dashboard routes, including the restaurant app menu, operational subscriptions and lead management, and the independent POS menu.
+- Both may create/edit POS products, variants, sales channels, permitted add-ons and prices; save drafts, publish prices and read historical published prices.
+- Each user's original persisted role and audit identity are retained. Inheritance does **not** grant admin/superadmin finance, payment-management, dashboard-user-management or other administrative permissions.
+- Kitchen and courier do not gain POS catalog editing.
+- Neither role can commit a real POS payment until a separate financial implementation and release gate is approved.
+- This permission change applies only to the isolated Staging branches under D-086, not Production.
+- The cashier's access to restaurant-level customer and CRM records is intentional parity, subject to existing authentication and audit controls.

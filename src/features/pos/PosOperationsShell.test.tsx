@@ -1,9 +1,18 @@
 // @vitest-environment jsdom
+import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PosOperationsShell } from "./PosOperationsShell";
 import { categories, previewProducts } from "./previewCatalog";
+
+// This shell test does not mount a real TanStack Router. Use an anchor for
+// its navigation link while route-authorization tests verify the true router.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
+    <a href={to} {...props}>{children}</a>
+  ),
+}));
 
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
@@ -23,7 +32,8 @@ describe("POS operations dashboard Staging shell", () => {
     expect(screen.getByRole("navigation", { name: "أقسام نقطة البيع" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "ابحث عن صنف" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
-    expect(screen.queryByRole("link", { name: /منيو الكاشير والأسعار/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /منيو الكاشير والأسعار/ }))
+      .toHaveAttribute("href", "/pos/menu");
   });
 
   it("uses the published catalog for overview numbers and no fabricated sales", async () => {

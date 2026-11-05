@@ -68,15 +68,6 @@ const KITCHEN_ROUTES = [
 
 const COURIER_ROUTES = ["/delivery", "/operations", "/profile"];
 
-const CASHIER_ROUTES = [
-  "/daily-closing",
-  "/manual-deduction",
-  "/operations",
-  "/one-time-orders",
-  "/users",
-  "/profile",
-];
-
 const RESTAURANT_ROUTES = [
   "/daily-closing",
   "/landing-leads",
@@ -91,6 +82,10 @@ const RESTAURANT_ROUTES = [
   "/premium-meals",
   "/profile",
 ];
+
+// Cashier is the operating owner of the branch and shares restaurant routes.
+// Do not add admin-only or superadmin-only routes here.
+const CASHIER_ROUTES = [...RESTAURANT_ROUTES];
 
 const RESTAURANT_DENIED_ROUTES: string[] = [];
 
