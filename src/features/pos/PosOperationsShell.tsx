@@ -387,7 +387,7 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
   );
 
   return (
-    <div className={view === "sale" ? "flex h-full min-h-0 flex-col overflow-hidden" : "min-w-0 px-3 pb-6 sm:px-5"} dir="rtl">
+    <div className={view === "sale" ? "flex h-full min-h-0 flex-col overflow-hidden" : "h-full min-h-0 min-w-0 overflow-y-auto px-3 pb-6 sm:px-5"} dir="rtl">
       {view !== "sale" && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3">
           <h1 className="text-base font-bold">بيسك دايت — نقطة البيع</h1>
