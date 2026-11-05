@@ -27,7 +27,7 @@ export function canAccessPosPreview(role: UserRole, path = "/pos") {
     return false;
   }
 
-  return (
+  return isPosPreviewPath(path) && (
     role === UserRoles.CASHIER ||
     role === UserRoles.RESTAURANT ||
     role === UserRoles.ADMIN ||
