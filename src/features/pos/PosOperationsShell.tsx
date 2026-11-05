@@ -339,7 +339,10 @@ function SettingsView() {
 export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }) {
   const [view, setView] = useState<View>("sale");
   const { user } = useAuth();
-  const manager = user?.role === UserRoles.ADMIN || user?.role === UserRoles.SUPERADMIN;
+  const canEditPosMenu = user?.role === UserRoles.CASHIER
+    || user?.role === UserRoles.RESTAURANT
+    || user?.role === UserRoles.ADMIN
+    || user?.role === UserRoles.SUPERADMIN;
   return (
     <div className="min-w-0 px-3 pb-6 sm:px-5" dir="rtl">
       <div className="mb-4 rounded-2xl border bg-card px-4 py-3">
