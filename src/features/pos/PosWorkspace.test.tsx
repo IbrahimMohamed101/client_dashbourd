@@ -194,6 +194,27 @@ describe("POS preview workspace", () => {
     expect(screen.getByRole("button", { name: /دجاج بالزبدة/ })).toBeDisabled();
   });
 
+  it("prevents approval when a newly published catalog disallows an add-on", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<PosWorkspace catalog={catalog} />);
+    await user.click(screen.getByRole("button", { name: /دجاج بالزبدة/ }));
+    const options = within(screen.getByRole("dialog", { name: /دجاج بالزبدة/ }));
+    await user.click(options.getByRole("button", { name: /150 جم/ }));
+    await user.click(options.getByRole("button", { name: /زيادة لحم/ }));
+    await user.click(options.getByRole("button", { name: /أضف للسلة/ }));
+    rerender(<PosWorkspace catalog={{
+      ...catalog,
+      revision: 2,
+      products: catalog.products.map((item) =>
+        item.id === "butter" ? { ...item, allowedAddonIds: ["extra-chicken"] } : item
+      ),
+    }} />);
+    const review = within(screen.getByRole("status", { name: "مراجعة اختلاف أسعار المنيو" }));
+    expect(review.getByRole("button", { name: "تأكيد الأسعار الجديدة" })).toBeDisabled();
+    await user.click(review.getByRole("button", { name: "حذف الصنف غير المتاح" }));
+    expect(screen.getByText("اختر صنفًا لتجربة إضافته إلى السلة.")).toBeInTheDocument();
+  });
+
   it("stops mixing prices when a new catalog is published during a sale preview", async () => {
     const user = userEvent.setup();
     const { rerender } = render(<PosWorkspace catalog={catalog} />);
