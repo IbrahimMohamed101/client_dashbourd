@@ -6,11 +6,13 @@ import {
   ClipboardList,
   LayoutDashboard,
   LockKeyhole,
+  Menu,
   Settings2,
   ShoppingBasket,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { UserRoles } from "@/types/auth";
@@ -343,39 +345,62 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
     || user?.role === UserRoles.RESTAURANT
     || user?.role === UserRoles.ADMIN
     || user?.role === UserRoles.SUPERADMIN;
-  return (
-    <div className="min-w-0 px-3 pb-6 sm:px-5" dir="rtl">
-      <div className="mb-4 rounded-2xl border bg-card px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <ShoppingBasket aria-hidden="true" className="size-5 text-primary" />
-            <h1 className="font-bold">بيسك دايت — نقطة البيع</h1>
-          </div>
-          <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-            معاينة Staging · لا توجد عمليات مالية
-          </span>
-        </div>
-        <nav aria-label="أقسام نقطة البيع" className="mt-3 flex min-w-0 gap-2 overflow-x-auto pb-1">
+
+  // One navigation control for every POS view: sales always occupies the
+  // whole working area, rather than spending a second row on tab buttons.
+  const navigationMenu = (
+    <nav aria-label="أقسام نقطة البيع" className="shrink-0">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="outline" aria-label="أقسام نقطة البيع"
+            className="min-h-12 gap-2">
+            <Menu aria-hidden="true" className="size-5" />
+            <span className="hidden sm:inline">الأقسام</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-56" dir="rtl">
           {navigation.map(({ id, label, icon: Icon }) => (
-            <Button
+            <DropdownMenuItem
               key={id}
-              type="button"
-              variant={view === id ? "default" : "outline"}
+              className="min-h-12 gap-3"
+              onSelect={() => setView(id)}
               aria-current={view === id ? "page" : undefined}
-              className="min-h-11 shrink-0 gap-2"
-              onClick={() => setView(id)}
             >
-              <Icon aria-hidden="true" className="size-4" />{label}
-            </Button>
+              <Icon aria-hidden="true" className="size-5" />
+              {label}
+            </DropdownMenuItem>
           ))}
           {canEditPosMenu && (
-            <Button asChild variant="outline" className="min-h-11 shrink-0 gap-2">
-              <Link to="/pos/menu"><BookOpen aria-hidden="true" className="size-4" />منيو الكاشير والأسعار</Link>
-            </Button>
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="min-h-12 gap-3">
+                <Link to="/pos/menu">
+                  <BookOpen aria-hidden="true" className="size-5" />
+                  منيو الكاشير والأسعار
+                </Link>
+              </DropdownMenuItem>
+            </>
           )}
-        </nav>
-      </div>
-      {view === "sale" && <PosWorkspace catalog={catalog} />}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </nav>
+  );
+
+  return (
+    <div className={view === "sale" ? "flex h-full min-h-0 flex-col overflow-hidden" : "min-w-0 px-3 pb-6 sm:px-5"} dir="rtl">
+      {view !== "sale" && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3">
+          <h1 className="text-base font-bold">بيسك دايت — نقطة البيع</h1>
+          {navigationMenu}
+        </div>
+      )}
+      {view === "sale" && (
+        <PosWorkspace
+          catalog={catalog}
+          operatorName={user?.name || "موظف"}
+          navigation={navigationMenu}
+        />
+      )}
       {view === "overview" && <OverviewView catalog={catalog} onSale={() => setView("sale")} />}
       {view === "orders" && <OrdersView catalog={catalog} onSale={() => setView("sale")} />}
       {view === "subscriptions" && <SubscriptionView />}
