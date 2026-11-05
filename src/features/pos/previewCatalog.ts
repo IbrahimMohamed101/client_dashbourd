@@ -4,7 +4,8 @@ export const channels = [
   { id: "keeta", label: "Keeta" },
 ] as const;
 
-export type Channel = (typeof channels)[number]["id"];
+export type Channel = string;
+export type PosChannel = { id: string; label: string };
 
 export const categories = [
   { id: "meals", label: "الوجبات" },
@@ -28,6 +29,7 @@ export type Product = {
 };
 
 export type Catalog = {
+  channels?: PosChannel[];
   categories: { id: string; label: string }[];
   products: Product[];
 };
@@ -113,7 +115,7 @@ export function previewUnitPrice(
 ) {
   const base = variant.prices[channel];
   const extras = addons.map((addon) => addon.prices[channel]);
-  if (base === null || extras.some((amount) => amount === null)) return null;
+  if (base == null || extras.some((amount) => amount == null)) return null;
   return extras.reduce<number>((total, amount) => total + (amount ?? 0), base);
 }
 
