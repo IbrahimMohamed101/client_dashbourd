@@ -467,7 +467,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
               (categories.find((item) => item.id === category)?.label ?? "الأصناف")}
           </h2>
           <div className="min-h-0 overflow-auto overscroll-contain">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2.5">
               {visibleProducts.map((item) => {
                 const pricedVariants = item.variants
                   .map((variant) => variant.prices[channel])
@@ -480,7 +480,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                     key={item.id}
                     type="button"
                     variant="outline"
-                    className="h-auto min-h-24 flex-col gap-2 px-2 py-3 text-center text-sm whitespace-normal"
+                    className="h-auto min-h-24 min-w-0 flex-col gap-1.5 overflow-hidden px-2 py-3 text-center text-sm whitespace-normal"
                     disabled={staleCart || startingPrice === null}
                     onClick={() => chooseProduct(item)}
                   >
