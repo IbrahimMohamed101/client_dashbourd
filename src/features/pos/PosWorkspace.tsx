@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Minus, Plus, Search, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Dialog,
@@ -334,7 +335,30 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
         <img src="/logo.png" alt="بيسك دايت" className="hidden size-10 shrink-0 object-contain sm:block" />
         <div role="group" aria-label="قناة البيع"
           className="flex min-w-0 max-w-[30vw] shrink-0 gap-2 overflow-x-auto whitespace-nowrap py-1 lg:max-w-[25vw]">
-          {channels.map((option) => (
+          {channels.length > 3 ? (
+            <>
+              <span role="status" title={channels.find((item) => item.id === channel)?.label ?? channel}
+                className="flex min-h-12 max-w-[13vw] shrink-0 items-center truncate rounded-lg border-2 border-primary bg-secondary px-3 text-sm font-bold"
+              >
+                {channels.find((item) => item.id === channel)?.label ?? channel}
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" className="min-h-12 shrink-0 px-2 text-sm" disabled={staleCart}>
+                    قنوات أخرى
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-48 text-right">
+                  {channels.map((option) => (
+                    <DropdownMenuItem key={option.id} disabled={option.id === channel}
+                      onSelect={() => chooseChannel(option.id)} className="min-h-12">
+                      {option.label}{option.id === channel ? " ✓" : ""}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : channels.map((option) => (
             <Button key={option.id} type="button"
               variant={channel === option.id ? "secondary" : "outline"}
               aria-pressed={channel === option.id}
