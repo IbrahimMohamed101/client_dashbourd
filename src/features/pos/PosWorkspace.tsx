@@ -21,6 +21,7 @@ import {
   type Variant,
 } from "./previewCatalog";
 import type { PublishedPosCatalog } from "./catalogApi";
+import { fetchPosQuote, type PosQuote } from "./quoteApi";
 
 type Selection = { product: Product; variant: Variant; addons: Addon[] };
 type CartLine = Selection & { id: string; quantity: number };
@@ -154,6 +155,9 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
   const [serviceMode, setServiceMode] = useState<"dine-in" | "takeaway" | "delivery">("takeaway");
   const [externalOrderNumber, setExternalOrderNumber] = useState("");
   const [appPaymentStatus, setAppPaymentStatus] = useState<"paid" | "cash">("paid");
+  const [quoteReview, setQuoteReview] = useState<{ key: string; data: PosQuote } | null>(null);
+  const [quoteFailure, setQuoteFailure] = useState<{ key: string; message: string } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
 
   const { categories, products } = catalog;
   const availableAddons = products
@@ -167,6 +171,38 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
   const itemCount = cart.reduce((count, line) => count + line.quantity, 0);
   const total = cartTotal(cart, channel);
   const nextTotal = pendingChannel ? cartTotal(cart, pendingChannel) : null;
+  const quoteRequest = {
+    revision: catalog.revision,
+    channel,
+    items: cart.map((line) => ({
+      productId: line.product.id,
+      variantId: line.variant.id,
+      quantity: line.quantity,
+      addonIds: line.addons.map((addon) => addon.id),
+    })),
+  };
+  const quoteKey = JSON.stringify(quoteRequest);
+  const currentQuote = quoteReview?.key === quoteKey ? quoteReview.data : null;
+  const currentQuoteError = quoteFailure?.key === quoteKey ? quoteFailure.message : null;
+  async function reviewServerPrice() {
+    if (staleCart || !cart.length || total === null || quoteLoading) return;
+    const key = quoteKey;
+    setQuoteLoading(true);
+    setQuoteFailure(null);
+    try {
+      const data = await fetchPosQuote(quoteRequest);
+      setQuoteReview({ key, data });
+    } catch {
+      setQuoteReview(null);
+      setQuoteFailure({
+        key,
+        message: "تعذر مراجعة الأسعار من Staging. لا تُعتمد الأسعار قبل عودة الخدمة.",
+      });
+    } finally {
+      setQuoteLoading(false);
+    }
+  }
+
   const searchTerm = search.trim();
   const visibleProducts = products.filter((item) =>
     searchTerm
@@ -533,6 +569,30 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
                 {total === null ? "غير متاح" : formatPreviewAmount(total)}
               </span>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-12"
+              disabled={!cart.length || total === null || staleCart || quoteLoading}
+              onClick={() => void reviewServerPrice()}
+            >
+              {quoteLoading ? "مراجعة الأسعار..." : "مراجعة الأسعار من السيرفر"}
+            </Button>
+            {currentQuoteError && (
+              <p role="alert" className="text-xs text-destructive">{currentQuoteError}</p>
+            )}
+            {currentQuote && (
+              <section aria-label="نتيجة تسعير السيرفر" className="rounded-xl border bg-muted/50 p-3 text-sm">
+                <h3 className="font-bold">مراجعة السعر · نسخة {currentQuote.revision}</h3>
+                <div className="mt-2 flex justify-between gap-2">
+                  <span>الإجمالي المبدئي</span>
+                  <strong>{formatPreviewAmount(currentQuote.provisionalSubtotalHalalas)}</strong>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  هذا ليس إجمالي الفاتورة النهائي؛ الضريبة والخصومات والسداد غير مفعّلة.
+                </p>
+              </section>
+            )}
             <Button type="button" disabled className="min-h-12">
               الدفع غير متاح في المعاينة
             </Button>
