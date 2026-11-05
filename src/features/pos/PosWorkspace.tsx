@@ -151,6 +151,9 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartRevision, setCartRevision] = useState(catalog.revision);
+  const [serviceMode, setServiceMode] = useState<"dine-in" | "takeaway" | "delivery">("takeaway");
+  const [externalOrderNumber, setExternalOrderNumber] = useState("");
+  const [appPaymentStatus, setAppPaymentStatus] = useState<"paid" | "cash">("paid");
 
   const { categories, products } = catalog;
   const availableAddons = products
@@ -256,6 +259,60 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
           )}
         </div>
       </header>
+      <section aria-label="معلومات الطلب التجريبي" className="rounded-xl border bg-card p-3">
+        {channel === "restaurant" ? (
+          <label className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="font-semibold">نوع الطلب</span>
+            <select
+              aria-label="نوع طلب المطعم"
+              className="min-h-11 rounded-lg border bg-background px-3"
+              value={serviceMode}
+              onChange={(event) =>
+                setServiceMode(event.target.value as "dine-in" | "takeaway" | "delivery")
+              }
+            >
+              <option value="dine-in">محلي</option>
+              <option value="takeaway">سفري</option>
+              <option value="delivery">توصيل</option>
+            </select>
+            <span className="text-xs text-muted-foreground">نوع الطلب لا يغيّر قائمة الأسعار.</span>
+          </label>
+        ) : (
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="grid min-w-48 flex-1 gap-1 text-sm">
+              الرقم الخارجي للتطبيق (اختياري)
+              <Input
+                aria-label="الرقم الخارجي لطلب التطبيق"
+                value={externalOrderNumber}
+                maxLength={60}
+                placeholder="يمكن تركه فارغًا"
+                onChange={(event) => setExternalOrderNumber(event.target.value)}
+              />
+            </label>
+            <div role="group" aria-label="حالة دفع طلب التطبيق" className="flex gap-2">
+              <Button
+                type="button"
+                variant={appPaymentStatus === "paid" ? "default" : "outline"}
+                aria-pressed={appPaymentStatus === "paid"}
+                onClick={() => setAppPaymentStatus("paid")}
+              >
+                مدفوع
+              </Button>
+              <Button
+                type="button"
+                variant={appPaymentStatus === "cash" ? "default" : "outline"}
+                aria-pressed={appPaymentStatus === "cash"}
+                onClick={() => setAppPaymentStatus("cash")}
+              >
+                كاش
+              </Button>
+            </div>
+            <p className="w-full text-xs text-muted-foreground">
+              معاينة فقط: لا يُسجّل بيع أو تحصيل، وكاش التطبيقات لا يُضاف لدرج المطعم.
+            </p>
+          </div>
+        )}
+      </section>
       {staleCart && (
         <div
           role="status"
