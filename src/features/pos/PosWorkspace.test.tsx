@@ -74,6 +74,23 @@ describe("POS preview workspace", () => {
     );
   });
 
+  it("keeps restaurant service mode separate from channel and app payment status", async () => {
+    const user = userEvent.setup();
+    render(<PosWorkspace catalog={catalog} />);
+    const mode = screen.getByRole("combobox", { name: "نوع طلب المطعم" });
+    expect(mode).toHaveValue("takeaway");
+    await user.selectOptions(mode, "dine-in");
+    expect(mode).toHaveValue("dine-in");
+
+    await user.click(screen.getByRole("button", { name: "Keeta" }));
+    expect(screen.getByRole("textbox", { name: "الرقم الخارجي لطلب التطبيق" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "كاش" }));
+    expect(screen.getByRole("button", { name: "كاش" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/كاش التطبيقات لا يُضاف لدرج المطعم/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "المطعم" }));
+    expect(screen.getByRole("combobox", { name: "نوع طلب المطعم" })).toHaveValue("dine-in");
+  });
+
   it("blocks switching channels when the selected size has no price in the destination", async () => {
     const user = userEvent.setup();
     render(<PosWorkspace catalog={catalog} />);
