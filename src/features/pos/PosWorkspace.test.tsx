@@ -15,15 +15,15 @@ describe("POS preview workspace", () => {
   it("opens on categories and reprices a configured item only after confirmation", async () => {
     const user = userEvent.setup();
     render(<PosWorkspace catalog={catalog} />);
-    const butter = screen.getByRole("button", { name: "دجاج بالزبدة" });
+    const butter = screen.getByRole("button", { name: /دجاج بالزبدة/ });
     expect(
       within(butter).getByText("من 24.00 ر.س")
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "الوجبات" }));
-    await user.click(screen.getByRole("button", { name: "دجاج بالزبدة" }));
+    await user.click(screen.getByRole("button", { name: /دجاج بالزبدة/ }));
 
     const options = within(
-      screen.getByRole("dialog", { name: "دجاج بالزبدة" })
+      screen.getByRole("dialog", { name: /دجاج بالزبدة/ })
     );
     expect(options.getByRole("button", { name: /أضف للسلة/ })).toBeDisabled();
     await user.click(options.getByRole("button", { name: /150 جم/ }));
@@ -57,17 +57,17 @@ describe("POS preview workspace", () => {
     const user = userEvent.setup();
     render(<PosWorkspace catalog={catalog} />);
 
-    const butter = screen.getByRole("button", { name: "دجاج بالزبدة" });
+    const butter = screen.getByRole("button", { name: /دجاج بالزبدة/ });
     expect(within(butter).getByText("من 24.00 ر.س")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "HungerStation" }));
     expect(within(butter).getByText("من 28.00 ر.س")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "السلطات" }));
-    expect(screen.getByRole("button", { name: "سلطة بيسك" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "دجاج بالزبدة" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /سلطة بيسك/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /دجاج بالزبدة/ })).not.toBeInTheDocument();
 
     await user.type(screen.getByRole("searchbox"), "دجاج");
-    expect(screen.getByRole("button", { name: "دجاج بالزبدة" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /دجاج بالزبدة/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "كل الأصناف" })).toHaveAttribute(
       "aria-pressed",
       "true"
@@ -78,7 +78,7 @@ describe("POS preview workspace", () => {
     const user = userEvent.setup();
     render(<PosWorkspace catalog={catalog} />);
     await user.type(screen.getByRole("searchbox"), "تكا");
-    await user.click(screen.getByRole("button", { name: "دجاج تكا" }));
+    await user.click(screen.getByRole("button", { name: /دجاج تكا/ }));
     await user.click(screen.getByRole("button", { name: /200 جم/ }));
     await user.click(screen.getByRole("button", { name: /أضف للسلة/ }));
     await user.click(screen.getByRole("button", { name: "Keeta" }));
@@ -101,11 +101,11 @@ describe("POS preview workspace", () => {
     const user = userEvent.setup();
     const { rerender } = render(<PosWorkspace catalog={catalog} />);
     await user.type(screen.getByRole("searchbox"), "مياه");
-    await user.click(screen.getByRole("button", { name: "مياه" }));
+    await user.click(screen.getByRole("button", { name: /مياه/ }));
     rerender(<PosWorkspace catalog={{ ...catalog, revision: 2 }} />);
     expect(screen.getByRole("status")).toHaveTextContent("اتنشر منيو جديد");
-    expect(screen.getByRole("button", { name: "مياه" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /مياه/ })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "ابدأ سلة جديدة" }));
-    expect(screen.getByRole("button", { name: "مياه" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /مياه/ })).toBeEnabled();
   });
 });
