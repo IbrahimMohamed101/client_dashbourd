@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PosWorkspace } from "./PosWorkspace";
 import { categories, previewProducts } from "./previewCatalog";
+import { fetchPosQuote } from "./quoteApi";
+
+vi.mock("./quoteApi", () => ({
+  fetchPosQuote: vi.fn(),
+}));
+
 
 const catalog = {
   revision: 1,
@@ -89,6 +95,40 @@ describe("POS preview workspace", () => {
     expect(screen.getByText(/كاش التطبيقات لا يُضاف لدرج المطعم/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "المطعم" }));
     expect(screen.getByRole("combobox", { name: "نوع طلب المطعم" })).toHaveValue("dine-in");
+  });
+
+  it("requests a server-side published catalogue quote without enabling payment", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchPosQuote).mockResolvedValueOnce({
+      revision: 1,
+      currency: "SAR",
+      channel: "restaurant",
+      lines: [{
+        productId: "water", name: "مياه", variantId: "bottle",
+        variantLabel: "عبوة", quantity: 1,
+        basePriceHalalas: 300, addons: [],
+        unitPriceHalalas: 300, lineTotalHalalas: 300,
+      }],
+      itemCount: 1,
+      provisionalSubtotalHalalas: 300,
+      finalPayableHalalas: null,
+      taxHalalas: null,
+      discountHalalas: null,
+      canCommit: false,
+      note: "مراجعة سعر",
+    });
+    render(<PosWorkspace catalog={catalog} />);
+    await user.type(screen.getByRole("searchbox", { name: "ابحث عن صنف" }), "مياه");
+    await user.click(screen.getByRole("button", { name: /مياه/ }));
+    await user.click(screen.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }));
+    expect(fetchPosQuote).toHaveBeenCalledWith({
+      revision: 1,
+      channel: "restaurant",
+      items: [{ productId: "water", variantId: "bottle", quantity: 1, addonIds: [] }],
+    });
+    const quote = within(await screen.findByRole("region", { name: "نتيجة تسعير السيرفر" }));
+    expect(quote.getByText(/3\.00/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
   });
 
   it("blocks switching channels when the selected size has no price in the destination", async () => {
