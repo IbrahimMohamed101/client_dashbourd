@@ -30,6 +30,17 @@ const catalog = {
       ] },
   ],
 };
+// Use 40 synthetic items so browser QA measures responsive grid density,
+// not only the first two demo product cards.
+for (let i = 0; i < 38; i += 1) {
+  catalog.products.push({
+    id: "synthetic-item-" + i,
+    name: "وجبة اختبار " + String(i + 1),
+    category: "meals",
+    active: true,
+    variants: [{ id: "regular", label: "حصة", prices: { restaurant: 2500, hungerstation: 2900, keeta: 2800 } }],
+  });
+}
 const user = {
   id: "synthetic-cashier-qa",
   role: "cashier",
@@ -105,6 +116,20 @@ try {
     assert.ok(firstCardBox, "First product must be visible");
     assert.ok(firstCardBox.y <= 123,
       "Product grid begins too far below top bar: " + firstCardBox.y);
+    const productCards = page.locator('section[aria-label="الكتالوج التجريبي"] .grid > button');
+    assert.equal(await productCards.count(), 40, "Synthetic 40-item catalog must render in product pane");
+    const firstRowCards = await Promise.all(
+      Array.from({ length: 12 }, (_, index) => productCards.nth(index).boundingBox())
+    );
+    const firstRow = firstRowCards.filter((rect) => rect && Math.abs(rect.y - firstRowCards[0].y) <= 1);
+    const expectedMinimumColumns = viewport.width >= 1200 ? 4 : viewport.width >= 1000 ? 3 : 2;
+    assert.ok(firstRow.length >= expectedMinimumColumns,
+      "Too few product columns for " + viewport.width + ": " + firstRow.length);
+    assert.ok(firstRowCards[0].width <= 210,
+      "Oversized product card width: " + firstRowCards[0].width + " at " + viewport.width);
+    assert.ok(firstRowCards[0].height >= 48,
+      "Product cards must remain touch accessible");
+
 
     await firstCard.click();
     await cart.getByText("سلة المطعم").waitFor();
@@ -120,7 +145,8 @@ try {
     assert.deepEqual(errors, [], "Unexpected client-side errors in POS");
     await page.screenshot({ path: destination + "/pos-a-" + viewport.width + "x" + viewport.height + ".png" });
     report.push({ viewport, topbar: headerBox.height, cartWidth: cartBox.width,
-      firstProductY: firstCardBox.y, payBottom: updatedBox.y + updatedBox.height,
+      firstProductY: firstCardBox.y, columns: firstRow.length,
+      productWidth: firstRowCards[0].width, payBottom: updatedBox.y + updatedBox.height,
       pageOverflow: pageScroll, status: "PASS" });
     await context.close();
   }

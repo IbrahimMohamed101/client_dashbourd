@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Minus, Plus, Search, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Dialog,
@@ -334,7 +335,30 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
         <img src="/logo.png" alt="بيسك دايت" className="hidden size-10 shrink-0 object-contain sm:block" />
         <div role="group" aria-label="قناة البيع"
           className="flex min-w-0 max-w-[30vw] shrink-0 gap-2 overflow-x-auto whitespace-nowrap py-1 lg:max-w-[25vw]">
-          {channels.map((option) => (
+          {channels.length > 3 ? (
+            <>
+              <span role="status" title={channels.find((item) => item.id === channel)?.label ?? channel}
+                className="flex min-h-12 max-w-[13vw] shrink-0 items-center truncate rounded-lg border-2 border-primary bg-secondary px-3 text-sm font-bold"
+              >
+                {channels.find((item) => item.id === channel)?.label ?? channel}
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" className="min-h-12 shrink-0 px-2 text-sm" disabled={staleCart}>
+                    قنوات أخرى
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-48 text-right">
+                  {channels.map((option) => (
+                    <DropdownMenuItem key={option.id} disabled={option.id === channel}
+                      onSelect={() => chooseChannel(option.id)} className="min-h-12">
+                      {option.label}{option.id === channel ? " ✓" : ""}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : channels.map((option) => (
             <Button key={option.id} type="button"
               variant={channel === option.id ? "secondary" : "outline"}
               aria-pressed={channel === option.id}
@@ -467,7 +491,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
               (categories.find((item) => item.id === category)?.label ?? "الأصناف")}
           </h2>
           <div className="min-h-0 overflow-auto overscroll-contain">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2.5">
               {visibleProducts.map((item) => {
                 const pricedVariants = item.variants
                   .map((variant) => variant.prices[channel])
@@ -480,7 +504,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                     key={item.id}
                     type="button"
                     variant="outline"
-                    className="h-auto min-h-24 flex-col gap-2 px-2 py-3 text-center text-sm whitespace-normal"
+                    className="h-auto min-h-24 min-w-0 flex-col gap-1.5 overflow-hidden px-2 py-3 text-center text-sm whitespace-normal"
                     disabled={staleCart || startingPrice === null}
                     onClick={() => chooseProduct(item)}
                   >

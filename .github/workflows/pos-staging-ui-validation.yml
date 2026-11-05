@@ -10,6 +10,7 @@ on:
     paths:
       - "src/features/pos/**"
       - "src/routes/_protected/pos/**"
+      - "src/routes/_protected/route.tsx"
       - "src/constants/routes.ts"
       - "tests/roleRoutes.test.ts"
       - "src/lib/authMiddleware.ts"
@@ -35,8 +36,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      - name: ESLint POS
-        run: npx eslint src/features/pos src/routes/_protected/pos
+      - name: ESLint entire dashboard
+        run: npm run lint
       - name: UI tests
         run: npx vitest run --maxWorkers=2 src/features/pos
       - name: Full dashboard regression suite
