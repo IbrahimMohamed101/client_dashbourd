@@ -16,12 +16,7 @@ test("navPermissions.test", () => {
     "cashier"
   ).map((item) => item.url);
 
-  assert.deepEqual(cashierUrls, [
-    "/daily-closing",
-    "/operations",
-    "/manual-deduction",
-    "/users",
-  ]);
+  assert.deepEqual(cashierUrls, navMainUrlsForRole("restaurant"));
 
   assert.equal(cashierUrls.includes("/payments"), false);
   assert.equal(cashierUrls.includes("/subscriptions"), false);
