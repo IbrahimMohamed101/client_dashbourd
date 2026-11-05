@@ -537,6 +537,30 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
             )}
           </div>
           <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
+            {channel !== "restaurant" && (
+              <div className="mb-3 grid gap-2 rounded-xl bg-muted/50 p-3">
+                <label className="grid gap-1 text-sm">
+                  رقم طلب التطبيق (اختياري)
+                  <Input aria-label="الرقم الخارجي لطلب التطبيق" value={externalOrderNumber}
+                    maxLength={60} placeholder="رقم الطلب"
+                    className="h-12" onChange={(event) => setExternalOrderNumber(event.target.value)} />
+                </label>
+                <div role="group" aria-label="حالة دفع طلب التطبيق" className="flex gap-2">
+                  <Button type="button"
+                    variant={appPaymentStatus === "paid" ? "secondary" : "outline"}
+                    aria-pressed={appPaymentStatus === "paid"} className="min-h-12 flex-1"
+                    onClick={() => setAppPaymentStatus("paid")}>مدفوع</Button>
+                  <Button type="button"
+                    variant={appPaymentStatus === "cash" ? "secondary" : "outline"}
+                    aria-pressed={appPaymentStatus === "cash"} className="min-h-12 flex-1"
+                    onClick={() => setAppPaymentStatus("cash")}>كاش</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  معاينة فقط: لا يُسجّل بيع أو تحصيل، وكاش التطبيقات لا يُضاف لدرج المطعم.
+                </p>
+              </div>
+            )}
+
             {cart.length === 0 ? (
               <p className="py-5 text-sm text-muted-foreground">
                 اختر صنفًا لتجربة إضافته إلى السلة.
@@ -594,26 +618,6 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                 })}
               </ul>
             )}
-          </div>
-          <div className="grid shrink-0 gap-2 border-t pt-3">
-            <div
-              className="flex justify-between gap-2 font-bold"
-              aria-live="polite"
-            >
-              <span>الإجمالي التجريبي</span>
-              <span>
-                {total === null ? "غير متاح" : formatPreviewAmount(total)}
-              </span>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-12"
-              disabled={!cart.length || total === null || staleCart || quoteLoading}
-              onClick={() => void reviewServerPrice()}
-            >
-              {quoteLoading ? "مراجعة الأسعار..." : "مراجعة الأسعار من السيرفر"}
-            </Button>
             {currentQuoteError && (
               <p role="alert" className="text-xs text-destructive">{currentQuoteError}</p>
             )}
@@ -629,7 +633,35 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                 </p>
               </section>
             )}
-            <Button type="button" disabled className="min-h-12">
+          </div>
+          <div className="grid shrink-0 gap-2 border-t bg-card pt-3">
+            <div className="flex justify-between gap-2 text-sm tabular-nums">
+              <span>المجموع</span>
+              <span>{total === null ? "غير متاح" : formatPreviewAmount(total)}</span>
+            </div>
+            <div className="flex justify-between gap-2 text-sm text-muted-foreground">
+              <span>الخصم</span><span>غير محسوب</span>
+            </div>
+            <div className="flex justify-between gap-2 text-sm text-muted-foreground">
+              <span>الضريبة</span><span>غير محسوبة</span>
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t pt-2"
+              aria-live="polite">
+              <span className="text-base font-bold">الإجمالي التجريبي</span>
+              <strong className="text-[28px] leading-none font-bold tabular-nums">
+                {total === null ? "غير متاح" : formatPreviewAmount(total)}
+              </strong>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-12"
+              disabled={!cart.length || total === null || staleCart || quoteLoading}
+              onClick={() => void reviewServerPrice()}
+            >
+              {quoteLoading ? "مراجعة الأسعار..." : "مراجعة الأسعار من السيرفر"}
+            </Button>
+            <Button type="button" disabled className="min-h-14 w-full text-base">
               الدفع غير متاح في المعاينة
             </Button>
           </div>
