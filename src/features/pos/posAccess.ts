@@ -28,7 +28,8 @@ export function canAccessPosPreview(role: UserRole, path = "/pos") {
   }
 
   return (
-    (role === UserRoles.CASHIER && (path === "/pos" || path === "/pos/")) ||
+    role === UserRoles.CASHIER ||
+    role === UserRoles.RESTAURANT ||
     role === UserRoles.ADMIN ||
     role === UserRoles.SUPERADMIN
   );
