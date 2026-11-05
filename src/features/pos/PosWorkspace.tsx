@@ -424,12 +424,12 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
       <div className="grid min-h-0 flex-1 gap-1 overflow-hidden p-0 md:grid-cols-[minmax(0,1fr)_minmax(22.5rem,25rem)]">
         <section
           aria-label="الكتالوج التجريبي"
-          className="flex min-h-0 min-w-0 flex-col gap-1 overflow-hidden rounded-2xl border bg-card p-1"
+          className="flex min-h-0 min-w-0 flex-col gap-0 overflow-hidden rounded-2xl border bg-card p-1"
         >
           <div
             role="group"
             aria-label="تصفية التصنيفات"
-            className="flex min-w-0 shrink-0 gap-2 overflow-x-auto pb-1"
+            className="flex min-w-0 shrink-0 gap-2 overflow-x-auto"
           >
             <Button
               type="button"
