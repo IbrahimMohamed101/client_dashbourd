@@ -397,7 +397,7 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
       {view === "sale" && (
         <PosWorkspace
           catalog={catalog}
-          operatorName={user?.name || "موظف"}
+          operatorName={user?.name?.trim() || user?.email?.split("@")[0] || "موظف"}
           navigation={navigationMenu}
         />
       )}
