@@ -4,7 +4,6 @@ import {
   BookOpen,
   CalendarClock,
   ClipboardList,
-  CreditCard,
   LayoutDashboard,
   LockKeyhole,
   Settings2,
