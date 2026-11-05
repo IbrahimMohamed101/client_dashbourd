@@ -56,7 +56,7 @@ test("roleRoutes.test", () => {
   assert.deepEqual(CASHIER_ROUTES, RESTAURANT_ROUTES, "cashier must match restaurant routes");
 
   assert.equal(CASHIER_ROUTES.includes("/payments"), false);
-  assert.equal(CASHIER_ROUTES.includes("/subscriptions"), false);
+  assert.equal(CASHIER_ROUTES.includes("/subscriptions"), true);
   assert.equal(CASHIER_ROUTES.includes("/menu"), true);
   assert.equal(CASHIER_ROUTES.includes("/addons"), true);
   assert.equal(CASHIER_ROUTES.includes("/subscriptions"), true);
