@@ -83,6 +83,10 @@ const RESTAURANT_ROUTES = [
   "/profile",
 ];
 
+// Cashier is the operating owner of the branch and shares restaurant routes.
+// Do not add admin-only or superadmin-only routes here.
+const CASHIER_ROUTES = [...RESTAURANT_ROUTES];
+
 const RESTAURANT_DENIED_ROUTES: string[] = [];
 
 const AUTH_ROUTES = ["/"];
