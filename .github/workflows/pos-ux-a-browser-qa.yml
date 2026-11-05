@@ -1,9 +1,6 @@
 name: POS UX A Viewport Browser QA
 
 on:
-  push:
-    branches:
-      - codex/pos-ux-a-fullscreen-20261105
   pull_request:
     branches:
       - codex/pos-staging-preview
@@ -16,6 +13,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: pos-ux-a-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   four-viewports:
