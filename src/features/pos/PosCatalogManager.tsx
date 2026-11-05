@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { parseApiError } from "@/lib/apiErrors";
 import {
-  channels,
+  channels as defaultChannels,
+  type PosChannel,
   type Catalog,
   type Channel,
   type Prices,
@@ -33,28 +34,33 @@ type EditVariant = Omit<Variant, "prices"> & {
   prices: Record<Channel, string>;
 };
 type EditProduct = Omit<Product, "variants"> & { variants: EditVariant[] };
-type EditCatalog = Omit<Catalog, "products"> & { products: EditProduct[] };
+type EditCatalog = Omit<Catalog, "products" | "channels"> & {
+  channels: PosChannel[];
+  products: EditProduct[];
+};
 const selectStyle = "min-h-11 w-full rounded-md border bg-background px-2";
 
-function emptyVariant(label = "حصة"): EditVariant {
+function emptyVariant(label = "حصة", currentChannels: PosChannel[] = [...defaultChannels]): EditVariant {
   return {
     id: crypto.randomUUID(),
     label,
-    prices: { restaurant: "", hungerstation: "", keeta: "" },
+    prices: Object.fromEntries(currentChannels.map(({ id }) => [id, ""])),
   };
 }
 
 function editableCatalog(catalog: Catalog): EditCatalog {
+  const currentChannels = catalog.channels ?? [...defaultChannels];
   return {
+    channels: currentChannels,
     categories: catalog.categories,
     products: catalog.products.map((item) => ({
       ...item,
       variants: item.variants.map((variant) => ({
         ...variant,
         prices: Object.fromEntries(
-          channels.map(({ id }) => {
+          currentChannels.map(({ id }) => {
             const amount = variant.prices[id];
-            return [id, amount === null ? "" : (amount / 100).toFixed(2)];
+            return [id, amount == null ? "" : (amount / 100).toFixed(2)];
           })
         ) as EditVariant["prices"],
       })),
@@ -64,14 +70,15 @@ function editableCatalog(catalog: Catalog): EditCatalog {
 
 function serializeDraft(edit: EditCatalog): Catalog {
   return {
+    channels: edit.channels,
     categories: edit.categories,
     products: edit.products.map((item) => ({
       ...item,
       variants: item.variants.map((variant) => ({
         ...variant,
         prices: Object.fromEntries(
-          channels.map(({ id, label }) => {
-            const input = variant.prices[id].trim();
+          edit.channels.map(({ id, label }) => {
+            const input = (variant.prices[id] ?? "").trim();
             if (!input) return [id, null];
             if (
               !/^\d{1,6}(\.\d{1,2})?$/.test(input) ||
@@ -107,6 +114,9 @@ function CatalogEditor({
   const [error, setError] = useState("");
   const [editorView, setEditorView] = useState<"individual" | "bulk">("individual");
   const [bulkChannel, setBulkChannel] = useState<Channel>("restaurant");
+  const [newChannelId, setNewChannelId] = useState("");
+  const [newChannelLabel, setNewChannelLabel] = useState("");
+  const channels = edit.channels;
   const product =
     edit.products.find((item) => item.id === selection) ?? edit.products[0];
   const category =
@@ -152,6 +162,37 @@ function CatalogEditor({
   });
   const busy = save.isPending || publish.isPending;
 
+  function addChannel() {
+    const id = newChannelId.trim().toLowerCase();
+    const label = newChannelLabel.trim();
+    if (!/^[a-z][a-z0-9-]{1,63}$/.test(id)) {
+      setError("معرف القناة يبدأ بحرف إنجليزي ويتكون من حروف وأرقام وشرطة فقط.");
+      return;
+    }
+    if (!label || label.length > 100 || channels.length >= 30) {
+      setError("اسم القناة مطلوب وبحد أقصى 100 حرف، والحد الأقصى 30 قناة.");
+      return;
+    }
+    if (channels.some((item) => item.id === id)) {
+      setError("قناة البيع موجودة بالفعل.");
+      return;
+    }
+    update({
+      ...edit,
+      channels: [...channels, { id, label }],
+      products: edit.products.map((item) => ({
+        ...item,
+        variants: item.variants.map((variant) => ({
+          ...variant,
+          prices: { ...variant.prices, [id]: "" },
+        })),
+      })),
+    });
+    setBulkChannel(id);
+    setNewChannelId("");
+    setNewChannelLabel("");
+  }
+
   function addCategory() {
     const id = crypto.randomUUID();
     update({ ...edit, categories: [...edit.categories, { id, label: "" }] });
@@ -171,7 +212,7 @@ function CatalogEditor({
           category: category.id,
           active: true,
           hasAddons: false,
-          variants: [emptyVariant()],
+          variants: [emptyVariant("حصة", channels)],
         },
       ],
     });
@@ -246,6 +287,35 @@ function CatalogEditor({
           </Button>
         </div>
       )}
+      <section aria-label="إدارة قنوات البيع" className="grid gap-3 rounded-xl border bg-card p-4">
+        <div>
+          <h2 className="font-bold">قنوات البيع المستقلة</h2>
+          <p className="text-sm text-muted-foreground">أضف قناة جديدة دون تعديل الكود. الأسعار الجديدة تظل غير مسعّرة إلى أن تدخلها وتنشر المسودة.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {channels.map((item) => (
+            <span key={item.id} className="rounded-full border px-3 py-1.5 text-sm">
+              {item.label}
+            </span>
+          ))}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+          <label className="grid gap-1 text-sm">
+            معرف القناة (إنجليزي)
+            <Input dir="ltr" aria-label="معرف قناة البيع الجديدة" value={newChannelId}
+              placeholder="example-app" maxLength={64}
+              onChange={(event) => setNewChannelId(event.target.value)} />
+          </label>
+          <label className="grid gap-1 text-sm">
+            اسم القناة
+            <Input aria-label="اسم قناة البيع الجديدة" value={newChannelLabel} maxLength={100}
+              placeholder="تطبيق جديد"
+              onChange={(event) => setNewChannelLabel(event.target.value)} />
+          </label>
+          <Button type="button" variant="outline" className="min-h-11"
+            disabled={busy || channels.length >= 30} onClick={addChannel}>إضافة قناة</Button>
+        </div>
+      </section>
       {editorView === "bulk" ? (
         <section className="grid gap-4 rounded-xl border bg-card p-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -540,7 +610,7 @@ function CatalogEditor({
                   onClick={() =>
                     updateProduct({
                       ...product,
-                      variants: [...product.variants, emptyVariant("")],
+                      variants: [...product.variants, emptyVariant("", channels)],
                     })
                   }
                 >
