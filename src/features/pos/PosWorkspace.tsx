@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Minus, Plus, Search, ShoppingBasket } from "lucide-react";
+import { Minus, Plus, Search, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,6 +21,7 @@ import {
   type Variant,
 } from "./previewCatalog";
 import type { PublishedPosCatalog } from "./catalogApi";
+import { fetchPosQuote, type PosQuote } from "./quoteApi";
 
 type Selection = { product: Product; variant: Variant; addons: Addon[] };
 type CartLine = Selection & { id: string; quantity: number };
@@ -151,6 +152,12 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
   const [product, setProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartRevision, setCartRevision] = useState(catalog.revision);
+  const [serviceMode, setServiceMode] = useState<"dine-in" | "takeaway" | "delivery">("takeaway");
+  const [externalOrderNumber, setExternalOrderNumber] = useState("");
+  const [appPaymentStatus, setAppPaymentStatus] = useState<"paid" | "cash">("paid");
+  const [quoteReview, setQuoteReview] = useState<{ key: string; data: PosQuote } | null>(null);
+  const [quoteFailure, setQuoteFailure] = useState<{ key: string; message: string } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
 
   const { categories, products } = catalog;
   const availableAddons = products
@@ -164,10 +171,44 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
   const itemCount = cart.reduce((count, line) => count + line.quantity, 0);
   const total = cartTotal(cart, channel);
   const nextTotal = pendingChannel ? cartTotal(cart, pendingChannel) : null;
+  const quoteRequest = {
+    revision: catalog.revision,
+    channel,
+    items: cart.map((line) => ({
+      productId: line.product.id,
+      variantId: line.variant.id,
+      quantity: line.quantity,
+      addonIds: line.addons.map((addon) => addon.id),
+    })),
+  };
+  const quoteKey = JSON.stringify(quoteRequest);
+  const currentQuote = quoteReview?.key === quoteKey ? quoteReview.data : null;
+  const currentQuoteError = quoteFailure?.key === quoteKey ? quoteFailure.message : null;
+  async function reviewServerPrice() {
+    if (staleCart || !cart.length || total === null || quoteLoading) return;
+    const key = quoteKey;
+    setQuoteLoading(true);
+    setQuoteFailure(null);
+    try {
+      const data = await fetchPosQuote(quoteRequest);
+      setQuoteReview({ key, data });
+    } catch {
+      setQuoteReview(null);
+      setQuoteFailure({
+        key,
+        message: "تعذر مراجعة الأسعار من Staging. لا تُعتمد الأسعار قبل عودة الخدمة.",
+      });
+    } finally {
+      setQuoteLoading(false);
+    }
+  }
+
   const searchTerm = search.trim();
-  const visibleProducts = searchTerm
-    ? products.filter((item) => item.name.includes(searchTerm))
-    : products.filter((item) => item.category === category);
+  const visibleProducts = products.filter((item) =>
+    searchTerm
+      ? item.name.includes(searchTerm)
+      : category === null || item.category === category
+  );
 
   function chooseChannel(next: Channel) {
     if (next === channel || staleCart) return;
@@ -254,6 +295,60 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
           )}
         </div>
       </header>
+      <section aria-label="معلومات الطلب التجريبي" className="rounded-xl border bg-card p-3">
+        {channel === "restaurant" ? (
+          <label className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="font-semibold">نوع الطلب</span>
+            <select
+              aria-label="نوع طلب المطعم"
+              className="min-h-11 rounded-lg border bg-background px-3"
+              value={serviceMode}
+              onChange={(event) =>
+                setServiceMode(event.target.value as "dine-in" | "takeaway" | "delivery")
+              }
+            >
+              <option value="dine-in">محلي</option>
+              <option value="takeaway">سفري</option>
+              <option value="delivery">توصيل</option>
+            </select>
+            <span className="text-xs text-muted-foreground">نوع الطلب لا يغيّر قائمة الأسعار.</span>
+          </label>
+        ) : (
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="grid min-w-48 flex-1 gap-1 text-sm">
+              الرقم الخارجي للتطبيق (اختياري)
+              <Input
+                aria-label="الرقم الخارجي لطلب التطبيق"
+                value={externalOrderNumber}
+                maxLength={60}
+                placeholder="يمكن تركه فارغًا"
+                onChange={(event) => setExternalOrderNumber(event.target.value)}
+              />
+            </label>
+            <div role="group" aria-label="حالة دفع طلب التطبيق" className="flex gap-2">
+              <Button
+                type="button"
+                variant={appPaymentStatus === "paid" ? "default" : "outline"}
+                aria-pressed={appPaymentStatus === "paid"}
+                onClick={() => setAppPaymentStatus("paid")}
+              >
+                مدفوع
+              </Button>
+              <Button
+                type="button"
+                variant={appPaymentStatus === "cash" ? "default" : "outline"}
+                aria-pressed={appPaymentStatus === "cash"}
+                onClick={() => setAppPaymentStatus("cash")}
+              >
+                كاش
+              </Button>
+            </div>
+            <p className="w-full text-xs text-muted-foreground">
+              معاينة فقط: لا يُسجّل بيع أو تحصيل، وكاش التطبيقات لا يُضاف لدرج المطعم.
+            </p>
+          </div>
+        )}
+      </section>
       {staleCart && (
         <div
           role="status"
@@ -289,63 +384,87 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
               placeholder="ابحث عن صنف"
               className="h-12 ps-10"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                if (event.target.value) setCategory(null);
+              }}
             />
           </div>
-          <div className="flex min-h-12 shrink-0 flex-wrap items-center gap-2">
-            {(category || searchTerm) && (
+          <div
+            role="group"
+            aria-label="تصفية التصنيفات"
+            className="flex min-w-0 shrink-0 gap-2 overflow-x-auto pb-1"
+          >
+            <Button
+              type="button"
+              variant={category === null ? "default" : "outline"}
+              aria-pressed={category === null}
+              className="min-h-11 shrink-0"
+              onClick={() => {
+                setCategory(null);
+                setSearch("");
+              }}
+            >
+              كل الأصناف
+            </Button>
+            {categories.map((item) => (
               <Button
+                key={item.id}
                 type="button"
-                variant="outline"
-                className="min-h-12"
+                variant={category === item.id ? "default" : "outline"}
+                aria-pressed={category === item.id}
+                className="min-h-11 shrink-0"
                 onClick={() => {
-                  setCategory(null);
+                  setCategory(item.id);
                   setSearch("");
                 }}
               >
-                <ArrowRight aria-hidden="true" /> التصنيفات
+                {item.label}
               </Button>
-            )}
+            ))}
+          </div>
+          <div className="flex shrink-0 items-center justify-between gap-2">
             <h2 className="font-bold">
               {searchTerm
                 ? "نتائج البحث"
                 : (categories.find((item) => item.id === category)?.label ??
-                  "اختر تصنيفًا")}
+                  "الأصناف")}
             </h2>
+            <span role="status" className="text-sm text-muted-foreground">
+              {visibleProducts.length} صنف
+            </span>
           </div>
           <div className="min-h-0 overflow-auto overscroll-contain">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-              {category || searchTerm
-                ? visibleProducts.map((item) => (
-                    <Button
-                      key={item.id}
-                      type="button"
-                      variant="outline"
-                      className="h-auto min-h-20 px-2 text-center text-sm whitespace-normal"
-                      disabled={
-                        staleCart ||
-                        item.variants.every(
-                          (variant) => variant.prices[channel] === null
-                        )
-                      }
-                      onClick={() => chooseProduct(item)}
-                    >
-                      {item.name}
-                    </Button>
-                  ))
-                : categories.map((item) => (
-                    <Button
-                      key={item.id}
-                      type="button"
-                      variant="secondary"
-                      className="h-auto min-h-20 text-base font-semibold whitespace-normal"
-                      onClick={() => setCategory(item.id)}
-                    >
-                      {item.label}
-                    </Button>
-                  ))}
+              {visibleProducts.map((item) => {
+                const pricedVariants = item.variants
+                  .map((variant) => variant.prices[channel])
+                  .filter((value): value is number => value !== null);
+                const startingPrice = pricedVariants.length
+                  ? Math.min(...pricedVariants)
+                  : null;
+                return (
+                  <Button
+                    key={item.id}
+                    type="button"
+                    variant="outline"
+                    className="h-auto min-h-24 flex-col gap-2 px-2 py-3 text-center text-sm whitespace-normal"
+                    disabled={staleCart || startingPrice === null}
+                    onClick={() => chooseProduct(item)}
+                  >
+                    <span className="font-semibold">{item.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {startingPrice === null
+                        ? "غير مسعّر"
+                        : item.variants.length > 1
+                          ? `من ${formatPreviewAmount(startingPrice)}`
+                          : formatPreviewAmount(startingPrice)}
+                    </span>
+                  </Button>
+                );
+              })}
             </div>
-            {(category || searchTerm) && visibleProducts.length === 0 && (
+            {visibleProducts.length === 0 && (
               <p role="status" className="py-6 text-sm text-muted-foreground">
                 لا توجد أصناف مطابقة.
               </p>
@@ -450,6 +569,30 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
                 {total === null ? "غير متاح" : formatPreviewAmount(total)}
               </span>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-12"
+              disabled={!cart.length || total === null || staleCart || quoteLoading}
+              onClick={() => void reviewServerPrice()}
+            >
+              {quoteLoading ? "مراجعة الأسعار..." : "مراجعة الأسعار من السيرفر"}
+            </Button>
+            {currentQuoteError && (
+              <p role="alert" className="text-xs text-destructive">{currentQuoteError}</p>
+            )}
+            {currentQuote && (
+              <section aria-label="نتيجة تسعير السيرفر" className="rounded-xl border bg-muted/50 p-3 text-sm">
+                <h3 className="font-bold">مراجعة السعر · نسخة {currentQuote.revision}</h3>
+                <div className="mt-2 flex justify-between gap-2">
+                  <span>الإجمالي المبدئي</span>
+                  <strong>{formatPreviewAmount(currentQuote.provisionalSubtotalHalalas)}</strong>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  هذا ليس إجمالي الفاتورة النهائي؛ الضريبة والخصومات والسداد غير مفعّلة.
+                </p>
+              </section>
+            )}
             <Button type="button" disabled className="min-h-12">
               الدفع غير متاح في المعاينة
             </Button>

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { fetchPosCatalog, posCatalogKey } from "./catalogApi";
-import { PosWorkspace } from "./PosWorkspace";
+import { PosOperationsShell } from "./PosOperationsShell";
 
 export function PosSalePage() {
   const query = useQuery({
@@ -9,7 +9,7 @@ export function PosSalePage() {
     queryFn: fetchPosCatalog,
     refetchOnWindowFocus: "always",
   });
-  if (query.data) return <PosWorkspace catalog={query.data} />;
+  if (query.data) return <PosOperationsShell catalog={query.data} />;
   return (
     <section
       dir="rtl"
