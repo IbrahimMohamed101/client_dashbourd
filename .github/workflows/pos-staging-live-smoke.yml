@@ -20,6 +20,7 @@ jobs:
           API="https://basicdiet145-staging-2882.up.railway.app"
           UI="https://clientdashbourd-staging.up.railway.app"
           curl --fail --silent --show-error --max-time 20 "${API}/health" | grep -E '("status":true|"db")'
+          curl --fail --silent --show-error --max-time 20 "https://basicdiet145-staging.up.railway.app/health" | grep -E '("status":true|"db")'
           curl --fail --silent --show-error --max-time 20 "${UI}/pos" | grep -qi '<html'
           curl --fail --silent --show-error --max-time 20 "${UI}/pos/menu" | grep -qi '<html'
           echo "Staging API health and protected SPA routes served"
@@ -28,7 +29,7 @@ jobs:
         run: |
           set -euo pipefail
           API="https://basicdiet145-staging-2882.up.railway.app"
-          for route in "/api/dashboard/pos/catalog" "/api/dashboard/pos/catalog/manage"; do
+          for route in "/api/dashboard/pos/catalog" "/api/dashboard/pos/catalog/manage" "/api/dashboard/pos/catalog/revisions" "/api/dashboard/pos/catalog/revisions/1"; do
             code=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "${API}${route}")
             test "$code" = "401" || { echo "FAIL: $route returned $code instead of 401"; exit 1; }
           done
