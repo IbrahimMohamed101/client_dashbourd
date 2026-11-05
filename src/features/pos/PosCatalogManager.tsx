@@ -518,7 +518,12 @@ function CatalogEditor({
                   className={selectStyle}
                   value={product.category}
                   onChange={(event) =>
-                    updateProduct({ ...product, category: event.target.value })
+                    updateProduct({
+                      ...product,
+                      category: event.target.value,
+                      ...(event.target.value === "addons"
+                        ? { hasAddons: false, allowedAddonIds: undefined } : {}),
+                    })
                   }
                 >
                   {edit.categories.map((entry) => (
@@ -557,6 +562,7 @@ function CatalogEditor({
                         updateProduct({
                           ...product,
                           hasAddons: event.target.checked,
+                          allowedAddonIds: event.target.checked ? product.allowedAddonIds : undefined,
                         })
                       }
                     />
@@ -564,6 +570,32 @@ function CatalogEditor({
                   </label>
                 )}
               </div>
+              {product.category !== "addons" && product.hasAddons === true && (
+                <fieldset className="grid gap-2 rounded-lg border p-3 text-sm">
+                  <legend className="px-2 font-semibold">الإضافات المسموحة لهذا الصنف</legend>
+                  <p className="text-muted-foreground">تحديد الإضافات يمنع بيع تركيبات غير مناسبة. الإضافات غير محددة القيود مسبقًا.</p>
+                  <div className="flex flex-wrap gap-4">
+                    {edit.products.filter((addon) => addon.category === "addons").map((addon) => (
+                      <label key={addon.id} className="flex min-h-10 items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={product.allowedAddonIds === undefined
+                            || product.allowedAddonIds.includes(addon.id)}
+                          onChange={(event) => {
+                            const allowed = product.allowedAddonIds ??
+                              edit.products.filter((item) => item.category === "addons").map((item) => item.id);
+                            const next = event.target.checked
+                              ? [...new Set([...allowed, addon.id])]
+                              : allowed.filter((id) => id !== addon.id);
+                            updateProduct({ ...product, allowedAddonIds: next });
+                          }}
+                        />
+                        {addon.name || "إضافة جديدة"}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
               <p className="text-sm text-muted-foreground">
                 الأسعار بالريال. الخانة الفارغة تعني أن الحجم غير متاح للبيع في
                 القناة.
