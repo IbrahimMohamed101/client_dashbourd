@@ -1,4 +1,5 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import { RouteError } from "@/components/global/RouteError";
 import { Loader } from "@/components/global/loader";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -23,8 +24,20 @@ export const Route = createFileRoute("/_protected")({
 });
 
 function RouteComponent() {
+  const { pathname } = useLocation();
+  const isPosSale = pathname === "/pos" || pathname === "/pos/";
+  const [sidebarOpen, setSidebarOpen] = useState(!isPosSale);
+
+  useEffect(() => {
+    // Hide the shared dashboard sidebar by default only inside POS sales.
+    setSidebarOpen(!isPosSale);
+  }, [isPosSale]);
+
   return (
     <SidebarProvider
+      open={sidebarOpen}
+      onOpenChange={setSidebarOpen}
+      className={isPosSale ? "h-dvh !min-h-0 overflow-hidden" : undefined}
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 72)",
@@ -33,11 +46,11 @@ function RouteComponent() {
       }
     >
       <AppSidebar variant="inset" side="right" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="@container/main flex min-w-0 flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+      <SidebarInset className={isPosSale ? "h-full min-h-0 overflow-hidden md:!m-0 md:!rounded-none md:!shadow-none" : undefined}>
+        {!isPosSale && <SiteHeader />}
+        <div className={isPosSale ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" : "flex min-w-0 flex-1 flex-col"}>
+          <div className={isPosSale ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" : "@container/main flex min-w-0 flex-1 flex-col gap-2"}>
+            <div className={isPosSale ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "flex flex-col gap-4 py-4 md:gap-6 md:py-6"}>
               <Outlet />
             </div>
           </div>

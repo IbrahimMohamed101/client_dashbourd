@@ -6,6 +6,12 @@ import { PosWorkspace } from "./PosWorkspace";
 import { categories, previewProducts } from "./previewCatalog";
 import { fetchPosQuote } from "./quoteApi";
 
+vi.mock("@/components/ui/sidebar", () => ({
+  SidebarTrigger: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button type="button" {...props}>القائمة</button>
+  ),
+}));
+
 vi.mock("./quoteApi", () => ({
   fetchPosQuote: vi.fn(),
 }));
@@ -83,10 +89,10 @@ describe("POS preview workspace", () => {
   it("keeps restaurant service mode separate from channel and app payment status", async () => {
     const user = userEvent.setup();
     render(<PosWorkspace catalog={catalog} />);
-    const mode = screen.getByRole("combobox", { name: "نوع طلب المطعم" });
-    expect(mode).toHaveValue("takeaway");
-    await user.selectOptions(mode, "dine-in");
-    expect(mode).toHaveValue("dine-in");
+    const mode = within(screen.getByRole("group", { name: "نوع طلب المطعم" }));
+    expect(mode.getByRole("button", { name: "سفري" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(mode.getByRole("button", { name: "محلي" }));
+    expect(mode.getByRole("button", { name: "محلي" })).toHaveAttribute("aria-pressed", "true");
 
     await user.click(screen.getByRole("button", { name: "Keeta" }));
     expect(screen.getByRole("textbox", { name: "الرقم الخارجي لطلب التطبيق" })).toBeInTheDocument();
@@ -94,7 +100,7 @@ describe("POS preview workspace", () => {
     expect(screen.getByRole("button", { name: "كاش" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/كاش التطبيقات لا يُضاف لدرج المطعم/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "المطعم" }));
-    expect(screen.getByRole("combobox", { name: "نوع طلب المطعم" })).toHaveValue("dine-in");
+    expect(within(screen.getByRole("group", { name: "نوع طلب المطعم" })).getByRole("button", { name: "محلي" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("requests a server-side published catalogue quote without enabling payment", async () => {
@@ -241,5 +247,25 @@ describe("POS preview workspace", () => {
     await user.click(review.getByRole("button", { name: "تأكيد الأسعار الجديدة" }));
     expect(within(screen.getByRole("region", { name: "الكتالوج التجريبي" })).getByRole("button", { name: /مياه/ })).toBeEnabled();
     expect(within(screen.getByRole("complementary", { name: "السلة التجريبية" })).getByRole("listitem")).toHaveTextContent("4.50");
+  });
+
+  it("keeps a single sale topbar and fixed cart actions when switching channels", async () => {
+    const user = userEvent.setup();
+    render(<PosWorkspace catalog={catalog} operatorName="أحمد" />);
+    const viewport = screen.getByTestId("pos-sale-viewport");
+    expect(viewport).toHaveClass("h-full", "overflow-hidden");
+    expect(screen.getByRole("banner", { name: "شريط البيع" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "ابحث عن صنف" })).toBeInTheDocument();
+    expect(screen.getAllByRole("searchbox", { name: "ابحث عن صنف" })).toHaveLength(1);
+    const cart = screen.getByRole("complementary", { name: "السلة التجريبية" });
+    expect(within(cart).getByText("سلة المطعم")).toBeInTheDocument();
+    const footerAction = within(cart).getByRole("button", { name: "الدفع غير متاح في المعاينة" });
+    expect(footerAction).toHaveClass("min-h-14");
+    expect(footerAction).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Keeta" }));
+    expect(within(cart).getByText("سلة Keeta")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "نوع طلب المطعم" })).not.toBeInTheDocument();
+    expect(within(cart).getByRole("textbox", { name: "الرقم الخارجي لطلب التطبيق" })).toBeInTheDocument();
+    expect(footerAction).toBeDisabled();
   });
 });
