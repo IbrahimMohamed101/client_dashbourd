@@ -368,7 +368,7 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
               <Icon aria-hidden="true" className="size-4" />{label}
             </Button>
           ))}
-          {manager && (
+          {canEditPosMenu && (
             <Button asChild variant="outline" className="min-h-11 shrink-0 gap-2">
               <Link to="/pos/menu"><BookOpen aria-hidden="true" className="size-4" />منيو الكاشير والأسعار</Link>
             </Button>
