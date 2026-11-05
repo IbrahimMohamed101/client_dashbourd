@@ -243,6 +243,7 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
       })
     : [];
   const canAcceptReprice = staleCart
+    && channels.some((item) => item.id === channel)
     && revisedLines.every(({ nextSelection }) => nextSelection !== null);
   const revisedTotal = canAcceptReprice
     ? revisedLines.reduce((sum, { line, newUnit }) => sum + (newUnit ?? 0) * line.quantity, 0)
@@ -679,7 +680,9 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
         <ProductOptions
           product={product}
           channel={channel}
-          availableAddons={availableAddons}
+          availableAddons={availableAddons.filter((addon) =>
+            product.allowedAddonIds === undefined || product.allowedAddonIds.includes(addon.id)
+          )}
           onClose={() => setProduct(null)}
           onAdd={addToCart}
         />
