@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Minus, Plus, Search, ShoppingBasket } from "lucide-react";
+import { Minus, Plus, Search, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -165,9 +165,11 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
   const total = cartTotal(cart, channel);
   const nextTotal = pendingChannel ? cartTotal(cart, pendingChannel) : null;
   const searchTerm = search.trim();
-  const visibleProducts = searchTerm
-    ? products.filter((item) => item.name.includes(searchTerm))
-    : products.filter((item) => item.category === category);
+  const visibleProducts = products.filter((item) =>
+    searchTerm
+      ? item.name.includes(searchTerm)
+      : category === null || item.category === category
+  );
 
   function chooseChannel(next: Channel) {
     if (next === channel || staleCart) return;
@@ -289,63 +291,90 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
               placeholder="ابحث عن صنف"
               className="h-12 ps-10"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                if (event.target.value) setCategory(null);
+              }}
             />
           </div>
-          <div className="flex min-h-12 shrink-0 flex-wrap items-center gap-2">
-            {(category || searchTerm) && (
+          <div
+            role="group"
+            aria-label="تصفية التصنيفات"
+            className="flex min-w-0 shrink-0 gap-2 overflow-x-auto pb-1"
+          >
+            <Button
+              type="button"
+              variant={category === null ? "default" : "outline"}
+              aria-pressed={category === null}
+              className="min-h-11 shrink-0"
+              onClick={() => {
+                setCategory(null);
+                setSearch("");
+              }}
+            >
+              كل الأصناف
+            </Button>
+            {categories.map((item) => (
               <Button
+                key={item.id}
                 type="button"
-                variant="outline"
-                className="min-h-12"
+                variant={category === item.id ? "default" : "outline"}
+                aria-pressed={category === item.id}
+                className="min-h-11 shrink-0"
                 onClick={() => {
-                  setCategory(null);
+                  setCategory(item.id);
                   setSearch("");
                 }}
               >
-                <ArrowRight aria-hidden="true" /> التصنيفات
+                {item.label}
               </Button>
-            )}
+            ))}
+          </div>
+          <div className="flex shrink-0 items-center justify-between gap-2">
             <h2 className="font-bold">
               {searchTerm
                 ? "نتائج البحث"
                 : (categories.find((item) => item.id === category)?.label ??
-                  "اختر تصنيفًا")}
+                  "الأصناف")}
             </h2>
+            <span role="status" className="text-sm text-muted-foreground">
+              {visibleProducts.length} صنف
+            </span>
           </div>
           <div className="min-h-0 overflow-auto overscroll-contain">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-              {category || searchTerm
-                ? visibleProducts.map((item) => (
-                    <Button
-                      key={item.id}
-                      type="button"
-                      variant="outline"
-                      className="h-auto min-h-20 px-2 text-center text-sm whitespace-normal"
-                      disabled={
-                        staleCart ||
-                        item.variants.every(
-                          (variant) => variant.prices[channel] === null
-                        )
-                      }
-                      onClick={() => chooseProduct(item)}
+              {visibleProducts.map((item) => {
+                const pricedVariants = item.variants
+                  .map((variant) => variant.prices[channel])
+                  .filter((value): value is number => value !== null);
+                const startingPrice = pricedVariants.length
+                  ? Math.min(...pricedVariants)
+                  : null;
+                return (
+                  <Button
+                    key={item.id}
+                    type="button"
+                    variant="outline"
+                    className="h-auto min-h-24 flex-col gap-2 px-2 py-3 text-center text-sm whitespace-normal"
+                    disabled={staleCart || startingPrice === null}
+                    onClick={() => chooseProduct(item)}
+                  >
+                    <span className="font-semibold">{item.name}</span>
+                    <span
+                      aria-hidden="true"
+                      className="text-xs text-muted-foreground"
                     >
-                      {item.name}
-                    </Button>
-                  ))
-                : categories.map((item) => (
-                    <Button
-                      key={item.id}
-                      type="button"
-                      variant="secondary"
-                      className="h-auto min-h-20 text-base font-semibold whitespace-normal"
-                      onClick={() => setCategory(item.id)}
-                    >
-                      {item.label}
-                    </Button>
-                  ))}
+                      {startingPrice === null
+                        ? "غير مسعّر"
+                        : item.variants.length > 1
+                          ? `من ${formatPreviewAmount(startingPrice)}`
+                          : formatPreviewAmount(startingPrice)}
+                    </span>
+                  </Button>
+                );
+              })}
             </div>
-            {(category || searchTerm) && visibleProducts.length === 0 && (
+            {visibleProducts.length === 0 && (
               <p role="status" className="py-6 text-sm text-muted-foreground">
                 لا توجد أصناف مطابقة.
               </p>
