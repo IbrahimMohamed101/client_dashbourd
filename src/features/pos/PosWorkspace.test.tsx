@@ -193,7 +193,11 @@ describe("POS preview workspace", () => {
       })),
     };
     render(<PosWorkspace catalog={dynamic} />);
-    await user.click(screen.getByRole("button", { name: "تطبيق جديد" }));
+    expect(screen.getByRole("group", { name: "قناة البيع" })).toHaveTextContent("المطعم");
+    expect(screen.getByRole("button", { name: "قنوات أخرى" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "قنوات أخرى" }));
+    await user.click(screen.getByRole("menuitem", { name: "تطبيق جديد" }));
+    expect(screen.getByRole("group", { name: "قناة البيع" })).toHaveTextContent("تطبيق جديد");
     await user.type(screen.getByRole("searchbox"), "مياه");
     expect(screen.getByRole("button", { name: /مياه/ })).toHaveTextContent("6.50");
     await user.clear(screen.getByRole("searchbox"));
