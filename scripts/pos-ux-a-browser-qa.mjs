@@ -84,7 +84,8 @@ try {
     const cart = page.getByRole("complementary", { name: "السلة التجريبية" });
     const pay = cart.getByRole("button", { name: "الدفع غير متاح في المعاينة" });
     await pay.waitFor();
-    const header = page.getByRole("banner", { name: "شريط البيع" });
+    // A header nested inside the dashboard main landmark is not an ARIA banner.
+    const header = page.locator('header[aria-label="شريط البيع"]');
     const headerBox = await header.boundingBox();
     assert.ok(headerBox, "POS topbar must be visible");
     assert.ok(headerBox.height <= 64.5, "Topbar exceeds 64px: " + headerBox.height);
