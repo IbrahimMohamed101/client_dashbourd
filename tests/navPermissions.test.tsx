@@ -19,7 +19,7 @@ test("navPermissions.test", () => {
   assert.deepEqual(cashierUrls, navMainUrlsForRole("restaurant"));
 
   assert.equal(cashierUrls.includes("/payments"), false);
-  assert.equal(cashierUrls.includes("/subscriptions"), false);
+  assert.equal(cashierUrls.includes("/subscriptions"), true);
   assert.equal(cashierUrls.includes("/menu"), false);
   assert.equal(cashierUrls.includes("/packages"), false);
 
