@@ -53,14 +53,7 @@ test("roleRoutes.test", () => {
   ]);
   assert.deepEqual(ADMIN_ROUTES, adminProtectedRoutes);
 
-  assert.deepEqual(CASHIER_ROUTES, [
-    "/daily-closing",
-    "/manual-deduction",
-    "/operations",
-    "/one-time-orders",
-    "/users",
-    "/profile",
-  ]);
+  assert.deepEqual(CASHIER_ROUTES, RESTAURANT_ROUTES, "cashier must match restaurant routes");
 
   assert.equal(CASHIER_ROUTES.includes("/payments"), false);
   assert.equal(CASHIER_ROUTES.includes("/subscriptions"), false);
