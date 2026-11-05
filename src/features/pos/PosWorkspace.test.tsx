@@ -15,9 +15,10 @@ describe("POS preview workspace", () => {
   it("opens on categories and reprices a configured item only after confirmation", async () => {
     const user = userEvent.setup();
     render(<PosWorkspace catalog={catalog} />);
+    const butter = screen.getByRole("button", { name: "دجاج بالزبدة" });
     expect(
-      screen.queryByRole("button", { name: "دجاج بالزبدة" })
-    ).not.toBeInTheDocument();
+      within(butter).getByText("من 24.00 ر.س")
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "الوجبات" }));
     await user.click(screen.getByRole("button", { name: "دجاج بالزبدة" }));
 
@@ -50,6 +51,27 @@ describe("POS preview workspace", () => {
     expect(
       cart.getByRole("button", { name: "الدفع غير متاح في المعاينة" })
     ).toBeDisabled();
+  });
+
+  it("shows all items immediately and updates product cards for channel and category", async () => {
+    const user = userEvent.setup();
+    render(<PosWorkspace catalog={catalog} />);
+
+    const butter = screen.getByRole("button", { name: "دجاج بالزبدة" });
+    expect(within(butter).getByText("من 24.00 ر.س")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "HungerStation" }));
+    expect(within(butter).getByText("من 28.00 ر.س")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "السلطات" }));
+    expect(screen.getByRole("button", { name: "سلطة بيسك" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "دجاج بالزبدة" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByRole("searchbox"), "دجاج");
+    expect(screen.getByRole("button", { name: "دجاج بالزبدة" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "كل الأصناف" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
   });
 
   it("blocks switching channels when the selected size has no price in the destination", async () => {
