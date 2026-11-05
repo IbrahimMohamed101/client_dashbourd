@@ -154,15 +154,69 @@ describe("POS preview workspace", () => {
     );
   });
 
+
+  it("shows the exact stale server quote conflict instead of a generic outage", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchPosQuote).mockRejectedValueOnce({
+      response: { status: 409, data: { error: { code: "POS_CATALOG_CONFLICT" } } },
+    });
+    render(<PosWorkspace catalog={catalog} />);
+    await user.type(screen.getByRole("searchbox"), "مياه");
+    await user.click(within(screen.getByRole("region", { name: "الكتالوج التجريبي" })).getByRole("button", { name: /مياه/ }));
+    await user.click(screen.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/تم نشر منيو أحدث/);
+    expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+  });
+
+  it("uses manager-configured channels without a frontend code change", async () => {
+    const user = userEvent.setup();
+    const dynamic = {
+      ...catalog,
+      channels: [
+        { id: "restaurant", label: "المطعم" },
+        { id: "hungerstation", label: "HungerStation" },
+        { id: "keeta", label: "Keeta" },
+        { id: "fourth-channel", label: "تطبيق جديد" },
+      ],
+      products: catalog.products.map((item) => ({
+        ...item,
+        variants: item.variants.map((variant) => ({
+          ...variant,
+          prices: { ...variant.prices, "fourth-channel": item.id === "water" ? 650 : null },
+        })),
+      })),
+    };
+    render(<PosWorkspace catalog={dynamic} />);
+    await user.click(screen.getByRole("button", { name: "تطبيق جديد" }));
+    await user.type(screen.getByRole("searchbox"), "مياه");
+    expect(screen.getByRole("button", { name: /مياه/ })).toHaveTextContent("6.50");
+    expect(screen.getByRole("button", { name: /دجاج بالزبدة/ })).toBeDisabled();
+  });
+
   it("stops mixing prices when a new catalog is published during a sale preview", async () => {
     const user = userEvent.setup();
     const { rerender } = render(<PosWorkspace catalog={catalog} />);
     await user.type(screen.getByRole("searchbox"), "مياه");
     await user.click(within(screen.getByRole("region", { name: "الكتالوج التجريبي" })).getByRole("button", { name: /مياه/ }));
-    rerender(<PosWorkspace catalog={{ ...catalog, revision: 2 }} />);
-    expect(screen.getByText(/اتنشر منيو جديد/)).toBeInTheDocument();
+    const updated = {
+      ...catalog,
+      revision: 2,
+      products: catalog.products.map((item) =>
+        item.id !== "water" ? item : {
+          ...item, variants: item.variants.map((v) =>
+            ({ ...v, prices: { ...v.prices, restaurant: 450 } })
+          ),
+        }
+      ),
+    };
+    rerender(<PosWorkspace catalog={updated} />);
+    const review = within(screen.getByRole("region", { name: "مراجعة اختلاف أسعار المنيو" }));
+    expect(review.getByText(/السلة محفوظة للمراجعة/)).toBeInTheDocument();
+    expect(review.getByText(/القديم:/)).toHaveTextContent(/3\.00/);
+    expect(review.getByText(/القديم:/)).toHaveTextContent(/4\.50/);
     expect(within(screen.getByRole("region", { name: "الكتالوج التجريبي" })).getByRole("button", { name: /مياه/ })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "ابدأ سلة جديدة" }));
+    await user.click(review.getByRole("button", { name: "تأكيد الأسعار الجديدة" }));
     expect(within(screen.getByRole("region", { name: "الكتالوج التجريبي" })).getByRole("button", { name: /مياه/ })).toBeEnabled();
+    expect(within(screen.getByRole("complementary", { name: "السلة التجريبية" })).getByRole("listitem")).toHaveTextContent("4.50");
   });
 });
