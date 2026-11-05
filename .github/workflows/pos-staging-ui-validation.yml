@@ -1,0 +1,39 @@
+name: POS Staging UI Validation
+on:
+  push:
+    branches:
+      - codex/pos-ux-fast-catalog-20261105
+  pull_request:
+    branches:
+      - codex/pos-staging-preview
+    paths:
+      - "src/features/pos/**"
+      - "src/routes/_protected/pos/**"
+      - ".github/workflows/pos-staging-ui-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pos-staging-ui
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint / UI tests / Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: ESLint POS
+        run: npx eslint src/features/pos src/routes/_protected/pos
+      - name: UI tests
+        run: npx vitest run --maxWorkers=2 src/features/pos
+      - name: Build and TypeScript
+        run: npm run build
