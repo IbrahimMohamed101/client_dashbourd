@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { ReactNode } from "react";
+import { forwardRef, type ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -9,8 +9,16 @@ import { categories, previewProducts } from "./previewCatalog";
 // This shell test does not mount a real TanStack Router. Use an anchor for
 // its navigation link while route-authorization tests verify the true router.
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
-    <a href={to} {...props}>{children}</a>
+  Link: forwardRef<HTMLAnchorElement, { to: string; children: ReactNode }>(
+    ({ to, children, ...props }, ref) => (
+      <a href={to} ref={ref} {...props}>{children}</a>
+    ),
+  ),
+}));
+
+vi.mock("@/components/ui/sidebar", () => ({
+  SidebarTrigger: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button type="button" {...props}>القائمة</button>
   ),
 }));
 
@@ -32,14 +40,17 @@ describe("POS operations dashboard Staging shell", () => {
     expect(screen.getByRole("navigation", { name: "أقسام نقطة البيع" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "ابحث عن صنف" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
-    expect(screen.getByRole("link", { name: /منيو الكاشير والأسعار/ }))
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
+    expect(screen.getByRole("menuitem", { name: /منيو الكاشير والأسعار/ }))
       .toHaveAttribute("href", "/pos/menu");
   });
 
   it("uses the published catalog for overview numbers and no fabricated sales", async () => {
     const user = userEvent.setup();
     render(<PosOperationsShell catalog={catalog} />);
-    await user.click(screen.getByRole("button", { name: "نظرة عامة" }));
+    await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
+    await user.click(screen.getByRole("menuitem", { name: "نظرة عامة" }));
     expect(screen.getByText("ملخص نقطة البيع")).toBeInTheDocument();
     expect(screen.getAllByText(String(catalog.products.length)).length).toBeGreaterThan(0);
     expect(screen.getByText(/لا يتم حساب صافي المبيعات/)).toBeInTheDocument();
@@ -50,7 +61,8 @@ describe("POS operations dashboard Staging shell", () => {
   it("shows functional order search filters without inventing invoices", async () => {
     const user = userEvent.setup();
     render(<PosOperationsShell catalog={catalog} />);
-    await user.click(screen.getByRole("button", { name: "الطلبات والفواتير" }));
+    await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
+    await user.click(screen.getByRole("menuitem", { name: "الطلبات والفواتير" }));
     const section = within(screen.getByRole("region", { name: "الطلبات والفواتير" }));
     await user.type(section.getByRole("textbox", { name: "بحث الطلبات" }), "K-123");
     expect(section.getByRole("textbox", { name: "بحث الطلبات" })).toHaveValue("K-123");
@@ -63,7 +75,8 @@ describe("POS operations dashboard Staging shell", () => {
   it("allows subscription package selection but blocks unauthorized paid renewal", async () => {
     const user = userEvent.setup();
     render(<PosOperationsShell catalog={catalog} />);
-    await user.click(screen.getByRole("button", { name: "الاشتراكات" }));
+    await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
+    await user.click(screen.getByRole("menuitem", { name: "الاشتراكات" }));
     await user.click(screen.getByRole("button", { name: "تجديد" }));
     await user.selectOptions(screen.getByRole("combobox", { name: "مدة الباقة" }), "30");
     await user.selectOptions(screen.getByRole("combobox", { name: "وزن البروتين" }), "200");
@@ -76,7 +89,8 @@ describe("POS operations dashboard Staging shell", () => {
   it("can enter close counts for review without submitting or storing a close", async () => {
     const user = userEvent.setup();
     render(<PosOperationsShell catalog={catalog} />);
-    await user.click(screen.getByRole("button", { name: "التقفيلة اليومية" }));
+    await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
+    await user.click(screen.getByRole("menuitem", { name: "التقفيلة اليومية" }));
     await user.type(screen.getByRole("textbox", { name: "النقدية المعدودة" }), "500.25");
     expect(screen.getByRole("textbox", { name: "النقدية المعدودة" })).toHaveValue("500.25");
     expect(screen.getByRole("button", { name: "مراجعة وإغلاق التقفيلة" })).toBeDisabled();
