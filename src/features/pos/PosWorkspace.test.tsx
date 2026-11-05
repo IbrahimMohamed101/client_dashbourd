@@ -190,6 +190,7 @@ describe("POS preview workspace", () => {
     await user.click(screen.getByRole("button", { name: "تطبيق جديد" }));
     await user.type(screen.getByRole("searchbox"), "مياه");
     expect(screen.getByRole("button", { name: /مياه/ })).toHaveTextContent("6.50");
+    await user.clear(screen.getByRole("searchbox"));
     expect(screen.getByRole("button", { name: /دجاج بالزبدة/ })).toBeDisabled();
   });
 
@@ -210,7 +211,7 @@ describe("POS preview workspace", () => {
       ),
     };
     rerender(<PosWorkspace catalog={updated} />);
-    const review = within(screen.getByRole("region", { name: "مراجعة اختلاف أسعار المنيو" }));
+    const review = within(screen.getByRole("status", { name: "مراجعة اختلاف أسعار المنيو" }));
     expect(review.getByText(/السلة محفوظة للمراجعة/)).toBeInTheDocument();
     expect(review.getByText(/القديم:/)).toHaveTextContent(/3\.00/);
     expect(review.getByText(/القديم:/)).toHaveTextContent(/4\.50/);
