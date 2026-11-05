@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { createFileRoute, Outlet, useLocation } from "@tanstack/react-router";
 import { RouteError } from "@/components/global/RouteError";
 import { Loader } from "@/components/global/loader";
@@ -26,17 +25,10 @@ export const Route = createFileRoute("/_protected")({
 function RouteComponent() {
   const { pathname } = useLocation();
   const isPosSale = pathname === "/pos" || pathname === "/pos/";
-  const [sidebarOpen, setSidebarOpen] = useState(!isPosSale);
-
-  useEffect(() => {
-    // Hide the shared dashboard sidebar by default only inside POS sales.
-    setSidebarOpen(!isPosSale);
-  }, [isPosSale]);
-
   return (
     <SidebarProvider
-      open={sidebarOpen}
-      onOpenChange={setSidebarOpen}
+      key={isPosSale ? "pos-sale" : "dashboard"}
+      defaultOpen={!isPosSale}
       className={isPosSale ? "h-dvh !min-h-0 overflow-hidden" : undefined}
       style={
         {
