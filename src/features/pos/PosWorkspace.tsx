@@ -421,28 +421,11 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
           </div>
         </section>
       )}
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,21rem)]">
+      <div className="grid min-h-0 flex-1 gap-2 overflow-hidden p-2 md:grid-cols-[minmax(0,1fr)_minmax(22.5rem,25rem)]">
         <section
           aria-label="الكتالوج التجريبي"
-          className="flex min-h-0 min-w-0 flex-col gap-4 rounded-2xl border bg-card p-4"
+          className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border bg-card p-2"
         >
-          <div className="relative shrink-0">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute start-3 top-3.5 size-5 text-muted-foreground"
-            />
-            <Input
-              type="search"
-              aria-label="ابحث عن صنف"
-              placeholder="ابحث عن صنف"
-              className="h-12 ps-10"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                if (event.target.value) setCategory(null);
-              }}
-            />
-          </div>
           <div
             role="group"
             aria-label="تصفية التصنيفات"
@@ -452,7 +435,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
               type="button"
               variant={category === null ? "default" : "outline"}
               aria-pressed={category === null}
-              className="min-h-11 shrink-0"
+              className="min-h-12 shrink-0"
               onClick={() => {
                 setCategory(null);
                 setSearch("");
@@ -466,7 +449,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                 type="button"
                 variant={category === item.id ? "default" : "outline"}
                 aria-pressed={category === item.id}
-                className="min-h-11 shrink-0"
+                className="min-h-12 shrink-0"
                 onClick={() => {
                   setCategory(item.id);
                   setSearch("");
@@ -528,14 +511,14 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
         <aside
           id="pos-cart"
           aria-label="السلة التجريبية"
-          className="flex min-h-0 min-w-0 flex-col gap-3 rounded-2xl border bg-card p-4"
+          className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border border-s-4 border-s-primary bg-card p-3"
         >
           <div className="flex shrink-0 items-center gap-2">
             <ShoppingBasket
               aria-hidden="true"
               className="size-5 text-primary"
             />
-            <h2 className="font-bold">السلة التجريبية</h2>
+            <h2 className="font-bold">سلة {channels.find((item) => item.id === channel)?.label ?? channel}</h2>
             <span
               className="rounded-full bg-muted px-2 text-sm"
               aria-label="عدد الأصناف"
