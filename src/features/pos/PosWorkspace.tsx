@@ -229,7 +229,8 @@ export function PosWorkspace({ catalog }: { catalog: PublishedPosCatalog }) {
         });
         const valid = Boolean(
           revisedProduct && revisedVariant && revisedVariant.prices[channel] != null
-          && revisedAddons.every((addon) => addon && addon.prices[channel] != null)
+          && revisedAddons.every((addon) => addon && addon.prices[channel] != null
+            && (revisedProduct?.allowedAddonIds === undefined || revisedProduct.allowedAddonIds.includes(addon.id)))
           && (!line.addons.length || revisedProduct?.hasAddons)
         );
         const nextSelection: Selection | null = valid && revisedProduct && revisedVariant
