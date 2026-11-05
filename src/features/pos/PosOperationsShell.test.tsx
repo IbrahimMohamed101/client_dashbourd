@@ -24,7 +24,7 @@ vi.mock("@/components/ui/sidebar", () => ({
 
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
-    user: { role: "cashier" },
+    user: { role: "cashier", name: "", email: "branch-cashier@synthetic.example.test" },
   }),
 }));
 
@@ -40,6 +40,7 @@ describe("POS operations dashboard Staging shell", () => {
     expect(screen.getByRole("navigation", { name: "أقسام نقطة البيع" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "ابحث عن صنف" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+    expect(screen.getByText("branch-cashier")).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
     expect(screen.getByRole("menuitem", { name: /منيو الكاشير والأسعار/ }))
