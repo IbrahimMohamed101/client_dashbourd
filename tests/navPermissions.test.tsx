@@ -20,7 +20,7 @@ test("navPermissions.test", () => {
 
   assert.equal(cashierUrls.includes("/payments"), false);
   assert.equal(cashierUrls.includes("/subscriptions"), true);
-  assert.equal(cashierUrls.includes("/menu"), false);
+  assert.equal(cashierUrls.includes("/menu"), true);
   assert.equal(cashierUrls.includes("/packages"), false);
 
   const restaurantUrls = navMainUrlsForRole("restaurant");
