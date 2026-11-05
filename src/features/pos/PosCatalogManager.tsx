@@ -111,6 +111,7 @@ function CatalogEditor({
   const [categoryId, setCategoryId] = useState(edit.categories[0]?.id ?? "");
   const [dirty, setDirty] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [zeroPriceDialog, setZeroPriceDialog] = useState(false);
   const [error, setError] = useState("");
   const [editorView, setEditorView] = useState<"individual" | "bulk">("individual");
   const [bulkChannel, setBulkChannel] = useState<Channel>("restaurant");
@@ -161,6 +162,11 @@ function CatalogEditor({
     },
   });
   const busy = save.isPending || publish.isPending;
+  const hasZeroPrice = edit.products.some((item) => item.active !== false
+    && item.variants.some((variant) => Object.values(variant.prices).some(
+      (value) => value.trim() !== "" && Number(value) === 0
+    )));
+  const requestSave = () => hasZeroPrice ? setZeroPriceDialog(true) : save.mutate();
 
   function addChannel() {
     const id = newChannelId.trim().toLowerCase();
@@ -221,6 +227,22 @@ function CatalogEditor({
 
   return (
     <>
+      <Dialog open={zeroPriceDialog} onOpenChange={setZeroPriceDialog}>
+        <DialogContent dir="rtl" className="text-right">
+          <DialogHeader>
+            <DialogTitle>تأكيد سعر مجاني (0 ريال)</DialogTitle>
+            <DialogDescription>
+              يوجد صنف ظاهر للبيع سعره صفر في إحدى القنوات. الخانة الفارغة تعني
+              غير مسعّر، أما الصفر فهو سعر مجاني فعلًا. هل تريد حفظ المسودة بهذا السعر؟
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setZeroPriceDialog(false)}>مراجعة الأسعار</Button>
+            <Button onClick={() => { setZeroPriceDialog(false); save.mutate(); }}
+              disabled={busy}>تأكيد حفظ سعر صفر</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
         <div>
           <p className="font-semibold">
@@ -240,7 +262,7 @@ function CatalogEditor({
             className="min-h-11"
             variant="outline"
             disabled={busy || !dirty}
-            onClick={() => save.mutate()}
+            onClick={requestSave}
           >
             حفظ المسودة
           </Button>
