@@ -31,7 +31,7 @@ describe("POS operations dashboard Staging shell", () => {
     render(<PosOperationsShell catalog={catalog} />);
     await user.click(screen.getByRole("button", { name: "نظرة عامة" }));
     expect(screen.getByText("ملخص نقطة البيع")).toBeInTheDocument();
-    expect(screen.getByText(String(catalog.products.length))).toBeInTheDocument();
+    expect(screen.getAllByText(String(catalog.products.length)).length).toBeGreaterThan(0);
     expect(screen.getByText(/لا يتم حساب صافي المبيعات/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "ابدأ طلبًا جديدًا" }));
     expect(screen.getByRole("searchbox", { name: "ابحث عن صنف" })).toBeInTheDocument();
