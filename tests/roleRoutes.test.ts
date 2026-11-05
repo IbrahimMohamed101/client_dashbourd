@@ -127,6 +127,14 @@ test("roleRoutes.test", () => {
   assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/one-time-orders"), true);
   assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/users"), true);
   assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/payments"), false);
+  assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/dashboard-users"), false);
+  assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/accounting"), false);
+  for (const route of RESTAURANT_ROUTES) {
+    assert.equal(canRoleAccessRoute(UserRoles.CASHIER, route),
+      canRoleAccessRoute(UserRoles.RESTAURANT, route),
+      "cashier and restaurant differ at " + route);
+  }
+  assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/menu/products/product-1/update"), true);
   assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/accounting"), false);
   assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/operations"), true);
   assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, "/one-time-orders"), true);
