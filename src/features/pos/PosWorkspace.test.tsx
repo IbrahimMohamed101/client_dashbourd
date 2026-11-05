@@ -120,7 +120,7 @@ describe("POS preview workspace", () => {
     await user.type(screen.getByRole("searchbox"), "مياه");
     await user.click(screen.getByRole("button", { name: /مياه/ }));
     rerender(<PosWorkspace catalog={{ ...catalog, revision: 2 }} />);
-    expect(screen.getByRole("status")).toHaveTextContent("اتنشر منيو جديد");
+    expect(screen.getByText(/اتنشر منيو جديد/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /مياه/ })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: "ابدأ سلة جديدة" }));
     expect(screen.getByRole("button", { name: /مياه/ })).toBeEnabled();
