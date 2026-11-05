@@ -19,9 +19,9 @@ jobs:
           set -euo pipefail
           API="https://basicdiet145-staging-2882.up.railway.app"
           UI="https://clientdashbourd-staging.up.railway.app"
-          curl --fail --silent --show-error --max-time 20 "\${API}/health" | grep -E '("status":true|"db")'
-          curl --fail --silent --show-error --max-time 20 "\${UI}/pos" | grep -qi '<html'
-          curl --fail --silent --show-error --max-time 20 "\${UI}/pos/menu" | grep -qi '<html'
+          curl --fail --silent --show-error --max-time 20 "${API}/health" | grep -E '("status":true|"db")'
+          curl --fail --silent --show-error --max-time 20 "${UI}/pos" | grep -qi '<html'
+          curl --fail --silent --show-error --max-time 20 "${UI}/pos/menu" | grep -qi '<html'
           echo "Staging API health and protected SPA routes served"
       - name: Verify POS endpoints deny unauthenticated access
         shell: bash
@@ -29,9 +29,9 @@ jobs:
           set -euo pipefail
           API="https://basicdiet145-staging-2882.up.railway.app"
           for route in "/api/dashboard/pos/catalog" "/api/dashboard/pos/catalog/manage"; do
-            code=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "\${API}\${route}")
+            code=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "${API}${route}")
             test "$code" = "401" || { echo "FAIL: $route returned $code instead of 401"; exit 1; }
           done
-          code=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"revision":1,"channel":"restaurant","items":[]}' "\${API}/api/dashboard/pos/quote")
+          code=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"revision":1,"channel":"restaurant","items":[]}' "${API}/api/dashboard/pos/quote")
           test "$code" = "401" || { echo "FAIL: unauthorized quote returned $code instead of 401"; exit 1; }
           echo "Staging POS protected API unauthenticated access rejected"
