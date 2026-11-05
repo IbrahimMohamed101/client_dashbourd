@@ -1,0 +1,31 @@
+name: POS independent preview build
+on:
+  pull_request:
+    paths:
+      - 'pos.html'
+      - 'vite.pos.config.ts'
+      - 'src/pos/**'
+      - 'package.json'
+      - '.github/workflows/pos-preview.yml'
+permissions:
+  contents: read
+jobs:
+  pos-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Generate dashboard route types and run TypeScript checks
+        run: npm run build
+      - name: Build POS independently
+        run: npm run build:pos
+      - name: Check isolated output
+        run: |
+          test -f dist-pos/pos.html
+          test -d dist-pos/assets
+          test ! -e dist-pos/index.html
