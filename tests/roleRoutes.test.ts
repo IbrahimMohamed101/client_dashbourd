@@ -57,7 +57,9 @@ test("roleRoutes.test", () => {
 
   assert.equal(CASHIER_ROUTES.includes("/payments"), false);
   assert.equal(CASHIER_ROUTES.includes("/subscriptions"), false);
-  assert.equal(CASHIER_ROUTES.includes("/menu"), false);
+  assert.equal(CASHIER_ROUTES.includes("/menu"), true);
+  assert.equal(CASHIER_ROUTES.includes("/addons"), true);
+  assert.equal(CASHIER_ROUTES.includes("/subscriptions"), true);
   assert.equal(CASHIER_ROUTES.includes("/packages"), false);
 
   assert.deepEqual(KITCHEN_ROUTES, [
