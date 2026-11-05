@@ -25,6 +25,7 @@ export type Product = {
   category: Category;
   variants: Variant[];
   hasAddons?: boolean;
+  allowedAddonIds?: string[];
   active?: boolean;
 };
 
