@@ -142,7 +142,7 @@ function ProductOptions({
         <DialogHeader>
           <DialogTitle>{product.name}</DialogTitle>
           <DialogDescription>
-            {initial ? "عدّل الحجم والإضافات والكمية ثم احفظ السطر." : "الحجم الافتراضي 150 جم عند توافره. اختر الإضافات والكمية."}
+            {initial ? "عدّل الحجم والإضافات والكمية ثم احفظ السطر." : product.defaultVariantId ? "الحجم الافتراضي من إعدادات المنيو. راجع الإضافات والكمية." : product.category === "meals" ? "حجم 150 جم افتراضي عند توفر سعره. اختر الإضافات والكمية." : "اختر الحجم والإضافات والكمية."}
           </DialogDescription>
         </DialogHeader>
         <div
