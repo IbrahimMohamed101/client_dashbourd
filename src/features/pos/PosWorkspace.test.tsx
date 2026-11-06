@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PosWorkspace } from "./PosWorkspace";
@@ -322,10 +322,10 @@ describe("POS preview workspace", () => {
     expect(cart.queryByRole("listitem")).not.toBeInTheDocument();
     await user.click(cart.getByRole("button", { name: "تراجع عن الحذف" }));
     expect(cart.getByRole("listitem")).toHaveTextContent("مياه عبوة");
-    await user.click(cart.getByRole("button", { name: "احذف مياه عبوة" }));
     vi.useFakeTimers();
     try {
-      await act(async () => { vi.advanceTimersByTime(5100); });
+      fireEvent.click(cart.getByRole("button", { name: "احذف مياه عبوة" }));
+      act(() => { vi.advanceTimersByTime(5100); });
       expect(cart.queryByRole("button", { name: "تراجع عن الحذف" })).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
@@ -353,7 +353,7 @@ describe("POS preview workspace", () => {
     render(<PosWorkspace catalog={newer} operatorId="operator-a" />);
     const review = within(screen.getByRole("status", { name: "مراجعة اختلاف أسعار المنيو" }));
     expect(review.getByText(/السلة محفوظة للمراجعة/)).toBeInTheDocument();
-    expect(review.getByText(/الجديد:/)).toHaveTextContent("4.50");
+    expect(review.getAllByText(/الجديد:/).find((node) => node.textContent?.includes("القديم:"))).toHaveTextContent("4.50");
     expect(within(screen.getByRole("region", { name: "الكتالوج التجريبي" }))
       .getByRole("button", { name: /مياه/ })).toBeDisabled();
     await user.click(review.getByRole("button", { name: "تأكيد الأسعار الجديدة" }));
