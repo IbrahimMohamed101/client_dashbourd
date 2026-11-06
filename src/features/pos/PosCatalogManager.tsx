@@ -521,6 +521,7 @@ function CatalogEditor({
                     updateProduct({
                       ...product,
                       category: event.target.value,
+                      sellStandalone: event.target.value === "addons" ? product.sellStandalone === true : undefined,
                       ...(event.target.value === "addons"
                         ? { hasAddons: false, allowedAddonIds: undefined } : {}),
                     })
@@ -553,6 +554,17 @@ function CatalogEditor({
                   />
                   يظهر في الكاشير بعد النشر
                 </label>
+                {product.category === "addons" && (
+                  <label className="flex min-h-12 items-center gap-2">
+                    <input type="checkbox" aria-label="تباع الإضافة منفردة"
+                      checked={product.sellStandalone === true}
+                      onChange={(event) =>
+                        updateProduct({ ...product, sellStandalone: event.target.checked })
+                      }
+                    />
+                    تباع الإضافة منفردة (بدون وجبة)
+                  </label>
+                )}
                 {product.category !== "addons" && (
                   <label className="flex min-h-10 items-center gap-2">
                     <input
@@ -570,6 +582,9 @@ function CatalogEditor({
                   </label>
                 )}
               </div>
+              {product.category === "addons" && !product.sellStandalone && (
+                <p className="text-xs text-muted-foreground">هذه الإضافة تظهر داخل خيارات الوجبات فقط ولا تظهر كبطاقة مستقلة للبيع.</p>
+              )}
               {product.category !== "addons" && product.hasAddons === true && (
                 <fieldset className="grid gap-2 rounded-lg border p-3 text-sm">
                   <legend className="px-2 font-semibold">الإضافات المسموحة لهذا الصنف</legend>
