@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { AppAdEditor } from "@/components/pages/settings/AppAdEditor";
 
 export const Route = createFileRoute("/_protected/settings/")({
   component: SettingsPage,
@@ -91,9 +92,9 @@ const navigationCards: SettingsNavigationCard[] = [
 ];
 
 const blockedControls = [
-  "لا يوجد نموذج تعديل عام.",
-  "لا يوجد زر حفظ أو إرسال مفاتيح مخفية.",
-  "لا يتم تحميل إعدادات من API عند فتح الشاشة.",
+  "تعديل صورة إعلان التطبيق متاح في القسم أدناه فقط.",
+  "تظل بقية الإعدادات في شاشاتها المختصة.",
+  "يتم تحميل صورة الإعلان الحالية من الباك إند.",
   "لا يتم تعديل VAT أو الأسعار أو السياسات من هذه الصفحة.",
 ];
 
@@ -111,12 +112,12 @@ function SettingsPage() {
                 الإعدادات العامة
               </h1>
               <p className="max-w-3xl text-sm text-muted-foreground">
-                تم توزيع الإعدادات على الشاشات المختصة لتجنب التعارض في الأسعار والسياسات. هذه الصفحة دليل سريع فقط وليست محرر إعدادات عام.
+                إدارة صورة إعلان التطبيق من هنا، مع إبقاء الأسعار والسياسات في شاشاتها المختصة.
               </p>
             </div>
           </div>
           <Badge variant="secondary" className="w-fit rounded-full px-4 py-1.5">
-            Navigation only
+            إعلان التطبيق
           </Badge>
         </CardContent>
       </Card>
@@ -146,7 +147,7 @@ function SettingsPage() {
                 قواعد مهمة
               </CardTitle>
               <CardDescription>
-                هذه الصفحة لا تملك أي إعداد قابل للحفظ.
+                هذه الصفحة تتيح تعديل صورة إعلان التطبيق فقط.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -164,15 +165,16 @@ function SettingsPage() {
           <Card className="rounded-2xl shadow-sm">
             <CardHeader className="gap-1 pb-2">
               <CardTitle className="text-base font-semibold">
-                لا توجد إعدادات عامة قابلة للتعديل هنا
+                محرر الإعلانات
               </CardTitle>
               <CardDescription>
-                اختر القسم المختص لإدارة الإعداد. أي إعداد غير موثق يجب اعتباره VERIFY_IN_BACKEND_BEFORE_USE.
+                تظل الأسعار والسياسات في شاشاتها المختصة.
               </CardDescription>
             </CardHeader>
           </Card>
         </div>
       </div>
+      <AppAdEditor />
     </div>
   );
 }
