@@ -540,6 +540,28 @@ function CatalogEditor({
                   ))}
                 </select>
               </label>
+              <label className="grid gap-1 text-sm">
+                الحجم الافتراضي للكاشير
+                <select
+                  aria-label="الحجم الافتراضي للصنف"
+                  className={selectStyle}
+                  value={product.defaultVariantId ?? ""}
+                  onChange={(event) =>
+                    updateProduct({
+                      ...product,
+                      defaultVariantId: event.target.value || undefined,
+                    })
+                  }
+                >
+                  <option value="">تلقائي (150 جم للوجبات إن توفر)</option>
+                  {product.variants.map((variant) => (
+                    <option key={variant.id} value={variant.id}>{variant.label || variant.id}</option>
+                  ))}
+                </select>
+                <span className="text-xs text-muted-foreground">
+                  لو الحجم المختار غير مسعّر في قناة بيع، الكاشير يختار أول حجم مسعّر بدلًا منه.
+                </span>
+              </label>
               <div className="flex flex-wrap gap-4 text-sm">
                 <label className="flex min-h-10 items-center gap-2">
                   <input
@@ -662,6 +684,8 @@ function CatalogEditor({
                           variants: product.variants.filter(
                             (item) => item.id !== variant.id
                           ),
+                          defaultVariantId: product.defaultVariantId === variant.id
+                            ? undefined : product.defaultVariantId,
                         })
                       }
                     >

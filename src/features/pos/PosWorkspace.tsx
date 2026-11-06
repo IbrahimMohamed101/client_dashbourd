@@ -37,7 +37,16 @@ type CartLine = PosCartLine;
 
 function defaultVariant(product: Product, channel: Channel): Variant | undefined {
   const priced = product.variants.filter((item) => item.prices[channel] != null);
-  return priced.find((item) => item.id === "150" || /(^|\D)150(\D|$)/.test(item.label)) ?? priced[0];
+  // Manager-published POS choice wins, when priceable for the chosen channel.
+  if (product.defaultVariantId) {
+    return priced.find((item) => item.id === product.defaultVariantId) ?? priced[0];
+  }
+  // 150g fallback is for meals only, never beverages such as 150ml.
+  if (product.category === "meals") {
+    return priced.find((item) => item.id === "150" || /(^|\D)150\s*(?:جم|g(?:ram)?s?)(?:$|\b)/i.test(item.label))
+      ?? priced[0];
+  }
+  return priced[0];
 }
 
 
@@ -133,7 +142,7 @@ function ProductOptions({
         <DialogHeader>
           <DialogTitle>{product.name}</DialogTitle>
           <DialogDescription>
-            {initial ? "عدّل الحجم والإضافات والكمية ثم احفظ السطر." : "الحجم الافتراضي 150 جم عند توافره. اختر الإضافات والكمية."}
+            {initial ? "عدّل الحجم والإضافات والكمية ثم احفظ السطر." : product.defaultVariantId ? "الحجم الافتراضي من إعدادات المنيو. راجع الإضافات والكمية." : product.category === "meals" ? "حجم 150 جم افتراضي عند توفر سعره. اختر الإضافات والكمية." : "اختر الحجم والإضافات والكمية."}
           </DialogDescription>
         </DialogHeader>
         <div
