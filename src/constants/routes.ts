@@ -1,5 +1,6 @@
 import { UserRoles } from "@/types/auth";
 import type { UserRole } from "@/types/auth";
+import { canAccessPosPreview, isPosPreviewPath } from "@/features/pos/posAccess";
 
 const SUPERADMIN_ROUTES = [
   "/dashboard",
@@ -67,15 +68,6 @@ const KITCHEN_ROUTES = [
 
 const COURIER_ROUTES = ["/delivery", "/operations", "/profile"];
 
-const CASHIER_ROUTES = [
-  "/daily-closing",
-  "/manual-deduction",
-  "/operations",
-  "/one-time-orders",
-  "/users",
-  "/profile",
-];
-
 const RESTAURANT_ROUTES = [
   "/daily-closing",
   "/landing-leads",
@@ -90,6 +82,10 @@ const RESTAURANT_ROUTES = [
   "/premium-meals",
   "/profile",
 ];
+
+// Cashier is the operating owner of the branch and shares restaurant routes.
+// Do not add admin-only or superadmin-only routes here.
+const CASHIER_ROUTES = [...RESTAURANT_ROUTES];
 
 const RESTAURANT_DENIED_ROUTES: string[] = [];
 
@@ -137,6 +133,7 @@ const isRouteMatch = (routes: string[], pathName: string) =>
 
 const canRoleAccessRoute = (role: UserRole | undefined, pathName: string) => {
   if (!role) return false;
+  if (isPosPreviewPath(pathName)) return canAccessPosPreview(role, pathName);
   if (isRouteMatch(ROLE_DENIED_ROUTES[role] ?? [], pathName)) return false;
   return isRouteMatch(ROLE_ROUTES[role] ?? [], pathName);
 };
