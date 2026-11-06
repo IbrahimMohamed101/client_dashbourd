@@ -203,6 +203,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const [serviceMode, setServiceMode] = useState<"dine-in" | "takeaway" | "delivery">(restored?.serviceMode ?? "takeaway");
   const [undoState, setUndoState] = useState<UndoState | null>(null);
   const [cartNotice, setCartNotice] = useState<string | null>(null);
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [externalOrderNumber, setExternalOrderNumber] = useState("");
   const [appPaymentStatus, setAppPaymentStatus] = useState<"paid" | "cash">("paid");
   const [quoteReview, setQuoteReview] = useState<{ key: string; data: PosQuote } | null>(null);
@@ -364,6 +365,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         0, { ...selection, id, quantity });
     }
     setCart(next);
+    setLastAddedId(id);
     if (!cart.length) setCartRevision(catalog.revision);
     setCartNotice(null);
     setUndoState(null);
@@ -392,6 +394,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
       expiresAt: Date.now() + 5000,
     });
     setCart(next);
+    setLastAddedId(null);
     setQuoteReview(null);
     setQuoteFailure(null);
     setCartNotice(null);
@@ -421,6 +424,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
     if (!undoState || Date.now() > undoState.expiresAt
       || undoState.revision !== cartRevision || undoState.channel !== channel) return;
     setCart(undoState.previous);
+    setLastAddedId(null);
     setUndoState(null);
     setQuoteReview(null);
     setQuoteFailure(null);
@@ -660,6 +664,16 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
             )}
           </div>
           <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
+            {undoState && !staleCart && (
+              <div role="status" className="mb-2 flex items-center justify-between gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm">
+                <span>تم حذف صنف أو تفريغ السلة. التراجع متاح لمدة 5 ثوانٍ.</span>
+                <Button type="button" variant="outline" aria-label="تراجع عن الحذف"
+                  className="min-h-12 shrink-0" onClick={undoRemoval}>
+                  <Undo2 aria-hidden="true" /> تراجع
+                </Button>
+              </div>
+            )}
+            {cartNotice && <p role="alert" className="mb-2 text-sm text-destructive">{cartNotice}</p>}
             {channel !== "restaurant" && (
               <div className="mb-3 grid gap-2 rounded-xl bg-muted/50 p-3">
                 <label className="grid gap-1 text-sm">
@@ -698,7 +712,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                     channel
                   );
                   return (
-                    <li key={line.id} className="grid gap-2 py-3">
+                    <li key={line.id} className={"grid gap-2 rounded-lg py-3 transition-colors " + (lastAddedId === line.id ? "bg-primary/10" : "")}>
                       <div className="flex items-start justify-between gap-2 text-sm font-semibold">
                         <span>{name}</span>
                         <span className="shrink-0">
@@ -718,7 +732,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                           variant="outline"
                           className="size-12"
                           aria-label={`زِد كمية ${name}`}
-                          disabled={staleCart}
+                          disabled={staleCart || line.quantity >= MAX_LINE_QUANTITY}
                           onClick={() => changeQuantity(line.id, 1)}
                         >
                           <Plus />
@@ -731,9 +745,23 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                           variant="outline"
                           className="size-12"
                           aria-label={`قلّل كمية ${name}`}
+                          disabled={staleCart}
                           onClick={() => changeQuantity(line.id, -1)}
                         >
                           <Minus />
+                        </Button>
+                        <Button type="button" variant="outline" className="min-h-12 gap-1"
+                          aria-label={`تعديل ${name}`} disabled={staleCart}
+                          onClick={() => {
+                            setEditingLineId(line.id);
+                            setProduct(line.product);
+                          }}>
+                          <Pencil aria-hidden="true" className="size-4" /> تعديل
+                        </Button>
+                        <Button type="button" variant="ghost" className="size-12"
+                          aria-label={`احذف ${name}`} disabled={staleCart}
+                          onClick={() => removeWithUndo(cart.filter((item) => item.id !== line.id))}>
+                          <Trash2 aria-hidden="true" className="size-4" />
                         </Button>
                       </div>
                     </li>
