@@ -44,7 +44,7 @@ function defaultVariant(product: Product, channel: Channel): Variant | undefined
 function ChannelSwitchMenu({
   channels, selected, onSelect, disabled, compact,
 }: {
-  channels: { id: string; label: string }[];
+  channels: readonly { id: string; label: string }[];
   selected: string;
   onSelect: (channel: string) => void;
   disabled: boolean;
