@@ -128,7 +128,7 @@ function ProductOptions({
                   type="button"
                   variant={selected ? "secondary" : "outline"}
                   aria-pressed={selected}
-                  disabled={price == null}
+                  disabled={price == null || (!selected && addons.length >= 10)}
                   className="min-h-12 justify-between"
                   onClick={() =>
                     setAddons((current) =>
