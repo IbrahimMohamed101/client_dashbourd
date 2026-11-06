@@ -284,12 +284,13 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         const revisedVariant = revisedProduct?.variants.find((item) => item.id === line.variant.id);
         const revisedAddons = line.addons.map((addon) => {
           const updated = products.find((item) => item.id === addon.id && item.category === "addons");
-          return updated && updated.variants.length === 1
+          return updated && updated.active !== false && updated.variants.length === 1
             ? { id: updated.id, name: updated.name, prices: updated.variants[0].prices }
             : null;
         });
         const valid = Boolean(
-          revisedProduct && revisedVariant && revisedVariant.prices[channel] != null
+          revisedProduct && revisedProduct.active !== false && revisedVariant && revisedVariant.prices[channel] != null
+          && (revisedProduct.category !== "addons" || revisedProduct.sellStandalone === true)
           && revisedAddons.every((addon) => addon && addon.prices[channel] != null
             && (revisedProduct?.allowedAddonIds === undefined || revisedProduct.allowedAddonIds.includes(addon.id)))
           && (!line.addons.length || revisedProduct?.hasAddons)
@@ -326,6 +327,8 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
 
   const searchTerm = search.trim();
   const visibleProducts = products.filter((item) =>
+    item.active !== false && (item.category !== "addons" || item.sellStandalone === true)
+  ).filter((item) =>
     searchTerm
       ? item.name.includes(searchTerm)
       : category === null || item.category === category
