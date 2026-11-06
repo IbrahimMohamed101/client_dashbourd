@@ -311,6 +311,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
     : null;
   function acceptReprice() {
     if (!canAcceptReprice) return;
+    setUndoState(null);
     setCart(revisedLines.map(({ line, nextSelection }) => ({
       ...line,
       ...nextSelection!,
@@ -332,49 +333,97 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   function chooseChannel(next: Channel) {
     if (next === channel || staleCart) return;
     if (cart.length) setPendingChannel(next);
-    else setChannel(next);
+    else {
+      setChannel(next);
+      setUndoState(null);
+      setCartNotice(null);
+    }
   }
 
-  function addToCart(selection: Selection) {
-    if (staleCart) return;
+  function applySelection(selection: Selection, quantity = 1, editId: string | null = null) {
+    if (staleCart || !Number.isSafeInteger(quantity)
+      || quantity < 1 || quantity > MAX_LINE_QUANTITY) return;
+    const id = cartLineId(selection);
+    const originalIndex = editId ? cart.findIndex((line) => line.id === editId) : -1;
+    if (editId && originalIndex < 0) return;
+    const others = editId ? cart.filter((line) => line.id !== editId) : [...cart];
+    const matching = others.find((line) => line.id === id);
+    if (matching && matching.quantity + quantity > MAX_LINE_QUANTITY) {
+      setCartNotice("الحد الأقصى 99 وحدة لكل صنف بالحجم والإضافات نفسها.");
+      return;
+    }
+    if (!matching && others.length >= MAX_CART_LINES) {
+      setCartNotice("الحد الأقصى 50 سطرًا في السلة. راجع الأصناف الحالية.");
+      return;
+    }
+    const next = matching
+      ? others.map((line) => line.id === id ? { ...line, quantity: line.quantity + quantity } : line)
+      : [...others];
+    if (!matching) {
+      next.splice(originalIndex < 0 ? next.length : Math.min(originalIndex, next.length),
+        0, { ...selection, id, quantity });
+    }
+    setCart(next);
     if (!cart.length) setCartRevision(catalog.revision);
-    const { product, variant, addons } = selection;
-    const id = [
-      product.id,
-      variant.id,
-      ...addons.map((addon) => addon.id).sort(),
-    ].join("/");
-    setCart((current) =>
-      current.some((line) => line.id === id)
-        ? current.map((line) =>
-            line.id === id ? { ...line, quantity: line.quantity + 1 } : line
-          )
-        : [...current, { ...selection, id, quantity: 1 }]
-    );
+    setCartNotice(null);
+    setUndoState(null);
+    setQuoteReview(null);
+    setQuoteFailure(null);
     setProduct(null);
+    setEditingLineId(null);
   }
 
   function chooseProduct(item: Product) {
-    const variant = item.variants[0];
-    if (
-      item.variants.length === 1 &&
-      !item.hasAddons &&
-      variant.prices[channel] != null
-    ) {
-      addToCart({ product: item, variant, addons: [] });
+    const variant = defaultVariant(item, channel);
+    if (item.variants.length === 1 && !item.hasAddons && variant) {
+      applySelection({ product: item, variant, addons: [] });
     } else {
+      setEditingLineId(null);
       setProduct(item);
     }
   }
 
+  function removeWithUndo(next: CartLine[]) {
+    if (next.length === cart.length) return;
+    setUndoState({
+      previous: cart,
+      revision: cartRevision,
+      channel,
+      expiresAt: Date.now() + 5000,
+    });
+    setCart(next);
+    setQuoteReview(null);
+    setQuoteFailure(null);
+    setCartNotice(null);
+  }
+
   function changeQuantity(id: string, delta: number) {
-    setCart((current) =>
-      current
-        .map((line) =>
-          line.id === id ? { ...line, quantity: line.quantity + delta } : line
-        )
-        .filter((line) => line.quantity > 0)
-    );
+    if (staleCart) return;
+    const line = cart.find((item) => item.id === id);
+    if (!line) return;
+    if (line.quantity + delta <= 0) {
+      removeWithUndo(cart.filter((item) => item.id !== id));
+      return;
+    }
+    if (line.quantity + delta > MAX_LINE_QUANTITY) {
+      setCartNotice("الحد الأقصى 99 وحدة لكل صنف.");
+      return;
+    }
+    setCart(cart.map((item) => item.id === id
+      ? { ...item, quantity: item.quantity + delta } : item));
+    setUndoState(null);
+    setCartNotice(null);
+    setQuoteReview(null);
+    setQuoteFailure(null);
+  }
+
+  function undoRemoval() {
+    if (!undoState || Date.now() > undoState.expiresAt
+      || undoState.revision !== cartRevision || undoState.channel !== channel) return;
+    setCart(undoState.previous);
+    setUndoState(null);
+    setQuoteReview(null);
+    setQuoteFailure(null);
   }
 
   return (
@@ -477,7 +526,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                   {" — "}الجديد: {newUnit == null ? "لم يعد متاحًا" : formatPreviewAmount(newUnit * line.quantity)}
                 </span>
                 {newUnit === null && (
-                  <Button size="sm" variant="outline" onClick={() => setCart((list) => list.filter((item) => item.id !== line.id))}>
+                  <Button size="sm" variant="outline" onClick={() => removeWithUndo(cart.filter((item) => item.id !== line.id))}>
                     حذف الصنف غير المتاح
                   </Button>
                 )}
@@ -493,7 +542,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
               تأكيد الأسعار الجديدة
             </Button>
             <Button type="button" variant="outline" className="min-h-11"
-              onClick={() => { setProduct(null); setPendingChannel(null); setCart([]); }}>
+              onClick={() => { setProduct(null); setPendingChannel(null); removeWithUndo([]); }}>
               إلغاء السلة
             </Button>
           </div>
@@ -604,7 +653,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                 type="button"
                 variant="ghost"
                 className="ms-auto min-h-12"
-                onClick={() => setCart([])}
+                onClick={() => removeWithUndo([])}
               >
                 مسح السلة
               </Button>
@@ -748,8 +797,10 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           availableAddons={availableAddons.filter((addon) =>
             product.allowedAddonIds === undefined || product.allowedAddonIds.includes(addon.id)
           )}
-          onClose={() => setProduct(null)}
-          onAdd={addToCart}
+          key={editingLineId ?? product.id}
+          initial={cart.find((line) => line.id === editingLineId)}
+          onClose={() => { setProduct(null); setEditingLineId(null); }}
+          onAdd={(selection, quantity) => applySelection(selection, quantity, editingLineId)}
         />
       )}
       {pendingChannel && !staleCart && (
@@ -785,6 +836,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                   if (!pendingChannel || nextTotal === null) return;
                   setChannel(pendingChannel);
                   setPendingChannel(null);
+                  setUndoState(null);
                 }}
               >
                 تأكيد تغيير القناة
