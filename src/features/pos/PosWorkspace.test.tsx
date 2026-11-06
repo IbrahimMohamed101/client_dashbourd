@@ -386,4 +386,50 @@ describe("POS preview workspace", () => {
       .getByRole("button", { name: /زيادة دجاج/ })).toBeInTheDocument();
   });
 
+
+  it("prefers published defaultVariantId and does not confuse 150ml with 150g", async () => {
+    const user = userEvent.setup();
+    const changed = {
+      ...catalog,
+      products: catalog.products.map((item) =>
+        item.id === "butter" ? { ...item, defaultVariantId: "200" } : item
+      ),
+    };
+    const view = render(<PosWorkspace catalog={changed} />);
+    await user.click(screen.getByRole("button", { name: /دجاج بالزبدة/ }));
+    let dialog = within(screen.getByRole("dialog", { name: /دجاج بالزبدة/ }));
+    expect(dialog.getByRole("button", { name: /200 جم/ })).toHaveAttribute("aria-pressed", "true");
+    await user.click(dialog.getByRole("button", { name: "إغلاق النافذة" }));
+    view.unmount();
+
+    const drink = {
+      id: "sample-drink", name: "مشروب اختبار", category: "drinks",
+      active: true,
+      variants: [
+        { id: "small", label: "100 مل", prices: { restaurant: 1200, hungerstation: 1400, keeta: 1500 } },
+        { id: "large", label: "150 مل", prices: { restaurant: 1500, hungerstation: 1700, keeta: 1800 } },
+      ],
+    };
+    render(<PosWorkspace catalog={{ ...catalog, products: [...catalog.products, drink] }} />);
+    await user.click(screen.getByRole("button", { name: /مشروب اختبار/ }));
+    dialog = within(screen.getByRole("dialog", { name: /مشروب اختبار/ }));
+    expect(dialog.getByRole("button", { name: /100 مل/ })).toHaveAttribute("aria-pressed", "true");
+    expect(dialog.getByRole("button", { name: /150 مل/ })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("falls back to the first priced variant when configured default is unpriced for the channel", async () => {
+    const user = userEvent.setup();
+    const changed = {
+      ...catalog,
+      products: catalog.products.map((item) =>
+        item.id === "tikka" ? { ...item, defaultVariantId: "200" } : item),
+    };
+    render(<PosWorkspace catalog={changed} />);
+    await user.click(screen.getByRole("button", { name: "Keeta" }));
+    await user.click(screen.getByRole("button", { name: /دجاج تكا/ }));
+    const dialog = within(screen.getByRole("dialog", { name: /دجاج تكا/ }));
+    expect(dialog.getByRole("button", { name: /100 جم/ })).toHaveAttribute("aria-pressed", "true");
+    expect(dialog.getByRole("button", { name: /200 جم/ })).toBeDisabled();
+  });
+
 });
