@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { Minus, Plus, Search, ShoppingBasket } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Minus, Plus, Search, ShoppingBasket, Pencil, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,9 +25,21 @@ import {
 import type { PublishedPosCatalog } from "./catalogApi";
 import { fetchPosQuote, type PosQuote } from "./quoteApi";
 import { parseApiError } from "@/lib/apiErrors";
+import {
+  cartLineId, readPosCartDraft, writePosCartDraft,
+  MAX_CART_LINES, MAX_LINE_QUANTITY,
+  type PosSelection, type PosCartLine,
+} from "./posCartDraft";
 
-type Selection = { product: Product; variant: Variant; addons: Addon[] };
-type CartLine = Selection & { id: string; quantity: number };
+type Selection = PosSelection;
+type CartLine = PosCartLine;
+
+function defaultVariant(product: Product, channel: Channel): Variant | undefined {
+  const priced = product.variants.filter((item) => item.prices[channel] != null);
+  return priced.find((item) => item.id === "150" || /(^|\D)150(\D|$)/.test(item.label)) ?? priced[0];
+}
+
+type UndoState = { previous: CartLine[]; revision: number; channel: string; expiresAt: number };
 
 function cartTotal(cart: CartLine[], channel: Channel) {
   let total = 0;
@@ -45,17 +57,25 @@ function ProductOptions({
   availableAddons,
   onClose,
   onAdd,
+  initial,
 }: {
   product: Product;
   channel: Channel;
   availableAddons: Addon[];
   onClose: () => void;
-  onAdd: (selection: Selection) => void;
+  onAdd: (selection: Selection, quantity: number) => void;
+  initial?: CartLine;
 }) {
   const [variant, setVariant] = useState(() =>
-    product.variants.length === 1 ? product.variants[0] : undefined
+    initial ? product.variants.find((item) => item.id === initial.variant.id)
+      ?? defaultVariant(product, channel) : defaultVariant(product, channel)
   );
-  const [addons, setAddons] = useState<Addon[]>([]);
+  const [addons, setAddons] = useState<Addon[]>(() =>
+    initial?.addons.map((old) => availableAddons.find((item) => item.id === old.id)).filter(
+      (item): item is Addon => item != null
+    ) ?? []
+  );
+  const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const amount = variant ? previewUnitPrice(variant, addons, channel) : null;
 
   return (
@@ -69,7 +89,7 @@ function ProductOptions({
         <DialogHeader>
           <DialogTitle>{product.name}</DialogTitle>
           <DialogDescription>
-            اختر الحجم والإضافات من أسعار المعاينة للقناة الحالية.
+            {initial ? "عدّل الحجم والإضافات والكمية ثم احفظ السطر." : "الحجم الافتراضي 150 جم عند توافره. اختر الإضافات والكمية."}
           </DialogDescription>
         </DialogHeader>
         <div
@@ -101,7 +121,7 @@ function ProductOptions({
             <legend className="mb-2 font-semibold">الإضافات الاختيارية</legend>
             {availableAddons.map((addon) => {
               const price = addon.prices[channel];
-              const selected = addons.includes(addon);
+              const selected = addons.some((item) => item.id === addon.id);
               return (
                 <Button
                   key={addon.id}
@@ -112,8 +132,8 @@ function ProductOptions({
                   className="min-h-12 justify-between"
                   onClick={() =>
                     setAddons((current) =>
-                      current.includes(addon)
-                        ? current.filter((item) => item !== addon)
+                      current.some((item) => item.id === addon.id)
+                        ? current.filter((item) => item.id !== addon.id)
                         : [...current, addon]
                     )
                   }
@@ -127,6 +147,22 @@ function ProductOptions({
             })}
           </fieldset>
         )}
+        <div role="group" aria-label="كمية الصنف" className="flex items-center justify-between rounded-lg border px-3 py-2">
+          <span className="font-semibold">الكمية</span>
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" className="size-12"
+              aria-label="قلّل الكمية المختارة" disabled={quantity <= 1}
+              onClick={() => setQuantity((current) => Math.max(1, current - 1))}>
+              <Minus aria-hidden="true" />
+            </Button>
+            <output aria-live="polite" className="min-w-8 text-center tabular-nums">{quantity}</output>
+            <Button type="button" variant="outline" className="size-12"
+              aria-label="زِد الكمية المختارة" disabled={quantity >= MAX_LINE_QUANTITY}
+              onClick={() => setQuantity((current) => Math.min(MAX_LINE_QUANTITY, current + 1))}>
+              <Plus aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
         <DialogFooter>
           <Button
             type="button"
@@ -134,12 +170,12 @@ function ProductOptions({
             disabled={!variant || amount === null}
             onClick={() => {
               if (variant && amount !== null)
-                onAdd({ product, variant, addons });
+                onAdd({ product, variant, addons }, quantity);
             }}
           >
             {amount === null
               ? "أضف للسلة"
-              : `أضف للسلة · ${formatPreviewAmount(amount)}`}
+              : `${initial ? "حفظ التعديل" : "أضف للسلة"} · ${formatPreviewAmount(amount * quantity)}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -147,24 +183,42 @@ function ProductOptions({
   );
 }
 
-export function PosWorkspace({ catalog, operatorName = "موظف", navigation }: {
+export function PosWorkspace({ catalog, operatorName = "موظف", navigation, operatorId }: {
   catalog: PublishedPosCatalog;
   operatorName?: string;
   navigation?: ReactNode;
+  operatorId?: string | null;
 }) {
-  const [channel, setChannel] = useState<Channel>("restaurant");
+  // Read business-only draft references once per signed-in operator. No
+  // client-side total is ever considered an approved payable amount.
+  const [restored] = useState(() => readPosCartDraft(operatorId, catalog));
+  const [channel, setChannel] = useState<Channel>(restored?.channel ?? "restaurant");
   const [pendingChannel, setPendingChannel] = useState<Channel | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
   const [search, setSearch] = useState("");
   const [product, setProduct] = useState<Product | null>(null);
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [cartRevision, setCartRevision] = useState(catalog.revision);
-  const [serviceMode, setServiceMode] = useState<"dine-in" | "takeaway" | "delivery">("takeaway");
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
+  const [cart, setCart] = useState<CartLine[]>(restored?.lines ?? []);
+  const [cartRevision, setCartRevision] = useState(restored?.revision ?? catalog.revision);
+  const [serviceMode, setServiceMode] = useState<"dine-in" | "takeaway" | "delivery">(restored?.serviceMode ?? "takeaway");
+  const [undoState, setUndoState] = useState<UndoState | null>(null);
+  const [cartNotice, setCartNotice] = useState<string | null>(null);
   const [externalOrderNumber, setExternalOrderNumber] = useState("");
   const [appPaymentStatus, setAppPaymentStatus] = useState<"paid" | "cash">("paid");
   const [quoteReview, setQuoteReview] = useState<{ key: string; data: PosQuote } | null>(null);
   const [quoteFailure, setQuoteFailure] = useState<{ key: string; message: string } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+
+  useEffect(() => {
+    writePosCartDraft(operatorId, { revision: cartRevision, channel, serviceMode, lines: cart });
+  }, [operatorId, cartRevision, channel, serviceMode, cart]);
+
+  useEffect(() => {
+    if (!undoState) return;
+    const timer = window.setTimeout(() => setUndoState(null),
+      Math.max(0, undoState.expiresAt - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [undoState]);
 
   const { categories, products } = catalog;
   const channels = catalog.channels ?? defaultChannels;
