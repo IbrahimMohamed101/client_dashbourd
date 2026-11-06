@@ -41,6 +41,11 @@ describe("POS preview workspace", () => {
     expect(options.getByRole("button", { name: /150 جم/ })).toHaveAttribute("aria-pressed", "true");
     await user.click(options.getByRole("button", { name: /150 جم/ }));
     await user.click(options.getByRole("button", { name: /زيادة دجاج/ }));
+    const chosenAddon = options.getByRole("button", { name: /زيادة دجاج/ });
+    expect(chosenAddon).toHaveAttribute("aria-pressed", "true");
+    expect(chosenAddon).toHaveClass("border-primary", "bg-primary/10");
+    expect(chosenAddon.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
+    expect(options.getByRole("button", { name: "إغلاق النافذة" })).toBeInTheDocument();
     await user.click(options.getByRole("button", { name: /أضف للسلة/ }));
 
     const cart = within(
@@ -196,6 +201,7 @@ describe("POS preview workspace", () => {
     render(<PosWorkspace catalog={dynamic} />);
     expect(screen.getByRole("group", { name: "قناة البيع" })).toHaveTextContent("المطعم");
     expect(screen.getByRole("button", { name: "قنوات أخرى" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "قنوات أخرى" })).toHaveTextContent("المطعم");
     await user.click(screen.getByRole("button", { name: "قنوات أخرى" }));
     await user.click(screen.getByRole("menuitem", { name: "تطبيق جديد" }));
     expect(screen.getByRole("group", { name: "قناة البيع" })).toHaveTextContent("تطبيق جديد");

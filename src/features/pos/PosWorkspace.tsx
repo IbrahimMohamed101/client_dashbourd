@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Minus, Plus, Search, ShoppingBasket, Pencil, Trash2, Undo2 } from "lucide-react";
+import { Check, ChevronDown, Minus, Plus, Search, ShoppingBasket, Pencil, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -7,6 +7,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Dialog,
   DialogContent,
+  DialogClose,
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -37,6 +38,43 @@ type CartLine = PosCartLine;
 function defaultVariant(product: Product, channel: Channel): Variant | undefined {
   const priced = product.variants.filter((item) => item.prices[channel] != null);
   return priced.find((item) => item.id === "150" || /(^|\D)150(\D|$)/.test(item.label)) ?? priced[0];
+}
+
+
+function ChannelSwitchMenu({
+  channels, selected, onSelect, disabled, compact,
+}: {
+  channels: readonly { id: string; label: string }[];
+  selected: string;
+  onSelect: (channel: string) => void;
+  disabled: boolean;
+  compact: boolean;
+}) {
+  const selectedLabel = channels.find((entry) => entry.id === selected)?.label ?? selected;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="outline" disabled={disabled}
+          aria-label={compact ? `تغيير قناة البيع: ${selectedLabel}` : "قنوات أخرى"}
+          className="flex min-h-12 max-w-full min-w-0 gap-2 border-2 border-primary px-3 text-sm">
+          <span className="min-w-0 truncate font-semibold" title={selectedLabel}>
+            {selectedLabel}
+          </span>
+          {!compact && <span className="hidden shrink-0 2xl:inline">قنوات أخرى</span>}
+          <ChevronDown aria-hidden="true" className="size-4 shrink-0" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-52 text-right">
+        {channels.map((entry) => (
+          <DropdownMenuItem key={entry.id} className="min-h-12 gap-2"
+            disabled={entry.id === selected} onSelect={() => onSelect(entry.id)}>
+            {entry.id === selected && <Check aria-hidden="true" className="size-4 text-primary" />}
+            {entry.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 type UndoState = { previous: CartLine[]; revision: number; channel: string; expiresAt: number };
@@ -85,7 +123,13 @@ function ProductOptions({
         if (!open) onClose();
       }}
     >
-      <DialogContent dir="rtl" className="text-right">
+      <DialogContent dir="rtl" className="text-right" showCloseButton={false}>
+        <DialogClose asChild>
+          <Button type="button" variant="ghost" size="icon-sm"
+            className="absolute top-3 left-3 sm:top-4 sm:left-4" aria-label="إغلاق النافذة">
+            <X aria-hidden="true" />
+          </Button>
+        </DialogClose>
         <DialogHeader>
           <DialogTitle>{product.name}</DialogTitle>
           <DialogDescription>
@@ -129,7 +173,10 @@ function ProductOptions({
                   variant={selected ? "secondary" : "outline"}
                   aria-pressed={selected}
                   disabled={price == null || (!selected && addons.length >= 10)}
-                  className="min-h-12 justify-between"
+                  className={"min-h-12 justify-between border-2 " + (
+                    selected ? "border-primary bg-primary/10 font-semibold text-foreground"
+                      : "border-transparent"
+                  )}
                   onClick={() =>
                     setAddons((current) =>
                       current.some((item) => item.id === addon.id)
@@ -138,7 +185,10 @@ function ProductOptions({
                     )
                   }
                 >
-                  {addon.name}
+                  <span className="flex min-w-0 items-center gap-2">
+                    {selected && <Check aria-hidden="true" className="size-5 shrink-0 text-primary" />}
+                    {addon.name}
+                  </span>
                   <span>
                     {price == null ? "غير مسعّر" : formatPreviewAmount(price)}
                   </span>
@@ -444,42 +494,32 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         <SidebarTrigger aria-label="فتح القائمة الجانبية" className="size-12 shrink-0" />
         <img src="/logo.png" alt="بيسك دايت" className="hidden size-10 shrink-0 object-contain sm:block" />
         <div role="group" aria-label="قناة البيع"
-          className="flex min-w-0 max-w-[30vw] shrink-0 gap-2 overflow-x-auto whitespace-nowrap py-1 lg:max-w-[25vw]">
+          className="flex min-w-0 max-w-[40vw] shrink-0 items-center whitespace-nowrap xl:max-w-[30vw]">
           {channels.length > 3 ? (
+            <ChannelSwitchMenu channels={channels} selected={channel}
+              onSelect={chooseChannel} disabled={staleCart} compact={false} />
+          ) : (
             <>
-              <span role="status" title={channels.find((item) => item.id === channel)?.label ?? channel}
-                className="flex min-h-12 max-w-[13vw] shrink-0 items-center truncate rounded-lg border-2 border-primary bg-secondary px-3 text-sm font-bold"
-              >
-                {channels.find((item) => item.id === channel)?.label ?? channel}
-              </span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline" className="min-h-12 shrink-0 px-2 text-sm" disabled={staleCart}>
-                    قنوات أخرى
+              <div className="min-w-0 xl:hidden">
+                <ChannelSwitchMenu channels={channels} selected={channel}
+                  onSelect={chooseChannel} disabled={staleCart} compact />
+              </div>
+              <div className="hidden min-w-0 items-center gap-2 xl:flex">
+                {channels.map((option) => (
+                  <Button key={option.id} type="button"
+                    variant={channel === option.id ? "secondary" : "outline"}
+                    aria-pressed={channel === option.id}
+                    disabled={staleCart}
+                    className={"min-h-12 shrink-0 border-2 px-3 text-sm " +
+                      (channel === option.id ? "border-primary font-bold" : "border-transparent")}
+                    onClick={() => chooseChannel(option.id)}
+                  >
+                    {option.label}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-48 text-right">
-                  {channels.map((option) => (
-                    <DropdownMenuItem key={option.id} disabled={option.id === channel}
-                      onSelect={() => chooseChannel(option.id)} className="min-h-12">
-                      {option.label}{option.id === channel ? " ✓" : ""}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                ))}
+              </div>
             </>
-          ) : channels.map((option) => (
-            <Button key={option.id} type="button"
-              variant={channel === option.id ? "secondary" : "outline"}
-              aria-pressed={channel === option.id}
-              disabled={staleCart}
-              className={"min-h-12 shrink-0 border-2 px-3 text-sm " +
-                (channel === option.id ? "border-primary font-bold" : "border-transparent")}
-              onClick={() => chooseChannel(option.id)}
-            >
-              {option.label}
-            </Button>
-          ))}
+          )}
         </div>
         {channel === "restaurant" && (
           <div role="group" aria-label="نوع طلب المطعم"

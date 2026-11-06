@@ -135,7 +135,36 @@ try {
     await cart.getByText("سلة المطعم").waitFor();
     assert.equal(await pay.isDisabled(), true);
     const channelButtons = page.getByRole("group", { name: "قناة البيع" });
-    await channelButtons.getByRole("button", { name: "HungerStation" }).click();
+    const channelGroupBox = await channelButtons.boundingBox();
+    assert.ok(channelGroupBox, "Channel selector group must be visible");
+    if (viewport.width < 1280) {
+      const selector = channelButtons.getByRole("button", { name: /تغيير قناة البيع:/ });
+      const selectorBox = await selector.boundingBox();
+      assert.ok(selectorBox, "Tablet channel dropdown must be visible");
+      assert.ok(selectorBox.x >= channelGroupBox.x - 1 &&
+        selectorBox.x + selectorBox.width <= channelGroupBox.x + channelGroupBox.width + 1,
+      "Tablet channel button must fit fully inside its header group");
+      assert.ok(selectorBox.x >= -1 && selectorBox.x + selectorBox.width <= viewport.width + 1,
+        "Selected channel button is clipped by the viewport");
+      await selector.click();
+      for (const channelLabel of ["المطعم", "HungerStation", "Keeta"]) {
+        const item = page.getByRole("menuitem", { name: channelLabel });
+        const rect = await item.boundingBox();
+        assert.ok(rect, "Every configured channel must be visible as a complete menu item: " + channelLabel);
+        assert.ok(rect.x >= -1 && rect.x + rect.width <= viewport.width + 1,
+          "Channel option " + channelLabel + " clipped at " + viewport.width + "px");
+      }
+      await page.getByRole("menuitem", { name: "HungerStation" }).click();
+    } else {
+      for (const channelLabel of ["المطعم", "HungerStation", "Keeta"]) {
+        const item = channelButtons.getByRole("button", { name: channelLabel, exact: true });
+        const rect = await item.boundingBox();
+        assert.ok(rect && rect.x >= channelGroupBox.x - 1
+          && rect.x + rect.width <= channelGroupBox.x + channelGroupBox.width + 1,
+          "Desktop channel button is clipped: " + channelLabel);
+      }
+      await channelButtons.getByRole("button", { name: "HungerStation" }).click();
+    }
     await page.getByRole("dialog", { name: "تغيير قناة البيع" }).waitFor();
     await page.getByRole("button", { name: "تأكيد تغيير القناة" }).click();
     await cart.getByText("سلة HungerStation").waitFor();
@@ -157,6 +186,20 @@ try {
     assert.match(await cart.getByRole("listitem").innerText(), /8\.00/,
       "Session reload must restore cashier's published-revision cart");
     assert.equal(await pay.isDisabled(), true, "Restored cart cannot enable payment");
+    if (viewport.width < 1280) {
+      const selector = channelButtons.getByRole("button", { name: /تغيير قناة البيع:/ });
+      await selector.click();
+      await page.getByRole("menuitem", { name: "Keeta" }).click();
+      await page.getByRole("dialog", { name: "تغيير قناة البيع" }).waitFor();
+      await page.getByRole("button", { name: "تأكيد تغيير القناة" }).click();
+      await cart.getByText("سلة Keeta").waitFor();
+      const keetaSelector = channelButtons.getByRole("button", { name: "تغيير قناة البيع: Keeta" });
+      const keetaBox = await keetaSelector.boundingBox();
+      assert.ok(keetaBox && keetaBox.x >= -1
+        && keetaBox.x + keetaBox.width <= viewport.width + 1,
+        "Selected Keeta channel must remain fully visible at " + viewport.width + "px");
+      assert.equal(await keetaSelector.isVisible(), true);
+    }
     const updatedBox = await pay.boundingBox();
     assert.ok(updatedBox && updatedBox.y + updatedBox.height <= viewport.height + 1,
       "Payment footer must remain visible after changing channel");
@@ -165,7 +208,10 @@ try {
     report.push({ viewport, topbar: headerBox.height, cartWidth: cartBox.width,
       firstProductY: firstCardBox.y, columns: firstRow.length,
       productWidth: firstRowCards[0].width, payBottom: updatedBox.y + updatedBox.height,
-      pageOverflow: pageScroll, status: "PASS" });
+      pageOverflow: pageScroll,
+      channelVisibility: viewport.width < 1280 ? "tablet-dropdown-and-Keeta-visible"
+        : "all-desktop-channel-buttons-visible",
+      status: "PASS" });
     await context.close();
   }
   await fs.writeFile(destination + "/results.json", JSON.stringify(report, null, 2));
