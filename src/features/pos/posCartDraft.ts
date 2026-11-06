@@ -65,6 +65,7 @@ function cleanLine(value: unknown): PosCartLine | null {
       variants: [{ id: variant.id, label: variant.label, prices: variant.prices }],
       active: true,
       hasAddons: product.hasAddons === true,
+      sellStandalone: product.sellStandalone === true,
       ...(Array.isArray(product.allowedAddonIds) && product.allowedAddonIds.every(validId)
         ? { allowedAddonIds: product.allowedAddonIds } : {}),
     },
@@ -78,7 +79,8 @@ function cleanLine(value: unknown): PosCartLine | null {
 function currentLine(line: PosCartLine, catalog: PublishedPosCatalog): PosCartLine | null {
   const product = catalog.products.find((item) => item.id === line.product.id && item.active !== false);
   const variant = product?.variants.find((item) => item.id === line.variant.id);
-  if (!product || !variant) return null;
+  if (!product || !variant
+    || (product.category === "addons" && product.sellStandalone !== true)) return null;
   const addons = line.addons.map((old) => {
     const addon = catalog.products.find((item) => item.id === old.id && item.category === "addons" && item.active !== false);
     return addon && addon.variants.length === 1
@@ -154,6 +156,7 @@ export function writePosCartDraft(operatorId: string | null | undefined, draft: 
         product: {
           id: line.product.id, name: line.product.name, category: line.product.category,
           hasAddons: line.product.hasAddons,
+          sellStandalone: line.product.sellStandalone,
           allowedAddonIds: line.product.allowedAddonIds,
         },
         variant: {
