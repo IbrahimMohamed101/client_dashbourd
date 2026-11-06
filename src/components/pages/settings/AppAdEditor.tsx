@@ -139,7 +139,7 @@ export function AppAdEditor() {
               type="file"
               accept="image/jpeg,image/png,image/webp"
               className="sr-only"
-              onChange={(event) => handleFileChange(event.currentTarget.files?.[0])}
+              onChange={(event) => {\n                handleFileChange(event.currentTarget.files?.[0]);\n                event.currentTarget.value = "";\n              }}
             />
           </label>
           {selectedFile ? (
@@ -148,7 +148,7 @@ export function AppAdEditor() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!selectedFile || isLoading || isSaving}
+            disabled={!settings || !selectedFile || isLoading || isSaving}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? "جارٍ الرفع والحفظ…" : "حفظ صورة التطبيق"}
