@@ -139,7 +139,8 @@ export function AppAdEditor() {
               type="file"
               accept="image/jpeg,image/png,image/webp"
               className="sr-only"
-              onChange={(event) => {\n                handleFileChange(event.currentTarget.files?.[0]);\n                event.currentTarget.value = "";\n              }}
+              onChange={(event) => {
+                handleFileChange(event.currentTarget.files?.[0]);\n                event.currentTarget.value = "";\n              }}
             />
           </label>
           {selectedFile ? (
