@@ -396,7 +396,9 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
       )}
       {view === "sale" && (
         <PosWorkspace
+          key={user?.id ?? "anonymous-preview"}
           catalog={catalog}
+          operatorId={user?.id}
           operatorName={user?.name?.trim() || user?.email?.split("@")[0] || "موظف"}
           navigation={navigationMenu}
         />

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PosWorkspace } from "./PosWorkspace";
@@ -37,7 +37,8 @@ describe("POS preview workspace", () => {
     const options = within(
       screen.getByRole("dialog", { name: /دجاج بالزبدة/ })
     );
-    expect(options.getByRole("button", { name: /أضف للسلة/ })).toBeDisabled();
+    expect(options.getByRole("button", { name: /أضف للسلة/ })).toBeEnabled();
+    expect(options.getByRole("button", { name: /150 جم/ })).toHaveAttribute("aria-pressed", "true");
     await user.click(options.getByRole("button", { name: /150 جم/ }));
     await user.click(options.getByRole("button", { name: /زيادة دجاج/ }));
     await user.click(options.getByRole("button", { name: /أضف للسلة/ }));
@@ -272,4 +273,111 @@ describe("POS preview workspace", () => {
     expect(within(cart).getByRole("textbox", { name: "الرقم الخارجي لطلب التطبيق" })).toBeInTheDocument();
     expect(footerAction).toBeDisabled();
   });
+
+  it("merges quick-add duplicate items and edits quantity from the cart", async () => {
+    const user = userEvent.setup();
+    render(<PosWorkspace catalog={catalog} />);
+    const water = screen.getByRole("button", { name: /مياه/ });
+    await user.click(water);
+    await user.click(water);
+    const cart = within(screen.getByRole("complementary", { name: "السلة التجريبية" }));
+    expect(cart.getAllByRole("listitem")).toHaveLength(1);
+    expect(cart.getByRole("listitem")).toHaveTextContent("6.00");
+    await user.click(cart.getByRole("button", { name: "تعديل مياه عبوة" }));
+    const dialog = within(screen.getByRole("dialog", { name: /مياه/ }));
+    expect(dialog.getByRole("group", { name: "كمية الصنف" })).toHaveTextContent("2");
+    await user.click(dialog.getByRole("button", { name: "زِد الكمية المختارة" }));
+    await user.click(dialog.getByRole("button", { name: /حفظ التعديل/ }));
+    expect(cart.getAllByRole("listitem")).toHaveLength(1);
+    expect(cart.getByRole("listitem")).toHaveTextContent("9.00");
+    expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+  });
+
+  it("prefills 150 g and can edit an add-on line without multiplying add-ons incorrectly", async () => {
+    const user = userEvent.setup();
+    render(<PosWorkspace catalog={catalog} />);
+    await user.click(screen.getByRole("button", { name: /دجاج بالزبدة/ }));
+    let dialog = within(screen.getByRole("dialog", { name: /دجاج بالزبدة/ }));
+    expect(dialog.getByRole("button", { name: /150 جم/ })).toHaveAttribute("aria-pressed", "true");
+    await user.click(dialog.getByRole("button", { name: /زيادة دجاج/ }));
+    await user.click(dialog.getByRole("button", { name: "زِد الكمية المختارة" }));
+    await user.click(dialog.getByRole("button", { name: /أضف للسلة/ }));
+    const cart = within(screen.getByRole("complementary", { name: "السلة التجريبية" }));
+    expect(cart.getByRole("listitem")).toHaveTextContent("74.00");
+    await user.click(cart.getByRole("button", { name: /تعديل دجاج بالزبدة 150 جم/ }));
+    dialog = within(screen.getByRole("dialog", { name: /دجاج بالزبدة/ }));
+    expect(dialog.getByRole("button", { name: /زيادة دجاج/ })).toHaveAttribute("aria-pressed", "true");
+    await user.click(dialog.getByRole("button", { name: /100 جم/ }));
+    await user.click(dialog.getByRole("button", { name: /حفظ التعديل/ }));
+    expect(cart.getAllByRole("listitem")).toHaveLength(1);
+    expect(cart.getByRole("listitem")).toHaveTextContent("58.00");
+  });
+
+  it("restores deleted cart lines via undo, then expires undo after five seconds", async () => {
+    const user = userEvent.setup();
+    render(<PosWorkspace catalog={catalog} />);
+    await user.click(screen.getByRole("button", { name: /مياه/ }));
+    const cart = within(screen.getByRole("complementary", { name: "السلة التجريبية" }));
+    await user.click(cart.getByRole("button", { name: "احذف مياه عبوة" }));
+    expect(cart.queryByRole("listitem")).not.toBeInTheDocument();
+    await user.click(cart.getByRole("button", { name: "تراجع عن الحذف" }));
+    expect(cart.getByRole("listitem")).toHaveTextContent("مياه عبوة");
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(cart.getByRole("button", { name: "احذف مياه عبوة" }));
+      act(() => { vi.advanceTimersByTime(5100); });
+      expect(cart.queryByRole("button", { name: "تراجع عن الحذف" })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("restores an operator-scoped session cart, and enforces reprice when published revision changes", async () => {
+    const user = userEvent.setup();
+    const initial = render(<PosWorkspace catalog={catalog} operatorId="operator-a" />);
+    await user.click(screen.getByRole("button", { name: /مياه/ }));
+    expect(screen.getByRole("complementary", { name: "السلة التجريبية" })).toHaveTextContent("3.00");
+    initial.unmount();
+    const another = render(<PosWorkspace catalog={catalog} operatorId="operator-b" />);
+    expect(screen.getByText("اختر صنفًا لتجربة إضافته إلى السلة.")).toBeInTheDocument();
+    another.unmount();
+    const newer = {
+      ...catalog, revision: 2, products: catalog.products.map((item) =>
+        item.id !== "water" ? item : {
+          ...item, variants: item.variants.map((v) =>
+            ({ ...v, prices: { ...v.prices, restaurant: 450 } })
+          ),
+        }
+      ),
+    };
+    render(<PosWorkspace catalog={newer} operatorId="operator-a" />);
+    const review = within(screen.getByRole("status", { name: "مراجعة اختلاف أسعار المنيو" }));
+    expect(review.getByText(/السلة محفوظة للمراجعة/)).toBeInTheDocument();
+    expect(review.getAllByText(/الجديد:/).find((node) => node.textContent?.includes("القديم:"))).toHaveTextContent("4.50");
+    expect(within(screen.getByRole("region", { name: "الكتالوج التجريبي" }))
+      .getByRole("button", { name: /مياه/ })).toBeDisabled();
+    await user.click(review.getByRole("button", { name: "تأكيد الأسعار الجديدة" }));
+    expect(screen.getByRole("complementary", { name: "السلة التجريبية" })).toHaveTextContent("4.50");
+    expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+  });
+
+  it("shows add-ons in meal dialog, not as standalone sales cards unless opted in", async () => {
+    const user = userEvent.setup();
+    const ui = render(<PosWorkspace catalog={catalog} />);
+    expect(within(screen.getByRole("region", { name: "الكتالوج التجريبي" }))
+      .queryByRole("button", { name: /زيادة دجاج/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /دجاج بالزبدة/ }));
+    expect(within(screen.getByRole("dialog", { name: /دجاج بالزبدة/ }))
+      .getByRole("button", { name: /زيادة دجاج/ })).toBeInTheDocument();
+    ui.unmount();
+    const enabled = {
+      ...catalog,
+      products: catalog.products.map((item) =>
+        item.id === "extra-chicken" ? { ...item, sellStandalone: true } : item),
+    };
+    render(<PosWorkspace catalog={enabled} />);
+    expect(within(screen.getByRole("region", { name: "الكتالوج التجريبي" }))
+      .getByRole("button", { name: /زيادة دجاج/ })).toBeInTheDocument();
+  });
+
 });

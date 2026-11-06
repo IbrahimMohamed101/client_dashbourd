@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { Minus, Plus, Search, ShoppingBasket } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Minus, Plus, Search, ShoppingBasket, Pencil, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,9 +25,21 @@ import {
 import type { PublishedPosCatalog } from "./catalogApi";
 import { fetchPosQuote, type PosQuote } from "./quoteApi";
 import { parseApiError } from "@/lib/apiErrors";
+import {
+  cartLineId, readPosCartDraft, writePosCartDraft,
+  MAX_CART_LINES, MAX_LINE_QUANTITY,
+  type PosSelection, type PosCartLine,
+} from "./posCartDraft";
 
-type Selection = { product: Product; variant: Variant; addons: Addon[] };
-type CartLine = Selection & { id: string; quantity: number };
+type Selection = PosSelection;
+type CartLine = PosCartLine;
+
+function defaultVariant(product: Product, channel: Channel): Variant | undefined {
+  const priced = product.variants.filter((item) => item.prices[channel] != null);
+  return priced.find((item) => item.id === "150" || /(^|\D)150(\D|$)/.test(item.label)) ?? priced[0];
+}
+
+type UndoState = { previous: CartLine[]; revision: number; channel: string; expiresAt: number };
 
 function cartTotal(cart: CartLine[], channel: Channel) {
   let total = 0;
@@ -45,17 +57,25 @@ function ProductOptions({
   availableAddons,
   onClose,
   onAdd,
+  initial,
 }: {
   product: Product;
   channel: Channel;
   availableAddons: Addon[];
   onClose: () => void;
-  onAdd: (selection: Selection) => void;
+  onAdd: (selection: Selection, quantity: number) => void;
+  initial?: CartLine;
 }) {
   const [variant, setVariant] = useState(() =>
-    product.variants.length === 1 ? product.variants[0] : undefined
+    initial ? product.variants.find((item) => item.id === initial.variant.id)
+      ?? defaultVariant(product, channel) : defaultVariant(product, channel)
   );
-  const [addons, setAddons] = useState<Addon[]>([]);
+  const [addons, setAddons] = useState<Addon[]>(() =>
+    initial?.addons.map((old) => availableAddons.find((item) => item.id === old.id)).filter(
+      (item): item is Addon => item != null
+    ) ?? []
+  );
+  const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const amount = variant ? previewUnitPrice(variant, addons, channel) : null;
 
   return (
@@ -69,7 +89,7 @@ function ProductOptions({
         <DialogHeader>
           <DialogTitle>{product.name}</DialogTitle>
           <DialogDescription>
-            اختر الحجم والإضافات من أسعار المعاينة للقناة الحالية.
+            {initial ? "عدّل الحجم والإضافات والكمية ثم احفظ السطر." : "الحجم الافتراضي 150 جم عند توافره. اختر الإضافات والكمية."}
           </DialogDescription>
         </DialogHeader>
         <div
@@ -101,19 +121,19 @@ function ProductOptions({
             <legend className="mb-2 font-semibold">الإضافات الاختيارية</legend>
             {availableAddons.map((addon) => {
               const price = addon.prices[channel];
-              const selected = addons.includes(addon);
+              const selected = addons.some((item) => item.id === addon.id);
               return (
                 <Button
                   key={addon.id}
                   type="button"
                   variant={selected ? "secondary" : "outline"}
                   aria-pressed={selected}
-                  disabled={price == null}
+                  disabled={price == null || (!selected && addons.length >= 10)}
                   className="min-h-12 justify-between"
                   onClick={() =>
                     setAddons((current) =>
-                      current.includes(addon)
-                        ? current.filter((item) => item !== addon)
+                      current.some((item) => item.id === addon.id)
+                        ? current.filter((item) => item.id !== addon.id)
                         : [...current, addon]
                     )
                   }
@@ -127,6 +147,22 @@ function ProductOptions({
             })}
           </fieldset>
         )}
+        <div role="group" aria-label="كمية الصنف" className="flex items-center justify-between rounded-lg border px-3 py-2">
+          <span className="font-semibold">الكمية</span>
+          <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" className="size-12"
+              aria-label="قلّل الكمية المختارة" disabled={quantity <= 1}
+              onClick={() => setQuantity((current) => Math.max(1, current - 1))}>
+              <Minus aria-hidden="true" />
+            </Button>
+            <output aria-live="polite" className="min-w-8 text-center tabular-nums">{quantity}</output>
+            <Button type="button" variant="outline" className="size-12"
+              aria-label="زِد الكمية المختارة" disabled={quantity >= MAX_LINE_QUANTITY}
+              onClick={() => setQuantity((current) => Math.min(MAX_LINE_QUANTITY, current + 1))}>
+              <Plus aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
         <DialogFooter>
           <Button
             type="button"
@@ -134,12 +170,12 @@ function ProductOptions({
             disabled={!variant || amount === null}
             onClick={() => {
               if (variant && amount !== null)
-                onAdd({ product, variant, addons });
+                onAdd({ product, variant, addons }, quantity);
             }}
           >
             {amount === null
               ? "أضف للسلة"
-              : `أضف للسلة · ${formatPreviewAmount(amount)}`}
+              : `${initial ? "حفظ التعديل" : "أضف للسلة"} · ${formatPreviewAmount(amount * quantity)}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -147,24 +183,43 @@ function ProductOptions({
   );
 }
 
-export function PosWorkspace({ catalog, operatorName = "موظف", navigation }: {
+export function PosWorkspace({ catalog, operatorName = "موظف", navigation, operatorId }: {
   catalog: PublishedPosCatalog;
   operatorName?: string;
   navigation?: ReactNode;
+  operatorId?: string | null;
 }) {
-  const [channel, setChannel] = useState<Channel>("restaurant");
+  // Read business-only draft references once per signed-in operator. No
+  // client-side total is ever considered an approved payable amount.
+  const [restored] = useState(() => readPosCartDraft(operatorId, catalog));
+  const [channel, setChannel] = useState<Channel>(restored?.channel ?? "restaurant");
   const [pendingChannel, setPendingChannel] = useState<Channel | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
   const [search, setSearch] = useState("");
   const [product, setProduct] = useState<Product | null>(null);
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [cartRevision, setCartRevision] = useState(catalog.revision);
-  const [serviceMode, setServiceMode] = useState<"dine-in" | "takeaway" | "delivery">("takeaway");
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
+  const [cart, setCart] = useState<CartLine[]>(restored?.lines ?? []);
+  const [cartRevision, setCartRevision] = useState(restored?.revision ?? catalog.revision);
+  const [serviceMode, setServiceMode] = useState<"dine-in" | "takeaway" | "delivery">(restored?.serviceMode ?? "takeaway");
+  const [undoState, setUndoState] = useState<UndoState | null>(null);
+  const [cartNotice, setCartNotice] = useState<string | null>(null);
+  const [lastAddedId, setLastAddedId] = useState<string | null>(null);
   const [externalOrderNumber, setExternalOrderNumber] = useState("");
   const [appPaymentStatus, setAppPaymentStatus] = useState<"paid" | "cash">("paid");
   const [quoteReview, setQuoteReview] = useState<{ key: string; data: PosQuote } | null>(null);
   const [quoteFailure, setQuoteFailure] = useState<{ key: string; message: string } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+
+  useEffect(() => {
+    writePosCartDraft(operatorId, { revision: cartRevision, channel, serviceMode, lines: cart });
+  }, [operatorId, cartRevision, channel, serviceMode, cart]);
+
+  useEffect(() => {
+    if (!undoState) return;
+    const timer = window.setTimeout(() => setUndoState(null),
+      Math.max(0, undoState.expiresAt - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [undoState]);
 
   const { categories, products } = catalog;
   const channels = catalog.channels ?? defaultChannels;
@@ -229,12 +284,13 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
         const revisedVariant = revisedProduct?.variants.find((item) => item.id === line.variant.id);
         const revisedAddons = line.addons.map((addon) => {
           const updated = products.find((item) => item.id === addon.id && item.category === "addons");
-          return updated && updated.variants.length === 1
+          return updated && updated.active !== false && updated.variants.length === 1
             ? { id: updated.id, name: updated.name, prices: updated.variants[0].prices }
             : null;
         });
         const valid = Boolean(
-          revisedProduct && revisedVariant && revisedVariant.prices[channel] != null
+          revisedProduct && revisedProduct.active !== false && revisedVariant && revisedVariant.prices[channel] != null
+          && (revisedProduct.category !== "addons" || revisedProduct.sellStandalone === true)
           && revisedAddons.every((addon) => addon && addon.prices[channel] != null
             && (revisedProduct?.allowedAddonIds === undefined || revisedProduct.allowedAddonIds.includes(addon.id)))
           && (!line.addons.length || revisedProduct?.hasAddons)
@@ -257,6 +313,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
     : null;
   function acceptReprice() {
     if (!canAcceptReprice) return;
+    setUndoState(null);
     setCart(revisedLines.map(({ line, nextSelection }) => ({
       ...line,
       ...nextSelection!,
@@ -270,6 +327,8 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
 
   const searchTerm = search.trim();
   const visibleProducts = products.filter((item) =>
+    item.active !== false && (item.category !== "addons" || item.sellStandalone === true)
+  ).filter((item) =>
     searchTerm
       ? item.name.includes(searchTerm)
       : category === null || item.category === category
@@ -278,49 +337,100 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
   function chooseChannel(next: Channel) {
     if (next === channel || staleCart) return;
     if (cart.length) setPendingChannel(next);
-    else setChannel(next);
+    else {
+      setChannel(next);
+      setUndoState(null);
+      setCartNotice(null);
+    }
   }
 
-  function addToCart(selection: Selection) {
-    if (staleCart) return;
+  function applySelection(selection: Selection, quantity = 1, editId: string | null = null) {
+    if (staleCart || !Number.isSafeInteger(quantity)
+      || quantity < 1 || quantity > MAX_LINE_QUANTITY) return;
+    const id = cartLineId(selection);
+    const originalIndex = editId ? cart.findIndex((line) => line.id === editId) : -1;
+    if (editId && originalIndex < 0) return;
+    const others = editId ? cart.filter((line) => line.id !== editId) : [...cart];
+    const matching = others.find((line) => line.id === id);
+    if (matching && matching.quantity + quantity > MAX_LINE_QUANTITY) {
+      setCartNotice("الحد الأقصى 99 وحدة لكل صنف بالحجم والإضافات نفسها.");
+      return;
+    }
+    if (!matching && others.length >= MAX_CART_LINES) {
+      setCartNotice("الحد الأقصى 50 سطرًا في السلة. راجع الأصناف الحالية.");
+      return;
+    }
+    const next = matching
+      ? others.map((line) => line.id === id ? { ...line, quantity: line.quantity + quantity } : line)
+      : [...others];
+    if (!matching) {
+      next.splice(originalIndex < 0 ? next.length : Math.min(originalIndex, next.length),
+        0, { ...selection, id, quantity });
+    }
+    setCart(next);
+    setLastAddedId(id);
     if (!cart.length) setCartRevision(catalog.revision);
-    const { product, variant, addons } = selection;
-    const id = [
-      product.id,
-      variant.id,
-      ...addons.map((addon) => addon.id).sort(),
-    ].join("/");
-    setCart((current) =>
-      current.some((line) => line.id === id)
-        ? current.map((line) =>
-            line.id === id ? { ...line, quantity: line.quantity + 1 } : line
-          )
-        : [...current, { ...selection, id, quantity: 1 }]
-    );
+    setCartNotice(null);
+    setUndoState(null);
+    setQuoteReview(null);
+    setQuoteFailure(null);
     setProduct(null);
+    setEditingLineId(null);
   }
 
   function chooseProduct(item: Product) {
-    const variant = item.variants[0];
-    if (
-      item.variants.length === 1 &&
-      !item.hasAddons &&
-      variant.prices[channel] != null
-    ) {
-      addToCart({ product: item, variant, addons: [] });
+    const variant = defaultVariant(item, channel);
+    if (item.variants.length === 1 && !item.hasAddons && variant) {
+      applySelection({ product: item, variant, addons: [] });
     } else {
+      setEditingLineId(null);
       setProduct(item);
     }
   }
 
+  function removeWithUndo(next: CartLine[]) {
+    if (next.length === cart.length) return;
+    setUndoState({
+      previous: cart,
+      revision: cartRevision,
+      channel,
+      expiresAt: Date.now() + 5000,
+    });
+    setCart(next);
+    setLastAddedId(null);
+    setQuoteReview(null);
+    setQuoteFailure(null);
+    setCartNotice(null);
+  }
+
   function changeQuantity(id: string, delta: number) {
-    setCart((current) =>
-      current
-        .map((line) =>
-          line.id === id ? { ...line, quantity: line.quantity + delta } : line
-        )
-        .filter((line) => line.quantity > 0)
-    );
+    if (staleCart) return;
+    const line = cart.find((item) => item.id === id);
+    if (!line) return;
+    if (line.quantity + delta <= 0) {
+      removeWithUndo(cart.filter((item) => item.id !== id));
+      return;
+    }
+    if (line.quantity + delta > MAX_LINE_QUANTITY) {
+      setCartNotice("الحد الأقصى 99 وحدة لكل صنف.");
+      return;
+    }
+    setCart(cart.map((item) => item.id === id
+      ? { ...item, quantity: item.quantity + delta } : item));
+    setUndoState(null);
+    setCartNotice(null);
+    setQuoteReview(null);
+    setQuoteFailure(null);
+  }
+
+  function undoRemoval() {
+    if (!undoState || Date.now() > undoState.expiresAt
+      || undoState.revision !== cartRevision || undoState.channel !== channel) return;
+    setCart(undoState.previous);
+    setLastAddedId(null);
+    setUndoState(null);
+    setQuoteReview(null);
+    setQuoteFailure(null);
   }
 
   return (
@@ -423,7 +533,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                   {" — "}الجديد: {newUnit == null ? "لم يعد متاحًا" : formatPreviewAmount(newUnit * line.quantity)}
                 </span>
                 {newUnit === null && (
-                  <Button size="sm" variant="outline" onClick={() => setCart((list) => list.filter((item) => item.id !== line.id))}>
+                  <Button size="sm" variant="outline" onClick={() => removeWithUndo(cart.filter((item) => item.id !== line.id))}>
                     حذف الصنف غير المتاح
                   </Button>
                 )}
@@ -439,7 +549,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
               تأكيد الأسعار الجديدة
             </Button>
             <Button type="button" variant="outline" className="min-h-11"
-              onClick={() => { setProduct(null); setPendingChannel(null); setCart([]); }}>
+              onClick={() => { setProduct(null); setPendingChannel(null); removeWithUndo([]); }}>
               إلغاء السلة
             </Button>
           </div>
@@ -550,13 +660,23 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                 type="button"
                 variant="ghost"
                 className="ms-auto min-h-12"
-                onClick={() => setCart([])}
+                onClick={() => removeWithUndo([])}
               >
                 مسح السلة
               </Button>
             )}
           </div>
           <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
+            {undoState && !staleCart && (
+              <div role="status" className="mb-2 flex items-center justify-between gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm">
+                <span>تم حذف صنف أو تفريغ السلة. التراجع متاح لمدة 5 ثوانٍ.</span>
+                <Button type="button" variant="outline" aria-label="تراجع عن الحذف"
+                  className="min-h-12 shrink-0" onClick={undoRemoval}>
+                  <Undo2 aria-hidden="true" /> تراجع
+                </Button>
+              </div>
+            )}
+            {cartNotice && <p role="alert" className="mb-2 text-sm text-destructive">{cartNotice}</p>}
             {channel !== "restaurant" && (
               <div className="mb-3 grid gap-2 rounded-xl bg-muted/50 p-3">
                 <label className="grid gap-1 text-sm">
@@ -595,7 +715,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                     channel
                   );
                   return (
-                    <li key={line.id} className="grid gap-2 py-3">
+                    <li key={line.id} className={"grid gap-2 rounded-lg py-3 transition-colors " + (lastAddedId === line.id ? "bg-primary/10" : "")}>
                       <div className="flex items-start justify-between gap-2 text-sm font-semibold">
                         <span>{name}</span>
                         <span className="shrink-0">
@@ -615,7 +735,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                           variant="outline"
                           className="size-12"
                           aria-label={`زِد كمية ${name}`}
-                          disabled={staleCart}
+                          disabled={staleCart || line.quantity >= MAX_LINE_QUANTITY}
                           onClick={() => changeQuantity(line.id, 1)}
                         >
                           <Plus />
@@ -628,9 +748,23 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                           variant="outline"
                           className="size-12"
                           aria-label={`قلّل كمية ${name}`}
+                          disabled={staleCart}
                           onClick={() => changeQuantity(line.id, -1)}
                         >
                           <Minus />
+                        </Button>
+                        <Button type="button" variant="outline" className="min-h-12 gap-1"
+                          aria-label={`تعديل ${name}`} disabled={staleCart}
+                          onClick={() => {
+                            setEditingLineId(line.id);
+                            setProduct(line.product);
+                          }}>
+                          <Pencil aria-hidden="true" className="size-4" /> تعديل
+                        </Button>
+                        <Button type="button" variant="ghost" className="size-12"
+                          aria-label={`احذف ${name}`} disabled={staleCart}
+                          onClick={() => removeWithUndo(cart.filter((item) => item.id !== line.id))}>
+                          <Trash2 aria-hidden="true" className="size-4" />
                         </Button>
                       </div>
                     </li>
@@ -694,8 +828,10 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
           availableAddons={availableAddons.filter((addon) =>
             product.allowedAddonIds === undefined || product.allowedAddonIds.includes(addon.id)
           )}
-          onClose={() => setProduct(null)}
-          onAdd={addToCart}
+          key={editingLineId ?? product.id}
+          initial={cart.find((line) => line.id === editingLineId)}
+          onClose={() => { setProduct(null); setEditingLineId(null); }}
+          onAdd={(selection, quantity) => applySelection(selection, quantity, editingLineId)}
         />
       )}
       {pendingChannel && !staleCart && (
@@ -731,6 +867,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation }:
                   if (!pendingChannel || nextTotal === null) return;
                   setChannel(pendingChannel);
                   setPendingChannel(null);
+                  setUndoState(null);
                 }}
               >
                 تأكيد تغيير القناة
