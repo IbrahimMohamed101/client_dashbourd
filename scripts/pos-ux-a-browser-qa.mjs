@@ -139,6 +139,24 @@ try {
     await page.getByRole("dialog", { name: "تغيير قناة البيع" }).waitFor();
     await page.getByRole("button", { name: "تأكيد تغيير القناة" }).click();
     await cart.getByText("سلة HungerStation").waitFor();
+    // Phase B: edit a quick-added item, undo removal and restore the
+    // cashier-scoped draft after a full reload. Only mocked local APIs.
+    await cart.getByRole("button", { name: "تعديل مياه عبوة" }).click();
+    const editing = page.getByRole("dialog", { name: /مياه/ });
+    await editing.getByRole("button", { name: "زِد الكمية المختارة" }).click();
+    await editing.getByRole("button", { name: /حفظ التعديل/ }).click();
+    assert.match(await cart.getByRole("listitem").innerText(), /8\.00/,
+      "Editing quantity must reprice 2 × 4.00 HungerStation water");
+    await cart.getByRole("button", { name: "احذف مياه عبوة" }).click();
+    assert.equal(await cart.getByRole("listitem").count(), 0);
+    await cart.getByRole("button", { name: "تراجع عن الحذف" }).click();
+    assert.match(await cart.getByRole("listitem").innerText(), /8\.00/,
+      "Undo must restore the original cart line within five seconds");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await cart.getByText("سلة HungerStation").waitFor();
+    assert.match(await cart.getByRole("listitem").innerText(), /8\.00/,
+      "Session reload must restore cashier's published-revision cart");
+    assert.equal(await pay.isDisabled(), true, "Restored cart cannot enable payment");
     const updatedBox = await pay.boundingBox();
     assert.ok(updatedBox && updatedBox.y + updatedBox.height <= viewport.height + 1,
       "Payment footer must remain visible after changing channel");
