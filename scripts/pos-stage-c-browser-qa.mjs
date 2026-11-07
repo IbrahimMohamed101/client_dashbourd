@@ -15,7 +15,7 @@ const initialCatalog = {
   channels: [{ id: "restaurant", label: "المطعم" }, { id: "hungerstation", label: "HungerStation" }, { id: "keeta", label: "Keeta" }],
   categories: [{ id: "meals", label: "الوجبات" }, { id: "drinks", label: "المشروبات" }],
   products: [
-    { id: "butter", name: "دجاج بالزبدة", category: "meals", active: true, variants: [
+    { id: "butter", name: "دجاج بالزبدة", category: "meals", active: true, hasAddons: true, variants: [
       { id: "100", label: "100 جم", prices: { restaurant: 2400, hungerstation: 2800, keeta: 2700 } },
       { id: "150", label: "150 جم", prices: { restaurant: 3200, hungerstation: 3600, keeta: 3500 } },
       { id: "200", label: "200 جم", prices: { restaurant: 3900, hungerstation: 4400, keeta: 4200 } },
