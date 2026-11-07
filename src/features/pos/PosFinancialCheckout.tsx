@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { posCatalogKey } from "./catalogApi";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +29,7 @@ export function PosFinancialCheckout({
   onClose: () => void;
   onSale: (invoice: PosInvoice) => void;
 }) {
+  const queryClient = useQueryClient();
   const [method, setMethod] = useState<"cash" | "network">("cash");
   const [receivedText, setReceivedText] = useState(
     (quote.totals.grossHalalas / 100).toFixed(2));
@@ -105,7 +108,11 @@ export function PosFinancialCheckout({
   async function handleBack() {
     if (busy || inFlight.current) return;
     const pending = attempt.current ?? readPending();
-    if (!pending) { onClose(); return; }
+    if (!pending) {
+      if (menuConflict) void queryClient.invalidateQueries({ queryKey: posCatalogKey });
+      onClose();
+      return;
+    }
     const outcome = await settlePending(pending);
     if (outcome === "cleared") onClose();
   }
