@@ -140,7 +140,7 @@ function CatalogEditor({
     ? priceCopySource : channels[0]?.id ?? "";
   const effectiveCopyTarget = channels.some((item) => item.id === priceCopyTarget && item.id !== effectiveCopySource)
     ? priceCopyTarget : channels.find((item) => item.id !== effectiveCopySource)?.id ?? "";
-  const validMarkup = /^(?:\\d{1,3})(?:\\.\\d{1,2})?$/.test(priceCopyMarkup)
+  const validMarkup = /^(?:\d{1,3})(?:\.\d{1,2})?$/.test(priceCopyMarkup)
     && Number(priceCopyMarkup) <= 300;
   const copyPreview = copyChannelPrices(
     edit, effectiveCopySource, effectiveCopyTarget,
