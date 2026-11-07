@@ -36,7 +36,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <div className="gap-3 hover:bg-transparent">
-                <img src="logo.png" alt="logo" className="h-8 w-8" />
+                <img src="/logo.png" alt="شعار بيسك دايت" className="h-8 w-8 object-contain" />
                 <span className="text-base font-bold text-primary dark:text-foreground">
                   بيسك دايت
                 </span>

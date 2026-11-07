@@ -120,6 +120,34 @@ describe("POS stage C manager interaction", () => {
     expect(tikka?.variants[0].prices.hungerstation).toBe(2800);
   });
 
+  it("requires opt-in before filling a channel that has never offered the product", async () => {
+    const published = baseCatalog();
+    for (const variant of published.products[0].variants) variant.prices.keeta = null;
+    vi.mocked(fetchPosManager).mockResolvedValue({
+      revision: 7, publishedRevision: 7, published, draft: null,
+    });
+    const user = userEvent.setup();
+    mount();
+    await screen.findByRole("button", { name: "جدول الأسعار" });
+    await user.click(screen.getByRole("button", { name: "جدول الأسعار" }));
+    await user.type(screen.getByRole("searchbox", { name: "بحث في جدول أسعار الكاشير" }), "دجاج بالزبدة");
+    await user.click(screen.getByRole("button", { name: "نسخ أسعار قناة" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "قناة وجهة الأسعار" }), "keeta");
+    expect(screen.getByText(/3 حجم غير مسعّر لن يتاح/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "تطبيق على المسودة" })).toBeDisabled();
+    await user.click(screen.getByRole("checkbox", { name: "الموافقة على إتاحة أحجام غير مسعرة" }));
+    expect(screen.getByText(/1 صنف سيصبح متاحًا لأول مرة/)).toBeInTheDocument();
+    const preview = within(screen.getByRole("region", { name: "معاينة نسخ الأسعار" }));
+    expect(preview.getAllByRole("row")).toHaveLength(4);
+    expect(preview.getAllByText("إتاحة جديدة")).toHaveLength(3);
+    await user.clear(screen.getByRole("spinbutton", { name: "نسبة زيادة الأسعار" }));
+    await user.type(screen.getByRole("spinbutton", { name: "نسبة زيادة الأسعار" }), "15");
+    await user.selectOptions(screen.getByRole("combobox", { name: "تقريب الأسعار" }), "half");
+    expect(preview.getByText("28.00 ر.س")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "تطبيق على المسودة" }));
+    expect(vi.mocked(savePosDraft)).not.toHaveBeenCalled();
+  });
+
   it("copies selected product as hidden with a remapped default and manages addon restrictions", async () => {
     const published = baseCatalog();
     published.products[0].defaultVariantId = "150";

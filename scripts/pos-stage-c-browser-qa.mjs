@@ -18,7 +18,7 @@ const initialCatalog = {
     { id: "butter", name: "دجاج بالزبدة", category: "meals", active: true, hasAddons: true, variants: [
       { id: "100", label: "100 جم", prices: { restaurant: 2400, hungerstation: 2800, keeta: 2700 } },
       { id: "150", label: "150 جم", prices: { restaurant: 3200, hungerstation: 3600, keeta: 3500 } },
-      { id: "200", label: "200 جم", prices: { restaurant: 3900, hungerstation: 4400, keeta: 4200 } },
+      { id: "200", label: "200 جم", prices: { restaurant: 3900, hungerstation: 4400, keeta: null } },
     ] },
     { id: "water", name: "مياه", category: "drinks", active: false, variants: [
       { id: "bottle", label: "عبوة", prices: { restaurant: 300, hungerstation: 400, keeta: 400 } },
@@ -102,6 +102,11 @@ try {
       assert.equal(await review.getByRole("row").count(), 4);
       const rect = await review.boundingBox();
       assert.ok(rect && rect.width <= viewport.width, "Catalog review must fit the viewport");
+      const afterCell = review.getByRole("row").nth(1).getByRole("cell").last();
+      const afterRect = await afterCell.boundingBox();
+      assert.ok(afterRect && afterRect.x >= rect.x - 1
+        && afterRect.x + afterRect.width <= rect.x + rect.width + 1,
+        "The AFTER price column must be wholly visible without horizontal scroll");
       await page.screenshot({ path: output + "/review-" + viewport.width + "x" + viewport.height + ".png" });
       await page.getByRole("button", { name: "نشر المنيو" }).click();
       assert.equal(state.published.products[0].variants[0].prices.restaurant, 2500, "Published price should change only after publish");
@@ -129,8 +134,21 @@ try {
         "Filtered price copy must leave water untouched");
       assert.equal(state.published.products[0].variants[0].prices.keeta, 2700,
         "Cross-channel copy must not alter Keeta");
+      assert.equal(state.published.products[0].variants[2].prices.keeta, null,
+        "An unpriced Keeta size must remain unavailable without explicit consent");
+      await page.getByRole("button", { name: "جدول الأسعار" }).click();
+      await page.getByRole("button", { name: "نسخ أسعار قناة" }).click();
+      await page.getByRole("combobox", { name: "قناة وجهة الأسعار" }).selectOption("keeta");
+      await page.getByText(/1 حجم غير مسعّر لن يتاح/).waitFor();
+      assert.equal(await page.getByRole("button", { name: "تطبيق على المسودة" }).isDisabled(), true,
+        "Default copy must not list an unpriced size for sale");
+      await page.getByRole("checkbox", { name: "الموافقة على إتاحة أحجام غير مسعرة" }).check();
+      await page.getByRole("button", { name: "تطبيق على المسودة" }).click();
+      assert.equal(state.published.products[0].variants[2].prices.keeta, null,
+        "Even approved new prices require save and publish");
 
       // Phase D: clones are independent, hidden and preserve explicit addon rules.
+      await page.getByRole("button", { name: "تعديل صنف" }).click();
       await page.getByRole("button", { name: "نسخ الصنف كمسودة مخفية" }).click();
       assert.equal(await page.getByRole("textbox", { name: "اسم الصنف" }).inputValue(), "نسخة من دجاج بالزبدة");
       assert.equal(await page.getByRole("checkbox", { name: "يظهر في الكاشير بعد النشر" }).isChecked(), false);
