@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { parseApiError } from "@/lib/apiErrors";
 import { getPosCatalogChanges } from "./catalogChangeReview";
+import { copyChannelPrices, duplicateDraftProduct, type PriceCopyMode } from "./catalogBulkOps";
 import {
   channels as defaultChannels,
   type PosChannel,
@@ -118,6 +119,11 @@ function CatalogEditor({
   const [error, setError] = useState("");
   const [editorView, setEditorView] = useState<"individual" | "bulk">("individual");
   const [bulkChannel, setBulkChannel] = useState<Channel>("restaurant");
+  const [showAllChannels, setShowAllChannels] = useState(false);
+  const [priceCopySource, setPriceCopySource] = useState<Channel>("restaurant");
+  const [priceCopyTarget, setPriceCopyTarget] = useState<Channel>("hungerstation");
+  const [priceCopyMode, setPriceCopyMode] = useState<PriceCopyMode>("missing");
+  const [priceCopyDialog, setPriceCopyDialog] = useState(false);
   const [newChannelId, setNewChannelId] = useState("");
   const [newChannelLabel, setNewChannelLabel] = useState("");
   const channels = edit.channels;
@@ -126,6 +132,14 @@ function CatalogEditor({
     (!search || item.name.toLocaleLowerCase().includes(search)
       || edit.categories.some((entry) => entry.id === item.category && entry.label.toLocaleLowerCase().includes(search)))
     && (visibilityFilter === "all" || (visibilityFilter === "visible" ? item.active !== false : item.active === false))
+  );
+  const effectiveCopySource = channels.some((item) => item.id === priceCopySource)
+    ? priceCopySource : channels[0]?.id ?? "";
+  const effectiveCopyTarget = channels.some((item) => item.id === priceCopyTarget && item.id !== effectiveCopySource)
+    ? priceCopyTarget : channels.find((item) => item.id !== effectiveCopySource)?.id ?? "";
+  const copyPreview = copyChannelPrices(
+    edit, effectiveCopySource, effectiveCopyTarget,
+    new Set(visibleProducts.map((item) => item.id)), priceCopyMode,
   );
   const reviewChanges = data.draft ? getPosCatalogChanges(data.published, data.draft) : [];
   const product =
@@ -260,6 +274,50 @@ function CatalogEditor({
             <Button variant="outline" onClick={() => setZeroPriceDialog(false)}>مراجعة الأسعار</Button>
             <Button onClick={() => { setZeroPriceDialog(false); save.mutate(); }}
               disabled={busy}>تأكيد حفظ سعر صفر</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={priceCopyDialog} onOpenChange={setPriceCopyDialog}>
+        <DialogContent dir="rtl" className="text-right">
+          <DialogHeader>
+            <DialogTitle>نسخ أسعار بين القنوات</DialogTitle>
+            <DialogDescription>
+              النسخ يؤثر على الأصناف الظاهرة في البحث فقط. الأسعار غير المسعّرة في قناة المصدر لن تُنسخ أو تمسح أسعار الوجهة.
+              التغييرات تبقى محلية حتى حفظ المسودة ثم نشرها.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <label className="grid gap-1 text-sm">قناة المصدر
+              <select className={selectStyle} aria-label="قناة مصدر الأسعار" value={effectiveCopySource}
+                onChange={(event) => setPriceCopySource(event.target.value)}>
+                {channels.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">قناة الوجهة
+              <select className={selectStyle} aria-label="قناة وجهة الأسعار" value={effectiveCopyTarget}
+                onChange={(event) => setPriceCopyTarget(event.target.value)}>
+                {channels.filter((item) => item.id !== effectiveCopySource)
+                  .map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">طريقة النسخ
+              <select className={selectStyle} aria-label="طريقة نسخ الأسعار" value={priceCopyMode}
+                onChange={(event) => setPriceCopyMode(event.target.value as PriceCopyMode)}>
+                <option value="missing">ملء الأسعار الفارغة فقط</option>
+                <option value="overwrite">استبدال الأسعار الموجودة</option>
+              </select>
+            </label>
+            <p role="status" className="rounded-lg border bg-muted p-3 text-sm">
+              {copyPreview.changed} سعر سيتغير من أصل {visibleProducts.length} صنف مطابق للبحث.
+              {priceCopyMode === "overwrite" ? " ستُستبدل الأسعار الموجودة في قناة الوجهة." : " لن تتغير الأسعار الموجودة."}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPriceCopyDialog(false)}>إلغاء</Button>
+            <Button type="button" disabled={busy || copyPreview.changed === 0}
+              onClick={() => { update(copyPreview.catalog); setPriceCopyDialog(false); }}>
+              تطبيق على المسودة
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
