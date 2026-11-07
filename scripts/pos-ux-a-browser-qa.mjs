@@ -231,8 +231,11 @@ try {
       "Never allow invoice preview before a server quote");
     await cart.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }).click();
     await reviewButton.waitFor();
+    for (let attempt = 0; attempt < 40 && await reviewButton.isDisabled(); attempt += 1) {
+      await page.waitForTimeout(100);
+    }
     assert.equal(await reviewButton.isEnabled(), true,
-      "A verified synthetic server quote should permit review");
+      "A verified synthetic server quote should permit review even if F quote was denied");
     await reviewButton.click();
     const checkout = page.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ });
     await checkout.getByText(/الإجمالي المبدئي من السيرفر/).waitFor();
