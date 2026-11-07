@@ -243,6 +243,9 @@ try {
       "Checkout review must remain within the screen on every viewport");
     // The confirmation actions must stay visible even as the line-items section scrolls.
     const actions = checkout.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ });
+    await checkout.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+    });
     const before = await actions.boundingBox();
     assert.ok(before && before.y + before.height <= viewport.height,
       "Checkout action clipped at " + viewport.width + "x" + viewport.height);
@@ -252,7 +255,8 @@ try {
     const after = await actions.boundingBox();
     assert.ok(after && Math.abs(after.y - before.y) < 2
       && after.y + after.height <= viewport.height,
-      "Checkout actions must remain fixed outside the scrolling content");
+      "Checkout actions must remain fixed outside the scrolling content: "
+        + JSON.stringify({ before, after, viewport }));
     const close = checkout.getByRole("button", { name: "إغلاق النافذة" });
     assert.ok(await close.isVisible(), "POS review close action must have an Arabic accessible label");
     await checkout.getByRole("button", { name: "رجوع للسلة" }).click();
