@@ -93,11 +93,11 @@ export function PosFinancialCheckout({
         clearPending();
         return "cleared";
       }
-      setFailed("البيع السابق لم يُحسم. اضغط «تحقق مرة أخرى» قبل أي بيع جديد.");
+      setFailed("البيع السابق لم يُحسم. اضغط «إلغاء المحاولة» قبل أي بيع جديد.");
       setLocked(true);
       return "blocked";
     } catch {
-      setFailed("تعذر الاتصال للتأكد من العملية السابقة. لا تُصدر فاتورة أخرى. تحقق مرة أخرى.");
+      setFailed("تعذر الاتصال للتأكد من العملية السابقة. لا تُصدر فاتورة أخرى. أعد المحاولة عند عودة الاتصال.");
       setLocked(true);
       return "blocked";
     } finally {
@@ -177,7 +177,7 @@ export function PosFinancialCheckout({
       } else {
         setLocked(true);
         setFailed(error.code === "POS_OPERATION_PENDING"
-          ? "عملية البيع السابقة قيد المعالجة. اضغط «تحقق مرة أخرى» أو أعد المحاولة."
+          ? "عملية البيع السابقة قيد المعالجة. اضغط «إلغاء المحاولة» أو أعد المحاولة."
           : "نتيجة البيع غير مؤكدة. أعد المحاولة أو تحقق من العملية قبل تغيير السلة.");
       }
     } finally {
@@ -284,7 +284,7 @@ export function PosFinancialCheckout({
               onClick={() => {
                 const current = attempt.current ?? readPending();
                 if (current) void settlePending(current);
-              }}>تحقق مرة أخرى</Button>
+              }}>إلغاء المحاولة</Button>
           )}
           {!menuConflict && <Button type="button" className="min-h-14"
             disabled={!allowed} onClick={() => void confirm()}>

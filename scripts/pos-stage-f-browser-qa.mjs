@@ -365,7 +365,7 @@ try {
       const beforeRecover = invoices.length;
       nextSaleFault = "abort-after";
       await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
-      await attemptDialog.getByRole("button", { name: "تحقق مرة أخرى" }).waitFor();
+      await attemptDialog.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
       await attemptDialog.getByRole("button", { name: "رجوع للسلة" }).click();
       await page.getByRole("dialog", { name: /الفاتورة STG-000001/ }).waitFor();
       assert.equal(invoices.length, beforeRecover + 1,
@@ -379,7 +379,7 @@ try {
       const beforeAbsent = invoices.length;
       nextSaleFault = "abort-before";
       await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
-      await attemptDialog.getByRole("button", { name: "تحقق مرة أخرى" }).waitFor();
+      await attemptDialog.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
       await attemptDialog.getByRole("button", { name: "رجوع للسلة" }).click();
       await page.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }).click();
       attemptDialog = page.getByRole("dialog", {
@@ -433,8 +433,8 @@ try {
       refundForm = await startFreshRefund();
       nextRefundFault = "abort-after";
       await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
-      await refundForm.getByRole("button", { name: "تحقق مرة أخرى" }).waitFor();
-      await refundForm.getByRole("button", { name: "إلغاء" }).click();
+      await refundForm.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
+      await refundForm.getByRole("button", { name: "إلغاء", exact: true }).click();
       await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
       assert.equal(refunds.length, 1, "refund receipt recovery must not record twice");
 
@@ -443,8 +443,8 @@ try {
       refundForm = await startFreshRefund();
       nextRefundFault = "abort-before";
       await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
-      await refundForm.getByRole("button", { name: "تحقق مرة أخرى" }).waitFor();
-      await refundForm.getByRole("button", { name: "إلغاء" }).click();
+      await refundForm.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
+      await refundForm.getByRole("button", { name: "إلغاء", exact: true }).click();
       assert.equal(refunds.length, 0, "abandoned absent refund creates no document");
       await page.reload();
       refundForm = await startFreshRefund();

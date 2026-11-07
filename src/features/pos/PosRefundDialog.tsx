@@ -108,11 +108,11 @@ export function PosRefundDialog({ invoice, operatorId, onClose, onRecorded }: {
         clearPending();
         return "cleared";
       }
-      setFailed("المرتجع السابق لم يُحسم. اضغط «تحقق مرة أخرى».");
+      setFailed("المرتجع السابق لم يُحسم. اضغط «إلغاء المحاولة».");
       setUnknown(true);
       return "blocked";
     } catch {
-      setFailed("تعذر التأكد من المرتجع السابق. لا تُسجل مرتجعًا ثانيًا؛ تحقق مرة أخرى.");
+      setFailed("تعذر التأكد من المرتجع السابق. لا تُسجل مرتجعًا ثانيًا؛ أعد المحاولة عند عودة الاتصال.");
       setUnknown(true);
       return "blocked";
     } finally {
@@ -255,7 +255,7 @@ export function PosRefundDialog({ invoice, operatorId, onClose, onRecorded }: {
             disabled={busy} onClick={() => {
               const pending = attempt.current ?? readPending();
               if (pending) void settlePending(pending);
-            }}>تحقق مرة أخرى</Button>}
+            }}>إلغاء المحاولة</Button>}
           <Button type="button" className="min-h-12" disabled={!valid || busy}
             onClick={() => void submit()}>
             {busy ? "جار تسجيل المرتجع..." : unknown ? "إعادة المحاولة" : "تسجيل المرتجع التجريبي"}
