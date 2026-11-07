@@ -26,7 +26,6 @@ import {
 import type { PublishedPosCatalog } from "./catalogApi";
 import { fetchPosQuote, type PosQuote } from "./quoteApi";
 import { validatePosCheckoutReview } from "./checkoutReview";
-import { PosCheckoutReview } from "./PosCheckoutReview";
 import { PosFinancialCheckout } from "./PosFinancialCheckout";
 import { PosInvoiceReceipt } from "./PosInvoiceReceipt";
 import { PosDiscountEditor } from "./PosDiscountEditor";
@@ -294,7 +293,6 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const [quoteFailure, setQuoteFailure] = useState<{ key: string; message: string } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [checkoutVariant, setCheckoutVariant] = useState<"legacy" | "financial" | null>(null);
   const [lineDiscountInputs, setLineDiscountInputs] = useState<Record<string, PosDiscountInput>>({});
   const [invoiceDiscountInput, setInvoiceDiscountInput] = useState<PosDiscountInput>(null);
   const [financeReview, setFinanceReview] = useState<{ key: string; data: PosFinanceQuote } | null>(null);
@@ -400,11 +398,8 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   }, [financeKey, staleCart, invalidDiscount, cart.length]);
   // An earlier open dialog may not silently reappear after a re-quote.
   useEffect(() => {
-    if ((checkoutVariant === "financial" && !verifiedFinanceQuote)
-      || (checkoutVariant === "legacy" && !verifiedQuote)) {
-      setCheckoutOpen(false);
-    }
-  }, [checkoutVariant, verifiedQuote, verifiedFinanceQuote]);
+    if (!verifiedFinanceQuote) setCheckoutOpen(false);
+  }, [verifiedFinanceQuote]);
 
   async function reviewServerPrice() {
     if (staleCart || !cart.length || total === null || quoteLoading) return;
@@ -1014,12 +1009,8 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
               {quoteLoading ? "مراجعة الأسعار..." : "مراجعة الأسعار من السيرفر"}
             </Button>
             <Button type="button" variant="outline" className="min-h-12"
-              disabled={(!verifiedFinanceQuote && !verifiedQuote)
-                || quoteLoading || financeLoading || invalidDiscount || staleCart}
-              onClick={() => {
-                setCheckoutVariant(verifiedFinanceQuote ? "financial" : "legacy");
-                setCheckoutOpen(true);
-              }}>
+              disabled={!verifiedFinanceQuote || financeLoading || invalidDiscount || staleCart}
+              onClick={() => setCheckoutOpen(true)}>
               مراجعة الطلب قبل الفاتورة
             </Button>
             <Button type="button" disabled className="min-h-14 w-full text-base">
@@ -1028,7 +1019,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           </div>
         </aside>
       </div>
-      {checkoutOpen && checkoutVariant === "financial" && verifiedFinanceQuote && (
+      {checkoutOpen && verifiedFinanceQuote && (
         <PosFinancialCheckout
           quote={verifiedFinanceQuote}
           request={financeRequest}
@@ -1040,7 +1031,6 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           onClose={() => setCheckoutOpen(false)}
           onSale={invoice => {
             setCheckoutOpen(false);
-            setCheckoutVariant(null);
             setIssuedInvoice(invoice);
             setCart([]);
             setCartRevision(catalog.revision);
@@ -1056,16 +1046,6 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
             setExternalOrderNumber("");
             setAppPaymentStatus("paid");
           }}
-        />
-      )}
-      {checkoutOpen && checkoutVariant === "legacy" && verifiedQuote && (
-        <PosCheckoutReview
-          quote={verifiedQuote}
-          channelName={channels.find((item) => item.id === channel)?.label ?? channel}
-          serviceMode={serviceMode}
-          externalOrderNumber={externalOrderNumber}
-          externalPaymentStatus={appPaymentStatus}
-          onClose={() => setCheckoutOpen(false)}
         />
       )}
       {issuedInvoice && <PosInvoiceReceipt invoice={issuedInvoice}
