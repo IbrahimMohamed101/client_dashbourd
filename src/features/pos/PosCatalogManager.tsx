@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { parseApiError } from "@/lib/apiErrors";
 import { getPosCatalogChanges } from "./catalogChangeReview";
+import { copyChannelPrices, duplicateDraftProduct, type PriceCopyMode } from "./catalogBulkOps";
 import {
   channels as defaultChannels,
   type PosChannel,
@@ -118,6 +119,11 @@ function CatalogEditor({
   const [error, setError] = useState("");
   const [editorView, setEditorView] = useState<"individual" | "bulk">("individual");
   const [bulkChannel, setBulkChannel] = useState<Channel>("restaurant");
+  const [showAllChannels, setShowAllChannels] = useState(false);
+  const [priceCopySource, setPriceCopySource] = useState<Channel>("restaurant");
+  const [priceCopyTarget, setPriceCopyTarget] = useState<Channel>("hungerstation");
+  const [priceCopyMode, setPriceCopyMode] = useState<PriceCopyMode>("missing");
+  const [priceCopyDialog, setPriceCopyDialog] = useState(false);
   const [newChannelId, setNewChannelId] = useState("");
   const [newChannelLabel, setNewChannelLabel] = useState("");
   const channels = edit.channels;
@@ -126,6 +132,14 @@ function CatalogEditor({
     (!search || item.name.toLocaleLowerCase().includes(search)
       || edit.categories.some((entry) => entry.id === item.category && entry.label.toLocaleLowerCase().includes(search)))
     && (visibilityFilter === "all" || (visibilityFilter === "visible" ? item.active !== false : item.active === false))
+  );
+  const effectiveCopySource = channels.some((item) => item.id === priceCopySource)
+    ? priceCopySource : channels[0]?.id ?? "";
+  const effectiveCopyTarget = channels.some((item) => item.id === priceCopyTarget && item.id !== effectiveCopySource)
+    ? priceCopyTarget : channels.find((item) => item.id !== effectiveCopySource)?.id ?? "";
+  const copyPreview = copyChannelPrices(
+    edit, effectiveCopySource, effectiveCopyTarget,
+    new Set(visibleProducts.map((item) => item.id)), priceCopyMode,
   );
   const reviewChanges = data.draft ? getPosCatalogChanges(data.published, data.draft) : [];
   const product =
@@ -263,6 +277,50 @@ function CatalogEditor({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={priceCopyDialog} onOpenChange={setPriceCopyDialog}>
+        <DialogContent dir="rtl" className="text-right">
+          <DialogHeader>
+            <DialogTitle>نسخ أسعار بين القنوات</DialogTitle>
+            <DialogDescription>
+              النسخ يؤثر على الأصناف الظاهرة في البحث فقط. الأسعار غير المسعّرة في قناة المصدر لن تُنسخ أو تمسح أسعار الوجهة.
+              التغييرات تبقى محلية حتى حفظ المسودة ثم نشرها.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <label className="grid gap-1 text-sm">قناة المصدر
+              <select className={selectStyle} aria-label="قناة مصدر الأسعار" value={effectiveCopySource}
+                onChange={(event) => setPriceCopySource(event.target.value)}>
+                {channels.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">قناة الوجهة
+              <select className={selectStyle} aria-label="قناة وجهة الأسعار" value={effectiveCopyTarget}
+                onChange={(event) => setPriceCopyTarget(event.target.value)}>
+                {channels.filter((item) => item.id !== effectiveCopySource)
+                  .map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">طريقة النسخ
+              <select className={selectStyle} aria-label="طريقة نسخ الأسعار" value={priceCopyMode}
+                onChange={(event) => setPriceCopyMode(event.target.value as PriceCopyMode)}>
+                <option value="missing">ملء الأسعار الفارغة فقط</option>
+                <option value="overwrite">استبدال الأسعار الموجودة</option>
+              </select>
+            </label>
+            <p role="status" className="rounded-lg border bg-muted p-3 text-sm">
+              {copyPreview.changed} سعر سيتغير من أصل {visibleProducts.length} صنف مطابق للبحث.
+              {priceCopyMode === "overwrite" ? " ستُستبدل الأسعار الموجودة في قناة الوجهة." : " لن تتغير الأسعار الموجودة."}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPriceCopyDialog(false)}>إلغاء</Button>
+            <Button type="button" disabled={busy || copyPreview.changed === 0}
+              onClick={() => { update(copyPreview.catalog); setPriceCopyDialog(false); }}>
+              تطبيق على المسودة
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
         <div>
           <p className="font-semibold">
@@ -368,20 +426,25 @@ function CatalogEditor({
                 جميع التعديلات تحفظ كمسودة، ولا تظهر للكاشير قبل النشر.
               </p>
             </div>
-            <label className="grid min-w-48 gap-1 text-sm">
-              قناة البيع
-              <select
-                className={selectStyle}
-                value={bulkChannel}
-                onChange={(event) => setBulkChannel(event.target.value as Channel)}
-              >
-                {channels.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex flex-wrap items-end gap-3">
+              {!showAllChannels && <label className="grid min-w-40 gap-1 text-sm">
+                قناة البيع
+                <select className={selectStyle} value={bulkChannel}
+                  onChange={(event) => setBulkChannel(event.target.value as Channel)}>
+                  {channels.map((item) => (
+                    <option key={item.id} value={item.id}>{item.label}</option>
+                  ))}
+                </select>
+              </label>}
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input type="checkbox" checked={showAllChannels}
+                  onChange={(event) => setShowAllChannels(event.target.checked)} />
+                عرض كل القنوات
+              </label>
+              <Button type="button" variant="outline" className="min-h-11"
+                disabled={busy || channels.length < 2 || visibleProducts.length === 0}
+                onClick={() => setPriceCopyDialog(true)}>نسخ أسعار قناة</Button>
+            </div>
           </div>
           <label className="grid gap-1 text-sm">
             بحث في جدول الأسعار
@@ -397,7 +460,9 @@ function CatalogEditor({
                   <th className="p-3">الصنف</th>
                   <th className="p-3">الحجم</th>
                   <th className="p-3">التوفر</th>
-                  <th className="p-3">السعر بالريال · {channels.find((item) => item.id === bulkChannel)?.label}</th>
+                  {(showAllChannels ? channels : channels.filter((item) => item.id === bulkChannel)).map((channel) => (
+                    <th key={channel.id} scope="col" className="min-w-44 p-3">السعر بالريال · {channel.label}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -407,40 +472,34 @@ function CatalogEditor({
                       <td className="p-3 font-semibold">{item.name}</td>
                       <td className="p-3">{variant.label}</td>
                       <td className="p-3">{item.active ? "ظاهر" : "مخفي"}</td>
-                      <td className="p-2">
-                        <Input
-                          aria-label={`سعر ${item.name} ${variant.label} في ${bulkChannel}`}
-                          className="min-h-11 w-full"
-                          dir="ltr"
-                          inputMode="decimal"
-                          placeholder="غير مسعّر"
-                          value={variant.prices[bulkChannel]}
-                          disabled={busy}
-                          onChange={(event) =>
-                            update({
-                              ...edit,
-                              products: edit.products.map((entry) =>
-                                entry.id !== item.id
-                                  ? entry
-                                  : {
-                                      ...entry,
-                                      variants: entry.variants.map((size) =>
-                                        size.id !== variant.id
-                                          ? size
-                                          : {
-                                              ...size,
-                                              prices: {
-                                                ...size.prices,
-                                                [bulkChannel]: event.target.value,
-                                              },
-                                            }
-                                      ),
-                                    }
-                              ),
-                            })
-                          }
-                        />
-                      </td>
+                      {(showAllChannels ? channels : channels.filter((channel) => channel.id === bulkChannel)).map((channel) => (
+                        <td className="p-2" key={channel.id}>
+                          <Input
+                            aria-label={`سعر ${item.name} ${variant.label} في ${channel.id}`}
+                            className="min-h-11 w-full"
+                            dir="ltr"
+                            inputMode="decimal"
+                            placeholder="غير مسعّر"
+                            value={variant.prices[channel.id] ?? ""}
+                            disabled={busy}
+                            onChange={(event) =>
+                              update({
+                                ...edit,
+                                products: edit.products.map((entry) =>
+                                  entry.id !== item.id ? entry : {
+                                    ...entry,
+                                    variants: entry.variants.map((size) =>
+                                      size.id !== variant.id ? size : {
+                                        ...size, prices: { ...size.prices, [channel.id]: event.target.value },
+                                      }
+                                    ),
+                                  }
+                                ),
+                              })
+                            }
+                          />
+                        </td>
+                      ))}
                     </tr>
                   ))
                 )}
@@ -555,6 +614,21 @@ function CatalogEditor({
           <h2 className="font-bold">بيانات الصنف وأسعاره</h2>
           {product ? (
             <>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  انسخ الصنف بأحجامه وأسعاره، وستظل النسخة مخفية حتى تُظهرها وتنشر المسودة.
+                </p>
+                <Button type="button" variant="outline"
+                  disabled={busy || edit.products.length >= 500}
+                  onClick={() => {
+                    const id = crypto.randomUUID();
+                    const copy = duplicateDraftProduct(product, id, product.variants.map(() => crypto.randomUUID()));
+                    update({ ...edit, products: [...edit.products, copy] });
+                    setSelection(id);
+                    setProductSearch("");
+                    setVisibilityFilter("all");
+                  }}>نسخ الصنف كمسودة مخفية</Button>
+              </div>
               <label className="grid gap-1 text-sm">
                 اسم الصنف
                 <Input
@@ -665,7 +739,22 @@ function CatalogEditor({
                 <fieldset className="grid gap-2 rounded-lg border p-3 text-sm">
                   <legend className="px-2 font-semibold">الإضافات المسموحة لهذا الصنف</legend>
                   <p className="text-muted-foreground">تحديد الإضافات يمنع بيع تركيبات غير مناسبة. الإضافات غير محددة القيود مسبقًا.</p>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-2">
+                     <Button type="button" variant="outline" size="sm"
+                       onClick={() => updateProduct({ ...product, allowedAddonIds: undefined })}>
+                       السماح بكل الإضافات
+                     </Button>
+                     <Button type="button" variant="outline" size="sm"
+                       onClick={() => updateProduct({ ...product, allowedAddonIds: [] })}>
+                       منع كل الإضافات
+                     </Button>
+                   </div>
+                   <p role="status" className="text-xs text-muted-foreground">
+                     {product.allowedAddonIds === undefined
+                       ? "جميع الإضافات مسموحة لهذا الصنف"
+                       : `${product.allowedAddonIds.length} إضافة مسموحة لهذا الصنف`}
+                   </p>
+                   <div className="flex flex-wrap gap-4">
                     {edit.products.filter((addon) => addon.category === "addons").map((addon) => (
                       <label key={addon.id} className="flex min-h-10 items-center gap-2">
                         <input

@@ -44,6 +44,16 @@ Scope: STAGING ONLY. Never enable financial production writes until readiness ga
 7. **Compliance**: business tax profile, ZATCA requirements, printer configuration, invoice tests and accountant sign-off before live use.
 8. **CI/E2E**: run full dashboard and backend suites + Chromium desktop/tablet/mobile on a disposable isolated Staging dataset, no production credentials or mutations.
 
+## Staging UX phases — update 2026-11-07
+
+- **A**: cashier full-screen workspace, responsive cart, category/search flow.
+- **B**: cart editing, per-line quantity, safe session restoration and selected add-on feedback.
+- **C**: searchable menu manager, draft vs published diff, per-channel prices, configurable default variant.
+- **D (PR #82, preview implementation)**: all-channel price matrix, channel-to-channel bulk copy limited to searched rows (fill blanks or explicit overwrite; blank source never erases destination), copy product with new IDs and remapped default variant starting hidden, bulk allow/deny addons.
+- **Verification for D**: isolated Vitest helper and manager tests plus extended four-viewport Chromium synthetic fixture. Test results must be read from PR #82 Actions before calling D accepted; use no production accounts.
+- **D limitation**: copying prices does **not** activate sales. Zero price still requires confirmation when saving; drafts need explicit publish and use the same revision guard. Changing addon eligibility remains global per product, not automatically per channel; any per-channel rule would require a new PRD/backend contract.
+- **Next operational dependencies**: full Staging isolation certification, backend quote, returns, subscriptions, closing and ZATCA remain blocked until their dedicated gates and permissions are satisfied.
+
 ## Engineering rules
 - This PR targets `codex/pos-staging-preview`, not `main`.
 - Keep `POS` purchase/refund mutations disabled until the above gates pass.

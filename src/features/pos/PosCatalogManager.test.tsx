@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PosCatalogManager } from "./PosCatalogManager";
@@ -88,4 +88,59 @@ describe("POS stage C manager interaction", () => {
     expect(review.getByText("25.00 ر.س")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "نشر المنيو" })).toBeEnabled();
   });
+  it("shows every channel together without mixing channel prices", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByRole("button", { name: "جدول الأسعار" });
+    await user.click(screen.getByRole("button", { name: "جدول الأسعار" }));
+    await user.click(screen.getByRole("checkbox", { name: "عرض كل القنوات" }));
+    expect(screen.getByRole("textbox", { name: "سعر دجاج بالزبدة 100 جم في restaurant" })).toHaveValue("24.00");
+    expect(screen.getByRole("textbox", { name: "سعر دجاج بالزبدة 100 جم في hungerstation" })).toHaveValue("28.00");
+    expect(screen.getByRole("textbox", { name: "سعر دجاج بالزبدة 100 جم في keeta" })).toHaveValue("27.00");
+  });
+
+  it("previews and copies only searched product prices into a draft", async () => {
+    const user = userEvent.setup();
+    mount();
+    await screen.findByRole("button", { name: "جدول الأسعار" });
+    await user.click(screen.getByRole("button", { name: "جدول الأسعار" }));
+    await user.type(screen.getByRole("searchbox", { name: "بحث في جدول أسعار الكاشير" }), "دجاج بالزبدة");
+    await user.click(screen.getByRole("button", { name: "نسخ أسعار قناة" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "طريقة نسخ الأسعار" }), "overwrite");
+    expect(screen.getByText(/3 سعر سيتغير/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "تطبيق على المسودة" }));
+    expect(vi.mocked(savePosDraft)).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "حفظ المسودة" }));
+    await waitFor(() => expect(vi.mocked(savePosDraft)).toHaveBeenCalledTimes(1));
+    const saved = vi.mocked(savePosDraft).mock.calls[0][1];
+    const butter = saved.products.find((item) => item.id === "butter");
+    const tikka = saved.products.find((item) => item.id === "tikka");
+    expect(butter?.variants.map((variant) => variant.prices.hungerstation)).toEqual([2400, 3200, 3900]);
+    expect(butter?.variants[0].prices.keeta).toBe(2700);
+    expect(tikka?.variants[0].prices.hungerstation).toBe(2800);
+  });
+
+  it("copies selected product as hidden with a remapped default and manages addon restrictions", async () => {
+    const published = baseCatalog();
+    published.products[0].defaultVariantId = "150";
+    vi.mocked(fetchPosManager).mockResolvedValue({
+      revision: 7, publishedRevision: 7, published, draft: null,
+    });
+    const user = userEvent.setup();
+    mount();
+    await screen.findByRole("button", { name: "نسخ الصنف كمسودة مخفية" });
+    await user.click(screen.getByRole("button", { name: "نسخ الصنف كمسودة مخفية" }));
+    expect(screen.getByDisplayValue("نسخة من دجاج بالزبدة")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "يظهر في الكاشير بعد النشر" })).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "منع كل الإضافات" }));
+    expect(screen.getByText("0 إضافة مسموحة لهذا الصنف")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "حفظ المسودة" }));
+    await waitFor(() => expect(vi.mocked(savePosDraft)).toHaveBeenCalledTimes(1));
+    const saved = vi.mocked(savePosDraft).mock.calls[0][1];
+    const clone = saved.products.find((item) => item.name === "نسخة من دجاج بالزبدة");
+    expect(clone?.active).toBe(false);
+    expect(clone?.defaultVariantId).toBe(clone?.variants[1].id);
+    expect(clone?.allowedAddonIds).toEqual([]);
+  });
+
 });
