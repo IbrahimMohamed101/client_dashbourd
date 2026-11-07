@@ -136,6 +136,7 @@ try {
         "Cross-channel copy must not alter Keeta");
       assert.equal(state.published.products[0].variants[2].prices.keeta, null,
         "An unpriced Keeta size must remain unavailable without explicit consent");
+      await page.getByRole("button", { name: "جدول الأسعار" }).click();
       await page.getByRole("button", { name: "نسخ أسعار قناة" }).click();
       await page.getByRole("combobox", { name: "قناة وجهة الأسعار" }).selectOption("keeta");
       await page.getByText(/1 حجم غير مسعّر لن يتاح/).waitFor();
