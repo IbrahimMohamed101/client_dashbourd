@@ -113,6 +113,9 @@ try {
     const invoices = [];
     const refunds = [];
     const idempotency = new Map();
+    const operations = new Map();
+    let nextSaleFault = null; // reject / abort-before / abort-after
+    let nextRefundFault = null; // reject / abort-before / abort-after
     page.on("pageerror", e => failures.push(e.message));
     await context.route("**/*", route => {
       const url = new URL(route.request().url());
@@ -132,11 +135,63 @@ try {
         return route.fulfill({ status: 403, contentType: "application/json",
           body: JSON.stringify({ error: { code: "LEGACY_READ_ONLY" } }) });
       }
+      if (/\/api\/dashboard\/pos\/operations\/active\/(sale|refund)$/.test(path)
+        && method === "GET") {
+        const kind = path.split("/").at(-1);
+        const pending = [...operations.entries()]
+          .find(([, value]) => value.kind === kind && value.status === "pending");
+        return route.fulfill(json({ status: true, data: pending
+          ? { key: pending[0], status: "pending", kind } : null }));
+      }
+      if (/\/api\/dashboard\/pos\/operations\/[^/]+$/.test(path) && method === "GET") {
+        const key = decodeURIComponent(path.split("/").at(-1));
+        const state = operations.get(key);
+        return route.fulfill(state ? json({ status: true, data: state }) : {
+          status: 404, contentType: "application/json",
+          body: JSON.stringify({ error: { code: "POS_OPERATION_NOT_FOUND" } }),
+        });
+      }
+      if (/\/api\/dashboard\/pos\/operations\/[^/]+\/abandon$/.test(path)
+        && method === "POST") {
+        const key = decodeURIComponent(path.split("/").at(-2));
+        const state = operations.get(key);
+        const response = state?.status === "committed"
+          ? state : { kind: route.request().postDataJSON().kind, status: "abandoned",
+              resultId: null, resultNumber: null, errorCode: null };
+        operations.set(key, response);
+        return route.fulfill(json({ status: true, data: response }));
+      }
+      if (/\/api\/dashboard\/pos\/sales\/[a-f0-9]{24}$/.test(path)
+        && method === "GET") {
+        const record = invoices.find(item => item._id === path.split("/").at(-1));
+        return route.fulfill(record ? json({ status: true, data: record }) : {
+          status: 404, contentType: "application/json",
+          body: '{"error":{"code":"POS_INVOICE_NOT_FOUND"}}',
+        });
+      }
+      if (/\/api\/dashboard\/pos\/refunds\/[a-f0-9]{24}$/.test(path)
+        && method === "GET") {
+        const record = refunds.find(item => item._id === path.split("/").at(-1));
+        return route.fulfill(record ? json({ status: true, data: record }) : {
+          status: 404, contentType: "application/json",
+          body: '{"error":{"code":"POS_REFUND_NOT_FOUND"}}',
+        });
+      }
       if (path.endsWith("/api/dashboard/pos/sales") && method === "POST") {
         const input = route.request().postDataJSON();
         const key = route.request().headers()["idempotency-key"];
         assert.ok(key && key.length >= 16, "sale requires idempotency key");
         const signature = JSON.stringify(input);
+        const fault = nextSaleFault;
+        nextSaleFault = null;
+        if (fault === "reject") {
+          operations.set(key, { status: "rejected", kind: "sale",
+            errorCode: "POS_CATALOG_CONFLICT", resultId: null, resultNumber: null });
+          return route.fulfill({ status: 409, contentType: "application/json",
+            body: JSON.stringify({ error: { code: "POS_CATALOG_CONFLICT",
+              message: "المنيو اتغيّر أثناء التأكيد" } }) });
+        }
+        if (fault === "abort-before") return route.abort("failed");
         let invoice = idempotency.get(key);
         if (invoice) assert.equal(signature, invoice.signature, "replay must keep exact sale intent");
         else {
@@ -158,6 +213,9 @@ try {
           idempotency.set(key, invoice);
           invoices.push(invoice);
         }
+        operations.set(key, { status: "committed", kind: "sale",
+          resultId: invoice._id, resultNumber: invoice.number, errorCode: null });
+        if (fault === "abort-after") return route.abort("failed");
         return route.fulfill(json({ status: true, data: invoice }));
       }
       if (path.endsWith("/api/dashboard/pos/sales") && method === "GET") {
@@ -168,8 +226,22 @@ try {
       }
       if (path.endsWith("/api/dashboard/pos/refunds") && method === "POST") {
         const body = route.request().postDataJSON();
+        const key = route.request().headers()["idempotency-key"];
+        const fault = nextRefundFault;
+        nextRefundFault = null;
+        if (fault === "reject") {
+          operations.set(key, { status: "rejected", kind: "refund",
+            errorCode: "POS_CONFLICT", resultId: null, resultNumber: null });
+          return route.fulfill({ status: 409, contentType: "application/json",
+            body: '{"error":{"code":"POS_CONFLICT","message":"تغيرت الكمية المتاحة"}}' });
+        }
+        if (fault === "abort-before") return route.abort("failed");
         const existing = refunds.find(x => x._key === route.request().headers()["idempotency-key"]);
-        if (existing) return route.fulfill(json({ status: true, data: existing }));
+        if (existing) {
+          operations.set(key, { status: "committed", kind: "refund",
+            resultId: existing._id, resultNumber: existing.number, errorCode: null });
+          return route.fulfill(json({ status: true, data: existing }));
+        }
         assert.equal(body.reason.length >= 3, true);
         const grossHalalas = 300 * body.lines[0].quantity;
         const data = {
@@ -186,6 +258,9 @@ try {
           note: "مرتجع تجريبي — لا يمثل رد مبالغ فعلي",
         };
         refunds.push(data);
+        operations.set(key, { status: "committed", kind: "refund",
+          resultId: data._id, resultNumber: data.number, errorCode: null });
+        if (fault === "abort-after") return route.abort("failed");
         return route.fulfill(json({ status: true, data }));
       }
       if (path.startsWith("/api/")) return route.fulfill({ status: 403,
@@ -232,6 +307,89 @@ try {
       await register.click();
       assert.equal(refunds.length, 1, "One refund document for selected invoice");
       await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      // Browser regression: final catalog 409 is not allowed to lock the
+      // cashier even when the cart changes and the page gets reloaded.
+      async function startFreshCheckout() {
+        await page.evaluate(() => sessionStorage.clear());
+        await page.goto(base + "/pos", { waitUntil: "domcontentloaded" });
+        await page.getByTestId("pos-sale-viewport").waitFor();
+        await page.getByRole("region", { name: "الكتالوج التجريبي" })
+          .getByRole("button", { name: /مياه/ }).click();
+        await page.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }).click();
+        const dialog = page.getByRole("dialog", {
+          name: /مراجعة الطلب وتأكيد الفاتورة التجريبية/,
+        });
+        await dialog.waitFor();
+        return dialog;
+      }
+      let attemptDialog = await startFreshCheckout();
+      nextSaleFault = "reject";
+      await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
+      await attemptDialog.getByText(/المنيو اتحدّث/).waitFor();
+      assert.equal(await attemptDialog.getByRole("button",
+        { name: "إعادة المحاولة", exact: true }).count(), 0);
+      await attemptDialog.getByRole("button", { name: "رجوع للسلة" }).click();
+      await page.getByRole("region", { name: "الكتالوج التجريبي" })
+        .getByRole("button", { name: /مياه/ }).click();
+      await page.reload();
+      await page.getByTestId("pos-sale-viewport").waitFor();
+      await page.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }).click();
+      attemptDialog = page.getByRole("dialog", {
+        name: /مراجعة الطلب وتأكيد الفاتورة التجريبية/,
+      });
+      const beforeResale = invoices.length;
+      await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
+      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ }).waitFor();
+      assert.equal(invoices.length, beforeResale + 1,
+        "409 followed by cart change and reload must allow new sale");
+      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ })
+        .getByRole("button", { name: "إغلاق", exact: true }).click();
+
+      // Timeout after committed write: retry with EXACT same key, one invoice.
+      attemptDialog = await startFreshCheckout();
+      const beforeRetry = invoices.length;
+      nextSaleFault = "abort-after";
+      await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
+      await attemptDialog.getByRole("button", { name: "إعادة المحاولة" }).waitFor();
+      await attemptDialog.getByRole("button", { name: "إعادة المحاولة" }).click();
+      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ }).waitFor();
+      assert.equal(invoices.length, beforeRetry + 1,
+        "timeout/retry must replay one invoice, not insert a second");
+      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ })
+        .getByRole("button", { name: "إغلاق", exact: true }).click();
+
+      // Timeout after the write: leaving dialog inspects the committed
+      // operation and displays its receipt, never issues another sale.
+      attemptDialog = await startFreshCheckout();
+      const beforeRecover = invoices.length;
+      nextSaleFault = "abort-after";
+      await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
+      await attemptDialog.getByRole("button", { name: "تحقق مرة أخرى" }).waitFor();
+      await attemptDialog.getByRole("button", { name: "رجوع للسلة" }).click();
+      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ }).waitFor();
+      assert.equal(invoices.length, beforeRecover + 1,
+        "committed operation must show previous receipt, not new sale");
+      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ })
+        .getByRole("button", { name: "إغلاق", exact: true }).click();
+
+      // Timeout BEFORE the request reaches the server: unknown 404 may be
+      // abandoned only by writing a tombstone; a subsequent sale succeeds.
+      attemptDialog = await startFreshCheckout();
+      const beforeAbsent = invoices.length;
+      nextSaleFault = "abort-before";
+      await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
+      await attemptDialog.getByRole("button", { name: "تحقق مرة أخرى" }).waitFor();
+      await attemptDialog.getByRole("button", { name: "رجوع للسلة" }).click();
+      await page.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }).click();
+      attemptDialog = page.getByRole("dialog", {
+        name: /مراجعة الطلب وتأكيد الفاتورة التجريبية/,
+      });
+      await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
+      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ }).waitFor();
+      assert.equal(invoices.length, beforeAbsent + 1,
+        "server-side tombstone permits a NEW safe sale");
+      await page.screenshot({ path: destination + "/f-safety-"
+        + viewport.width + "x" + viewport.height + ".png" });
       assert.deepEqual(failures, [], "Unexpected frontend exception");
       await page.screenshot({ path: destination + "/f-" + viewport.width + "x" + viewport.height + ".png" });
       report.push({ viewport, invoiceCount: invoices.length,
