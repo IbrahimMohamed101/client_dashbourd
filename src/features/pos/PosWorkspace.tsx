@@ -320,7 +320,9 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
       productId: line.product.id,
       variantId: line.variant.id,
       quantity: line.quantity,
-      addonIds: line.addons.map((addon) => addon.id),
+      ...(line.addons.some(addon => (addon.quantity ?? 1) > 1)
+        ? { addons: line.addons.map(addon => ({ productId: addon.id, quantity: addon.quantity ?? 1 })) }
+        : { addonIds: line.addons.map(addon => addon.id) }),
     })),
   };
   const quoteKey = JSON.stringify(quoteRequest);
@@ -373,7 +375,8 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         const revisedAddons = line.addons.map((addon) => {
           const updated = products.find((item) => item.id === addon.id && item.category === "addons");
           return updated && updated.active !== false && updated.variants.length === 1
-            ? { id: updated.id, name: updated.name, prices: updated.variants[0].prices }
+            ? { id: updated.id, name: updated.name, prices: updated.variants[0].prices,
+                quantity: addon.quantity ?? 1 }
             : null;
         });
         const valid = Boolean(
@@ -804,7 +807,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                       </div>
                       {line.addons.length > 0 && (
                         <p className="text-xs text-muted-foreground">
-                          {line.addons.map((addon) => addon.name).join("، ")}
+                          {line.addons.map((addon) => (addon.quantity ?? 1) + "× " + addon.name).join("، ")}
                         </p>
                       )}
                       <div className="flex items-center gap-2">
