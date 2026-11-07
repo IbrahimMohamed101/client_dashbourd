@@ -22,6 +22,8 @@ vi.mock("@/components/ui/sidebar", () => ({
   ),
 }));
 
+vi.mock("./financialApi", () => ({ listPosSales: vi.fn().mockResolvedValue([]) }));
+
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
     user: { role: "cashier", name: "", email: "branch-cashier@synthetic.example.test" },
@@ -59,18 +61,18 @@ describe("POS operations dashboard Staging shell", () => {
     expect(screen.getByRole("searchbox", { name: "ابحث عن صنف" })).toBeInTheDocument();
   });
 
-  it("shows functional order search filters without inventing invoices", async () => {
+  it("shows actual Staging invoice history filters without inventing invoices", async () => {
     const user = userEvent.setup();
     render(<PosOperationsShell catalog={catalog} />);
     await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
     await user.click(screen.getByRole("menuitem", { name: "الطلبات والفواتير" }));
     const section = within(screen.getByRole("region", { name: "الطلبات والفواتير" }));
-    await user.type(section.getByRole("textbox", { name: "بحث الطلبات" }), "K-123");
+    await user.type(section.getByRole("searchbox", { name: "بحث الفواتير" }), "K-123");
     expect(section.getByRole("textbox", { name: "بحث الطلبات" })).toHaveValue("K-123");
-    await user.selectOptions(section.getByRole("combobox", { name: "تصفية قناة الطلبات" }), "keeta");
+    await user.selectOptions(section.getByRole("combobox", { name: "قناة الفواتير" }), "keeta");
     expect(section.getByRole("combobox", { name: "تصفية قناة الطلبات" })).toHaveValue("keeta");
-    expect(section.getByText(/سجل الطلبات غير متصل بعد/)).toBeInTheDocument();
-    expect(section.getByRole("button", { name: "تصدير CSV" })).toBeDisabled();
+    expect(await section.findByText(/لا توجد فواتير مطابقة على Staging/)).toBeInTheDocument();
+    expect(section.getByRole("button", { name: "تحديث" })).toBeEnabled();
   });
 
   it("allows subscription package selection but blocks unauthorized paid renewal", async () => {
