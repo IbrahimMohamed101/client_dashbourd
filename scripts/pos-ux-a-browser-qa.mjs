@@ -225,15 +225,26 @@ try {
     const updatedBox = await pay.boundingBox();
     assert.ok(updatedBox && updatedBox.y + updatedBox.height <= viewport.height + 1,
       "Payment footer must remain visible after changing channel");
-    // Stage F safety: legacy Stage E price preview remains informational,
-    // but no final invoice can be confirmed without the Stage F VAT quote.
+    // App channels must fetch their server quote automatically after editing
+    // the basket or switching channels, with no manual review click.
+    const appQuote = cart.getByRole("region", { name: "نتيجة تسعير السيرفر" });
+    await appQuote.waitFor({ timeout: 10000 });
+    assert.match(await appQuote.innerText(), /8\.00/,
+      "App cart quantity must be automatically repriced from server");
+    const paymentGroup = cart.getByRole("group", { name: "حالة دفع طلب التطبيق" });
+    const paid = paymentGroup.getByRole("button", { name: "مدفوع" });
+    const cash = paymentGroup.getByRole("button", { name: "كاش" });
+    assert.equal(await paid.getAttribute("aria-pressed"), "true");
+    assert.match(await paid.getAttribute("class"), /border-primary/);
+    await cash.click();
+    assert.equal(await cash.getAttribute("aria-pressed"), "true");
+    assert.match(await cash.getAttribute("class"), /border-primary/);
+    assert.equal(await paid.getAttribute("aria-pressed"), "false");
+    await cart.getByText("الحالة المختارة: كاش").waitFor();
+    // Legacy quote does not replace mandatory financial VAT/discount approval.
     const reviewButton = cart.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" });
-    assert.equal(await reviewButton.isDisabled(), true);
-    await cart.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }).click();
-    await cart.getByRole("region", { name: "نتيجة تسعير السيرفر" }).waitFor();
     assert.equal(await reviewButton.isDisabled(), true,
       "Legacy read-only quote must never authorize a Stage F invoice");
-    assert.equal(await pay.isDisabled(), true, "Legacy quote never activates payment");
     assert.deepEqual(errors, [], "Unexpected client-side errors in POS");
     await page.screenshot({ path: destination + "/pos-a-" + viewport.width + "x" + viewport.height + ".png" });
     report.push({ viewport, topbar: headerBox.height, cartWidth: cartBox.width,
