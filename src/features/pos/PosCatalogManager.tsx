@@ -296,20 +296,20 @@ function CatalogEditor({
           <div className="grid gap-3">
             <label className="grid gap-1 text-sm">قناة المصدر
               <select className={selectStyle} aria-label="قناة مصدر الأسعار" value={effectiveCopySource}
-                onChange={(event) => setPriceCopySource(event.target.value)}>
+                onChange={(event) => { setPriceCopySource(event.target.value); setAllowNewPrices(false); }}>
                 {channels.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
               </select>
             </label>
             <label className="grid gap-1 text-sm">قناة الوجهة
               <select className={selectStyle} aria-label="قناة وجهة الأسعار" value={effectiveCopyTarget}
-                onChange={(event) => setPriceCopyTarget(event.target.value)}>
+                onChange={(event) => { setPriceCopyTarget(event.target.value); setAllowNewPrices(false); }}>
                 {channels.filter((item) => item.id !== effectiveCopySource)
                   .map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
               </select>
             </label>
             <label className="grid gap-1 text-sm">طريقة النسخ
               <select className={selectStyle} aria-label="طريقة نسخ الأسعار" value={priceCopyMode}
-                onChange={(event) => setPriceCopyMode(event.target.value as PriceCopyMode)}>
+                onChange={(event) => { setPriceCopyMode(event.target.value as PriceCopyMode); setAllowNewPrices(false); }}>
                 <option value="missing">ملء الأسعار الفارغة فقط</option>
                 <option value="overwrite">استبدال الأسعار الموجودة</option>
               </select>
@@ -495,7 +495,7 @@ function CatalogEditor({
               </label>
               <Button type="button" variant="outline" className="min-h-11"
                 disabled={busy || channels.length < 2 || visibleProducts.length === 0}
-                onClick={() => setPriceCopyDialog(true)}>نسخ أسعار قناة</Button>
+                onClick={() => { setAllowNewPrices(false); setPriceCopyDialog(true); }}>نسخ أسعار قناة</Button>
             </div>
           </div>
           <label className="grid gap-1 text-sm">
