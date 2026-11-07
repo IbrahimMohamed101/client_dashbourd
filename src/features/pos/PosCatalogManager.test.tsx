@@ -40,6 +40,21 @@ describe("POS stage C manager interaction", () => {
     });
   });
 
+  it("displays server-trusted publishedBy identity and draft editor readback", async () => {
+    const publisher = { id: "staff-1", name: "مسؤول النشر", email: "publisher@pos-staging.invalid",
+      role: "cashier" };
+    vi.mocked(fetchPosManager).mockResolvedValue({
+      revision: 12, publishedRevision: 11,
+      published: baseCatalog(), draft: baseCatalog(),
+      publishedBy: publisher, publishedAt: "2026-11-07T17:00:00.000Z",
+      draftSavedBy: { ...publisher, name: "حافظ المسودة" },
+      draftSavedAt: "2026-11-07T17:10:00.000Z",
+    });
+    mount();
+    expect(await screen.findByText(/نشر بواسطة: مسؤول النشر \(cashier\)/)).toBeInTheDocument();
+    expect(screen.getByText(/حفظ المسودة: حافظ المسودة/)).toBeInTheDocument();
+  });
+
   it("finds products directly and filters by visibility", async () => {
     const user = userEvent.setup();
     mount();
