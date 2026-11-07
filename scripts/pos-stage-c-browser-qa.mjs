@@ -148,6 +148,7 @@ try {
         "Even approved new prices require save and publish");
 
       // Phase D: clones are independent, hidden and preserve explicit addon rules.
+      await page.getByRole("button", { name: "تعديل صنف" }).click();
       await page.getByRole("button", { name: "نسخ الصنف كمسودة مخفية" }).click();
       assert.equal(await page.getByRole("textbox", { name: "اسم الصنف" }).inputValue(), "نسخة من دجاج بالزبدة");
       assert.equal(await page.getByRole("checkbox", { name: "يظهر في الكاشير بعد النشر" }).isChecked(), false);
