@@ -1,0 +1,53 @@
+name: POS Stage F Browser Sale and Refund QA
+on:
+  pull_request:
+    branches:
+      - codex/pos-staging-preview
+  push:
+    branches:
+      - codex/pos-staging-preview
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pos-stage-f-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-sale-refund:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run synthetic POS F sale, receipt and refund through four viewports
+        env:
+          VITE_POS_PREVIEW: "true"
+          VITE_BACKEND_URL: ""
+          POS_QA_URL: http://127.0.0.1:4173
+          POS_QA_EVIDENCE: /tmp/basicdiet-pos-stage-f
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 4173 --strictPort >/tmp/pos-f-vite.log 2>&1 &
+          VITE_PID=$!
+          trap 'kill "$VITE_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          node scripts/pos-stage-f-browser-qa.mjs
+      - name: Upload Stage F screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pos-stage-f-sale-refund-viewports
+          path: /tmp/basicdiet-pos-stage-f
+          if-no-files-found: warn

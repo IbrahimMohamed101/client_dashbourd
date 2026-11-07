@@ -19,6 +19,7 @@ import { UserRoles } from "@/types/auth";
 import { channels as defaultChannels } from "./previewCatalog";
 import type { PublishedPosCatalog } from "./catalogApi";
 import { PosWorkspace } from "./PosWorkspace";
+import { PosInvoiceHistory } from "./PosInvoiceHistory";
 
 type View = "sale" | "overview" | "orders" | "subscriptions" | "closing" | "settings";
 type SubscriptionMode = "new" | "renew" | "stack" | "deduct";
@@ -131,54 +132,8 @@ function OverviewView({ catalog, onSale }: {
   );
 }
 
-function OrdersView({ onSale, catalog }: { onSale: () => void; catalog: PublishedPosCatalog }) {
-  const channels = catalog.channels ?? defaultChannels;
-  const [search, setSearch] = useState("");
-  const [channel, setChannel] = useState("all");
-  const [status, setStatus] = useState("all");
-  return (
-    <section className="space-y-5" aria-label="الطلبات والفواتير">
-      <PageHeader
-        title="الطلبات والفواتير"
-        description="بحث الطلبات حسب رقم الفاتورة أو مرجع التطبيق، وإعادة الطباعة والمرتجعات بعد تفعيل الخدمات الرسمية."
-        action={<Button onClick={onSale} className="min-h-11">طلب جديد</Button>}
-      />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="طلبات اليوم" value="—" hint="بانتظار السجل المالي" />
-        <Metric label="مبيعات المطعم" value="—" hint="بانتظار السجل المالي" />
-        <Metric label="مبيعات التطبيقات" value="—" hint="بانتظار السجل المالي" />
-        <Metric label="المرتجعات" value="—" hint="صلاحيات المدير فقط" />
-      </div>
-      <div className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-[minmax(0,1fr)_12rem_12rem]">
-        <label className="grid gap-1 text-sm">
-          رقم الطلب أو مرجع التطبيق
-          <Input aria-label="بحث الطلبات" value={search} placeholder="بحث" onChange={(event) => setSearch(event.target.value)} />
-        </label>
-        <label className="grid gap-1 text-sm">
-          قناة البيع
-          <select aria-label="تصفية قناة الطلبات" className="min-h-11 rounded-md border bg-background px-3" value={channel} onChange={(event) => setChannel(event.target.value)}>
-            <option value="all">كل القنوات</option>
-            {channels.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm">
-          حالة الطلب
-          <select aria-label="تصفية حالة الطلبات" className="min-h-11 rounded-md border bg-background px-3" value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="all">كل الحالات</option>
-            <option value="completed">مكتمل</option>
-            <option value="refunded">مرتجع</option>
-          </select>
-        </label>
-      </div>
-      <section className="rounded-xl border bg-card p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-bold">سجل الطلبات</h3>
-          <Button disabled variant="outline" className="min-h-11">تصدير CSV</Button>
-        </div>
-        <EmptyData heading="سجل الطلبات غير متصل بعد" detail="لن تُنشأ طلبات وهمية، ولن يتم عرض معاملات محلية على أنها فواتير حقيقية. خيارات البحث جاهزة للربط بخدمة الطلبات الرسمية." />
-      </section>
-    </section>
-  );
+function OrdersView({ onSale }: { onSale: () => void; catalog: PublishedPosCatalog }) {
+  return <PosInvoiceHistory onSale={onSale} />;
 }
 
 const modes: { id: SubscriptionMode; label: string }[] = [
@@ -315,7 +270,6 @@ function ClosingView() {
 
 function SettingsView() {
   const [autoPrint, setAutoPrint] = useState(false);
-  const [cap, setCap] = useState("15");
   return (
     <section aria-label="إعدادات نقطة البيع" className="space-y-5">
       <PageHeader title="إعدادات الكاشير" description="إعدادات العرض فقط؛ الحفظ وتعديل ضوابط المالية يحتاجان API وصلاحيات المدير." />
@@ -327,11 +281,10 @@ function SettingsView() {
             <span className="text-sm">تفعيل المعاينة</span>
           </label>
         </div>
-        <div className="mt-4 grid gap-2 sm:max-w-sm">
-          <label htmlFor="cashier-cap" className="font-bold">الحد الأعلى لخصم الموظف (%)</label>
-          <Input id="cashier-cap" type="number" min="0" max="100" step="0.5" value={cap} onChange={(event) => setCap(event.target.value)} />
-          <p className="text-xs text-muted-foreground">الحد هنا تصوّري فقط. أي سقف حقيقي يجب أن يتحقق منه Backend عند التسعير والدفع.</p>
-        </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          D-089: لا يوجد سقف خصم للكاشير حاليًا. ضوابط الخصم مصدرها السيرفر فقط،
+          ولا توجد إعدادات محلية لتغييرها.
+        </p>
         <Button disabled className="mt-4 min-h-11">حفظ الإعدادات</Button>
       </div>
     </section>

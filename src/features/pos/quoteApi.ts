@@ -8,7 +8,7 @@ export type PosQuoteLine = {
   variantLabel: string;
   quantity: number;
   basePriceHalalas: number;
-  addons: { productId: string; name: string; priceHalalas: number }[];
+  addons: { productId: string; name: string; priceHalalas: number; quantity?: number }[];
   unitPriceHalalas: number;
   lineTotalHalalas: number;
 };
@@ -34,7 +34,8 @@ export type PosQuoteRequest = {
     productId: string;
     variantId: string;
     quantity: number;
-    addonIds: string[];
+    addonIds?: string[];
+    addons?: { productId: string; quantity: number }[];
   }[];
 };
 

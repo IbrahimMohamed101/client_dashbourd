@@ -18,7 +18,7 @@ export const categories = [
 export type Category = string;
 export type Prices = Record<Channel, number | null>;
 export type Variant = { id: string; label: string; prices: Prices };
-export type Addon = { id: string; name: string; prices: Prices };
+export type Addon = { id: string; name: string; prices: Prices; quantity?: number };
 export type Product = {
   id: string;
   name: string;
@@ -117,9 +117,11 @@ export function previewUnitPrice(
   channel: Channel
 ) {
   const base = variant.prices[channel];
-  const extras = addons.map((addon) => addon.prices[channel]);
-  if (base == null || extras.some((amount) => amount == null)) return null;
-  return extras.reduce<number>((total, amount) => total + (amount ?? 0), base);
+  if (base == null || addons.some((addon) => addon.prices[channel] == null
+    || !Number.isSafeInteger(addon.quantity ?? 1)
+    || (addon.quantity ?? 1) < 1 || (addon.quantity ?? 1) > 10)) return null;
+  return addons.reduce((total, addon) =>
+    total + (addon.prices[channel] ?? 0) * (addon.quantity ?? 1), base);
 }
 
 const formatter = new Intl.NumberFormat("ar-SA-u-nu-latn", {

@@ -34,7 +34,7 @@ export function validatePosCheckoutReview(
     if (!line || line.productId !== item.productId || line.variantId !== item.variantId
       || line.quantity !== item.quantity || !Number.isSafeInteger(line.quantity)
       || line.quantity < 1 || line.quantity > 99 || !Array.isArray(line.addons)
-      || line.addons.length !== item.addonIds.length
+      || line.addons.length !== (item.addons?.length ?? item.addonIds?.length ?? 0)
       || !safeHalalas(line.basePriceHalalas)
       || !safeHalalas(line.unitPriceHalalas)
       || !safeHalalas(line.lineTotalHalalas)
@@ -42,15 +42,22 @@ export function validatePosCheckoutReview(
       || typeof line.variantLabel !== "string" || !line.variantLabel.trim()) {
       return "تفاصيل السلة لا تطابق رد السيرفر.";
     }
-    const addonIds = line.addons.map((addon) => addon.productId).sort();
-    if (JSON.stringify(addonIds) !== JSON.stringify([...item.addonIds].sort())) {
-      return "الإضافات لا تطابق رد السيرفر.";
+    const addonIds = line.addons.map((addon) =>
+      addon.productId + ":" + (addon.quantity ?? 1)).sort();
+    const expectedAddons = item.addons ?? (item.addonIds ?? []).map(productId =>
+      ({ productId, quantity: 1 }));
+    const expectedIds = expectedAddons.map(addon =>
+      addon.productId + ":" + addon.quantity).sort();
+    if (JSON.stringify(addonIds) !== JSON.stringify(expectedIds)) {
+      return "الإضافات وكمياتها لا تطابق رد السيرفر.";
     }
     let addonsTotal = 0;
     for (const addon of line.addons) {
       if (!safeHalalas(addon.priceHalalas) || typeof addon.name !== "string"
         || !addon.name.trim()) return "تفاصيل سعر الإضافات غير صحيحة.";
-      addonsTotal += addon.priceHalalas;
+      if (!Number.isSafeInteger(addon.quantity ?? 1) || (addon.quantity ?? 1) < 1
+        || (addon.quantity ?? 1) > 10) return "كمية الإضافة غير صالحة.";
+      addonsTotal += addon.priceHalalas * (addon.quantity ?? 1);
     }
     if (!Number.isSafeInteger(addonsTotal)
       || line.basePriceHalalas + addonsTotal !== line.unitPriceHalalas

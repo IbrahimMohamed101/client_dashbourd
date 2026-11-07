@@ -1,8 +1,18 @@
-# POS Stage F — financial-write entry criteria (DRAFT — NOT APPROVED)
+# POS Stage F — owner-approved financial decisions (Staging only)
 
-Date: 2026-11-07. Environment: **dedicated Staging only**. This is a decision register, **not** authorization to implement or enable financial writes. The existing Stage E endpoint is a read-only quote; no checkout, fiscal invoice, tender settlement or real cash transaction is permitted.
+Date: 2026-11-07. Environment: **dedicated Staging only**. Owner approved isolated Staging sale/refund implementation under D-088..D-090; never enable Production, Moyasar, real payments or ZATCA. Release stays subject to CI and separate Staging write gate.
 
-## Decisions already constrained by the existing POS PRD/addenda
+
+## Approved decisions (owner order 2026-11-07 — supersedes unresolved draft rows)
+
+- **D-088:** All prices include **15% VAT**. Discount line total first, then invoice discount (fixed or percent, HALF_UP) allocated by largest remainder, tie by higher line amount then earlier line. Per-final-line VAT = `floor((grossHalalas*30+115)/230)`, net=gross−VAT, totals sum lines. No rounding to half/full SAR. Deliberately differs from Imdad.
+- **D-089:** Unlimited temporary cashier line and invoice discount in all channels, percent or fixed, capped only at eligible gross; configurable cap `null` until changed. Record every applied discount with actor, kind, value, time.
+- **D-090:** Cashier/restaurant/admin/superadmin may record full or partial refunds with a mandatory reason via independently revocable `pos.refund`. Money returns outside POS, method documented.
+- **D-018 and D-022:** Owner approved idempotent atomic transaction and immutable issued invoices. **D-050**: one tender (cash or network) for restaurant; external app always receivable and excluded from cash drawer.
+- **D-086..D-090:** Consolidated at [PRD v0.3.3](./PRD_v0.3.3_STAGING_UNIFIED.md). Original v0.3.2 remains historical.
+- **Open:** Wait for CI on Railway Staging #84 requires UI readback and fail-run block test. ZATCA Q-011 still blocks any Production cash sale.
+
+## Historical decisions and acceptance ledger (pre-owner approval)
 
 | ID | Constraint | Source / required enforcement |
 | --- | --- | --- |

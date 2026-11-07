@@ -26,7 +26,12 @@ import {
 import type { PublishedPosCatalog } from "./catalogApi";
 import { fetchPosQuote, type PosQuote } from "./quoteApi";
 import { validatePosCheckoutReview } from "./checkoutReview";
-import { PosCheckoutReview } from "./PosCheckoutReview";
+import { PosFinancialCheckout } from "./PosFinancialCheckout";
+import { PosInvoiceReceipt } from "./PosInvoiceReceipt";
+import { PosDiscountEditor } from "./PosDiscountEditor";
+import { toPosDiscount, type PosDiscountInput } from "./posDiscountMath";
+import { fetchFinancialQuote, type PosFinanceQuote, type PosFinanceQuoteRequest, type PosInvoice } from "./financialApi";
+import { validateFinancialQuote } from "./financialReview";
 import { parseApiError } from "@/lib/apiErrors";
 import {
   cartLineId, readPosCartDraft, writePosCartDraft,
@@ -120,9 +125,10 @@ function ProductOptions({
       ?? defaultVariant(product, channel) : defaultVariant(product, channel)
   );
   const [addons, setAddons] = useState<Addon[]>(() =>
-    initial?.addons.map((old) => availableAddons.find((item) => item.id === old.id)).filter(
-      (item): item is Addon => item != null
-    ) ?? []
+    initial?.addons.map((old): Addon | null => {
+      const found = availableAddons.find((item) => item.id === old.id);
+      return found ? { ...found, quantity: old.quantity ?? 1 } : null;
+    }).filter((item): item is Addon => item != null) ?? []
   );
   const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const amount = variant ? previewUnitPrice(variant, addons, channel) : null;
@@ -176,34 +182,50 @@ function ProductOptions({
             <legend className="mb-2 font-semibold">الإضافات الاختيارية</legend>
             {availableAddons.map((addon) => {
               const price = addon.prices[channel];
-              const selected = addons.some((item) => item.id === addon.id);
+              const chosen = addons.find((item) => item.id === addon.id);
+              const selected = Boolean(chosen);
+              const addonQuantity = chosen?.quantity ?? 1;
               return (
-                <Button
-                  key={addon.id}
-                  type="button"
-                  variant={selected ? "secondary" : "outline"}
-                  aria-pressed={selected}
-                  disabled={price == null || (!selected && addons.length >= 10)}
-                  className={"min-h-12 justify-between border-2 " + (
-                    selected ? "border-primary bg-primary/10 font-semibold text-foreground"
-                      : "border-transparent"
+                <div key={addon.id} className="rounded-lg border p-1">
+                  <Button type="button" variant={selected ? "secondary" : "outline"}
+                    aria-pressed={selected}
+                    disabled={price == null || (!selected && addons.length >= 10)}
+                    className={"min-h-12 w-full justify-between border-2 " + (
+                      selected ? "border-primary bg-primary/10 font-semibold text-foreground"
+                        : "border-transparent"
+                    )}
+                    onClick={() => setAddons(current =>
+                      current.some(item => item.id === addon.id)
+                        ? current.filter(item => item.id !== addon.id)
+                        : [...current, { ...addon, quantity: 1 }])}>
+                    <span className="flex min-w-0 items-center gap-2">
+                      {selected && <Check aria-hidden="true" className="size-5 shrink-0 text-primary" />}
+                      {addon.name}
+                    </span>
+                    <span>{price == null ? "غير مسعّر" : formatPreviewAmount(price)}</span>
+                  </Button>
+                  {selected && (
+                    <div role="group" aria-label={"تكرار " + addon.name}
+                      className="flex items-center justify-end gap-2 p-1">
+                      <span className="ms-auto text-xs text-muted-foreground">عدد الإضافة لكل وجبة (1–10)</span>
+                      <Button type="button" variant="outline" className="size-12"
+                        aria-label="قلّل عدد الإضافة" disabled={addonQuantity <= 1}
+                        onClick={() => setAddons(current => current.map(item =>
+                          item.id === addon.id ? { ...item, quantity: Math.max(1, (item.quantity ?? 1) - 1) } : item))}>
+                        <Minus aria-hidden="true" />
+                      </Button>
+                      <output aria-live="polite" className="min-w-8 text-center tabular-nums">
+                        {addonQuantity}
+                      </output>
+                      <Button type="button" variant="outline" className="size-12"
+                        aria-label="زِد عدد الإضافة" disabled={addonQuantity >= 10}
+                        onClick={() => setAddons(current => current.map(item =>
+                          item.id === addon.id ? { ...item, quantity: Math.min(10, (item.quantity ?? 1) + 1) } : item))}>
+                        <Plus aria-hidden="true" />
+                      </Button>
+                    </div>
                   )}
-                  onClick={() =>
-                    setAddons((current) =>
-                      current.some((item) => item.id === addon.id)
-                        ? current.filter((item) => item.id !== addon.id)
-                        : [...current, addon]
-                    )
-                  }
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    {selected && <Check aria-hidden="true" className="size-5 shrink-0 text-primary" />}
-                    {addon.name}
-                  </span>
-                  <span>
-                    {price == null ? "غير مسعّر" : formatPreviewAmount(price)}
-                  </span>
-                </Button>
+                </div>
               );
             })}
           </fieldset>
@@ -271,6 +293,12 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const [quoteFailure, setQuoteFailure] = useState<{ key: string; message: string } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [lineDiscountInputs, setLineDiscountInputs] = useState<Record<string, PosDiscountInput>>({});
+  const [invoiceDiscountInput, setInvoiceDiscountInput] = useState<PosDiscountInput>(null);
+  const [financeReview, setFinanceReview] = useState<{ key: string; data: PosFinanceQuote } | null>(null);
+  const [financeFailure, setFinanceFailure] = useState<{ key: string; message: string } | null>(null);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [issuedInvoice, setIssuedInvoice] = useState<PosInvoice | null>(null);
 
   useEffect(() => {
     writePosCartDraft(operatorId, { revision: cartRevision, channel, serviceMode, lines: cart });
@@ -303,7 +331,9 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
       productId: line.product.id,
       variantId: line.variant.id,
       quantity: line.quantity,
-      addonIds: line.addons.map((addon) => addon.id),
+      ...(line.addons.some(addon => (addon.quantity ?? 1) > 1)
+        ? { addons: line.addons.map(addon => ({ productId: addon.id, quantity: addon.quantity ?? 1 })) }
+        : { addonIds: line.addons.map(addon => addon.id) }),
     })),
   };
   const quoteKey = JSON.stringify(quoteRequest);
@@ -311,12 +341,65 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const currentQuoteError = quoteFailure?.key === quoteKey ? quoteFailure.message : null;
   const quoteValidationError = currentQuote ? validatePosCheckoutReview(quoteRequest, currentQuote) : null;
   const verifiedQuote = !staleCart && !quoteValidationError ? currentQuote : null;
-  // Invalidate the modal's *intent*, not just its rendering, whenever the
-  // published revision or cart changes. A later successful quote must never
-  // reopen a previous checkout review without another explicit click.
+  const invoiceDiscount = toPosDiscount(invoiceDiscountInput);
+  const financeItems = cart.map((line) => ({
+    productId: line.product.id, variantId: line.variant.id, quantity: line.quantity,
+    discount: toPosDiscount(lineDiscountInputs[line.id] ?? null),
+    addons: line.addons.map(addon => ({
+      productId: addon.id, quantity: addon.quantity ?? 1,
+      discount: toPosDiscount(lineDiscountInputs[line.id + ":" + addon.id] ?? null),
+    })),
+  }));
+  const invalidDiscount = invoiceDiscount === undefined || financeItems.some(line =>
+    line.discount === undefined || line.addons.some(addon => addon.discount === undefined));
+  const financeRequest: PosFinanceQuoteRequest = {
+    revision: catalog.revision, channel,
+    invoiceDiscount: invoiceDiscount ?? null,
+    items: financeItems.map(line => ({
+      ...line, discount: line.discount ?? null,
+      addons: line.addons.map(addon => ({ ...addon, discount: addon.discount ?? null })),
+    })),
+  };
+  const financeKey = JSON.stringify(financeRequest);
+  const currentFinanceQuote = financeReview?.key === financeKey ? financeReview.data : null;
+  const currentFinanceError = financeFailure?.key === financeKey ? financeFailure.message : null;
+  const financeValidationError = currentFinanceQuote
+    ? validateFinancialQuote(financeRequest, currentFinanceQuote) : null;
+  const verifiedFinanceQuote = !staleCart && !invalidDiscount && !financeValidationError
+    ? currentFinanceQuote : null;
+  // All pricing uses the backend's immutable published POS catalog. Discard
+  // out-of-order responses on every cart/discount/channel/revision change.
   useEffect(() => {
-    if (!verifiedQuote) setCheckoutOpen(false);
-  }, [verifiedQuote]);
+    if (staleCart || invalidDiscount || !cart.length) {
+      setFinanceReview(null);
+      setFinanceFailure(null);
+      setFinanceLoading(false);
+      return;
+    }
+    const key = financeKey;
+    let active = true;
+    setFinanceLoading(true);
+    const timer = window.setTimeout(() => {
+      void fetchFinancialQuote(JSON.parse(key) as PosFinanceQuoteRequest)
+        .then(data => {
+          if (!active) return;
+          setFinanceReview({ key, data });
+          setFinanceFailure(null);
+        }).catch(cause => {
+          if (!active) return;
+          const error = parseApiError(cause);
+          setFinanceReview(null);
+          setFinanceFailure({
+            key, message: error.message ?? "تعذر احتساب الفاتورة من سيرفر Staging.",
+          });
+        }).finally(() => { if (active) setFinanceLoading(false); });
+    }, 300);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [financeKey, staleCart, invalidDiscount, cart.length]);
+  // An earlier open dialog may not silently reappear after a re-quote.
+  useEffect(() => {
+    if (!verifiedFinanceQuote) setCheckoutOpen(false);
+  }, [verifiedFinanceQuote]);
 
   async function reviewServerPrice() {
     if (staleCart || !cart.length || total === null || quoteLoading) return;
@@ -356,7 +439,8 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         const revisedAddons = line.addons.map((addon) => {
           const updated = products.find((item) => item.id === addon.id && item.category === "addons");
           return updated && updated.active !== false && updated.variants.length === 1
-            ? { id: updated.id, name: updated.name, prices: updated.variants[0].prices }
+            ? { id: updated.id, name: updated.name, prices: updated.variants[0].prices,
+                quantity: addon.quantity ?? 1 }
             : null;
         });
         const valid = Boolean(
@@ -787,8 +871,25 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                       </div>
                       {line.addons.length > 0 && (
                         <p className="text-xs text-muted-foreground">
-                          {line.addons.map((addon) => addon.name).join("، ")}
+                          {line.addons.map((addon) => (addon.quantity ?? 1) + "× " + addon.name).join("، ")}
                         </p>
+                      )}
+                      {!staleCart && (
+                        <div className="grid gap-1">
+                          <PosDiscountEditor label={"خصم الصنف " + name}
+                            value={lineDiscountInputs[line.id] ?? null}
+                            onChange={value => setLineDiscountInputs(current => ({
+                              ...current, [line.id]: value,
+                            }))} />
+                          {line.addons.map(addon => (
+                            <PosDiscountEditor key={addon.id}
+                              label={"خصم إضافة " + addon.name}
+                              value={lineDiscountInputs[line.id + ":" + addon.id] ?? null}
+                              onChange={value => setLineDiscountInputs(current => ({
+                                ...current, [line.id + ":" + addon.id]: value,
+                              }))} />
+                          ))}
+                        </div>
                       )}
                       <div className="flex items-center gap-2">
                         <Button
@@ -833,6 +934,33 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                 })}
               </ul>
             )}
+            {!staleCart && cart.length > 0 && (
+              <PosDiscountEditor label="خصم الفاتورة" value={invoiceDiscountInput}
+                onChange={setInvoiceDiscountInput} />
+            )}
+            {invalidDiscount && <p role="alert" className="text-xs text-destructive">
+              صحّح قيمة الخصم قبل إصدار فاتورة.
+            </p>}
+            {currentFinanceError && <p role="alert" className="text-xs text-destructive">
+              {currentFinanceError}
+            </p>}
+            {financeValidationError && <p role="alert" className="text-xs text-destructive">
+              {financeValidationError}
+            </p>}
+            {verifiedFinanceQuote && (
+              <section aria-label="تسعير الفاتورة النهائي" className="rounded-xl border bg-muted/50 p-3 text-sm">
+                <h3 className="font-bold">تسعير سيرفر Staging · المنيو {verifiedFinanceQuote.revision}</h3>
+                <div className="mt-1 flex justify-between gap-2">
+                  <span>الخصم</span><strong>{formatPreviewAmount(verifiedFinanceQuote.totals.totalDiscountHalalas)}</strong>
+                </div>
+                <div className="mt-1 flex justify-between gap-2">
+                  <span>الضريبة المضمنة 15%</span><strong>{formatPreviewAmount(verifiedFinanceQuote.totals.vatHalalas)}</strong>
+                </div>
+                <div className="mt-1 flex justify-between gap-2 font-bold">
+                  <span>المستحق</span><strong>{formatPreviewAmount(verifiedFinanceQuote.totals.grossHalalas)}</strong>
+                </div>
+              </section>
+            )}
             {(currentQuoteError || quoteValidationError) && (
               <p role="alert" className="text-xs text-destructive">
                 {currentQuoteError || quoteValidationError}
@@ -857,16 +985,18 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
               <span>{total === null ? "غير متاح" : formatPreviewAmount(total)}</span>
             </div>
             <div className="flex justify-between gap-2 text-sm text-muted-foreground">
-              <span>الخصم</span><span>غير محسوب</span>
+              <span>الخصم</span><span>{verifiedFinanceQuote
+                ? formatPreviewAmount(verifiedFinanceQuote.totals.totalDiscountHalalas) : "بانتظار السيرفر"}</span>
             </div>
             <div className="flex justify-between gap-2 text-sm text-muted-foreground">
-              <span>الضريبة</span><span>غير محسوبة</span>
+              <span>الضريبة</span><span>{verifiedFinanceQuote
+                ? formatPreviewAmount(verifiedFinanceQuote.totals.vatHalalas) : "بانتظار السيرفر"}</span>
             </div>
             <div className="flex items-center justify-between gap-2 border-t pt-2"
               aria-live="polite">
-              <span className="text-base font-bold">الإجمالي التجريبي</span>
+              <span className="text-base font-bold">المستحق من السيرفر</span>
               <strong className="text-[28px] leading-none font-bold tabular-nums">
-                {total === null ? "غير متاح" : formatPreviewAmount(total)}
+                {verifiedFinanceQuote ? formatPreviewAmount(verifiedFinanceQuote.totals.grossHalalas) : "—"}
               </strong>
             </div>
             <Button
@@ -879,7 +1009,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
               {quoteLoading ? "مراجعة الأسعار..." : "مراجعة الأسعار من السيرفر"}
             </Button>
             <Button type="button" variant="outline" className="min-h-12"
-              disabled={!verifiedQuote || quoteLoading || staleCart}
+              disabled={!verifiedFinanceQuote || financeLoading || invalidDiscount || staleCart}
               onClick={() => setCheckoutOpen(true)}>
               مراجعة الطلب قبل الفاتورة
             </Button>
@@ -889,16 +1019,37 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           </div>
         </aside>
       </div>
-      {checkoutOpen && verifiedQuote && (
-        <PosCheckoutReview
-          quote={verifiedQuote}
-          channelName={channels.find((item) => item.id === channel)?.label ?? channel}
+      {checkoutOpen && verifiedFinanceQuote && (
+        <PosFinancialCheckout
+          quote={verifiedFinanceQuote}
+          request={financeRequest}
+          channelName={channels.find(item => item.id === channel)?.label ?? channel}
           serviceMode={serviceMode}
           externalOrderNumber={externalOrderNumber}
           externalPaymentStatus={appPaymentStatus}
+          operatorId={operatorId}
           onClose={() => setCheckoutOpen(false)}
+          onSale={invoice => {
+            setCheckoutOpen(false);
+            setIssuedInvoice(invoice);
+            setCart([]);
+            setCartRevision(catalog.revision);
+            setUndoState(null);
+            setLastAddedId(null);
+            setCartNotice(null);
+            setLineDiscountInputs({});
+            setInvoiceDiscountInput(null);
+            setQuoteReview(null);
+            setQuoteFailure(null);
+            setFinanceReview(null);
+            setFinanceFailure(null);
+            setExternalOrderNumber("");
+            setAppPaymentStatus("paid");
+          }}
         />
       )}
+      {issuedInvoice && <PosInvoiceReceipt invoice={issuedInvoice}
+        onClose={() => setIssuedInvoice(null)} />}
       {product && !staleCart && (
         <ProductOptions
           product={product}

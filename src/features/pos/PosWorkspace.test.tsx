@@ -140,12 +140,9 @@ describe("POS preview workspace", () => {
     });
     const quote = within(await screen.findByRole("region", { name: "نتيجة تسعير السيرفر" }));
     expect(quote.getByText(/3\.00/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }));
-    const checkout = within(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ }));
-    expect(checkout.getAllByText(/3\.00/)).toHaveLength(2);
-    expect(checkout.getByRole("button", { name: "شبكة" })).toBeEnabled();
-    expect(checkout.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ })).toBeDisabled();
-    await user.click(checkout.getByRole("button", { name: "رجوع للسلة" }));
+    expect(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" })).toBeDisabled();
+    // A read-only Stage E quote can never unlock Stage F invoice creation.
+    expect(screen.queryByRole("dialog", { name: /مراجعة الطلب وتأكيد الفاتورة/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
   });
 
@@ -193,8 +190,8 @@ describe("POS preview workspace", () => {
     await user.type(screen.getByRole("searchbox", { name: "ابحث عن صنف" }), "مياه");
     await user.click(screen.getByRole("button", { name: /مياه/ }));
     await user.click(screen.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }));
-    await user.click(await screen.findByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }));
-    expect(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ })).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "نتيجة تسعير السيرفر" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" })).toBeDisabled();
 
     view.rerender(<PosWorkspace catalog={{
       ...catalog, revision: 2,
@@ -204,15 +201,13 @@ describe("POS preview workspace", () => {
       } : item),
     }} />);
     const reprice = within(screen.getByRole("status", { name: "مراجعة اختلاف أسعار المنيو" }));
-    expect(screen.queryByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /مراجعة الطلب وتأكيد الفاتورة/ })).not.toBeInTheDocument();
     await user.click(reprice.getByRole("button", { name: "تأكيد الأسعار الجديدة" }));
     await user.click(screen.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }));
     expect(await screen.findByRole("region", { name: "نتيجة تسعير السيرفر" })).toHaveTextContent("4.50");
     // The old open=true state must never restore the modal after re-quoting.
-    expect(screen.queryByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }));
-    expect(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ })).toBeDisabled();
+    expect(screen.queryByRole("dialog", { name: /مراجعة الطلب وتأكيد الفاتورة/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" })).toBeDisabled();
   });
 
   it("blocks switching channels when the selected size has no price in the destination", async () => {
@@ -248,7 +243,7 @@ describe("POS preview workspace", () => {
     await user.type(screen.getByRole("searchbox"), "مياه");
     await user.click(within(screen.getByRole("region", { name: "الكتالوج التجريبي" })).getByRole("button", { name: /مياه/ }));
     await user.click(screen.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/تم نشر منيو أحدث/);
+    expect(await screen.findByText(/تم نشر منيو أحدث/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
   });
 
