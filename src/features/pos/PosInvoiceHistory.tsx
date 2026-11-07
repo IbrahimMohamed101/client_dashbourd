@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { formatPreviewAmount } from "./previewCatalog";
 import { listPosSales, type PosInvoice, type PosRefund } from "./financialApi";
@@ -7,6 +8,7 @@ import { PosInvoiceReceipt } from "./PosInvoiceReceipt";
 import { PosRefundDialog } from "./PosRefundDialog";
 
 export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
+  const { user } = useAuth();
   const [invoices, setInvoices] = useState<PosInvoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +115,7 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
       {selected && <PosInvoiceReceipt invoice={selected}
         onClose={() => setSelected(null)}
         onRefund={() => { setReturnInvoice(selected); setSelected(null); }} />}
-      {returnInvoice && <PosRefundDialog invoice={returnInvoice}
+      {returnInvoice && <PosRefundDialog invoice={returnInvoice} operatorId={user?.id}
         onClose={() => setReturnInvoice(null)}
         onRecorded={refund => {
           setSavedRefund(refund);
