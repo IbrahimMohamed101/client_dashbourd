@@ -283,7 +283,7 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
             </DropdownMenuItem>
           ))}
           <DropdownMenuItem asChild className="min-h-12 gap-3">
-            <Link to="/operations">
+            <Link to="/operations" search={{ tab: undefined }}>
               <Activity aria-hidden="true" className="size-5" />
               لوحة العمليات الحالية
             </Link>
