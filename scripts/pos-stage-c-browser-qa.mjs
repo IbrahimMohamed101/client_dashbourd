@@ -46,7 +46,7 @@ try {
       if (address.hostname !== "127.0.0.1") return route.abort();
       const pathname = address.pathname;
       if (pathname.endsWith("/api/dashboard/auth/me")) {
-        return route.fulfill(respond({ token: "synthetic-qa-token-not-valid", user }));
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: true, token: "synthetic-qa-token-not-valid", user }) });
       }
       if (pathname.endsWith("/api/dashboard/pos/catalog/manage") && request.method() === "GET") {
         return route.fulfill(respond(state));
