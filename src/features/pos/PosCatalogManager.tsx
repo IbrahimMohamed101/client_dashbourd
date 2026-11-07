@@ -426,20 +426,25 @@ function CatalogEditor({
                 جميع التعديلات تحفظ كمسودة، ولا تظهر للكاشير قبل النشر.
               </p>
             </div>
-            <label className="grid min-w-48 gap-1 text-sm">
-              قناة البيع
-              <select
-                className={selectStyle}
-                value={bulkChannel}
-                onChange={(event) => setBulkChannel(event.target.value as Channel)}
-              >
-                {channels.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex flex-wrap items-end gap-3">
+              {!showAllChannels && <label className="grid min-w-40 gap-1 text-sm">
+                قناة البيع
+                <select className={selectStyle} value={bulkChannel}
+                  onChange={(event) => setBulkChannel(event.target.value as Channel)}>
+                  {channels.map((item) => (
+                    <option key={item.id} value={item.id}>{item.label}</option>
+                  ))}
+                </select>
+              </label>}
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input type="checkbox" checked={showAllChannels}
+                  onChange={(event) => setShowAllChannels(event.target.checked)} />
+                عرض كل القنوات
+              </label>
+              <Button type="button" variant="outline" className="min-h-11"
+                disabled={busy || channels.length < 2 || visibleProducts.length === 0}
+                onClick={() => setPriceCopyDialog(true)}>نسخ أسعار قناة</Button>
+            </div>
           </div>
           <label className="grid gap-1 text-sm">
             بحث في جدول الأسعار
@@ -455,7 +460,9 @@ function CatalogEditor({
                   <th className="p-3">الصنف</th>
                   <th className="p-3">الحجم</th>
                   <th className="p-3">التوفر</th>
-                  <th className="p-3">السعر بالريال · {channels.find((item) => item.id === bulkChannel)?.label}</th>
+                  {(showAllChannels ? channels : channels.filter((item) => item.id === bulkChannel)).map((channel) => (
+                    <th key={channel.id} scope="col" className="min-w-44 p-3">السعر بالريال · {channel.label}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -465,40 +472,34 @@ function CatalogEditor({
                       <td className="p-3 font-semibold">{item.name}</td>
                       <td className="p-3">{variant.label}</td>
                       <td className="p-3">{item.active ? "ظاهر" : "مخفي"}</td>
-                      <td className="p-2">
-                        <Input
-                          aria-label={`سعر ${item.name} ${variant.label} في ${bulkChannel}`}
-                          className="min-h-11 w-full"
-                          dir="ltr"
-                          inputMode="decimal"
-                          placeholder="غير مسعّر"
-                          value={variant.prices[bulkChannel]}
-                          disabled={busy}
-                          onChange={(event) =>
-                            update({
-                              ...edit,
-                              products: edit.products.map((entry) =>
-                                entry.id !== item.id
-                                  ? entry
-                                  : {
-                                      ...entry,
-                                      variants: entry.variants.map((size) =>
-                                        size.id !== variant.id
-                                          ? size
-                                          : {
-                                              ...size,
-                                              prices: {
-                                                ...size.prices,
-                                                [bulkChannel]: event.target.value,
-                                              },
-                                            }
-                                      ),
-                                    }
-                              ),
-                            })
-                          }
-                        />
-                      </td>
+                      {(showAllChannels ? channels : channels.filter((channel) => channel.id === bulkChannel)).map((channel) => (
+                        <td className="p-2" key={channel.id}>
+                          <Input
+                            aria-label={`سعر ${item.name} ${variant.label} في ${channel.id}`}
+                            className="min-h-11 w-full"
+                            dir="ltr"
+                            inputMode="decimal"
+                            placeholder="غير مسعّر"
+                            value={variant.prices[channel.id] ?? ""}
+                            disabled={busy}
+                            onChange={(event) =>
+                              update({
+                                ...edit,
+                                products: edit.products.map((entry) =>
+                                  entry.id !== item.id ? entry : {
+                                    ...entry,
+                                    variants: entry.variants.map((size) =>
+                                      size.id !== variant.id ? size : {
+                                        ...size, prices: { ...size.prices, [channel.id]: event.target.value },
+                                      }
+                                    ),
+                                  }
+                                ),
+                              })
+                            }
+                          />
+                        </td>
+                      ))}
                     </tr>
                   ))
                 )}
