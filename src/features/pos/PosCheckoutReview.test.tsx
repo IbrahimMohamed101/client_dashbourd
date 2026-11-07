@@ -29,7 +29,7 @@ describe("POS Stage E preview-only checkout review", () => {
     const dialog = within(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ }));
     expect(dialog.getByText(/74\.00/)).toBeInTheDocument();
     expect(dialog.getByText(/زيادة دجاج/)).toBeInTheDocument();
-    expect(dialog.getByText("غير محسوبة")).toBeInTheDocument();
+    expect(dialog.getAllByText("غير محسوبة")).toHaveLength(2);
     expect(dialog.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ })).toBeDisabled();
     await user.click(dialog.getByRole("button", { name: "شبكة" }));
     expect(dialog.getByRole("button", { name: "شبكة" })).toHaveAttribute("aria-pressed", "true");
