@@ -390,6 +390,69 @@ try {
         "server-side tombstone permits a NEW safe sale");
       await page.screenshot({ path: destination + "/f-safety-"
         + viewport.width + "x" + viewport.height + ".png" });
+
+      // Refund regression follows the identical durable-operation protocol.
+      async function startFreshRefund() {
+        refunds.splice(0); // Separate synthetic fixture scenario only.
+        await page.evaluate(() => sessionStorage.clear());
+        await page.goto(base + "/pos", { waitUntil: "domcontentloaded" });
+        await page.getByTestId("pos-sale-viewport").waitFor();
+        await page.getByRole("button", { name: "أقسام نقطة البيع" }).click();
+        await page.getByRole("menuitem", { name: "الطلبات والفواتير" }).click();
+        await page.getByRole("button", { name: "عرض / مرتجع" }).first().click();
+        const detail = page.getByRole("dialog", { name: /الفاتورة STG-000001/ });
+        await detail.getByRole("button", { name: "تسجيل مرتجع" }).click();
+        const form = page.getByRole("dialog", { name: /مرتجع الفاتورة STG-000001/ });
+        await form.waitFor();
+        await form.getByRole("spinbutton", { name: "كمية مرتجع مياه" }).fill("1");
+        await form.getByRole("textbox", { name: "سبب المرتجع" })
+          .fill("إرجاع تجريبي بطلب العميل");
+        return form;
+      }
+      // Terminal 409 is rejected, immediately allowing a new refund key.
+      let refundForm = await startFreshRefund();
+      nextRefundFault = "reject";
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByText(/تغيرت الكمية المتاحة/).waitFor();
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      assert.equal(refunds.length, 1, "409 rejection must release refund key");
+
+      // Unknown response after a committed refund: SAME key retry yields 1.
+      refundForm = await startFreshRefund();
+      nextRefundFault = "abort-after";
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByRole("button", { name: "إعادة المحاولة" }).waitFor();
+      await refundForm.getByRole("button", { name: "إعادة المحاولة" }).click();
+      await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      assert.equal(refunds.length, 1, "refund timeout/retry cannot duplicate partial refund");
+
+      // Unknown response after commit, user presses Cancel: original refund
+      // receipt must be recovered from operation state instead of re-recorded.
+      refundForm = await startFreshRefund();
+      nextRefundFault = "abort-after";
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByRole("button", { name: "تحقق مرة أخرى" }).waitFor();
+      await refundForm.getByRole("button", { name: "إلغاء" }).click();
+      await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      assert.equal(refunds.length, 1, "refund receipt recovery must not record twice");
+
+      // Unknown response that never reached the server: tombstone it first,
+      // then safely accept a newly keyed refund, including after page reload.
+      refundForm = await startFreshRefund();
+      nextRefundFault = "abort-before";
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByRole("button", { name: "تحقق مرة أخرى" }).waitFor();
+      await refundForm.getByRole("button", { name: "إلغاء" }).click();
+      assert.equal(refunds.length, 0, "abandoned absent refund creates no document");
+      await page.reload();
+      refundForm = await startFreshRefund();
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      assert.equal(refunds.length, 1, "new refund after abandon must succeed");
+      await page.screenshot({ path: destination + "/f-refund-safety-"
+        + viewport.width + "x" + viewport.height + ".png" });
+
       assert.deepEqual(failures, [], "Unexpected frontend exception");
       await page.screenshot({ path: destination + "/f-" + viewport.width + "x" + viewport.height + ".png" });
       report.push({ viewport, invoiceCount: invoices.length,
