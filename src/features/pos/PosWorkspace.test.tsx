@@ -142,7 +142,7 @@ describe("POS preview workspace", () => {
     expect(quote.getByText(/3\.00/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }));
     const checkout = within(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ }));
-    expect(checkout.getByText(/3\.00/)).toBeInTheDocument();
+    expect(checkout.getAllByText(/3\.00/)).toHaveLength(2);
     expect(checkout.getByRole("button", { name: "شبكة" })).toBeEnabled();
     expect(checkout.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ })).toBeDisabled();
     await user.click(checkout.getByRole("button", { name: "رجوع للسلة" }));
