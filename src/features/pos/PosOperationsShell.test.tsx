@@ -23,6 +23,12 @@ vi.mock("@/components/ui/sidebar", () => ({
 }));
 
 vi.mock("./financialApi", () => ({ listPosSales: vi.fn().mockResolvedValue([]) }));
+vi.mock("@/components/pages/subscriptions/create/CreateSubscriptionFormContent", () => ({
+  CreateSubscriptionFormContent: () => <div data-testid="existing-subscription-form" />,
+}));
+vi.mock("@/components/pages/manual-deduction/ManualDeductionPage", () => ({
+  default: () => <div data-testid="existing-manual-deduction" />,
+}));
 
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
@@ -76,18 +82,19 @@ describe("POS operations dashboard Staging shell", () => {
     expect(section.getByRole("button", { name: "تحديث" })).toBeEnabled();
   });
 
-  it("allows subscription package selection but blocks unauthorized paid renewal", async () => {
+  it("uses existing subscription/deduction components and keeps cashier permissions", async () => {
     const user = userEvent.setup();
     render(<PosOperationsShell catalog={catalog} />);
     await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
+    expect(screen.getByRole("menuitem", { name: "لوحة العمليات الحالية" }))
+      .toHaveAttribute("href", "/operations");
     await user.click(screen.getByRole("menuitem", { name: "الاشتراكات" }));
-    await user.click(screen.getByRole("button", { name: "تجديد" }));
-    await user.selectOptions(screen.getByRole("combobox", { name: "مدة الباقة" }), "30");
-    await user.selectOptions(screen.getByRole("combobox", { name: "وزن البروتين" }), "200");
-    expect(screen.getByText(/30 يومًا · 200 جم/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "الاستعلام عن السعر وإكمال الاشتراك" })).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "خصم وجبة" }));
-    expect(screen.getByRole("button", { name: "تأكيد خصم وجبة" })).toBeDisabled();
+    expect(screen.getByText(/لا يسمح لهذا الدور بإنشاء اشتراك مدفوع/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "إنشاء مستخدم سريع" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "كل الاشتراكات" }))
+      .toHaveAttribute("href", "/subscriptions");
+    await user.click(screen.getByRole("button", { name: "خصم وجبات المشترك" }));
+    expect(screen.getByTestId("existing-manual-deduction")).toBeInTheDocument();
   });
 
   it("can enter close counts for review without submitting or storing a close", async () => {
