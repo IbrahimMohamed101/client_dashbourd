@@ -120,9 +120,10 @@ function ProductOptions({
       ?? defaultVariant(product, channel) : defaultVariant(product, channel)
   );
   const [addons, setAddons] = useState<Addon[]>(() =>
-    initial?.addons.map((old) => availableAddons.find((item) => item.id === old.id)).filter(
-      (item): item is Addon => item != null
-    ) ?? []
+    initial?.addons.map((old) => {
+      const found = availableAddons.find((item) => item.id === old.id);
+      return found ? { ...found, quantity: old.quantity ?? 1 } : null;
+    }).filter((item): item is Addon => item != null) ?? []
   );
   const [quantity, setQuantity] = useState(initial?.quantity ?? 1);
   const amount = variant ? previewUnitPrice(variant, addons, channel) : null;
@@ -176,36 +177,52 @@ function ProductOptions({
             <legend className="mb-2 font-semibold">الإضافات الاختيارية</legend>
             {availableAddons.map((addon) => {
               const price = addon.prices[channel];
-              const selected = addons.some((item) => item.id === addon.id);
+              const chosen = addons.find((item) => item.id === addon.id);
+              const selected = Boolean(chosen);
+              const addonQuantity = chosen?.quantity ?? 1;
               return (
-                <Button
-                  key={addon.id}
-                  type="button"
-                  variant={selected ? "secondary" : "outline"}
-                  aria-pressed={selected}
-                  disabled={price == null || (!selected && addons.length >= 10)}
-                  className={"min-h-12 justify-between border-2 " + (
-                    selected ? "border-primary bg-primary/10 font-semibold text-foreground"
-                      : "border-transparent"
+                <div key={addon.id} className="rounded-lg border p-1">
+                  <Button type="button" variant={selected ? "secondary" : "outline"}
+                    aria-pressed={selected}
+                    disabled={price == null || (!selected && addons.length >= 10)}
+                    className={"min-h-12 w-full justify-between border-2 " + (
+                      selected ? "border-primary bg-primary/10 font-semibold text-foreground"
+                        : "border-transparent"
+                    )}
+                    onClick={() => setAddons(current =>
+                      current.some(item => item.id === addon.id)
+                        ? current.filter(item => item.id !== addon.id)
+                        : [...current, { ...addon, quantity: 1 }])}>
+                    <span className="flex min-w-0 items-center gap-2">
+                      {selected && <Check aria-hidden="true" className="size-5 shrink-0 text-primary" />}
+                      {addon.name}
+                    </span>
+                    <span>{price == null ? "غير مسعّر" : formatPreviewAmount(price)}</span>
+                  </Button>
+                  {selected && (
+                    <div role="group" aria-label={"تكرار " + addon.name}
+                      className="flex items-center justify-end gap-2 p-1">
+                      <span className="ms-auto text-xs text-muted-foreground">عدد الإضافة لكل وجبة (1–10)</span>
+                      <Button type="button" variant="outline" className="size-12"
+                        aria-label="قلّل عدد الإضافة" disabled={addonQuantity <= 1}
+                        onClick={() => setAddons(current => current.map(item =>
+                          item.id === addon.id ? { ...item, quantity: Math.max(1, (item.quantity ?? 1) - 1) } : item))}>
+                        <Minus aria-hidden="true" />
+                      </Button>
+                      <output aria-live="polite" className="min-w-8 text-center tabular-nums">
+                        {addonQuantity}
+                      </output>
+                      <Button type="button" variant="outline" className="size-12"
+                        aria-label="زِد عدد الإضافة" disabled={addonQuantity >= 10}
+                        onClick={() => setAddons(current => current.map(item =>
+                          item.id === addon.id ? { ...item, quantity: Math.min(10, (item.quantity ?? 1) + 1) } : item))}>
+                        <Plus aria-hidden="true" />
+                      </Button>
+                    </div>
                   )}
-                  onClick={() =>
-                    setAddons((current) =>
-                      current.some((item) => item.id === addon.id)
-                        ? current.filter((item) => item.id !== addon.id)
-                        : [...current, addon]
-                    )
-                  }
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    {selected && <Check aria-hidden="true" className="size-5 shrink-0 text-primary" />}
-                    {addon.name}
-                  </span>
-                  <span>
-                    {price == null ? "غير مسعّر" : formatPreviewAmount(price)}
-                  </span>
-                </Button>
+                </div>
               );
-            })}
+            })}     })}
           </fieldset>
         )}
         <div role="group" aria-label="كمية الصنف" className="flex items-center justify-between rounded-lg border px-3 py-2">
