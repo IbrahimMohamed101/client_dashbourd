@@ -75,6 +75,28 @@ try {
       if (url.pathname.endsWith("/api/dashboard/pos/catalog")) {
         return route.fulfill(json({ status: true, data: catalog }));
       }
+      if (url.pathname.endsWith("/api/dashboard/pos/quote") && route.request().method() === "POST") {
+        // Phase E: a disposable *read-only* mock, never a sale or payment.
+        const request = route.request().postDataJSON();
+        const lines = request.items.map((item) => {
+          const product = catalog.products.find((entry) => entry.id === item.productId);
+          const variant = product.variants.find((entry) => entry.id === item.variantId);
+          const basePriceHalalas = variant.prices[request.channel];
+          const lineTotalHalalas = basePriceHalalas * item.quantity;
+          return {
+            productId: product.id, name: product.name, variantId: variant.id,
+            variantLabel: variant.label, quantity: item.quantity,
+            basePriceHalalas, addons: [], unitPriceHalalas: basePriceHalalas, lineTotalHalalas,
+          };
+        });
+        return route.fulfill(json({ status: true, data: {
+          revision: catalog.revision, currency: "SAR", channel: request.channel,
+          lines, itemCount: lines.reduce((sum, line) => sum + line.quantity, 0),
+          provisionalSubtotalHalalas: lines.reduce((sum, line) => sum + line.lineTotalHalalas, 0),
+          finalPayableHalalas: null, taxHalalas: null, discountHalalas: null,
+          canCommit: false, note: "synthetic no-payment quote",
+        } }));
+      }
       if (url.pathname.startsWith("/api/")) {
         return route.fulfill({ status: 403, contentType: "application/json", body: '{"status":false,"error":{"code":"QA_DENIED"}}' });
       }
@@ -203,6 +225,24 @@ try {
     const updatedBox = await pay.boundingBox();
     assert.ok(updatedBox && updatedBox.y + updatedBox.height <= viewport.height + 1,
       "Payment footer must remain visible after changing channel");
+    // Phase E: only a read-only server quote may unlock the preview.
+    const reviewButton = cart.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" });
+    assert.equal(await reviewButton.isDisabled(), true,
+      "Never allow invoice preview before a server quote");
+    await cart.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }).click();
+    await reviewButton.waitFor();
+    assert.equal(await reviewButton.isEnabled(), true,
+      "A verified synthetic server quote should permit review");
+    await reviewButton.click();
+    const checkout = page.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ });
+    await checkout.getByText(/الإجمالي المبدئي من السيرفر/).waitFor();
+    assert.equal(await checkout.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ }).isDisabled(), true,
+      "Invoice and payment confirmation must never activate");
+    const reviewBox = await checkout.boundingBox();
+    assert.ok(reviewBox && reviewBox.x >= -1 && reviewBox.x + reviewBox.width <= viewport.width + 1,
+      "Checkout review must remain within the screen on every viewport");
+    await checkout.getByRole("button", { name: "رجوع للسلة" }).click();
+    assert.equal(await pay.isDisabled(), true, "Review does not authorize payment");
     assert.deepEqual(errors, [], "Unexpected client-side errors in POS");
     await page.screenshot({ path: destination + "/pos-a-" + viewport.width + "x" + viewport.height + ".png" });
     report.push({ viewport, topbar: headerBox.height, cartWidth: cartBox.width,
