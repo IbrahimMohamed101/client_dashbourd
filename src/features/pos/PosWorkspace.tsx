@@ -27,6 +27,11 @@ import type { PublishedPosCatalog } from "./catalogApi";
 import { fetchPosQuote, type PosQuote } from "./quoteApi";
 import { validatePosCheckoutReview } from "./checkoutReview";
 import { PosCheckoutReview } from "./PosCheckoutReview";
+import { PosFinancialCheckout } from "./PosFinancialCheckout";
+import { PosInvoiceReceipt } from "./PosInvoiceReceipt";
+import { PosDiscountEditor, toPosDiscount, type PosDiscountInput } from "./PosDiscountEditor";
+import { fetchFinancialQuote, type PosFinanceQuote, type PosFinanceQuoteRequest, type PosInvoice } from "./financialApi";
+import { validateFinancialQuote } from "./financialReview";
 import { parseApiError } from "@/lib/apiErrors";
 import {
   cartLineId, readPosCartDraft, writePosCartDraft,
@@ -288,6 +293,13 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const [quoteFailure, setQuoteFailure] = useState<{ key: string; message: string } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutVariant, setCheckoutVariant] = useState<"legacy" | "financial" | null>(null);
+  const [lineDiscountInputs, setLineDiscountInputs] = useState<Record<string, PosDiscountInput>>({});
+  const [invoiceDiscountInput, setInvoiceDiscountInput] = useState<PosDiscountInput>(null);
+  const [financeReview, setFinanceReview] = useState<{ key: string; data: PosFinanceQuote } | null>(null);
+  const [financeFailure, setFinanceFailure] = useState<{ key: string; message: string } | null>(null);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [issuedInvoice, setIssuedInvoice] = useState<PosInvoice | null>(null);
 
   useEffect(() => {
     writePosCartDraft(operatorId, { revision: cartRevision, channel, serviceMode, lines: cart });
@@ -330,12 +342,68 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const currentQuoteError = quoteFailure?.key === quoteKey ? quoteFailure.message : null;
   const quoteValidationError = currentQuote ? validatePosCheckoutReview(quoteRequest, currentQuote) : null;
   const verifiedQuote = !staleCart && !quoteValidationError ? currentQuote : null;
-  // Invalidate the modal's *intent*, not just its rendering, whenever the
-  // published revision or cart changes. A later successful quote must never
-  // reopen a previous checkout review without another explicit click.
+  const invoiceDiscount = toPosDiscount(invoiceDiscountInput);
+  const financeItems = cart.map((line) => ({
+    productId: line.product.id, variantId: line.variant.id, quantity: line.quantity,
+    discount: toPosDiscount(lineDiscountInputs[line.id] ?? null),
+    addons: line.addons.map(addon => ({
+      productId: addon.id, quantity: addon.quantity ?? 1,
+      discount: toPosDiscount(lineDiscountInputs[line.id + ":" + addon.id] ?? null),
+    })),
+  }));
+  const invalidDiscount = invoiceDiscount === undefined || financeItems.some(line =>
+    line.discount === undefined || line.addons.some(addon => addon.discount === undefined));
+  const financeRequest: PosFinanceQuoteRequest = {
+    revision: catalog.revision, channel,
+    invoiceDiscount: invoiceDiscount ?? null,
+    items: financeItems.map(line => ({
+      ...line, discount: line.discount ?? null,
+      addons: line.addons.map(addon => ({ ...addon, discount: addon.discount ?? null })),
+    })),
+  };
+  const financeKey = JSON.stringify(financeRequest);
+  const currentFinanceQuote = financeReview?.key === financeKey ? financeReview.data : null;
+  const currentFinanceError = financeFailure?.key === financeKey ? financeFailure.message : null;
+  const financeValidationError = currentFinanceQuote
+    ? validateFinancialQuote(financeRequest, currentFinanceQuote) : null;
+  const verifiedFinanceQuote = !staleCart && !invalidDiscount && !financeValidationError
+    ? currentFinanceQuote : null;
+  // All pricing uses the backend's immutable published POS catalog. Discard
+  // out-of-order responses on every cart/discount/channel/revision change.
   useEffect(() => {
-    if (!verifiedQuote) setCheckoutOpen(false);
-  }, [verifiedQuote]);
+    if (staleCart || invalidDiscount || !cart.length) {
+      setFinanceReview(null);
+      setFinanceFailure(null);
+      setFinanceLoading(false);
+      return;
+    }
+    const key = financeKey;
+    let active = true;
+    setFinanceLoading(true);
+    const timer = window.setTimeout(() => {
+      void fetchFinancialQuote(JSON.parse(key) as PosFinanceQuoteRequest)
+        .then(data => {
+          if (!active) return;
+          setFinanceReview({ key, data });
+          setFinanceFailure(null);
+        }).catch(cause => {
+          if (!active) return;
+          const error = parseApiError(cause);
+          setFinanceReview(null);
+          setFinanceFailure({
+            key, message: error.message ?? "تعذر احتساب الفاتورة من سيرفر Staging.",
+          });
+        }).finally(() => { if (active) setFinanceLoading(false); });
+    }, 300);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [financeKey, staleCart, invalidDiscount, cart.length]);
+  // An earlier open dialog may not silently reappear after a re-quote.
+  useEffect(() => {
+    if ((checkoutVariant === "financial" && !verifiedFinanceQuote)
+      || (checkoutVariant === "legacy" && !verifiedQuote)) {
+      setCheckoutOpen(false);
+    }
+  }, [checkoutVariant, verifiedQuote, verifiedFinanceQuote]);
 
   async function reviewServerPrice() {
     if (staleCart || !cart.length || total === null || quoteLoading) return;
