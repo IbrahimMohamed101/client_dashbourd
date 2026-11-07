@@ -125,7 +125,7 @@ function ProductOptions({
       ?? defaultVariant(product, channel) : defaultVariant(product, channel)
   );
   const [addons, setAddons] = useState<Addon[]>(() =>
-    initial?.addons.map((old) => {
+    initial?.addons.map((old): Addon | null => {
       const found = availableAddons.find((item) => item.id === old.id);
       return found ? { ...found, quantity: old.quantity ?? 1 } : null;
     }).filter((item): item is Addon => item != null) ?? []
