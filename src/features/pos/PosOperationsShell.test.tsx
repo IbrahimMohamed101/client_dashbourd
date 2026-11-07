@@ -9,8 +9,8 @@ import { categories, previewProducts } from "./previewCatalog";
 // This shell test does not mount a real TanStack Router. Use an anchor for
 // its navigation link while route-authorization tests verify the true router.
 vi.mock("@tanstack/react-router", () => ({
-  Link: forwardRef<HTMLAnchorElement, { to: string; children: ReactNode }>(
-    ({ to, children, ...props }, ref) => (
+  Link: forwardRef<HTMLAnchorElement, { to: string; children: ReactNode; search?: unknown }>(
+    ({ to, children, search: _search, ...props }, ref) => (
       <a href={to} ref={ref} {...props}>{children}</a>
     ),
   ),
