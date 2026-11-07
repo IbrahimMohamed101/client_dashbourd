@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { parseApiError } from "@/lib/apiErrors";
 import { formatPreviewAmount } from "./previewCatalog";
-import { parseHalalas } from "./PosDiscountEditor";
+import { parseHalalas } from "./posDiscountMath";
 import {
   issuePosSale,
   type PosFinanceQuote, type PosFinanceQuoteRequest, type PosInvoice, type PosSaleIntent,
