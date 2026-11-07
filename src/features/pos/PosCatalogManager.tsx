@@ -391,7 +391,7 @@ function CatalogEditor({
                 : "غير مسجّل"}
               {data.draftSavedAt && " · " + new Date(data.draftSavedAt).toLocaleString("ar-SA-u-nu-latn")}
             </p>
-          )
+          )}
           <p className="text-sm text-muted-foreground" role="status">
             {dirty
               ? "تعديلات تحتاج حفظًا"
