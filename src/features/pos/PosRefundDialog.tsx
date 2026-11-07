@@ -9,7 +9,7 @@ import {
 import { parseApiError } from "@/lib/apiErrors";
 import { formatPreviewAmount } from "./previewCatalog";
 import {
-  listPosRefunds, recordPosRefund, getPosRefund, getPosOperation, abandonPosOperation,
+  listPosRefunds, recordPosRefund, getPosRefund, getPosOperation, getActivePosOperation, abandonPosOperation,
   type PosInvoice, type PosRefund, type PosRefundRequest,
 } from "./financialApi";
 
@@ -137,6 +137,18 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
       onRecorded(refund);
     } catch (cause) {
       const error = parseApiError(cause);
+      if (error.code === "POS_OPERATION_PENDING") {
+        // A different unresolved key may belong to this same cashier,
+        // e.g. after a tab crash. Recover the REAL pending key first.
+        try {
+          const active = await getActivePosOperation("refund");
+          if (active && attempt.current?.key !== active.key) {
+            attempt.current = { signature: "", key: active.key };
+            try { sessionStorage.setItem(storageKey,
+              JSON.stringify({ ...attempt.current, at: Date.now() })); } catch { /* blocked */ }
+          }
+        } catch { /* Preserve uncertainty until connectivity is restored. */ }
+      }
       if (error.status !== undefined && error.status >= 400 && error.status < 500
         && error.code && error.code !== "POS_OPERATION_PENDING") {
         clearPending();
