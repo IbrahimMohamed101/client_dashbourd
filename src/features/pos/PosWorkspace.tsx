@@ -311,6 +311,13 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const currentQuoteError = quoteFailure?.key === quoteKey ? quoteFailure.message : null;
   const quoteValidationError = currentQuote ? validatePosCheckoutReview(quoteRequest, currentQuote) : null;
   const verifiedQuote = !staleCart && !quoteValidationError ? currentQuote : null;
+  // Invalidate the modal's *intent*, not just its rendering, whenever the
+  // published revision or cart changes. A later successful quote must never
+  // reopen a previous checkout review without another explicit click.
+  useEffect(() => {
+    if (!verifiedQuote) setCheckoutOpen(false);
+  }, [verifiedQuote]);
+
   async function reviewServerPrice() {
     if (staleCart || !cart.length || total === null || quoteLoading) return;
     const key = quoteKey;
