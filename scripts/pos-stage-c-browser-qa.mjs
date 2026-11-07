@@ -106,6 +106,42 @@ try {
       await page.getByRole("button", { name: "نشر المنيو" }).click();
       assert.equal(state.published.products[0].variants[0].prices.restaurant, 2500, "Published price should change only after publish");
       await page.getByText("المنيو المنشور هو الظاهر للكاشير").waitFor();
+
+      // Phase D: show the full multi-channel matrix; only filtered rows are copied.
+      await page.getByRole("button", { name: "جدول الأسعار" }).click();
+      await page.getByRole("checkbox", { name: "عرض كل القنوات" }).check();
+      assert.equal(await page.getByRole("textbox", { name: "سعر دجاج بالزبدة 100 جم في keeta" }).inputValue(), "27.00");
+      await page.getByRole("searchbox", { name: "بحث في جدول أسعار الكاشير" }).fill("دجاج بالزبدة");
+      await page.getByRole("button", { name: "نسخ أسعار قناة" }).click();
+      await page.getByRole("combobox", { name: "طريقة نسخ الأسعار" }).selectOption("overwrite");
+      await page.getByText(/3 سعر سيتغير/).waitFor();
+      await page.getByRole("button", { name: "تطبيق على المسودة" }).click();
+      assert.equal(state.published.products[0].variants[0].prices.hungerstation, 2800,
+        "Bulk copy must not alter published prices before saving and publishing");
+      await page.getByRole("button", { name: "حفظ المسودة" }).click();
+      await page.getByText(/مسودة محفوظة · 3 تغيير/).waitFor();
+      await page.getByRole("button", { name: "مراجعة ونشر" }).click();
+      const phaseDReview = page.getByRole("region", { name: "مراجعة تغييرات منيو الكاشير" });
+      assert.equal(await phaseDReview.getByRole("row").count(), 4);
+      await page.getByRole("button", { name: "نشر المنيو" }).click();
+      assert.equal(state.published.products[0].variants[0].prices.hungerstation, 2500);
+      assert.equal(state.published.products[1].variants[0].prices.hungerstation, 400,
+        "Filtered price copy must leave water untouched");
+      assert.equal(state.published.products[0].variants[0].prices.keeta, 2700,
+        "Cross-channel copy must not alter Keeta");
+
+      // Phase D: clones are independent, hidden and preserve explicit addon rules.
+      await page.getByRole("button", { name: "نسخ الصنف كمسودة مخفية" }).click();
+      assert.equal(await page.getByRole("textbox", { name: "اسم الصنف" }).inputValue(), "نسخة من دجاج بالزبدة");
+      assert.equal(await page.getByRole("checkbox", { name: "يظهر في الكاشير بعد النشر" }).isChecked(), false);
+      await page.getByRole("button", { name: "منع كل الإضافات" }).click();
+      await page.getByRole("button", { name: "حفظ المسودة" }).click();
+      await page.getByRole("button", { name: "مراجعة ونشر" }).click();
+      await page.getByRole("button", { name: "نشر المنيو" }).click();
+      const duplicated = state.published.products.find((item) => item.name === "نسخة من دجاج بالزبدة");
+      assert.ok(duplicated && duplicated.active === false, "Copied item must be hidden until explicitly enabled");
+      assert.deepEqual(duplicated.allowedAddonIds, []);
+      assert.notEqual(duplicated.variants[0].id, state.published.products[0].variants[0].id);
       assert.deepEqual(errors, []);
     } catch (error) {
       console.error("Stage C QA diagnostic", { viewport, errors, url: page.url(), body: (await page.locator("body").innerText()).slice(0, 1000) });
@@ -118,4 +154,4 @@ try {
 } finally {
   await browser.close();
 }
-console.log("POS Stage C catalog save/review/publish passed at all four viewports with synthetic data only");
+console.log("POS Stages C+D price matrix, bulk copy, hidden clone and publish passed on four viewports with synthetic data only");
