@@ -32,7 +32,12 @@ describe("POS Stage E preview-only checkout review", () => {
     expect(dialog.getAllByText("غير محسوبة")).toHaveLength(2);
     expect(dialog.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ })).toBeDisabled();
     await user.click(dialog.getByRole("button", { name: "شبكة" }));
-    expect(dialog.getByRole("button", { name: "شبكة" })).toHaveAttribute("aria-pressed", "true");
+    const selectedNetwork = dialog.getByRole("button", { name: "شبكة" });
+    expect(selectedNetwork).toHaveAttribute("aria-pressed", "true");
+    expect(selectedNetwork).toHaveClass("border-primary", "bg-primary/10");
+    expect(selectedNetwork.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "كاش" })).not.toHaveClass("border-primary");
+    expect(dialog.getByRole("button", { name: "إغلاق النافذة" })).toBeInTheDocument();
     expect(dialog.getByText(/لا يتم تحصيل نقد/)).toBeInTheDocument();
     await user.click(dialog.getByRole("button", { name: "رجوع للسلة" }));
     expect(close).toHaveBeenCalledOnce();

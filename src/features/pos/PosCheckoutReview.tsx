@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -21,14 +22,14 @@ export function PosCheckoutReview({
   const serviceNames = { "dine-in": "محلي", takeaway: "سفري", delivery: "توصيل" };
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent dir="rtl" className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto text-right">
-        <DialogHeader>
+      <DialogContent dir="rtl" className="flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl flex-col overflow-hidden text-right">
+        <DialogHeader className="shrink-0">
           <DialogTitle>مراجعة الطلب قبل إصدار الفاتورة — معاينة</DialogTitle>
           <DialogDescription>
             تسعير من السيرفر للمنيو المنشور رقم {quote.revision}، لكنه ليس فاتورة ضريبية ولا طلبًا مسجلًا.
           </DialogDescription>
         </DialogHeader>
-        <section aria-label="تفاصيل مراجعة الطلب" className="space-y-3 text-sm">
+        <section aria-label="تفاصيل مراجعة الطلب" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-2 text-sm">
           <div className="flex flex-wrap justify-between gap-2 rounded-lg border bg-muted/50 p-3">
             <span>قناة البيع: <strong>{channelName}</strong></span>
             {restaurant && <span>نوع الطلب: <strong>{serviceNames[serviceMode]}</strong></span>}
@@ -84,11 +85,19 @@ export function PosCheckoutReview({
               <legend className="px-1 font-semibold">وسيلة الدفع المقترحة — اختيار تجريبي</legend>
               <div className="mt-2 flex gap-2">
                 <Button type="button" variant={restaurantTender === "cash" ? "secondary" : "outline"}
-                  className="min-h-12 flex-1" aria-pressed={restaurantTender === "cash"}
-                  onClick={() => setRestaurantTender("cash")}>كاش</Button>
+                  className={"min-h-12 flex-1 gap-2 border-2 " + (restaurantTender === "cash"
+                    ? "border-primary bg-primary/10 font-bold text-foreground"
+                    : "border-border")} aria-pressed={restaurantTender === "cash"}
+                  onClick={() => setRestaurantTender("cash")}>
+                  {restaurantTender === "cash" && <Check aria-hidden="true" className="size-5 shrink-0 text-primary" />}كاش
+                </Button>
                 <Button type="button" variant={restaurantTender === "network" ? "secondary" : "outline"}
-                  className="min-h-12 flex-1" aria-pressed={restaurantTender === "network"}
-                  onClick={() => setRestaurantTender("network")}>شبكة</Button>
+                  className={"min-h-12 flex-1 gap-2 border-2 " + (restaurantTender === "network"
+                    ? "border-primary bg-primary/10 font-bold text-foreground"
+                    : "border-border")} aria-pressed={restaurantTender === "network"}
+                  onClick={() => setRestaurantTender("network")}>
+                  {restaurantTender === "network" && <Check aria-hidden="true" className="size-5 shrink-0 text-primary" />}شبكة
+                </Button>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
                 الاختيار للعرض فقط، ولا يتم تحصيل نقد أو إرسال عملية للشبكة.
@@ -108,7 +117,7 @@ export function PosCheckoutReview({
             المرحلة E للتأكد من شكل الطلب وتسعيره فقط. لا توجد صلاحية لتأكيد البيع أو إصدار فاتورة أو تسجيل تحصيل.
           </p>
         </section>
-        <DialogFooter>
+        <DialogFooter className="!static !mx-0 !mb-0 !shrink-0 !border-t !bg-popover !px-0 !pt-3 !pb-0">
           <Button type="button" variant="outline" className="min-h-12" onClick={onClose}>
             رجوع للسلة
           </Button>

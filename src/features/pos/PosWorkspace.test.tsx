@@ -171,6 +171,50 @@ describe("POS preview workspace", () => {
     expect(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" })).toBeDisabled();
   });
 
+  it("clears checkout-open intent when the quote disappears after a new menu publish", async () => {
+    const user = userEvent.setup();
+    const initialQuote = {
+      revision: 1, currency: "SAR" as const, channel: "restaurant",
+      lines: [{ productId: "water", name: "مياه", variantId: "bottle",
+        variantLabel: "عبوة", quantity: 1, basePriceHalalas: 300, addons: [],
+        unitPriceHalalas: 300, lineTotalHalalas: 300 }],
+      itemCount: 1, provisionalSubtotalHalalas: 300,
+      finalPayableHalalas: null, taxHalalas: null, discountHalalas: null,
+      canCommit: false as const, note: "معاينة فقط",
+    };
+    vi.mocked(fetchPosQuote)
+      .mockResolvedValueOnce(initialQuote)
+      .mockResolvedValueOnce({
+        ...initialQuote, revision: 2, provisionalSubtotalHalalas: 450,
+        lines: [{ ...initialQuote.lines[0], basePriceHalalas: 450,
+          unitPriceHalalas: 450, lineTotalHalalas: 450 }],
+      });
+    const view = render(<PosWorkspace catalog={catalog} />);
+    await user.type(screen.getByRole("searchbox", { name: "ابحث عن صنف" }), "مياه");
+    await user.click(screen.getByRole("button", { name: /مياه/ }));
+    await user.click(screen.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }));
+    await user.click(await screen.findByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }));
+    expect(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ })).toBeInTheDocument();
+
+    view.rerender(<PosWorkspace catalog={{
+      ...catalog, revision: 2,
+      products: catalog.products.map((item) => item.id === "water" ? {
+        ...item, variants: item.variants.map((variant) =>
+          ({ ...variant, prices: { ...variant.prices, restaurant: 450 } })),
+      } : item),
+    }} />);
+    const reprice = within(screen.getByRole("status", { name: "مراجعة اختلاف أسعار المنيو" }));
+    expect(screen.queryByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ })).not.toBeInTheDocument();
+    await user.click(reprice.getByRole("button", { name: "تأكيد الأسعار الجديدة" }));
+    await user.click(screen.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }));
+    expect(await screen.findByRole("region", { name: "نتيجة تسعير السيرفر" })).toHaveTextContent("4.50");
+    // The old open=true state must never restore the modal after re-quoting.
+    expect(screen.queryByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }));
+    expect(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ })).toBeDisabled();
+  });
+
   it("blocks switching channels when the selected size has no price in the destination", async () => {
     const user = userEvent.setup();
     render(<PosWorkspace catalog={catalog} />);

@@ -241,6 +241,24 @@ try {
     const reviewBox = await checkout.boundingBox();
     assert.ok(reviewBox && reviewBox.x >= -1 && reviewBox.x + reviewBox.width <= viewport.width + 1,
       "Checkout review must remain within the screen on every viewport");
+    // The confirmation actions must stay visible even as the line-items section scrolls.
+    const actions = checkout.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ });
+    await checkout.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+    });
+    const before = await actions.boundingBox();
+    assert.ok(before && before.y + before.height <= viewport.height,
+      "Checkout action clipped at " + viewport.width + "x" + viewport.height);
+    await checkout.getByRole("region", { name: "تفاصيل مراجعة الطلب" }).evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+    const after = await actions.boundingBox();
+    assert.ok(after && Math.abs(after.y - before.y) < 2
+      && after.y + after.height <= viewport.height,
+      "Checkout actions must remain fixed outside the scrolling content: "
+        + JSON.stringify({ before, after, viewport }));
+    const close = checkout.getByRole("button", { name: "إغلاق النافذة" });
+    assert.ok(await close.isVisible(), "POS review close action must have an Arabic accessible label");
     await checkout.getByRole("button", { name: "رجوع للسلة" }).click();
     assert.equal(await pay.isDisabled(), true, "Review does not authorize payment");
     assert.deepEqual(errors, [], "Unexpected client-side errors in POS");

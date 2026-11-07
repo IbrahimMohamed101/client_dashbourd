@@ -100,6 +100,16 @@ try {
       const review = page.getByRole("region", { name: "مراجعة تغييرات منيو الكاشير" });
       await review.getByText("24.00 ر.س").waitFor();
       assert.equal(await review.getByRole("row").count(), 4);
+      // Wait for the containing Radix dialog's entry animation before comparing
+      // the region and its last cell; otherwise their rectangles are captured at
+      // different transform progress and can spuriously look clipped.
+      await review.evaluate(async (element) => {
+        const dialog = element.closest('[data-slot="dialog-content"]');
+        if (dialog) {
+          await Promise.all(dialog.getAnimations().map((animation) =>
+            animation.finished.catch(() => undefined)));
+        }
+      });
       const rect = await review.boundingBox();
       assert.ok(rect && rect.width <= viewport.width, "Catalog review must fit the viewport");
       const afterCell = review.getByRole("row").nth(1).getByRole("cell").last();

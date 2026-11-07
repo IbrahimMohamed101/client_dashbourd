@@ -73,7 +73,7 @@ function DialogContent({
               size="icon-sm"
             >
               <XIcon />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{props.dir === "rtl" ? "إغلاق النافذة" : "Close"}</span>
             </Button>
           </DialogPrimitive.Close>
         )}
