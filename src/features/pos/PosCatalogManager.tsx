@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { parseApiError } from "@/lib/apiErrors";
 import { getPosCatalogChanges } from "./catalogChangeReview";
-import { copyChannelPrices, duplicateDraftProduct, type PriceCopyMode } from "./catalogBulkOps";
+import { copyChannelPrices, duplicateDraftProduct, type PriceCopyMode, type PriceCopyRounding } from "./catalogBulkOps";
 import {
   channels as defaultChannels,
   type PosChannel,
@@ -123,6 +123,9 @@ function CatalogEditor({
   const [priceCopySource, setPriceCopySource] = useState<Channel>("restaurant");
   const [priceCopyTarget, setPriceCopyTarget] = useState<Channel>("hungerstation");
   const [priceCopyMode, setPriceCopyMode] = useState<PriceCopyMode>("missing");
+  const [priceCopyMarkup, setPriceCopyMarkup] = useState("0");
+  const [priceCopyRounding, setPriceCopyRounding] = useState<PriceCopyRounding>("none");
+  const [allowNewPrices, setAllowNewPrices] = useState(false);
   const [priceCopyDialog, setPriceCopyDialog] = useState(false);
   const [newChannelId, setNewChannelId] = useState("");
   const [newChannelLabel, setNewChannelLabel] = useState("");
@@ -137,9 +140,13 @@ function CatalogEditor({
     ? priceCopySource : channels[0]?.id ?? "";
   const effectiveCopyTarget = channels.some((item) => item.id === priceCopyTarget && item.id !== effectiveCopySource)
     ? priceCopyTarget : channels.find((item) => item.id !== effectiveCopySource)?.id ?? "";
+  const validMarkup = /^(?:\\d{1,3})(?:\\.\\d{1,2})?$/.test(priceCopyMarkup)
+    && Number(priceCopyMarkup) <= 300;
   const copyPreview = copyChannelPrices(
     edit, effectiveCopySource, effectiveCopyTarget,
     new Set(visibleProducts.map((item) => item.id)), priceCopyMode,
+    { increasePercent: validMarkup ? Number(priceCopyMarkup) : 0,
+      rounding: priceCopyRounding, allowNewPrices },
   );
   const reviewChanges = data.draft ? getPosCatalogChanges(data.published, data.draft) : [];
   const product =
@@ -278,7 +285,7 @@ function CatalogEditor({
         </DialogContent>
       </Dialog>
       <Dialog open={priceCopyDialog} onOpenChange={setPriceCopyDialog}>
-        <DialogContent dir="rtl" className="text-right">
+        <DialogContent dir="rtl" className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto text-right">
           <DialogHeader>
             <DialogTitle>نسخ أسعار بين القنوات</DialogTitle>
             <DialogDescription>
@@ -307,14 +314,59 @@ function CatalogEditor({
                 <option value="overwrite">استبدال الأسعار الموجودة</option>
               </select>
             </label>
+            <label className="grid gap-1 text-sm">زيادة على سعر المصدر (%)
+              <Input type="number" min="0" max="300" step="0.01" inputMode="decimal"
+                aria-label="نسبة زيادة الأسعار" dir="ltr" value={priceCopyMarkup}
+                onChange={(event) => setPriceCopyMarkup(event.target.value)} />
+            </label>
+            <label className="grid gap-1 text-sm">تقريب السعر الناتج
+              <select className={selectStyle} aria-label="تقريب الأسعار" value={priceCopyRounding}
+                onChange={(event) => setPriceCopyRounding(event.target.value as PriceCopyRounding)}>
+                <option value="none">بدون تقريب (هللتان عشريتان)</option>
+                <option value="half">لأعلى إلى أقرب 0.50 ريال</option>
+                <option value="whole">لأعلى إلى أقرب 1 ريال</option>
+              </select>
+            </label>
+            {!validMarkup && <p role="alert" className="text-sm text-destructive">أدخل نسبة زيادة صحيحة من 0 إلى 300.</p>}
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-1" aria-label="الموافقة على إتاحة أحجام غير مسعرة"
+                checked={allowNewPrices} onChange={(event) => setAllowNewPrices(event.target.checked)} />
+              أوافق صراحةً على تسعير أحجام كانت غير متاحة في قناة الوجهة (ستتاح للبيع بعد النشر).
+            </label>
             <p role="status" className="rounded-lg border bg-muted p-3 text-sm">
               {copyPreview.changed} سعر سيتغير من أصل {visibleProducts.length} صنف مطابق للبحث.
               {priceCopyMode === "overwrite" ? " ستُستبدل الأسعار الموجودة في قناة الوجهة." : " لن تتغير الأسعار الموجودة."}
             </p>
+            {copyPreview.blockedNewPrices.length > 0 && <p role="alert" className="rounded-lg border p-3 text-sm font-medium">
+              {copyPreview.blockedNewPrices.length} حجم غير مسعّر لن يتاح للبيع تلقائيًا. فعّل الموافقة أعلاه لمراجعته وتسعيره.
+            </p>}
+            {copyPreview.firstTimeProducts.length > 0 && <p role="alert" className="rounded-lg border p-3 text-sm font-semibold">
+              تحذير: {copyPreview.firstTimeProducts.length} صنف سيصبح متاحًا لأول مرة على {channels.find((entry) => entry.id === effectiveCopyTarget)?.label} بعد الحفظ والنشر: {copyPreview.firstTimeProducts.join("، ")}.
+            </p>}
+            <div role="region" aria-label="معاينة نسخ الأسعار" className="max-h-56 overflow-auto rounded-lg border">
+              <table className="w-full table-fixed border-collapse text-right text-xs">
+                <thead className="sticky top-0 bg-muted"><tr>
+                  <th className="w-[38%] p-2">الصنف والحجم</th><th className="w-[19%] p-2">الحالي</th>
+                  <th className="w-[19%] p-2">المقترح</th><th className="w-[24%] p-2">الحالة</th>
+                </tr></thead>
+                <tbody>
+                  {[...copyPreview.changes, ...copyPreview.blockedNewPrices].map((change) => (
+                    <tr key={change.productId + "-" + change.variantId} className="border-t">
+                      <td className="break-words p-2">{change.productName} · {change.variantLabel}</td>
+                      <td className="break-words p-2">{change.before}</td>
+                      <td className="break-words p-2 font-medium">{change.after} ر.س</td>
+                      <td className="break-words p-2">{copyPreview.blockedNewPrices.includes(change) ? "ممنوع حتى الموافقة" : change.newlyPriced ? "إتاحة جديدة" : "تغيير سعر"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {copyPreview.changed === 0 && copyPreview.blockedNewPrices.length === 0 &&
+                <p className="p-3 text-sm text-muted-foreground">لا توجد أسعار ستتغير بالإعدادات الحالية.</p>}
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setPriceCopyDialog(false)}>إلغاء</Button>
-            <Button type="button" disabled={busy || copyPreview.changed === 0}
+            <Button type="button" disabled={busy || !validMarkup || copyPreview.changed === 0}
               onClick={() => { update(copyPreview.catalog); setPriceCopyDialog(false); }}>
               تطبيق على المسودة
             </Button>
@@ -869,7 +921,7 @@ function CatalogEditor({
             if (!open && !publish.isPending) setConfirm(false);
           }}
         >
-          <DialogContent dir="rtl">
+          <DialogContent dir="rtl" className="w-[calc(100vw-2rem)] max-w-2xl">
             <DialogHeader>
               <DialogTitle>مراجعة فروق منيو الكاشير قبل النشر</DialogTitle>
               <DialogDescription>
@@ -886,16 +938,17 @@ function CatalogEditor({
               {reviewChanges.length === 0 ? (
                 <p className="p-3 text-sm text-muted-foreground">لا توجد فروق بين المسودة والمنيو المنشور.</p>
               ) : (
-                <table className="w-full min-w-[28rem] border-collapse text-right text-xs">
+                <table className="w-full table-fixed border-collapse text-right text-xs">
+                  <colgroup><col className="w-[48%]" /><col className="w-[26%]" /><col className="w-[26%]" /></colgroup>
                   <thead className="bg-muted">
                     <tr><th className="p-2">التغيير</th><th className="p-2">قبل</th><th className="p-2">بعد</th></tr>
                   </thead>
                   <tbody>
                     {reviewChanges.map((entry) => (
                       <tr key={entry.id} className="border-t">
-                        <td className="p-2 font-medium">{entry.label}</td>
-                        <td className="p-2 text-muted-foreground">{entry.before}</td>
-                        <td className="p-2">{entry.after}</td>
+                        <td className="break-words p-1 font-medium sm:p-2">{entry.label}</td>
+                        <td className="break-words p-1 text-muted-foreground sm:p-2">{entry.before}</td>
+                        <td className="break-words p-1 sm:p-2" aria-label={`بعد: ${entry.after}`}>{entry.after}</td>
                       </tr>
                     ))}
                   </tbody>
