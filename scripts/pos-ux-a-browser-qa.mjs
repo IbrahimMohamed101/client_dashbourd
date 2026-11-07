@@ -225,45 +225,15 @@ try {
     const updatedBox = await pay.boundingBox();
     assert.ok(updatedBox && updatedBox.y + updatedBox.height <= viewport.height + 1,
       "Payment footer must remain visible after changing channel");
-    // Phase E: only a read-only server quote may unlock the preview.
+    // Stage F safety: legacy Stage E price preview remains informational,
+    // but no final invoice can be confirmed without the Stage F VAT quote.
     const reviewButton = cart.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" });
-    assert.equal(await reviewButton.isDisabled(), true,
-      "Never allow invoice preview before a server quote");
+    assert.equal(await reviewButton.isDisabled(), true);
     await cart.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }).click();
-    await reviewButton.waitFor();
-    for (let attempt = 0; attempt < 40 && await reviewButton.isDisabled(); attempt += 1) {
-      await page.waitForTimeout(100);
-    }
-    assert.equal(await reviewButton.isEnabled(), true,
-      "A verified synthetic server quote should permit review even if F quote was denied");
-    await reviewButton.click();
-    const checkout = page.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ });
-    await checkout.getByText(/الإجمالي المبدئي من السيرفر/).waitFor();
-    assert.equal(await checkout.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ }).isDisabled(), true,
-      "Invoice and payment confirmation must never activate");
-    const reviewBox = await checkout.boundingBox();
-    assert.ok(reviewBox && reviewBox.x >= -1 && reviewBox.x + reviewBox.width <= viewport.width + 1,
-      "Checkout review must remain within the screen on every viewport");
-    // The confirmation actions must stay visible even as the line-items section scrolls.
-    const actions = checkout.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ });
-    await checkout.evaluate(async (element) => {
-      await Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
-    });
-    const before = await actions.boundingBox();
-    assert.ok(before && before.y + before.height <= viewport.height,
-      "Checkout action clipped at " + viewport.width + "x" + viewport.height);
-    await checkout.getByRole("region", { name: "تفاصيل مراجعة الطلب" }).evaluate((el) => {
-      el.scrollTop = el.scrollHeight;
-    });
-    const after = await actions.boundingBox();
-    assert.ok(after && Math.abs(after.y - before.y) < 2
-      && after.y + after.height <= viewport.height,
-      "Checkout actions must remain fixed outside the scrolling content: "
-        + JSON.stringify({ before, after, viewport }));
-    const close = checkout.getByRole("button", { name: "إغلاق النافذة" });
-    assert.ok(await close.isVisible(), "POS review close action must have an Arabic accessible label");
-    await checkout.getByRole("button", { name: "رجوع للسلة" }).click();
-    assert.equal(await pay.isDisabled(), true, "Review does not authorize payment");
+    await cart.getByRole("region", { name: "نتيجة تسعير السيرفر" }).waitFor();
+    assert.equal(await reviewButton.isDisabled(), true,
+      "Legacy read-only quote must never authorize a Stage F invoice");
+    assert.equal(await pay.isDisabled(), true, "Legacy quote never activates payment");
     assert.deepEqual(errors, [], "Unexpected client-side errors in POS");
     await page.screenshot({ path: destination + "/pos-a-" + viewport.width + "x" + viewport.height + ".png" });
     report.push({ viewport, topbar: headerBox.height, cartWidth: cartBox.width,
