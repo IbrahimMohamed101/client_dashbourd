@@ -19,7 +19,7 @@ export const MAX_LINE_QUANTITY = 99;
 
 export function cartLineId(selection: PosSelection) {
   return [selection.product.id, selection.variant.id,
-    ...selection.addons.map((addon) => addon.id).sort()].join("/");
+    ...selection.addons.map((addon) => addon.id + ((addon.quantity ?? 1) > 1 ? "@" + addon.quantity : "")).sort()].join("/");
 }
 
 function keyFor(operatorId?: string | null) {
@@ -55,8 +55,11 @@ function cleanLine(value: unknown): PosCartLine | null {
     || !Array.isArray(line.addons) || line.addons.length > 10) return null;
   const addons: Addon[] = [];
   for (const addon of line.addons) {
-    if (!addon || !validId(addon.id) || !validName(addon.name) || !validPrices(addon.prices)) return null;
-    addons.push({ id: addon.id, name: addon.name, prices: addon.prices });
+    if (!addon || !validId(addon.id) || !validName(addon.name) || !validPrices(addon.prices)
+      || (addon.quantity !== undefined && (!Number.isSafeInteger(addon.quantity)
+        || addon.quantity < 1 || addon.quantity > 10))) return null;
+    addons.push({ id: addon.id, name: addon.name, prices: addon.prices,
+      ...(addon.quantity === undefined ? {} : { quantity: addon.quantity }) });
   }
   if (new Set(addons.map((item) => item.id)).size !== addons.length) return null;
   const selection: PosSelection = {
@@ -84,7 +87,7 @@ function currentLine(line: PosCartLine, catalog: PublishedPosCatalog): PosCartLi
   const addons = line.addons.map((old) => {
     const addon = catalog.products.find((item) => item.id === old.id && item.category === "addons" && item.active !== false);
     return addon && addon.variants.length === 1
-      ? { id: addon.id, name: addon.name, prices: addon.variants[0].prices } : null;
+      ? { id: addon.id, name: addon.name, prices: addon.variants[0].prices, quantity: old.quantity ?? 1 } : null;
   });
   if (addons.some((addon) => !addon)
     || (addons.length > 0 && !product.hasAddons)
@@ -162,7 +165,7 @@ export function writePosCartDraft(operatorId: string | null | undefined, draft: 
         variant: {
           id: line.variant.id, label: line.variant.label, prices: line.variant.prices,
         },
-        addons: line.addons.map(({ id, name, prices }) => ({ id, name, prices })),
+        addons: line.addons.map(({ id, name, prices, quantity }) => ({ id, name, prices, quantity })),
       })),
     };
     const json = JSON.stringify(payload);
