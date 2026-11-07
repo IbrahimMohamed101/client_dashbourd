@@ -378,6 +378,20 @@ function CatalogEditor({
           <p className="font-semibold">
             النسخة المنشورة {data.publishedRevision}
           </p>
+          <p className="text-xs text-muted-foreground" aria-label="ناشر منيو الكاشير">
+            نشر بواسطة: {data.publishedBy
+              ? (data.publishedBy.name || data.publishedBy.email) + " (" + data.publishedBy.role + ")"
+              : "غير مسجّل للنسخ الأقدم"}
+            {data.publishedAt && " · " + new Date(data.publishedAt).toLocaleString("ar-SA-u-nu-latn")}
+          </p>
+          {data.draft && (
+            <p className="text-xs text-muted-foreground" aria-label="حافظ مسودة الكاشير">
+              حفظ المسودة: {data.draftSavedBy
+                ? data.draftSavedBy.name || data.draftSavedBy.email
+                : "غير مسجّل"}
+              {data.draftSavedAt && " · " + new Date(data.draftSavedAt).toLocaleString("ar-SA-u-nu-latn")}
+            </p>
+          )
           <p className="text-sm text-muted-foreground" role="status">
             {dirty
               ? "تعديلات تحتاج حفظًا"
