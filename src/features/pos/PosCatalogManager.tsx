@@ -614,6 +614,21 @@ function CatalogEditor({
           <h2 className="font-bold">بيانات الصنف وأسعاره</h2>
           {product ? (
             <>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  انسخ الصنف بأحجامه وأسعاره، وستظل النسخة مخفية حتى تُظهرها وتنشر المسودة.
+                </p>
+                <Button type="button" variant="outline"
+                  disabled={busy || edit.products.length >= 500}
+                  onClick={() => {
+                    const id = crypto.randomUUID();
+                    const copy = duplicateDraftProduct(product, id, product.variants.map(() => crypto.randomUUID()));
+                    update({ ...edit, products: [...edit.products, copy] });
+                    setSelection(id);
+                    setProductSearch("");
+                    setVisibilityFilter("all");
+                  }}>نسخ الصنف كمسودة مخفية</Button>
+              </div>
               <label className="grid gap-1 text-sm">
                 اسم الصنف
                 <Input
@@ -724,7 +739,22 @@ function CatalogEditor({
                 <fieldset className="grid gap-2 rounded-lg border p-3 text-sm">
                   <legend className="px-2 font-semibold">الإضافات المسموحة لهذا الصنف</legend>
                   <p className="text-muted-foreground">تحديد الإضافات يمنع بيع تركيبات غير مناسبة. الإضافات غير محددة القيود مسبقًا.</p>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-2">
+                     <Button type="button" variant="outline" size="sm"
+                       onClick={() => updateProduct({ ...product, allowedAddonIds: undefined })}>
+                       السماح بكل الإضافات
+                     </Button>
+                     <Button type="button" variant="outline" size="sm"
+                       onClick={() => updateProduct({ ...product, allowedAddonIds: [] })}>
+                       منع كل الإضافات
+                     </Button>
+                   </div>
+                   <p role="status" className="text-xs text-muted-foreground">
+                     {product.allowedAddonIds === undefined
+                       ? "جميع الإضافات مسموحة لهذا الصنف"
+                       : `${product.allowedAddonIds.length} إضافة مسموحة لهذا الصنف`}
+                   </p>
+                   <div className="flex flex-wrap gap-4">
                     {edit.products.filter((addon) => addon.category === "addons").map((addon) => (
                       <label key={addon.id} className="flex min-h-10 items-center gap-2">
                         <input
