@@ -140,7 +140,35 @@ describe("POS preview workspace", () => {
     });
     const quote = within(await screen.findByRole("region", { name: "نتيجة تسعير السيرفر" }));
     expect(quote.getByText(/3\.00/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" }));
+    const checkout = within(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ }));
+    expect(checkout.getByText(/3\.00/)).toBeInTheDocument();
+    expect(checkout.getByRole("button", { name: "شبكة" })).toBeEnabled();
+    expect(checkout.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ })).toBeDisabled();
+    await user.click(checkout.getByRole("button", { name: "رجوع للسلة" }));
     expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+  });
+
+  it("fails closed when server quote totals are inconsistent", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchPosQuote).mockResolvedValueOnce({
+      revision: 1, currency: "SAR", channel: "restaurant",
+      lines: [{
+        productId: "water", name: "مياه", variantId: "bottle", variantLabel: "عبوة",
+        quantity: 1, basePriceHalalas: 300, addons: [], unitPriceHalalas: 300,
+        lineTotalHalalas: 300,
+      }],
+      itemCount: 1, provisionalSubtotalHalalas: 500,
+      finalPayableHalalas: null, taxHalalas: null, discountHalalas: null,
+      canCommit: false, note: "review",
+    });
+    render(<PosWorkspace catalog={catalog} />);
+    await user.type(screen.getByRole("searchbox", { name: "ابحث عن صنف" }), "مياه");
+    await user.click(screen.getByRole("button", { name: /مياه/ }));
+    expect(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/الإجمالي المبدئي/);
+    expect(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" })).toBeDisabled();
   });
 
   it("blocks switching channels when the selected size has no price in the destination", async () => {
