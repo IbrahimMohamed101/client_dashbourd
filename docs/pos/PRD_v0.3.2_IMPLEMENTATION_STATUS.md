@@ -52,7 +52,9 @@ Scope: STAGING ONLY. Never enable financial production writes until readiness ga
 - **D (PR #82, preview implementation)**: all-channel price matrix, channel-to-channel bulk copy limited to searched rows (fill blanks or explicit overwrite; blank source never erases destination), copy product with new IDs and remapped default variant starting hidden, bulk allow/deny addons.
 - **Verification for D**: isolated Vitest helper and manager tests plus extended four-viewport Chromium synthetic fixture. Test results must be read from PR #82 Actions before calling D accepted; use no production accounts.
 - **D limitation**: copying prices does **not** activate sales. Zero price still requires confirmation when saving; drafts need explicit publish and use the same revision guard. Changing addon eligibility remains global per product, not automatically per channel; any per-channel rule would require a new PRD/backend contract.
-- **Next operational dependencies**: full Staging isolation certification, backend quote, returns, subscriptions, closing and ZATCA remain blocked until their dedicated gates and permissions are satisfied.
+- **E (PR pending, Staging only)**: invoice-before-payment review using the existing read-only backend `/api/dashboard/pos/quote`, strict response validation (matching revision/channel/line IDs/addons, safe halala arithmetic, no final payable), per-line preview, suggested restaurant cash/network tender and external-app reported paid/cash status. All sale/print/payment mutations remain disabled; provisional subtotal is not tax-inclusive payable amount.
+- **E acceptance**: React/UI tests, quote-integrity unit tests, regression and four viewport QA. Do not display fiscal/tax invoice, print, record transactions, claim any cash collection or mark E financially complete.
+- **Next operational dependencies**: full Staging isolation certification, backend final payable/tax/discount implementation, returns, subscriptions, closing and ZATCA remain blocked until their dedicated gates and permissions are satisfied.
 
 ## Engineering rules
 - This PR targets `codex/pos-staging-preview`, not `main`.
