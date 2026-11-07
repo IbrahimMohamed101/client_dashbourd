@@ -434,7 +434,7 @@ try {
       nextRefundFault = "abort-after";
       await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
       await refundForm.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
-      await refundForm.getByRole("button", { name: "إلغاء" }).click();
+      await refundForm.getByRole("button", { name: "إلغاء", exact: true }).click();
       await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
       assert.equal(refunds.length, 1, "refund receipt recovery must not record twice");
 
@@ -444,7 +444,7 @@ try {
       nextRefundFault = "abort-before";
       await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
       await refundForm.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
-      await refundForm.getByRole("button", { name: "إلغاء" }).click();
+      await refundForm.getByRole("button", { name: "إلغاء", exact: true }).click();
       assert.equal(refunds.length, 0, "abandoned absent refund creates no document");
       await page.reload();
       refundForm = await startFreshRefund();
