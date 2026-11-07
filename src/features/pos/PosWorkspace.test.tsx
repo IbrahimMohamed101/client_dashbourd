@@ -522,7 +522,7 @@ describe("POS preview workspace", () => {
     await user.click(within(screen.getByRole("region", { name: "الكتالوج التجريبي" }))
       .getByRole("button", { name: /مياه/ }));
     const quote = within(await screen.findByRole("region", { name: "نتيجة تسعير السيرفر" }));
-    expect(quote.getByText(/4\\.00/)).toBeInTheDocument();
+    expect(quote.getByText(/4\.00/)).toBeInTheDocument();
     expect(fetchPosQuote).toHaveBeenCalledWith({
       revision: 1, channel: "hungerstation",
       items: [{ productId: "water", variantId: "bottle", quantity: 1, addonIds: [] }],
