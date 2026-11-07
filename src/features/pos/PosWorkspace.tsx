@@ -25,6 +25,8 @@ import {
 } from "./previewCatalog";
 import type { PublishedPosCatalog } from "./catalogApi";
 import { fetchPosQuote, type PosQuote } from "./quoteApi";
+import { validatePosCheckoutReview } from "./checkoutReview";
+import { PosCheckoutReview } from "./PosCheckoutReview";
 import { parseApiError } from "@/lib/apiErrors";
 import {
   cartLineId, readPosCartDraft, writePosCartDraft,
@@ -268,6 +270,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const [quoteReview, setQuoteReview] = useState<{ key: string; data: PosQuote } | null>(null);
   const [quoteFailure, setQuoteFailure] = useState<{ key: string; message: string } | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   useEffect(() => {
     writePosCartDraft(operatorId, { revision: cartRevision, channel, serviceMode, lines: cart });
@@ -306,6 +309,8 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const quoteKey = JSON.stringify(quoteRequest);
   const currentQuote = quoteReview?.key === quoteKey ? quoteReview.data : null;
   const currentQuoteError = quoteFailure?.key === quoteKey ? quoteFailure.message : null;
+  const quoteValidationError = currentQuote ? validatePosCheckoutReview(quoteRequest, currentQuote) : null;
+  const verifiedQuote = !staleCart && !quoteValidationError ? currentQuote : null;
   async function reviewServerPrice() {
     if (staleCart || !cart.length || total === null || quoteLoading) return;
     const key = quoteKey;
@@ -821,15 +826,17 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                 })}
               </ul>
             )}
-            {currentQuoteError && (
-              <p role="alert" className="text-xs text-destructive">{currentQuoteError}</p>
+            {(currentQuoteError || quoteValidationError) && (
+              <p role="alert" className="text-xs text-destructive">
+                {currentQuoteError || quoteValidationError}
+              </p>
             )}
-            {currentQuote && (
+            {verifiedQuote && (
               <section aria-label="نتيجة تسعير السيرفر" className="rounded-xl border bg-muted/50 p-3 text-sm">
-                <h3 className="font-bold">مراجعة السعر · نسخة {currentQuote.revision}</h3>
+                <h3 className="font-bold">مراجعة السعر · نسخة {verifiedQuote.revision}</h3>
                 <div className="mt-2 flex justify-between gap-2">
                   <span>الإجمالي المبدئي</span>
-                  <strong>{formatPreviewAmount(currentQuote.provisionalSubtotalHalalas)}</strong>
+                  <strong>{formatPreviewAmount(verifiedQuote.provisionalSubtotalHalalas)}</strong>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   هذا ليس إجمالي الفاتورة النهائي؛ الضريبة والخصومات والسداد غير مفعّلة.
@@ -864,12 +871,27 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
             >
               {quoteLoading ? "مراجعة الأسعار..." : "مراجعة الأسعار من السيرفر"}
             </Button>
+            <Button type="button" variant="outline" className="min-h-12"
+              disabled={!verifiedQuote || quoteLoading || staleCart}
+              onClick={() => setCheckoutOpen(true)}>
+              مراجعة الطلب قبل الفاتورة
+            </Button>
             <Button type="button" disabled className="min-h-14 w-full text-base">
               الدفع غير متاح في المعاينة
             </Button>
           </div>
         </aside>
       </div>
+      {checkoutOpen && verifiedQuote && (
+        <PosCheckoutReview
+          quote={verifiedQuote}
+          channelName={channels.find((item) => item.id === channel)?.label ?? channel}
+          serviceMode={serviceMode}
+          externalOrderNumber={externalOrderNumber}
+          externalPaymentStatus={appPaymentStatus}
+          onClose={() => setCheckoutOpen(false)}
+        />
+      )}
       {product && !staleCart && (
         <ProductOptions
           product={product}
