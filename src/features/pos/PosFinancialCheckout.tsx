@@ -150,8 +150,10 @@ export function PosFinancialCheckout({
           const active = await getActivePosOperation("sale");
           if (active && attempt.current?.key !== active.key) {
             attempt.current = { signature: "", key: active.key };
-            try { sessionStorage.setItem(storageKey,
-              JSON.stringify({ ...attempt.current, at: Date.now() })); } catch { /* blocked */ }
+            if (storageKey) {
+              try { sessionStorage.setItem(storageKey,
+                JSON.stringify({ ...attempt.current, at: Date.now() })); } catch { /* blocked */ }
+            }
           }
         } catch { /* Preserve uncertainty until connectivity is restored. */ }
       }
