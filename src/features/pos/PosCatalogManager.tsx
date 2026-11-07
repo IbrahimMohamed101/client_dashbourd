@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { parseApiError } from "@/lib/apiErrors";
+import { getPosCatalogChanges } from "./catalogChangeReview";
 import {
   channels as defaultChannels,
   type PosChannel,
@@ -110,6 +111,8 @@ function CatalogEditor({
   const [selection, setSelection] = useState(edit.products[0]?.id ?? "");
   const [categoryId, setCategoryId] = useState(edit.categories[0]?.id ?? "");
   const [dirty, setDirty] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [visibilityFilter, setVisibilityFilter] = useState<"all" | "visible" | "hidden">("all");
   const [confirm, setConfirm] = useState(false);
   const [zeroPriceDialog, setZeroPriceDialog] = useState(false);
   const [error, setError] = useState("");
@@ -118,6 +121,13 @@ function CatalogEditor({
   const [newChannelId, setNewChannelId] = useState("");
   const [newChannelLabel, setNewChannelLabel] = useState("");
   const channels = edit.channels;
+  const search = productSearch.trim().toLocaleLowerCase();
+  const visibleProducts = edit.products.filter((item) =>
+    (!search || item.name.toLocaleLowerCase().includes(search)
+      || edit.categories.some((entry) => entry.id === item.category && entry.label.toLocaleLowerCase().includes(search)))
+    && (visibilityFilter === "all" || (visibilityFilter === "visible" ? item.active !== false : item.active === false))
+  );
+  const reviewChanges = data.draft ? getPosCatalogChanges(data.published, data.draft) : [];
   const product =
     edit.products.find((item) => item.id === selection) ?? edit.products[0];
   const category =
@@ -167,6 +177,16 @@ function CatalogEditor({
       (value) => value.trim() !== "" && Number(value) === 0
     )));
   const requestSave = () => hasZeroPrice ? setZeroPriceDialog(true) : save.mutate();
+
+  useEffect(() => {
+    if (!dirty) return;
+    const preventLoss = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", preventLoss);
+    return () => window.removeEventListener("beforeunload", preventLoss);
+  }, [dirty]);
 
   function addChannel() {
     const id = newChannelId.trim().toLowerCase();
@@ -252,7 +272,7 @@ function CatalogEditor({
             {dirty
               ? "تعديلات تحتاج حفظًا"
               : data.draft
-                ? "مسودة محفوظة جاهزة للمراجعة"
+                ? "مسودة محفوظة · " + reviewChanges.length + " تغيير للمراجعة"
                 : "المنيو المنشور هو الظاهر للكاشير"}
           </p>
         </div>
@@ -363,6 +383,13 @@ function CatalogEditor({
               </select>
             </label>
           </div>
+          <label className="grid gap-1 text-sm">
+            بحث في جدول الأسعار
+            <Input type="search" aria-label="بحث في جدول أسعار الكاشير"
+              placeholder="اسم الصنف أو التصنيف" value={productSearch}
+              onChange={(event) => setProductSearch(event.target.value)} />
+          </label>
+          <p className="text-xs text-muted-foreground">عرض {visibleProducts.length} من {edit.products.length} صنف.</p>
           <div className="max-h-[65dvh] overflow-auto rounded-xl border">
             <table className="w-full min-w-[38rem] border-collapse text-right text-sm">
               <thead className="sticky top-0 bg-muted">
@@ -374,7 +401,7 @@ function CatalogEditor({
                 </tr>
               </thead>
               <tbody>
-                {edit.products.flatMap((item) =>
+                {visibleProducts.flatMap((item) =>
                   item.variants.map((variant) => (
                     <tr key={`${item.id}/${variant.id}`} className="border-t">
                       <td className="p-3 font-semibold">{item.name}</td>
@@ -473,21 +500,48 @@ function CatalogEditor({
           </Button>
           <hr />
           <label className="grid gap-1 text-sm">
-            الصنف
-            <select
-              className={selectStyle}
-              value={product?.id ?? ""}
-              onChange={(event) => setSelection(event.target.value)}
-            >
-              {!product && <option value="">أضف صنفًا</option>}
-              {edit.products.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name || "صنف جديد"}
-                  {item.active === false ? " · مخفي" : ""}
-                </option>
-              ))}
-            </select>
+            البحث في الأصناف
+            <Input
+              type="search"
+              aria-label="بحث في أصناف الكاشير"
+              placeholder="اسم الصنف أو التصنيف"
+              value={productSearch}
+              onChange={(event) => setProductSearch(event.target.value)}
+            />
           </label>
+          <div role="group" aria-label="عرض الأصناف" className="flex flex-wrap gap-2">
+            {([
+              ["all", "الكل"], ["visible", "الظاهرة"], ["hidden", "المخفية"],
+            ] as const).map(([id, label]) => (
+              <Button key={id} type="button" size="sm"
+                variant={visibilityFilter === id ? "default" : "outline"}
+                aria-pressed={visibilityFilter === id}
+                onClick={() => setVisibilityFilter(id)}
+              >{label}</Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground" role="status">
+            عرض {visibleProducts.length} من {edit.products.length} صنف
+          </p>
+          <div role="group" aria-label="قائمة أصناف الكاشير"
+            className="grid max-h-[40dvh] gap-1.5 overflow-y-auto rounded-lg border p-2">
+            {visibleProducts.map((item) => (
+              <button type="button" key={item.id}
+                aria-pressed={product?.id === item.id}
+                onClick={() => setSelection(item.id)}
+                className={"flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-right text-sm transition-colors " +
+                  (product?.id === item.id ? "border-primary bg-primary/10 font-semibold" : "border-transparent hover:bg-muted")}
+              >
+                <span className="min-w-0 truncate">{item.name || "صنف جديد"}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {item.active === false ? "مخفي" : "ظاهر"}
+                </span>
+              </button>
+            ))}
+            {visibleProducts.length === 0 && (
+              <p className="p-3 text-sm text-muted-foreground">لا توجد أصناف مطابقة. غيّر البحث أو فلتر الظهور.</p>
+            )}
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -728,13 +782,37 @@ function CatalogEditor({
         >
           <DialogContent dir="rtl">
             <DialogHeader>
-              <DialogTitle>نشر منيو الكاشير</DialogTitle>
+              <DialogTitle>مراجعة فروق منيو الكاشير قبل النشر</DialogTitle>
               <DialogDescription>
                 هتظهر المسودة للكاشير بعد النشر. تضم{" "}
                 {data.draft.products.filter((item) => item.active).length} صنفًا
                 ظاهرًا.
               </DialogDescription>
             </DialogHeader>
+            <div role="region" aria-label="مراجعة تغييرات منيو الكاشير"
+              className="max-h-[45dvh] overflow-auto rounded-lg border">
+              <p className="sticky top-0 border-b bg-background p-3 text-sm font-semibold">
+                {reviewChanges.length} تغيير مقارنة بالمنيو المنشور · أسعار: {reviewChanges.filter((entry) => entry.kind === "price").length}
+              </p>
+              {reviewChanges.length === 0 ? (
+                <p className="p-3 text-sm text-muted-foreground">لا توجد فروق بين المسودة والمنيو المنشور.</p>
+              ) : (
+                <table className="w-full min-w-[28rem] border-collapse text-right text-xs">
+                  <thead className="bg-muted">
+                    <tr><th className="p-2">التغيير</th><th className="p-2">قبل</th><th className="p-2">بعد</th></tr>
+                  </thead>
+                  <tbody>
+                    {reviewChanges.map((entry) => (
+                      <tr key={entry.id} className="border-t">
+                        <td className="p-2 font-medium">{entry.label}</td>
+                        <td className="p-2 text-muted-foreground">{entry.before}</td>
+                        <td className="p-2">{entry.after}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
             <DialogFooter>
               <Button
                 type="button"
@@ -746,7 +824,7 @@ function CatalogEditor({
               </Button>
               <Button
                 type="button"
-                disabled={publish.isPending}
+                disabled={publish.isPending || reviewChanges.length === 0}
                 onClick={() => publish.mutate()}
               >
                 نشر المنيو
