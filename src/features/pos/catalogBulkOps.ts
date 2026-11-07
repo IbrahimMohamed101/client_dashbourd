@@ -1,6 +1,6 @@
 // Staging-only client-side draft helpers. The POS catalog remains separate from the app menu.
 type DraftVariant = { id: string; prices: Record<string, string> };
-type DraftProduct = { id: string; name: string; active?: boolean; variants: DraftVariant[]; allowedAddonIds?: string[] };
+type DraftProduct = { id: string; name: string; active?: boolean; variants: DraftVariant[]; allowedAddonIds?: string[]; defaultVariantId?: string };
 type DraftCatalog = { products: DraftProduct[] };
 
 export type PriceCopyMode = "missing" | "overwrite";
