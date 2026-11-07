@@ -197,7 +197,8 @@ try {
         else {
           const quote = finalQuote(input);
           invoice = {
-            signature, _id: "111111111111111111111111", number: "STG-000001",
+            signature, _id: (invoices.length + 1).toString(16).padStart(24, "0"),
+            number: "STG-000001",
             sequence: 1, publishedRevision: input.revision, channel: input.channel,
             serviceMode: input.serviceMode, actor: {
               id: user.id, name: user.name, email: user.email, role: "cashier",
