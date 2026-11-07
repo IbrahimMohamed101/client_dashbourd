@@ -7,6 +7,10 @@ export type PosCatalogManagerState = {
   publishedRevision: number;
   published: Catalog;
   draft: Catalog | null;
+  draftSavedBy?: { id: string; name: string | null; email: string; role: string } | null;
+  draftSavedAt?: string | null;
+  publishedBy?: { id: string; name: string | null; email: string; role: string } | null;
+  publishedAt?: string | null;
 };
 
 export const posCatalogKey = ["pos-catalog", "published"] as const;
