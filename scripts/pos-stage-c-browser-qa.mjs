@@ -139,6 +139,10 @@ try {
       const phaseDReview = page.getByRole("region", { name: "مراجعة تغييرات منيو الكاشير" });
       assert.equal(await phaseDReview.getByRole("row").count(), 4);
       await page.getByRole("button", { name: "نشر المنيو" }).click();
+      for (let wait = 0; wait < 50
+        && state.published.products[0].variants[0].prices.hungerstation !== 2500; wait += 1) {
+        await page.waitForTimeout(50);
+      }
       assert.equal(state.published.products[0].variants[0].prices.hungerstation, 2500);
       assert.equal(state.published.products[1].variants[0].prices.hungerstation, 400,
         "Filtered price copy must leave water untouched");
