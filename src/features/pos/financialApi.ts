@@ -129,6 +129,10 @@ export async function listPosRefunds(invoiceId: string): Promise<PosRefund[]> {
   );
   return res.data.data;
 }
+export async function getPosRefund(id: string): Promise<PosRefund> {
+  const res = await api.get<{ data: PosRefund }>(base + "/refunds/" + encodeURIComponent(id));
+  return res.data.data;
+}
 export async function recordPosRefund(body: PosRefundRequest, key: string): Promise<PosRefund> {
   const res = await api.post<{ data: PosRefund }>(base + "/refunds", body, {
     headers: { "Idempotency-Key": key },
