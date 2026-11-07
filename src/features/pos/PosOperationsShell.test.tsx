@@ -37,11 +37,12 @@ const catalog = {
 };
 
 describe("POS operations dashboard Staging shell", () => {
-  it("opens with a real POS catalog and never exposes a payment write", async () => {
+  it("opens with a real POS catalog and presents the active sale review action", async () => {
     render(<PosOperationsShell catalog={catalog} />);
     expect(screen.getByRole("navigation", { name: "أقسام نقطة البيع" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "ابحث عن صنف" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "الدفع غير متاح في المعاينة" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" })).toBeInTheDocument();
     expect(screen.getByText("branch-cashier")).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));

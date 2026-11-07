@@ -66,9 +66,8 @@ describe("POS preview workspace", () => {
       confirmation.getByRole("button", { name: "تأكيد تغيير القناة" })
     );
     expect(cart.getByRole("listitem")).toHaveTextContent("42.00");
-    expect(
-      cart.getByRole("button", { name: "الدفع غير متاح في المعاينة" })
-    ).toBeDisabled();
+    expect(cart.queryByRole("button", { name: "الدفع غير متاح في المعاينة" })).not.toBeInTheDocument();
+    expect(cart.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" })).toBeInTheDocument();
   });
 
   it("shows all items immediately and updates product cards for channel and category", async () => {
@@ -104,6 +103,9 @@ describe("POS preview workspace", () => {
     expect(screen.getByRole("textbox", { name: "الرقم الخارجي لطلب التطبيق" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "كاش" }));
     expect(screen.getByRole("button", { name: "كاش" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "كاش" })).toHaveClass("border-primary");
+    expect(screen.getByRole("button", { name: "مدفوع" })).not.toHaveClass("border-primary");
+    expect(screen.getByText("الحالة المختارة: كاش")).toBeInTheDocument();
     expect(screen.getByText(/كاش التطبيقات لا يُضاف لدرج المطعم/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "المطعم" }));
     expect(within(screen.getByRole("group", { name: "نوع طلب المطعم" })).getByRole("button", { name: "محلي" })).toHaveAttribute("aria-pressed", "true");
@@ -143,7 +145,7 @@ describe("POS preview workspace", () => {
     expect(screen.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" })).toBeDisabled();
     // A read-only Stage E quote can never unlock Stage F invoice creation.
     expect(screen.queryByRole("dialog", { name: /مراجعة الطلب وتأكيد الفاتورة/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "الدفع غير متاح في المعاينة" })).not.toBeInTheDocument();
   });
 
   it("fails closed when server quote totals are inconsistent", async () => {
@@ -244,7 +246,7 @@ describe("POS preview workspace", () => {
     await user.click(within(screen.getByRole("region", { name: "الكتالوج التجريبي" })).getByRole("button", { name: /مياه/ }));
     await user.click(screen.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }));
     expect(await screen.findByText(/تم نشر منيو أحدث/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "الدفع غير متاح في المعاينة" })).not.toBeInTheDocument();
   });
 
   it("uses manager-configured channels without a frontend code change", async () => {
@@ -337,9 +339,10 @@ describe("POS preview workspace", () => {
     expect(screen.getAllByRole("searchbox", { name: "ابحث عن صنف" })).toHaveLength(1);
     const cart = screen.getByRole("complementary", { name: "السلة التجريبية" });
     expect(within(cart).getByText("سلة المطعم")).toBeInTheDocument();
-    const footerAction = within(cart).getByRole("button", { name: "الدفع غير متاح في المعاينة" });
+    const footerAction = within(cart).getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" });
     expect(footerAction).toHaveClass("min-h-14");
-    expect(footerAction).toBeDisabled();
+    expect(within(cart).queryByRole("button", { name: "الدفع غير متاح في المعاينة" }))
+      .not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Keeta" }));
     expect(within(cart).getByText("سلة Keeta")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "نوع طلب المطعم" })).not.toBeInTheDocument();
@@ -363,7 +366,7 @@ describe("POS preview workspace", () => {
     await user.click(dialog.getByRole("button", { name: /حفظ التعديل/ }));
     expect(cart.getAllByRole("listitem")).toHaveLength(1);
     expect(cart.getByRole("listitem")).toHaveTextContent("9.00");
-    expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "الدفع غير متاح في المعاينة" })).not.toBeInTheDocument();
   });
 
   it("prefills 150 g and can edit an add-on line without multiplying add-ons incorrectly", async () => {
@@ -431,7 +434,7 @@ describe("POS preview workspace", () => {
       .getByRole("button", { name: /مياه/ })).toBeDisabled();
     await user.click(review.getByRole("button", { name: "تأكيد الأسعار الجديدة" }));
     expect(screen.getByRole("complementary", { name: "السلة التجريبية" })).toHaveTextContent("4.50");
-    expect(screen.getByRole("button", { name: "الدفع غير متاح في المعاينة" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "الدفع غير متاح في المعاينة" })).not.toBeInTheDocument();
   });
 
   it("shows add-ons in meal dialog, not as standalone sales cards unless opted in", async () => {
@@ -497,6 +500,36 @@ describe("POS preview workspace", () => {
     const dialog = within(screen.getByRole("dialog", { name: /دجاج تكا/ }));
     expect(dialog.getByRole("button", { name: /100 جم/ })).toHaveAttribute("aria-pressed", "true");
     expect(dialog.getByRole("button", { name: /200 جم/ })).toBeDisabled();
+  });
+
+  it("automatically refreshes app-channel prices without pressing the manual review button", async () => {
+    vi.mocked(fetchPosQuote).mockReset();
+    vi.mocked(fetchPosQuote).mockResolvedValue({
+      revision: 1, currency: "SAR", channel: "hungerstation",
+      lines: [{
+        productId: "water", name: "مياه", variantId: "bottle", variantLabel: "عبوة",
+        quantity: 1, basePriceHalalas: 400, addons: [],
+        unitPriceHalalas: 400, lineTotalHalalas: 400,
+      }],
+      itemCount: 1, provisionalSubtotalHalalas: 400,
+      finalPayableHalalas: null, taxHalalas: null, discountHalalas: null,
+      canCommit: false, note: "مراجعة السعر",
+    });
+    const user = userEvent.setup();
+    render(<PosWorkspace catalog={catalog} />);
+    await user.click(screen.getByRole("button", { name: "HungerStation" }));
+    await user.type(screen.getByRole("searchbox", { name: "ابحث عن صنف" }), "مياه");
+    await user.click(within(screen.getByRole("region", { name: "الكتالوج التجريبي" }))
+      .getByRole("button", { name: /مياه/ }));
+    const quote = within(await screen.findByRole("region", { name: "نتيجة تسعير السيرفر" }));
+    expect(quote.getByText(/4\.00/)).toBeInTheDocument();
+    expect(fetchPosQuote).toHaveBeenCalledWith({
+      revision: 1, channel: "hungerstation",
+      items: [{ productId: "water", variantId: "bottle", quantity: 1, addonIds: [] }],
+    });
+    const payment = within(screen.getByRole("group", { name: "حالة دفع طلب التطبيق" }));
+    expect(payment.getByRole("button", { name: "مدفوع" })).toHaveClass("border-primary");
+    expect(payment.getByRole("button", { name: "كاش" })).not.toHaveClass("border-primary");
   });
 
 });

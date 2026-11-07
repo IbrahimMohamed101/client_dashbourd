@@ -396,6 +396,43 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
     }, 300);
     return () => { active = false; window.clearTimeout(timer); };
   }, [financeKey, staleCart, invalidDiscount, cart.length]);
+  // App-channel price previews should update as soon as the cashier changes
+  // the cart/channel. Requests are keyed to the exact snapshot: a late reply
+  // cannot overwrite the current basket's price, and server money remains
+  // authoritative in the separate financial quote above.
+  useEffect(() => {
+    if (channel === "restaurant" || staleCart || !cart.length || total === null) {
+      setQuoteLoading(false);
+      return;
+    }
+    const key = quoteKey;
+    let active = true;
+    setQuoteLoading(true);
+    const timer = window.setTimeout(() => {
+      void fetchPosQuote(JSON.parse(key) as typeof quoteRequest)
+        .then(data => {
+          if (!active) return;
+          const error = validatePosCheckoutReview(JSON.parse(key) as typeof quoteRequest, data);
+          if (error) {
+            setQuoteReview(null);
+            setQuoteFailure({ key, message: error });
+            return;
+          }
+          setQuoteReview({ key, data });
+          setQuoteFailure(null);
+        })
+        .catch(cause => {
+          if (!active) return;
+          const error = parseApiError(cause);
+          setQuoteReview(null);
+          setQuoteFailure({ key, message: error.code === "POS_CATALOG_CONFLICT"
+            ? "تم نشر منيو أحدث. حدّث الصفحة وراجع الأسعار قبل البيع."
+            : error.message || "تعذر تسعير التطبيق من سيرفر Staging." });
+        })
+        .finally(() => { if (active) setQuoteLoading(false); });
+    }, 300);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [channel, quoteKey, staleCart, cart.length, total]);
   // An earlier open dialog may not silently reappear after a re-quote.
   useEffect(() => {
     if (!verifiedFinanceQuote) setCheckoutOpen(false);
@@ -833,15 +870,34 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                 <div role="group" aria-label="حالة دفع طلب التطبيق" className="flex gap-2">
                   <Button type="button"
                     variant={appPaymentStatus === "paid" ? "secondary" : "outline"}
-                    aria-pressed={appPaymentStatus === "paid"} className="min-h-12 flex-1"
-                    onClick={() => setAppPaymentStatus("paid")}>مدفوع</Button>
+                    aria-pressed={appPaymentStatus === "paid"}
+                    className={"min-h-12 flex-1 gap-2 border-2 " + (
+                      appPaymentStatus === "paid"
+                        ? "border-primary bg-primary/10 font-bold text-foreground"
+                        : "border-border"
+                    )}
+                    onClick={() => setAppPaymentStatus("paid")}>
+                    {appPaymentStatus === "paid" && <Check aria-hidden="true" className="size-5 text-primary" />}
+                    مدفوع
+                  </Button>
                   <Button type="button"
                     variant={appPaymentStatus === "cash" ? "secondary" : "outline"}
-                    aria-pressed={appPaymentStatus === "cash"} className="min-h-12 flex-1"
-                    onClick={() => setAppPaymentStatus("cash")}>كاش</Button>
+                    aria-pressed={appPaymentStatus === "cash"}
+                    className={"min-h-12 flex-1 gap-2 border-2 " + (
+                      appPaymentStatus === "cash"
+                        ? "border-primary bg-primary/10 font-bold text-foreground"
+                        : "border-border"
+                    )}
+                    onClick={() => setAppPaymentStatus("cash")}>
+                    {appPaymentStatus === "cash" && <Check aria-hidden="true" className="size-5 text-primary" />}
+                    كاش
+                  </Button>
                 </div>
+                <p role="status" className="text-sm font-semibold">
+                  الحالة المختارة: {appPaymentStatus === "paid" ? "مدفوع" : "كاش"}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  معاينة فقط: لا يُسجّل بيع أو تحصيل، وكاش التطبيقات لا يُضاف لدرج المطعم.
+                  يُسجَّل البيع التجريبي كمستحق على التطبيق، وكاش التطبيقات لا يُضاف لدرج المطعم.
                 </p>
               </div>
             )}
@@ -1008,13 +1064,10 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
             >
               {quoteLoading ? "مراجعة الأسعار..." : "مراجعة الأسعار من السيرفر"}
             </Button>
-            <Button type="button" variant="outline" className="min-h-12"
+            <Button type="button" className="min-h-14 w-full text-base font-bold"
               disabled={!verifiedFinanceQuote || financeLoading || invalidDiscount || staleCart}
               onClick={() => setCheckoutOpen(true)}>
               مراجعة الطلب قبل الفاتورة
-            </Button>
-            <Button type="button" disabled className="min-h-14 w-full text-base">
-              الدفع غير متاح في المعاينة
             </Button>
           </div>
         </aside>

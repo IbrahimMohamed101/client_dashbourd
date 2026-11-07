@@ -115,20 +115,20 @@ try {
       throw error;
     }
     const cart = page.getByRole("complementary", { name: "السلة التجريبية" });
-    const pay = cart.getByRole("button", { name: "الدفع غير متاح في المعاينة" });
+    const pay = cart.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" });
     await pay.waitFor();
     // A header nested inside the dashboard main landmark is not an ARIA banner.
     const header = page.locator('header[aria-label="شريط البيع"]');
     const headerBox = await header.boundingBox();
     assert.ok(headerBox, "POS topbar must be visible");
     assert.ok(headerBox.height <= 64.5, "Topbar exceeds 64px: " + headerBox.height);
-    assert.equal(await pay.isDisabled(), true, "Never enable live payment in UX phase A");
+    assert.equal(await pay.isDisabled(), true, "Empty cart must not enable checkout");
     const payBox = await pay.boundingBox();
     const cartBox = await cart.boundingBox();
-    assert.ok(payBox && cartBox, "Cart and pay action must be on screen");
-    assert.ok(payBox.height >= 56, "Pay action touch target must be >=56px");
+    assert.ok(payBox && cartBox, "Cart and checkout action must be on screen");
+    assert.ok(payBox.height >= 56, "Checkout touch target must be >=56px");
     assert.ok(payBox.y + payBox.height <= viewport.height + 1,
-      "Pay action clipped beyond viewport at " + viewport.width + "x" + viewport.height);
+      "Checkout action clipped beyond viewport at " + viewport.width + "x" + viewport.height);
     assert.ok(cartBox.width >= 360 && cartBox.width <= 405,
       "Fixed cart width out of range: " + cartBox.width);
     const pageScroll = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
@@ -225,15 +225,26 @@ try {
     const updatedBox = await pay.boundingBox();
     assert.ok(updatedBox && updatedBox.y + updatedBox.height <= viewport.height + 1,
       "Payment footer must remain visible after changing channel");
-    // Stage F safety: legacy Stage E price preview remains informational,
-    // but no final invoice can be confirmed without the Stage F VAT quote.
+    // App channels must fetch their server quote automatically after editing
+    // the basket or switching channels, with no manual review click.
+    const appQuote = cart.getByRole("region", { name: "نتيجة تسعير السيرفر" });
+    await appQuote.waitFor({ timeout: 10000 });
+    assert.match(await appQuote.innerText(), /8\.00/,
+      "App cart quantity must be automatically repriced from server");
+    const paymentGroup = cart.getByRole("group", { name: "حالة دفع طلب التطبيق" });
+    const paid = paymentGroup.getByRole("button", { name: "مدفوع" });
+    const cash = paymentGroup.getByRole("button", { name: "كاش" });
+    assert.equal(await paid.getAttribute("aria-pressed"), "true");
+    assert.match(await paid.getAttribute("class"), /border-primary/);
+    await cash.click();
+    assert.equal(await cash.getAttribute("aria-pressed"), "true");
+    assert.match(await cash.getAttribute("class"), /border-primary/);
+    assert.equal(await paid.getAttribute("aria-pressed"), "false");
+    await cart.getByText("الحالة المختارة: كاش").waitFor();
+    // Legacy quote does not replace mandatory financial VAT/discount approval.
     const reviewButton = cart.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" });
-    assert.equal(await reviewButton.isDisabled(), true);
-    await cart.getByRole("button", { name: "مراجعة الأسعار من السيرفر" }).click();
-    await cart.getByRole("region", { name: "نتيجة تسعير السيرفر" }).waitFor();
     assert.equal(await reviewButton.isDisabled(), true,
       "Legacy read-only quote must never authorize a Stage F invoice");
-    assert.equal(await pay.isDisabled(), true, "Legacy quote never activates payment");
     assert.deepEqual(errors, [], "Unexpected client-side errors in POS");
     await page.screenshot({ path: destination + "/pos-a-" + viewport.width + "x" + viewport.height + ".png" });
     report.push({ viewport, topbar: headerBox.height, cartWidth: cartBox.width,
