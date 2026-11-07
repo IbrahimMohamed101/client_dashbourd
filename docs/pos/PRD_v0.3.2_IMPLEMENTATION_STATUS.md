@@ -1,6 +1,23 @@
 # Basic Diet POS — PRD v0.3.2 Implementation Matrix (2026-11-05)
 
-Scope: STAGING ONLY. Never enable financial production writes until readiness gates pass. This document is a progress ledger, not a replacement for PRD D-001..D-085.
+Scope: STAGING ONLY. Never enable financial production writes until readiness gates pass. This is a historical progress ledger; the **current owner-approved rules are in [Stage F decisions](./STAGE_F_FINANCIAL_DECISIONS_DRAFT.md) and [consolidated PRD v0.3.3](./PRD_v0.3.3_STAGING_UNIFIED.md)**. Older “blocked/pending/unapproved” paragraphs below describe snapshots before Stage F and must **not** supersede D-088..D-090.
+
+## Stage F final implementation status — 2026-11-07
+
+- **Backend:** [PR #198](https://github.com/IbrahimMohamed101/basicdiet145/pull/198) merged into `codex/pos-staging-isolation`, commit `3e68e0b`. Railway Staging backend deployment `0c71e6f2-1df3-4ccb-b23f-74e51f89d201` reported `SUCCESS`; startup log shows the private `basicdiet_pos_staging_test` DB on `mongodb-qxhu.railway.internal:27017`.
+- **Dashboard:** [PR #89](https://github.com/IbrahimMohamed101/client_dashbourd/pull/89) merged into `codex/pos-staging-preview`, commit `6ba94f7`. Railway dashboard Staging deploy `da7c5cac-e521-4b88-a275-6297779a819b` reported `SUCCESS`.
+- **QA:** Backend 4/4 green GitHub workflows including 7 VAT test vectors, deterministic property test and MongoDB replica-set idempotency, concurrency and refunds. Dashboard 4/4 green PR checks, including synthetic four-viewport browser sale/return/receipt.
+- **Delivered:** final VAT-inclusive server quote; halala HALF_UP; item, add-on and invoice discounts; 1–10 identical-add-on repetitions; atomic immutable invoice with unique idempotency key and separate ledger for restaurant cash/network vs app receivables; printed **non-tax Staging** receipt; recent invoices; capability-gated full/partial refunds with mandatory reason, externally recorded method, and pro-rata tax.
+- **Temporary permission overrides:** D-089 removes the old cashier discount cap. D-090 grants `pos.refund` to cashier, restaurant, admin and superadmin; money is returned outside the POS.
+- **Audit follow-up:** #85 server-trusted `publishedBy` and revision hash audit, #86 add-on repetitions. UI readback and tests tracked in dedicated Staging-only follow-up PRs.
+- **Not yet certified:** #84 Railway `checkSuites=false` / Wait for CI cannot be enabled by the available connector; Staging commit pin mitigates future auto-deploys only. No live-Staging authenticated cashier end-to-end test or verified DB backup/restore. ZATCA Q-011 remains open before **any** Production sale.
+- **Prohibitions still enforced:** No Production/`main`; no customer data; no terminal charge, Moyasar, real payment, ZATCA, or Production-grade fiscal invoice. Stage F must not be represented as a completed Production POS.
+
+---
+
+## Historical snapshots (pre-Stage-F; archived for traceability)
+
+
 
 ## Verified infrastructure evidence
 - Railway Staging environment: `90700265-e775-4075-a99c-8d04508a7d98`
