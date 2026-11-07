@@ -216,7 +216,7 @@ try {
       assert.match(await receipt.innerText(), /فاتورة تجريبية — غير ضريبية/);
       assert.match(await receipt.innerText(), /الضريبة المستخرجة/);
       assert.equal(await cart.getByRole("listitem").count(), 0, "Cart clears after saved sale");
-      await receipt.getByRole("button", { name: "إغلاق" }).click();
+      await receipt.getByRole("button", { name: "إغلاق", exact: true }).click();
       await page.getByRole("button", { name: "أقسام نقطة البيع" }).click();
       await page.getByRole("menuitem", { name: "الطلبات والفواتير" }).click();
       await page.getByRole("button", { name: "عرض / مرتجع" }).click();
