@@ -9,7 +9,7 @@ import { parseApiError } from "@/lib/apiErrors";
 import { formatPreviewAmount } from "./previewCatalog";
 import { parseHalalas } from "./posDiscountMath";
 import {
-  issuePosSale, abandonPosOperation, getPosOperation, getPosSale,
+  issuePosSale, abandonPosOperation, getPosOperation, getActivePosOperation, getPosSale,
   type PosFinanceQuote, type PosFinanceQuoteRequest, type PosInvoice, type PosSaleIntent,
 } from "./financialApi";
 
@@ -143,6 +143,18 @@ export function PosFinancialCheckout({
       onSale(invoice);
     } catch (cause) {
       const error = parseApiError(cause);
+      if (error.code === "POS_OPERATION_PENDING") {
+        // A different unresolved key may belong to this same cashier,
+        // e.g. after a tab crash. Recover the REAL pending key first.
+        try {
+          const active = await getActivePosOperation("sale");
+          if (active && attempt.current?.key !== active.key) {
+            attempt.current = { signature: "", key: active.key };
+            try { sessionStorage.setItem(storageKey,
+              JSON.stringify({ ...attempt.current, at: Date.now() })); } catch { /* blocked */ }
+          }
+        } catch { /* Preserve uncertainty until connectivity is restored. */ }
+      }
       const final = error.status !== undefined && error.status >= 400 && error.status < 500
         && Boolean(error.code) && error.code !== "POS_OPERATION_PENDING";
       if (final) {
