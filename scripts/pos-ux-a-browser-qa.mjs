@@ -115,20 +115,20 @@ try {
       throw error;
     }
     const cart = page.getByRole("complementary", { name: "السلة التجريبية" });
-    const pay = cart.getByRole("button", { name: "الدفع غير متاح في المعاينة" });
+    const pay = cart.getByRole("button", { name: "مراجعة الطلب قبل الفاتورة" });
     await pay.waitFor();
     // A header nested inside the dashboard main landmark is not an ARIA banner.
     const header = page.locator('header[aria-label="شريط البيع"]');
     const headerBox = await header.boundingBox();
     assert.ok(headerBox, "POS topbar must be visible");
     assert.ok(headerBox.height <= 64.5, "Topbar exceeds 64px: " + headerBox.height);
-    assert.equal(await pay.isDisabled(), true, "Never enable live payment in UX phase A");
+    assert.equal(await pay.isDisabled(), true, "Empty cart must not enable checkout");
     const payBox = await pay.boundingBox();
     const cartBox = await cart.boundingBox();
-    assert.ok(payBox && cartBox, "Cart and pay action must be on screen");
-    assert.ok(payBox.height >= 56, "Pay action touch target must be >=56px");
+    assert.ok(payBox && cartBox, "Cart and checkout action must be on screen");
+    assert.ok(payBox.height >= 56, "Checkout touch target must be >=56px");
     assert.ok(payBox.y + payBox.height <= viewport.height + 1,
-      "Pay action clipped beyond viewport at " + viewport.width + "x" + viewport.height);
+      "Checkout action clipped beyond viewport at " + viewport.width + "x" + viewport.height);
     assert.ok(cartBox.width >= 360 && cartBox.width <= 405,
       "Fixed cart width out of range: " + cartBox.width);
     const pageScroll = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
