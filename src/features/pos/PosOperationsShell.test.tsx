@@ -68,9 +68,9 @@ describe("POS operations dashboard Staging shell", () => {
     await user.click(screen.getByRole("menuitem", { name: "الطلبات والفواتير" }));
     const section = within(screen.getByRole("region", { name: "الطلبات والفواتير" }));
     await user.type(section.getByRole("searchbox", { name: "بحث الفواتير" }), "K-123");
-    expect(section.getByRole("textbox", { name: "بحث الطلبات" })).toHaveValue("K-123");
+    expect(section.getByRole("searchbox", { name: "بحث الفواتير" })).toHaveValue("K-123");
     await user.selectOptions(section.getByRole("combobox", { name: "قناة الفواتير" }), "keeta");
-    expect(section.getByRole("combobox", { name: "تصفية قناة الطلبات" })).toHaveValue("keeta");
+    expect(section.getByRole("combobox", { name: "قناة الفواتير" })).toHaveValue("keeta");
     expect(await section.findByText(/لا توجد فواتير مطابقة على Staging/)).toBeInTheDocument();
     expect(section.getByRole("button", { name: "تحديث" })).toBeEnabled();
   });
