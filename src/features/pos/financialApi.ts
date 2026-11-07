@@ -129,9 +129,50 @@ export async function listPosRefunds(invoiceId: string): Promise<PosRefund[]> {
   );
   return res.data.data;
 }
+export async function getPosRefund(id: string): Promise<PosRefund> {
+  const res = await api.get<{ data: PosRefund }>(base + "/refunds/" + encodeURIComponent(id));
+  return res.data.data;
+}
 export async function recordPosRefund(body: PosRefundRequest, key: string): Promise<PosRefund> {
   const res = await api.post<{ data: PosRefund }>(base + "/refunds", body, {
     headers: { "Idempotency-Key": key },
   });
+  return res.data.data;
+}
+
+export type PosOperationState = {
+  status: "pending" | "committed" | "rejected" | "abandoned";
+  kind: "sale" | "refund";
+  resultId: string | null;
+  resultNumber: string | null;
+  errorCode: string | null;
+};
+export async function getPosOperation(key: string): Promise<PosOperationState | null> {
+  try {
+    const res = await api.get<{ data: PosOperationState }>(
+      base + "/operations/" + encodeURIComponent(key)
+    );
+    return res.data.data;
+  } catch (cause) {
+    // 404 is only a display state, NEVER permission to create another key.
+    const { parseApiError } = await import("@/lib/apiErrors");
+    if (parseApiError(cause).status === 404) return null;
+    throw cause;
+  }
+}
+export async function getActivePosOperation(kind: "sale" | "refund"): Promise<{
+  key: string; status: string; kind: string;
+} | null> {
+  const res = await api.get<{ data: { key: string; status: string; kind: string } | null }>(
+    base + "/operations/active/" + kind
+  );
+  return res.data.data;
+}
+export async function abandonPosOperation(
+  key: string, kind: "sale" | "refund"
+): Promise<PosOperationState> {
+  const res = await api.post<{ data: PosOperationState }>(
+    base + "/operations/" + encodeURIComponent(key) + "/abandon", { kind }
+  );
   return res.data.data;
 }

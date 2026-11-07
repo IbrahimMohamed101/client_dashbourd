@@ -9,12 +9,13 @@ import {
 import { parseApiError } from "@/lib/apiErrors";
 import { formatPreviewAmount } from "./previewCatalog";
 import {
-  listPosRefunds, recordPosRefund,
+  listPosRefunds, recordPosRefund, getPosRefund, getPosOperation, getActivePosOperation, abandonPosOperation,
   type PosInvoice, type PosRefund, type PosRefundRequest,
 } from "./financialApi";
 
-export function PosRefundDialog({ invoice, onClose, onRecorded }: {
+export function PosRefundDialog({ invoice, operatorId, onClose, onRecorded }: {
   invoice: PosInvoice;
+  operatorId?: string | null;
   onClose: () => void;
   onRecorded: (refund: PosRefund) => void;
 }) {
@@ -25,14 +26,31 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
   const [method, setMethod] = useState<"cash" | "network" | "external">("external");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [unknown, setUnknown] = useState(false);
+  const inFlight = useRef(false);
+  const storageKey = operatorId && /^[a-zA-Z0-9_-]{1,128}$/.test(operatorId)
+    ? "basicdiet:pos:pending-refund:v1:" + operatorId : null;
   const attempt = useRef<{ signature: string; key: string } | null>(null);
+
+  useEffect(() => {
+    // A page refresh must not hide an unresolved refund behind an empty form.
+    try {
+      const data = storageKey ? sessionStorage.getItem(storageKey) : null;
+      const priorAttempt = data ? JSON.parse(data) as { key?: unknown; signature?: unknown } : null;
+      if (typeof priorAttempt?.key === "string" && typeof priorAttempt?.signature === "string") {
+        setUnknown(true);
+        setFailed("هناك محاولة مرتجع سابقة لم تُحسم. تحقق من نتيجتها قبل تسجيل مرتجع جديد.");
+      }
+    } catch { /* Storage is optional; server-side pending fence still applies. */ }
+  }, [storageKey]);
 
   useEffect(() => {
     let active = true;
     void listPosRefunds(invoice._id).then(data => {
       if (active) { setPrior(data); setLoading(false); }
     }).catch(() => {
-      if (active) { setLoading(false); setFailed("تعذر تحميل المرتجعات السابقة؛ لا يمكن اعتماد مرتجع جديد."); }
+      if (active) { setLoading(false); setLoadFailed(true); setFailed("تعذر تحميل المرتجعات السابقة؛ لا يمكن اعتماد مرتجع جديد."); }
     });
     return () => { active = false; };
   }, [invoice._id]);
@@ -45,33 +63,128 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
   const lines = invoice.lines
     .map(line => ({ lineId: line.id, quantity: quantities[line.id] ?? 0 }))
     .filter(line => line.quantity > 0);
-  const valid = !loading && !failed && reason.trim().length >= 3 && lines.length > 0
+  const valid = !loading && !loadFailed && reason.trim().length >= 3 && lines.length > 0
     && lines.every(line => line.quantity <= remaining(line.lineId,
       invoice.lines.find(item => item.id === line.lineId)!.quantity));
+  type Pending = { signature: string; key: string };
+  function readPending(): Pending | null {
+    try {
+      const raw = storageKey ? sessionStorage.getItem(storageKey) : null;
+      if (!raw || raw.length > 20000) return null;
+      const parsed = JSON.parse(raw) as { signature?: unknown; key?: unknown };
+      if (typeof parsed.signature !== "string" || typeof parsed.key !== "string"
+        || !/^[a-zA-Z0-9_-]{16,128}$/.test(parsed.key)) return null;
+      return { signature: parsed.signature, key: parsed.key };
+    } catch { return null; }
+  }
+  function clearPending() {
+    if (storageKey) {
+      try { sessionStorage.removeItem(storageKey); } catch { /* Storage blocked. */ }
+    }
+    attempt.current = null;
+    setUnknown(false);
+  }
+  async function settlePending(pending: Pending): Promise<"cleared" | "recovered" | "blocked"> {
+    if (inFlight.current) return "blocked";
+    inFlight.current = true;
+    setBusy(true);
+    setFailed(null);
+    try {
+      // A 404 response never means the original HTTP request cannot still arrive.
+      const inspected = await getPosOperation(pending.key);
+      if (inspected?.status === "rejected" || inspected?.status === "abandoned") {
+        clearPending();
+        return "cleared";
+      }
+      const settled = inspected?.status === "committed"
+        ? inspected : await abandonPosOperation(pending.key, "refund");
+      if (settled.status === "committed" && settled.resultId) {
+        const refund = await getPosRefund(settled.resultId);
+        clearPending();
+        onRecorded(refund);
+        return "recovered";
+      }
+      if (settled.status === "abandoned" || settled.status === "rejected") {
+        clearPending();
+        return "cleared";
+      }
+      setFailed("المرتجع السابق لم يُحسم. اضغط «تحقق مرة أخرى».");
+      setUnknown(true);
+      return "blocked";
+    } catch {
+      setFailed("تعذر التأكد من المرتجع السابق. لا تُسجل مرتجعًا ثانيًا؛ تحقق مرة أخرى.");
+      setUnknown(true);
+      return "blocked";
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+  async function closeSafely() {
+    if (busy || inFlight.current) return;
+    const pending = attempt.current ?? readPending();
+    if (!pending) { onClose(); return; }
+    const state = await settlePending(pending);
+    if (state === "cleared") onClose();
+  }
   async function submit() {
-    if (!valid || busy) return;
+    if (!valid || busy || inFlight.current) return;
     const body: PosRefundRequest = {
       invoiceId: invoice._id, reason: reason.trim(), method, lines,
     };
     const signature = JSON.stringify(body);
-    if (!attempt.current || attempt.current.signature !== signature) {
-      attempt.current = { signature, key: crypto.randomUUID() };
+    const previous = attempt.current ?? readPending();
+    if (previous && previous.signature !== signature) {
+      const state = await settlePending(previous);
+      if (state !== "cleared") return;
     }
+    if (!previous || previous.signature !== signature) {
+      attempt.current = { signature, key: crypto.randomUUID() };
+      if (storageKey) {
+        try {
+          sessionStorage.setItem(storageKey, JSON.stringify({ ...attempt.current, at: Date.now() }));
+        } catch { /* In-memory key still prevents duplicate clicks. */ }
+      }
+    } else attempt.current = previous;
+    inFlight.current = true;
     setBusy(true);
     setFailed(null);
     try {
-      const refund = await recordPosRefund(body, attempt.current.key);
+      const refund = await recordPosRefund(body, attempt.current!.key);
+      clearPending();
       onRecorded(refund);
     } catch (cause) {
       const error = parseApiError(cause);
-      setFailed(error.message ?? "لم نتأكد من حفظ المرتجع؛ أعد المحاولة بنفس المفتاح.");
+      if (error.code === "POS_OPERATION_PENDING") {
+        // A different unresolved key may belong to this same cashier,
+        // e.g. after a tab crash. Recover the REAL pending key first.
+        try {
+          const active = await getActivePosOperation("refund");
+          if (active && attempt.current?.key !== active.key) {
+            attempt.current = { signature: "", key: active.key };
+            if (storageKey) {
+              try { sessionStorage.setItem(storageKey,
+                JSON.stringify({ ...attempt.current, at: Date.now() })); } catch { /* blocked */ }
+            }
+          }
+        } catch { /* Preserve uncertainty until connectivity is restored. */ }
+      }
+      if (error.status !== undefined && error.status >= 400 && error.status < 500
+        && error.code && error.code !== "POS_OPERATION_PENDING") {
+        clearPending();
+        setFailed(error.message);
+      } else {
+        setUnknown(true);
+        setFailed("نتيجة تسجيل المرتجع غير مؤكدة. أعد المحاولة أو تحقق قبل أي مرتجع جديد.");
+      }
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
+    <Dialog open onOpenChange={(open) => { if (!open && !busy) void closeSafely(); }}>
       <DialogContent dir="rtl" className="flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl flex-col overflow-hidden text-right">
         <DialogHeader className="shrink-0">
           <DialogTitle>مرتجع الفاتورة {invoice.number}</DialogTitle>
@@ -129,16 +242,23 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
                 ))}
             </div>
           </fieldset>
-          {failed && <p role="alert" className="rounded-lg border p-3 text-sm text-destructive">{failed}</p>}
           <p className="text-xs text-muted-foreground">
             الضريبة والمبلغ المرتجع يحسبهما السيرفر من سطور الفاتورة الأصلية والكمية المتبقية.
             التأكيد يسجّل مستندًا فقط، ولا ينفذ أي تحويل أموال.
           </p>
         </section>
+        {failed && <p role="alert" className="shrink-0 rounded-lg border p-2 text-sm text-destructive">{failed}</p>}
         <DialogFooter className="!static !mx-0 !mb-0 !shrink-0 !border-t !bg-popover !px-0 !pt-3 !pb-0">
-          <Button type="button" variant="outline" className="min-h-12" disabled={busy} onClick={onClose}>إلغاء</Button>
-          <Button type="button" className="min-h-12" disabled={!valid || busy} onClick={() => void submit()}>
-            {busy ? "جار تسجيل المرتجع..." : "تسجيل المرتجع التجريبي"}
+          <Button type="button" variant="outline" className="min-h-12"
+            disabled={busy} onClick={() => void closeSafely()}>إلغاء</Button>
+          {unknown && <Button type="button" variant="outline" className="min-h-12"
+            disabled={busy} onClick={() => {
+              const pending = attempt.current ?? readPending();
+              if (pending) void settlePending(pending);
+            }}>تحقق مرة أخرى</Button>}
+          <Button type="button" className="min-h-12" disabled={!valid || busy}
+            onClick={() => void submit()}>
+            {busy ? "جار تسجيل المرتجع..." : unknown ? "إعادة المحاولة" : "تسجيل المرتجع التجريبي"}
           </Button>
         </DialogFooter>
       </DialogContent>

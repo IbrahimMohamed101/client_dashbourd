@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { posCatalogKey } from "./catalogApi";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +11,7 @@ import { parseApiError } from "@/lib/apiErrors";
 import { formatPreviewAmount } from "./previewCatalog";
 import { parseHalalas } from "./posDiscountMath";
 import {
-  issuePosSale,
+  issuePosSale, abandonPosOperation, getPosOperation, getActivePosOperation, getPosSale,
   type PosFinanceQuote, type PosFinanceQuoteRequest, type PosInvoice, type PosSaleIntent,
 } from "./financialApi";
 
@@ -27,11 +29,14 @@ export function PosFinancialCheckout({
   onClose: () => void;
   onSale: (invoice: PosInvoice) => void;
 }) {
+  const queryClient = useQueryClient();
   const [method, setMethod] = useState<"cash" | "network">("cash");
   const [receivedText, setReceivedText] = useState(
     (quote.totals.grossHalalas / 100).toFixed(2));
   const [busy, setBusy] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [menuConflict, setMenuConflict] = useState(false);
+  const inFlight = useRef(false);
   const [failed, setFailed] = useState<string | null>(null);
   const attempt = useRef<{ signature: string; key: string } | null>(null);
   const restaurant = request.channel === "restaurant";
@@ -41,24 +46,78 @@ export function PosFinancialCheckout({
   const storageKey = operatorId && /^[a-zA-Z0-9_-]{1,128}$/.test(operatorId)
     ? "basicdiet:pos:pending-sale:v1:" + operatorId : null;
 
-  function readPending(): { signature: string; key: string } | null {
+  type Pending = { signature: string; key: string };
+  function readPending(): Pending | null {
     if (!storageKey) return null;
     try {
       const item = sessionStorage.getItem(storageKey);
       if (!item || item.length > 20000) return null;
       const parsed: unknown = JSON.parse(item);
       if (!parsed || typeof parsed !== "object") return null;
-      const value = parsed as { signature?: unknown; key?: unknown; at?: unknown };
+      const value = parsed as { signature?: unknown; key?: unknown };
       if (typeof value.signature !== "string" || typeof value.key !== "string"
-        || typeof value.at !== "number" || Date.now() - value.at > 12 * 60 * 60 * 1000) {
-        return null;
-      }
+        || !/^[a-zA-Z0-9_-]{16,128}$/.test(value.key)) return null;
+      // Never expire an unresolved server operation based on browser time alone.
       return { signature: value.signature, key: value.key };
     } catch { return null; }
   }
-
+  function clearPending() {
+    if (storageKey) {
+      try { sessionStorage.removeItem(storageKey); } catch { /* Storage blocked. */ }
+    }
+    attempt.current = null;
+    setLocked(false);
+  }
+  async function settlePending(pending: Pending): Promise<"cleared" | "recovered" | "blocked"> {
+    if (inFlight.current) return "blocked";
+    inFlight.current = true;
+    setBusy(true);
+    setFailed(null);
+    try {
+      // GET is informational only: even an unseen (404) operation MUST be
+      // tombstoned on the server before a new key can be used.
+      const inspected = await getPosOperation(pending.key);
+      if (inspected?.status === "rejected" || inspected?.status === "abandoned") {
+        clearPending();
+        return "cleared";
+      }
+      const settled = inspected?.status === "committed"
+        ? inspected : await abandonPosOperation(pending.key, "sale");
+      if (settled.status === "committed" && settled.resultId) {
+        const invoice = await getPosSale(settled.resultId);
+        clearPending();
+        onSale(invoice);
+        return "recovered";
+      }
+      if (settled.status === "abandoned" || settled.status === "rejected") {
+        clearPending();
+        return "cleared";
+      }
+      setFailed("البيع السابق لم يُحسم. اضغط «تحقق مرة أخرى» قبل أي بيع جديد.");
+      setLocked(true);
+      return "blocked";
+    } catch {
+      setFailed("تعذر الاتصال للتأكد من العملية السابقة. لا تُصدر فاتورة أخرى. تحقق مرة أخرى.");
+      setLocked(true);
+      return "blocked";
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
+  }
+  async function handleBack() {
+    if (busy || inFlight.current) return;
+    const pending = attempt.current ?? readPending();
+    if (!pending) {
+      if (menuConflict) void queryClient.invalidateQueries({ queryKey: posCatalogKey });
+      onClose();
+      return;
+    }
+    const outcome = await settlePending(pending);
+    if (outcome === "cleared") onClose();
+  }
   async function confirm() {
-    if (!allowed) return;
+    if (!allowed || inFlight.current || menuConflict) return;
     const body: PosSaleIntent = restaurant ? {
       ...request, serviceMode,
       tender: method === "cash"
@@ -71,10 +130,10 @@ export function PosFinancialCheckout({
     const signature = JSON.stringify(body);
     const pending = attempt.current ?? readPending();
     if (pending && pending.signature !== signature) {
-      setFailed("توجد محاولة بيع سابقة لم تُحسم. أعد نفس البيانات وحاول بالمفتاح الأصلي قبل عملية جديدة.");
-      return;
+      const outcome = await settlePending(pending);
+      if (outcome !== "cleared") return;
     }
-    if (!pending) {
+    if (!pending || pending.signature !== signature) {
       attempt.current = { signature, key: crypto.randomUUID() };
       if (storageKey) {
         try { sessionStorage.setItem(storageKey, JSON.stringify({ ...attempt.current, at: Date.now() })); }
@@ -82,25 +141,53 @@ export function PosFinancialCheckout({
       }
     } else attempt.current = pending;
     setLocked(true);
+    inFlight.current = true;
     setBusy(true);
     setFailed(null);
     try {
       const invoice = await issuePosSale(body, attempt.current!.key);
-      if (storageKey) {
-        try { sessionStorage.removeItem(storageKey); } catch { /* Browser may block storage. */ }
-      }
-      attempt.current = null;
+      clearPending();
       onSale(invoice);
     } catch (cause) {
       const error = parseApiError(cause);
-      setFailed(error.message ?? "النتيجة غير مؤكدة؛ أعد المحاولة بنفس المفتاح، وليس طلبًا جديدًا.");
+      if (error.code === "POS_OPERATION_PENDING") {
+        // A different unresolved key may belong to this same cashier,
+        // e.g. after a tab crash. Recover the REAL pending key first.
+        try {
+          const active = await getActivePosOperation("sale");
+          if (active && attempt.current?.key !== active.key) {
+            attempt.current = { signature: "", key: active.key };
+            if (storageKey) {
+              try { sessionStorage.setItem(storageKey,
+                JSON.stringify({ ...attempt.current, at: Date.now() })); } catch { /* blocked */ }
+            }
+          }
+        } catch { /* Preserve uncertainty until connectivity is restored. */ }
+      }
+      const final = error.status !== undefined && error.status >= 400 && error.status < 500
+        && Boolean(error.code) && error.code !== "POS_OPERATION_PENDING";
+      if (final) {
+        clearPending();
+        if (error.code === "POS_CATALOG_CONFLICT") {
+          setMenuConflict(true);
+          setFailed("المنيو اتحدّث — ارجع للسلة وأكد الأسعار الجديدة");
+        } else {
+          setFailed(error.message);
+        }
+      } else {
+        setLocked(true);
+        setFailed(error.code === "POS_OPERATION_PENDING"
+          ? "عملية البيع السابقة قيد المعالجة. اضغط «تحقق مرة أخرى» أو أعد المحاولة."
+          : "نتيجة البيع غير مؤكدة. أعد المحاولة أو تحقق من العملية قبل تغيير السلة.");
+      }
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
 
   return (
-    <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }}>
+    <Dialog open onOpenChange={open => { if (!open && !busy) void handleBack(); }}>
       <DialogContent dir="rtl" className="flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl flex-col overflow-hidden text-right">
         <DialogHeader className="shrink-0">
           <DialogTitle>مراجعة الطلب وتأكيد الفاتورة التجريبية</DialogTitle>
@@ -187,18 +274,23 @@ export function PosFinancialCheckout({
               لا يدخل درج المطعم.
             </p>
           )}
-          {failed && <p role="alert" className="rounded-lg border p-3 text-destructive">
-            {failed} <strong>إعادة المحاولة تحفظ مفتاح منع التكرار نفسه.</strong>
-          </p>}
         </section>
+        {failed && <p role="alert" className="shrink-0 rounded-lg border p-2 text-sm text-destructive">{failed}</p>}
         <DialogFooter className="!static !mx-0 !mb-0 !shrink-0 !border-t !bg-popover !px-0 !pt-3 !pb-0">
           <Button type="button" variant="outline" className="min-h-12"
-            disabled={busy} onClick={onClose}>رجوع للسلة</Button>
-          <Button type="button" className="min-h-14"
+            disabled={busy} onClick={() => void handleBack()}>رجوع للسلة</Button>
+          {!menuConflict && locked && (
+            <Button type="button" variant="outline" className="min-h-12" disabled={busy}
+              onClick={() => {
+                const current = attempt.current ?? readPending();
+                if (current) void settlePending(current);
+              }}>تحقق مرة أخرى</Button>
+          )}
+          {!menuConflict && <Button type="button" className="min-h-14"
             disabled={!allowed} onClick={() => void confirm()}>
             {busy ? "جار حفظ الفاتورة..." : locked
-              ? "إعادة المحاولة بنفس المفتاح" : "تأكيد البيع وإصدار الفاتورة التجريبية"}
-          </Button>
+              ? "إعادة المحاولة" : "تأكيد البيع وإصدار الفاتورة التجريبية"}
+          </Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
