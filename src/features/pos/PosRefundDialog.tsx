@@ -13,8 +13,9 @@ import {
   type PosInvoice, type PosRefund, type PosRefundRequest,
 } from "./financialApi";
 
-export function PosRefundDialog({ invoice, onClose, onRecorded }: {
+export function PosRefundDialog({ invoice, operatorId, onClose, onRecorded }: {
   invoice: PosInvoice;
+  operatorId?: string | null;
   onClose: () => void;
   onRecorded: (refund: PosRefund) => void;
 }) {
@@ -28,20 +29,21 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
   const [loadFailed, setLoadFailed] = useState(false);
   const [unknown, setUnknown] = useState(false);
   const inFlight = useRef(false);
-  const storageKey = "basicdiet:pos:pending-refund:v1";
+  const storageKey = operatorId && /^[a-zA-Z0-9_-]{1,128}$/.test(operatorId)
+    ? "basicdiet:pos:pending-refund:v1:" + operatorId : null;
   const attempt = useRef<{ signature: string; key: string } | null>(null);
 
   useEffect(() => {
     // A page refresh must not hide an unresolved refund behind an empty form.
     try {
-      const data = sessionStorage.getItem(storageKey);
+      const data = storageKey ? sessionStorage.getItem(storageKey) : null;
       const priorAttempt = data ? JSON.parse(data) as { key?: unknown; signature?: unknown } : null;
       if (typeof priorAttempt?.key === "string" && typeof priorAttempt?.signature === "string") {
         setUnknown(true);
         setFailed("هناك محاولة مرتجع سابقة لم تُحسم. تحقق من نتيجتها قبل تسجيل مرتجع جديد.");
       }
     } catch { /* Storage is optional; server-side pending fence still applies. */ }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     let active = true;
@@ -67,7 +69,7 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
   type Pending = { signature: string; key: string };
   function readPending(): Pending | null {
     try {
-      const raw = sessionStorage.getItem(storageKey);
+      const raw = storageKey ? sessionStorage.getItem(storageKey) : null;
       if (!raw || raw.length > 20000) return null;
       const parsed = JSON.parse(raw) as { signature?: unknown; key?: unknown };
       if (typeof parsed.signature !== "string" || typeof parsed.key !== "string"
@@ -76,7 +78,9 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
     } catch { return null; }
   }
   function clearPending() {
-    try { sessionStorage.removeItem(storageKey); } catch { /* Storage blocked. */ }
+    if (storageKey) {
+      try { sessionStorage.removeItem(storageKey); } catch { /* Storage blocked. */ }
+    }
     attempt.current = null;
     setUnknown(false);
   }
@@ -136,9 +140,11 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
     }
     if (!previous || previous.signature !== signature) {
       attempt.current = { signature, key: crypto.randomUUID() };
-      try {
-        sessionStorage.setItem(storageKey, JSON.stringify({ ...attempt.current, at: Date.now() }));
-      } catch { /* In-memory key still prevents duplicate clicks. */ }
+      if (storageKey) {
+        try {
+          sessionStorage.setItem(storageKey, JSON.stringify({ ...attempt.current, at: Date.now() }));
+        } catch { /* In-memory key still prevents duplicate clicks. */ }
+      }
     } else attempt.current = previous;
     inFlight.current = true;
     setBusy(true);
@@ -156,8 +162,10 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
           const active = await getActivePosOperation("refund");
           if (active && attempt.current?.key !== active.key) {
             attempt.current = { signature: "", key: active.key };
-            try { sessionStorage.setItem(storageKey,
-              JSON.stringify({ ...attempt.current, at: Date.now() })); } catch { /* blocked */ }
+            if (storageKey) {
+              try { sessionStorage.setItem(storageKey,
+                JSON.stringify({ ...attempt.current, at: Date.now() })); } catch { /* blocked */ }
+            }
           }
         } catch { /* Preserve uncertainty until connectivity is restored. */ }
       }
