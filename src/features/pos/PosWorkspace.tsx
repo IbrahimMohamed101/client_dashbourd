@@ -29,7 +29,8 @@ import { validatePosCheckoutReview } from "./checkoutReview";
 import { PosCheckoutReview } from "./PosCheckoutReview";
 import { PosFinancialCheckout } from "./PosFinancialCheckout";
 import { PosInvoiceReceipt } from "./PosInvoiceReceipt";
-import { PosDiscountEditor, toPosDiscount, type PosDiscountInput } from "./PosDiscountEditor";
+import { PosDiscountEditor } from "./PosDiscountEditor";
+import { toPosDiscount, type PosDiscountInput } from "./posDiscountMath";
 import { fetchFinancialQuote, type PosFinanceQuote, type PosFinanceQuoteRequest, type PosInvoice } from "./financialApi";
 import { validateFinancialQuote } from "./financialReview";
 import { parseApiError } from "@/lib/apiErrors";
@@ -227,7 +228,7 @@ function ProductOptions({
                   )}
                 </div>
               );
-            })}     })}
+            })}
           </fieldset>
         )}
         <div role="group" aria-label="كمية الصنف" className="flex items-center justify-between rounded-lg border px-3 py-2">
