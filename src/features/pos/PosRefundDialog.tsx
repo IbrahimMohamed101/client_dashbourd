@@ -32,6 +32,18 @@ export function PosRefundDialog({ invoice, onClose, onRecorded }: {
   const attempt = useRef<{ signature: string; key: string } | null>(null);
 
   useEffect(() => {
+    // A page refresh must not hide an unresolved refund behind an empty form.
+    try {
+      const data = sessionStorage.getItem(storageKey);
+      const priorAttempt = data ? JSON.parse(data) as { key?: unknown; signature?: unknown } : null;
+      if (typeof priorAttempt?.key === "string" && typeof priorAttempt?.signature === "string") {
+        setUnknown(true);
+        setFailed("هناك محاولة مرتجع سابقة لم تُحسم. تحقق من نتيجتها قبل تسجيل مرتجع جديد.");
+      }
+    } catch { /* Storage is optional; server-side pending fence still applies. */ }
+  }, []);
+
+  useEffect(() => {
     let active = true;
     void listPosRefunds(invoice._id).then(data => {
       if (active) { setPrior(data); setLoading(false); }
