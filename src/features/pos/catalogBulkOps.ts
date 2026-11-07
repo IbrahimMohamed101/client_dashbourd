@@ -49,6 +49,9 @@ export function duplicateDraftProduct<T extends DraftProduct>(
     id: newId,
     name: ("نسخة من " + product.name).slice(0, 100),
     active: false,
+    defaultVariantId: product.defaultVariantId
+      ? newVariantIds[product.variants.findIndex((variant) => variant.id === product.defaultVariantId)]
+      : undefined,
     allowedAddonIds: product.allowedAddonIds ? [...product.allowedAddonIds] : undefined,
     variants: product.variants.map((variant, index) => ({
       ...variant,
