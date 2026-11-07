@@ -878,6 +878,23 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                           {line.addons.map((addon) => (addon.quantity ?? 1) + "× " + addon.name).join("، ")}
                         </p>
                       )}
+                      {!staleCart && (
+                        <div className="grid gap-1">
+                          <PosDiscountEditor label={"خصم الصنف " + name}
+                            value={lineDiscountInputs[line.id] ?? null}
+                            onChange={value => setLineDiscountInputs(current => ({
+                              ...current, [line.id]: value,
+                            }))} />
+                          {line.addons.map(addon => (
+                            <PosDiscountEditor key={addon.id}
+                              label={"خصم إضافة " + addon.name}
+                              value={lineDiscountInputs[line.id + ":" + addon.id] ?? null}
+                              onChange={value => setLineDiscountInputs(current => ({
+                                ...current, [line.id + ":" + addon.id]: value,
+                              }))} />
+                          ))}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <Button
                           type="button"
@@ -921,6 +938,33 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                 })}
               </ul>
             )}
+            {!staleCart && cart.length > 0 && (
+              <PosDiscountEditor label="خصم الفاتورة" value={invoiceDiscountInput}
+                onChange={setInvoiceDiscountInput} />
+            )}
+            {invalidDiscount && <p role="alert" className="text-xs text-destructive">
+              صحّح قيمة الخصم قبل إصدار فاتورة.
+            </p>}
+            {currentFinanceError && <p role="alert" className="text-xs text-destructive">
+              {currentFinanceError}
+            </p>}
+            {financeValidationError && <p role="alert" className="text-xs text-destructive">
+              {financeValidationError}
+            </p>}
+            {verifiedFinanceQuote && (
+              <section aria-label="تسعير الفاتورة النهائي" className="rounded-xl border bg-muted/50 p-3 text-sm">
+                <h3 className="font-bold">تسعير سيرفر Staging · المنيو {verifiedFinanceQuote.revision}</h3>
+                <div className="mt-1 flex justify-between gap-2">
+                  <span>الخصم</span><strong>{formatPreviewAmount(verifiedFinanceQuote.totals.totalDiscountHalalas)}</strong>
+                </div>
+                <div className="mt-1 flex justify-between gap-2">
+                  <span>الضريبة المضمنة 15%</span><strong>{formatPreviewAmount(verifiedFinanceQuote.totals.vatHalalas)}</strong>
+                </div>
+                <div className="mt-1 flex justify-between gap-2 font-bold">
+                  <span>المستحق</span><strong>{formatPreviewAmount(verifiedFinanceQuote.totals.grossHalalas)}</strong>
+                </div>
+              </section>
+            )}
             {(currentQuoteError || quoteValidationError) && (
               <p role="alert" className="text-xs text-destructive">
                 {currentQuoteError || quoteValidationError}
@@ -945,16 +989,18 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
               <span>{total === null ? "غير متاح" : formatPreviewAmount(total)}</span>
             </div>
             <div className="flex justify-between gap-2 text-sm text-muted-foreground">
-              <span>الخصم</span><span>غير محسوب</span>
+              <span>الخصم</span><span>{verifiedFinanceQuote
+                ? formatPreviewAmount(verifiedFinanceQuote.totals.totalDiscountHalalas) : "بانتظار السيرفر"}</span>
             </div>
             <div className="flex justify-between gap-2 text-sm text-muted-foreground">
-              <span>الضريبة</span><span>غير محسوبة</span>
+              <span>الضريبة</span><span>{verifiedFinanceQuote
+                ? formatPreviewAmount(verifiedFinanceQuote.totals.vatHalalas) : "بانتظار السيرفر"}</span>
             </div>
             <div className="flex items-center justify-between gap-2 border-t pt-2"
               aria-live="polite">
-              <span className="text-base font-bold">الإجمالي التجريبي</span>
+              <span className="text-base font-bold">المستحق من السيرفر</span>
               <strong className="text-[28px] leading-none font-bold tabular-nums">
-                {total === null ? "غير متاح" : formatPreviewAmount(total)}
+                {verifiedFinanceQuote ? formatPreviewAmount(verifiedFinanceQuote.totals.grossHalalas) : "—"}
               </strong>
             </div>
             <Button
@@ -967,8 +1013,12 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
               {quoteLoading ? "مراجعة الأسعار..." : "مراجعة الأسعار من السيرفر"}
             </Button>
             <Button type="button" variant="outline" className="min-h-12"
-              disabled={!verifiedQuote || quoteLoading || staleCart}
-              onClick={() => setCheckoutOpen(true)}>
+              disabled={(!verifiedFinanceQuote && !verifiedQuote)
+                || quoteLoading || financeLoading || invalidDiscount || staleCart}
+              onClick={() => {
+                setCheckoutVariant(verifiedFinanceQuote ? "financial" : "legacy");
+                setCheckoutOpen(true);
+              }}>
               مراجعة الطلب قبل الفاتورة
             </Button>
             <Button type="button" disabled className="min-h-14 w-full text-base">
@@ -977,7 +1027,37 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           </div>
         </aside>
       </div>
-      {checkoutOpen && verifiedQuote && (
+      {checkoutOpen && checkoutVariant === "financial" && verifiedFinanceQuote && (
+        <PosFinancialCheckout
+          quote={verifiedFinanceQuote}
+          request={financeRequest}
+          channelName={channels.find(item => item.id === channel)?.label ?? channel}
+          serviceMode={serviceMode}
+          externalOrderNumber={externalOrderNumber}
+          externalPaymentStatus={appPaymentStatus}
+          operatorId={operatorId}
+          onClose={() => setCheckoutOpen(false)}
+          onSale={invoice => {
+            setCheckoutOpen(false);
+            setCheckoutVariant(null);
+            setIssuedInvoice(invoice);
+            setCart([]);
+            setCartRevision(catalog.revision);
+            setUndoState(null);
+            setLastAddedId(null);
+            setCartNotice(null);
+            setLineDiscountInputs({});
+            setInvoiceDiscountInput(null);
+            setQuoteReview(null);
+            setQuoteFailure(null);
+            setFinanceReview(null);
+            setFinanceFailure(null);
+            setExternalOrderNumber("");
+            setAppPaymentStatus("paid");
+          }}
+        />
+      )}
+      {checkoutOpen && checkoutVariant === "legacy" && verifiedQuote && (
         <PosCheckoutReview
           quote={verifiedQuote}
           channelName={channels.find((item) => item.id === channel)?.label ?? channel}
@@ -987,6 +1067,8 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           onClose={() => setCheckoutOpen(false)}
         />
       )}
+      {issuedInvoice && <PosInvoiceReceipt invoice={issuedInvoice}
+        onClose={() => setIssuedInvoice(null)} />}
       {product && !staleCart && (
         <ProductOptions
           product={product}
