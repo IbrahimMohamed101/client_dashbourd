@@ -56,6 +56,13 @@ Scope: STAGING ONLY. Never enable financial production writes until readiness ga
 - **E acceptance**: React/UI tests, quote-integrity unit tests, regression and four viewport QA. Do not display fiscal/tax invoice, print, record transactions, claim any cash collection or mark E financially complete.
 - **Next operational dependencies**: full Staging isolation certification, backend final payable/tax/discount implementation, returns, subscriptions, closing and ZATCA remain blocked until their dedicated gates and permissions are satisfied.
 
+## Phase E independent audit and Stage F decision gate — 2026-11-07
+
+- **Stage E hardening**: clear stale checkout dialog intent (not merely hide it), keep action footer visible as order details scroll, distinguish proposed cash/network tender visually, and give RTL dialog close buttons Arabic accessible labels. Frontend tests and Chromium coverage required before Staging merge.
+- **Stage F is NOT authorized for financial writes** by completion of a read-only Stage E screen. See [financial decision register](./STAGE_F_FINANCIAL_DECISIONS_DRAFT.md): owner/accounting sign-off needed on 15% VAT-inclusive price treatment, discount order and cap, line-vs-invoice rounding, sale idempotency, immutable invoice/refund authorization, ZATCA numbering and tested restore/isolation.
+- **D-086 and D-087** are already recorded as separate approved Staging addenda in [CHG-023](./CHG-023_D-086_STAGING_AUTHORIZATION.md). They have not been merged into the original owner PRD; no editable original v0.3.2 PRD is present here. Do not suggest Production authorization.
+- **Outstanding gates**: GitHub issue #84 (Railway Staging Wait for CI), #85 (`publishedBy` audit identity) and #86 (multiple quantity of same add-on); plus real cashier account permission checks.
+
 ## Engineering rules
 - This PR targets `codex/pos-staging-preview`, not `main`.
 - Keep `POS` purchase/refund mutations disabled until the above gates pass.
