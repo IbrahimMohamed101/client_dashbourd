@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseHalalas, toPosDiscount } from "./PosDiscountEditor";
+import { parseHalalas, toPosDiscount } from "./posDiscountMath";
 import { validateFinancialQuote } from "./financialReview";
 import type { PosFinanceQuote, PosFinanceQuoteRequest } from "./financialApi";
 
