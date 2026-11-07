@@ -57,7 +57,7 @@ export function copyChannelPrices<T extends DraftCatalog>(
       variants: product.variants.map((variant) => {
         const from = variant.prices[source]?.trim() ?? "";
         const to = variant.prices[destination]?.trim() ?? "";
-        if (!/^\\d{1,6}(\\.\\d{1,2})?$/.test(from) || Number(from) > 100000
+        if (!/^\d{1,6}(\.\d{1,2})?$/.test(from) || Number(from) > 100000
           || (mode === "missing" && to)) return variant;
         let halalas = Math.round(Math.round(Number(from) * 100) * (100 + percent) / 100);
         if (options.rounding === "half") halalas = Math.ceil(halalas / 50) * 50;
