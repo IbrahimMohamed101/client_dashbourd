@@ -41,9 +41,9 @@ describe("POS Stage E read-only checkout quote guard", () => {
   });
 
   it("blocks a quote that mistakenly claims payment or tax authority", () => {
-    expect(validatePosCheckoutReview(request, { ...valid, canCommit: true as false })).toMatch(/عقد التسعير/);
-    expect(validatePosCheckoutReview(request, { ...valid, taxHalalas: 0 as null })).toMatch(/عقد التسعير/);
-    expect(validatePosCheckoutReview(request, { ...valid, finalPayableHalalas: 7000 as null })).toMatch(/عقد التسعير/);
+    expect(validatePosCheckoutReview(request, { ...valid, canCommit: true as unknown as false })).toMatch(/عقد التسعير/);
+    expect(validatePosCheckoutReview(request, { ...valid, taxHalalas: 0 as unknown as null })).toMatch(/عقد التسعير/);
+    expect(validatePosCheckoutReview(request, { ...valid, finalPayableHalalas: 7000 as unknown as null })).toMatch(/عقد التسعير/);
   });
 
   it("rejects changing line identity or addons without re-quoting", () => {
