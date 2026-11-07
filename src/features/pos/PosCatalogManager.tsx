@@ -500,21 +500,48 @@ function CatalogEditor({
           </Button>
           <hr />
           <label className="grid gap-1 text-sm">
-            الصنف
-            <select
-              className={selectStyle}
-              value={product?.id ?? ""}
-              onChange={(event) => setSelection(event.target.value)}
-            >
-              {!product && <option value="">أضف صنفًا</option>}
-              {edit.products.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name || "صنف جديد"}
-                  {item.active === false ? " · مخفي" : ""}
-                </option>
-              ))}
-            </select>
+            البحث في الأصناف
+            <Input
+              type="search"
+              aria-label="بحث في أصناف الكاشير"
+              placeholder="اسم الصنف أو التصنيف"
+              value={productSearch}
+              onChange={(event) => setProductSearch(event.target.value)}
+            />
           </label>
+          <div role="group" aria-label="عرض الأصناف" className="flex flex-wrap gap-2">
+            {([
+              ["all", "الكل"], ["visible", "الظاهرة"], ["hidden", "المخفية"],
+            ] as const).map(([id, label]) => (
+              <Button key={id} type="button" size="sm"
+                variant={visibilityFilter === id ? "default" : "outline"}
+                aria-pressed={visibilityFilter === id}
+                onClick={() => setVisibilityFilter(id)}
+              >{label}</Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground" role="status">
+            عرض {visibleProducts.length} من {edit.products.length} صنف
+          </p>
+          <div role="group" aria-label="قائمة أصناف الكاشير"
+            className="grid max-h-[40dvh] gap-1.5 overflow-y-auto rounded-lg border p-2">
+            {visibleProducts.map((item) => (
+              <button type="button" key={item.id}
+                aria-pressed={product?.id === item.id}
+                onClick={() => setSelection(item.id)}
+                className={"flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-right text-sm transition-colors " +
+                  (product?.id === item.id ? "border-primary bg-primary/10 font-semibold" : "border-transparent hover:bg-muted")}
+              >
+                <span className="min-w-0 truncate">{item.name || "صنف جديد"}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {item.active === false ? "مخفي" : "ظاهر"}
+                </span>
+              </button>
+            ))}
+            {visibleProducts.length === 0 && (
+              <p className="p-3 text-sm text-muted-foreground">لا توجد أصناف مطابقة. غيّر البحث أو فلتر الظهور.</p>
+            )}
+          </div>
           <Button
             type="button"
             variant="outline"
