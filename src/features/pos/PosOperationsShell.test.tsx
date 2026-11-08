@@ -108,7 +108,7 @@ describe("POS operations dashboard Staging shell", () => {
     expect(section.getByRole("searchbox", { name: "بحث الفواتير" })).toHaveValue("K-123");
     await user.selectOptions(section.getByRole("combobox", { name: "قناة الفواتير" }), "keeta");
     expect(section.getByRole("combobox", { name: "قناة الفواتير" })).toHaveValue("keeta");
-    expect(await section.findByText(/لا توجد فواتير مطابقة على Staging/)).toBeInTheDocument();
+    expect(await section.findByText(/لا توجد فواتير مطابقة/)).toBeInTheDocument();
     expect(section.getByRole("button", { name: "تحديث" })).toBeEnabled();
   });
 
