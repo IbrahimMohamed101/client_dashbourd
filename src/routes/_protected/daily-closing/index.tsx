@@ -67,9 +67,43 @@ type Summary = {
   localRecordedHalala: number; localDifferenceHalala: number; overallDifferenceHalala: number;
   recordedPlusReceivablesHalala: number; subscriptionCountDifference: number;
 };
+type ServerExpectedTotals = {
+  businessDate: string;
+  pos: {
+    invoiceCount: number;
+    refundCount: number;
+    grossHalalas: number;
+    refundsHalalas: number;
+    netHalalas: number;
+    restaurantCashHalalas: number;
+    restaurantNetworkHalalas: number;
+    restaurantExternalRefundHalalas: number;
+    appReceivableByChannelHalalas: Record<string, number>;
+    unresolvedRefundInvoiceCount: number;
+  };
+  subscriptions: { paymentCount: number; cashHalalas: number; visaHalalas: number };
+  expected: {
+    cashHalalas: number;
+    networkHalalas: number;
+    appReceivableHalalas: number;
+    totalHalalas: number;
+  };
+};
+type Reconciliation = {
+  countedCashHalala: number;
+  countedNetworkHalala: number;
+  expectedCashHalala: number;
+  expectedNetworkHalala: number;
+  expectedAppReceivableHalala: number;
+  cashDifferenceHalala: number;
+  networkDifferenceHalala: number;
+  localDifferenceHalala: number;
+};
+
 type ClosingView = ClosingValues & {
   businessDate: string; status: "new" | "draft" | "submitted" | "approved";
-  automatic: Automatic; summary: Summary; submittedAt: string | null; approvedAt: string | null;
+  automatic: Automatic; summary: Summary; expectedTotals: ServerExpectedTotals; reconciliation: Reconciliation;
+  submittedAt: string | null; approvedAt: string | null;
   history: { actor: string; action: string; reason: string; at: string }[];
 };
 type ClosingResponse = { status: boolean; data: ClosingView };
@@ -80,6 +114,9 @@ type FormState = {
   cash: string; card: string;
   confirmedCount: string; discrepancyReason: string; notes: string;
 };
+
+const appChannelName = (channel: string) =>
+  ({ hungerstation: "هنجرستيشن", keeta: "كيتا" })[channel.toLowerCase() as "hungerstation" | "keeta"] || channel;
 
 const moneySar = (halala: number) =>
   new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", minimumFractionDigits: 2 }).format(halala / 100);
@@ -198,22 +235,50 @@ function DailyClosingPage() {
 
   const automatic = view?.automatic;
   const asHalala = (value: string) => Number.isFinite(Number(value)) ? Math.round(Number(value) * 100) : 0;
-  const restaurant = asHalala(form.restaurant);
-  const apps = asHalala(form.hungerstation) + asHalala(form.keeta) + form.other.reduce((s, x) => s + asHalala(x.amount), 0);
-  const sales = restaurant + apps + (automatic?.amountHalala ?? 0);
-  const collected = asHalala(form.cash) + asHalala(form.card);
-  const expected = restaurant + (automatic?.cashHalala ?? 0) + (automatic?.cardHalala ?? 0);
-  const receivedAndDue = collected + apps + (automatic?.moyasarHalala ?? 0);
-  const overallDifference = receivedAndDue - sales;
+  // Manual channel inputs remain part of the existing PUT payload only.
+  // They must never determine the expected cash/network or reconciliation.
+  const manualRestaurant = asHalala(form.restaurant);
+  const manualApps = asHalala(form.hungerstation) + asHalala(form.keeta) +
+    form.other.reduce((sum, channel) => sum + asHalala(channel.amount), 0);
+  const manualChannelSales = manualRestaurant + manualApps;
+  const countedCash = asHalala(form.cash);
+  const countedNetwork = asHalala(form.card);
+  const collected = countedCash + countedNetwork;
+  const totals = view?.expectedTotals;
+  const hasServerTotals = Boolean(totals?.expected && totals?.pos && totals?.subscriptions);
+  const pos = totals?.pos;
+  const subscriptionTotals = totals?.subscriptions;
+  const expectedCash = totals?.expected.cashHalalas ?? 0;
+  const expectedNetwork = totals?.expected.networkHalalas ?? 0;
+  const expectedApps = totals?.expected.appReceivableHalalas ?? 0;
+  const expectedTotal = totals?.expected.totalHalalas ?? 0;
+  const subscriptionCash = subscriptionTotals?.cashHalalas ?? 0;
+  const subscriptionNetwork = subscriptionTotals?.visaHalalas ?? 0;
+  const subscriptionCollections = subscriptionCash + subscriptionNetwork;
+  // Reconciliation from GET is authoritative for persisted values. When the
+  // user edits the counted inputs, apply its exact difference formula live.
+  const cashDifference = edited
+    ? countedCash - expectedCash
+    : view?.reconciliation?.cashDifferenceHalala ?? countedCash - expectedCash;
+  const networkDifference = edited
+    ? countedNetwork - expectedNetwork
+    : view?.reconciliation?.networkDifferenceHalala ?? countedNetwork - expectedNetwork;
+  const difference = cashDifference + networkDifference;
+  // Preserve external-refund adjustments already included in expected.totalHalalas.
+  const reconciledTotal = expectedTotal + difference;
+  const appChannels = Object.entries(pos?.appReceivableByChannelHalalas ?? {})
+    .sort(([left], [right]) => left.localeCompare(right, "ar"));
   const count = form.confirmedCount.trim() ? Number(form.confirmedCount) : automatic?.count ?? 0;
   const countDiff = count - (automatic?.count ?? 0);
   const status = view?.status || "new";
   const statusLabels = { new: "لم تُحفظ", draft: "مسودة محفوظة", submitted: "بانتظار اعتماد المدير", approved: "معتمدة" };
-  const reviewNeeded = countDiff !== 0 || collected !== expected || overallDifference !== 0 ||
+  const reviewNeeded = !hasServerTotals || countDiff !== 0 || difference !== 0 ||
     (automatic?.reviewPaymentsCount ?? 0) > 0 ||
-    (automatic?.unknownHalala ?? 0) > 0 || (automatic?.refundsHalala ?? 0) > 0;
-  const totalChannelSales = restaurant + apps;
-  const differenceLabel = overallDifference === 0 ? (reviewNeeded ? "توجد ملاحظات للمراجعة" : "المبالغ متطابقة") : overallDifference < 0 ? "يوجد عجز" : "يوجد زيادة";
+    (automatic?.unknownHalala ?? 0) > 0 || (automatic?.refundsHalala ?? 0) > 0 ||
+    (pos?.unresolvedRefundInvoiceCount ?? 0) > 0;
+  const differenceLabel = !hasServerTotals ? "الإجماليات غير متاحة" :
+    difference === 0 ? (reviewNeeded ? "توجد ملاحظات للمراجعة" : "المبالغ متطابقة") :
+    difference < 0 ? "يوجد عجز" : "يوجد زيادة";
   const canEdit = !locked && !action.isPending;
 
   const amountField = (label: string, id: "restaurant" | "hungerstation" | "keeta" | "cash" | "card", hint?: string) => (
