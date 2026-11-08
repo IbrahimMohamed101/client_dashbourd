@@ -15,8 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
-import { UserRoles } from "@/types/auth";
-import { canCreateAppCustomer, canCreateCustomerSubscription } from "@/lib/rolePermissions";
+import { canCreateAppCustomer, canCreateCustomerSubscription, canManageMenuData } from "@/lib/rolePermissions";
 import { CreateSubscriptionFormContent } from "@/components/pages/subscriptions/create/CreateSubscriptionFormContent";
 import ManualDeductionPage from "@/components/pages/manual-deduction/ManualDeductionPage";
 import { CreateUserForm } from "@/components/pages/users/create-user-form";
@@ -141,8 +140,8 @@ function OrdersView({ onSale }: { onSale: () => void; catalog: PublishedPosCatal
 
 function SubscriptionView({ role }: { role: string | undefined }) {
   const [mode, setMode] = useState<"purchase" | "deduct" | "user">("purchase");
-  const canPurchase = canCreateCustomerSubscription(role) || role === UserRoles.CASHIER;
-  const canCreateUser = canCreateAppCustomer(role) || role === UserRoles.CASHIER;
+  const canPurchase = canCreateCustomerSubscription(role);
+  const canCreateUser = canCreateAppCustomer(role);
   return (
     <section aria-label="اشتراكات نقطة البيع" className="space-y-5">
       <PageHeader
@@ -150,14 +149,8 @@ function SubscriptionView({ role }: { role: string | undefined }) {
         description="نفس نماذج الاشتراك والخصم اليدوي الموجودة بالداشبورد، ونفس صلاحياتها وواجهات API الرسمية."
         action={<div className="flex flex-wrap gap-2">
           {canCreateUser ? (
-            role === UserRoles.CASHIER ? (
-              <Button type="button" variant="outline" className="min-h-11"
-                onClick={() => setMode("user")}>إنشاء مستخدم سريع</Button>
-            ) : (
-              <Button asChild variant="outline" className="min-h-11">
-                <Link to="/users/create">إنشاء مستخدم سريع</Link>
-              </Button>
-            )
+            <Button type="button" variant="outline" className="min-h-11"
+              onClick={() => setMode("user")}>إنشاء مستخدم سريع</Button>
           ) : (
             <p role="status" className="text-xs text-muted-foreground">
               إنشاء مستخدم يحتاج صلاحية المطعم أو الإدارة حاليًا.
@@ -178,17 +171,12 @@ function SubscriptionView({ role }: { role: string | undefined }) {
           خصم وجبات المشترك
         </Button>
       </div>
-      {mode === "purchase" && role === UserRoles.CASHIER && (
-        <p role="status" className="rounded-lg border bg-muted/50 p-3 text-sm">
-          صلاحية الكاشير الحالية تسمح بتحصيل اشتراكات كاش فقط؛ فيزا تحتاج دور المطعم أو الإدارة.
-        </p>
-      )}
       {mode === "deduct" ? (
         <ManualDeductionPage />
       ) : mode === "user" && canCreateUser ? (
         <CreateUserForm />
       ) : canPurchase ? (
-        <CreateSubscriptionFormContent allowedPaymentMethods={role === UserRoles.CASHIER ? ["cash"] : undefined} />
+        <CreateSubscriptionFormContent />
       ) : (
         <div className="rounded-xl border p-4 text-sm" role="status">
           لا يمكن لهذا الدور إنشاء اشتراك من نقطة البيع بصلاحيات النظام الحالية.
@@ -244,10 +232,7 @@ function SettingsView() {
 export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }) {
   const [view, setView] = useState<View>("sale");
   const { user } = useAuth();
-  const canEditPosMenu = user?.role === UserRoles.CASHIER
-    || user?.role === UserRoles.RESTAURANT
-    || user?.role === UserRoles.ADMIN
-    || user?.role === UserRoles.SUPERADMIN;
+  const canEditPosMenu = canManageMenuData(user?.role);
 
   // One navigation control for every POS view: sales always occupies the
   // whole working area, rather than spending a second row on tab buttons.
