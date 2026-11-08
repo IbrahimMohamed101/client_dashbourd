@@ -43,8 +43,6 @@ import { SubscriptionInvoiceDialog } from "../invoice/SubscriptionInvoiceDialog"
 interface CreateSubscriptionFormContentProps {
   /** Pre-set userId (when creating from user page). If provided, user selection is hidden. */
   userId?: string;
-  /** Optional POS-only narrowing. Existing dashboard route retains both methods. */
-  allowedPaymentMethods?: readonly ("cash" | "visa")[];
 }
 
 type ApiRecord = Record<string, unknown>;
@@ -158,7 +156,6 @@ function formatMoney(halala: number, currency: string) {
 
 export function CreateSubscriptionFormContent({
   userId,
-  allowedPaymentMethods,
 }: CreateSubscriptionFormContentProps) {
   const form = useCreateSubscriptionForm(userId || "");
   const navigate = useNavigate();
@@ -241,16 +238,7 @@ export function CreateSubscriptionFormContent({
   const { mutateAsync, isPending } = useCreateSubscriptionMutation();
   const isSubmitting = isPending || isValidatingPrice;
   const selectedPaymentMethod = form.watch("paymentMethod");
-  const cashierCashOnly = allowedPaymentMethods?.length === 1
-    && allowedPaymentMethods[0] === "cash";
-  const visiblePaymentOptions = allowedPaymentMethods
-    ? paymentOptions.filter(option => allowedPaymentMethods.includes(option.method))
-    : paymentOptions;
-  useEffect(() => {
-    if (cashierCashOnly && selectedPaymentMethod !== "cash") {
-      form.setValue("paymentMethod", "cash", { shouldValidate: true });
-    }
-  }, [cashierCashOnly, form, selectedPaymentMethod]);
+  const visiblePaymentOptions = paymentOptions;
 
   useEffect(() => {
     const subscription = form.watch((_value, { name }) => {
