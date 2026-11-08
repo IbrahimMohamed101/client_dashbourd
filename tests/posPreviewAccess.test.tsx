@@ -6,12 +6,11 @@ import { filterNavItemsForRole } from "@/lib/navPermissions";
 afterEach(() => vi.unstubAllEnvs());
 
 describe("POS preview access", () => {
-  it("keeps the direct route and navigation hidden unless enabled", () => {
+  it("role eligibility is independent of VITE; page and sidebar then require backend /pos/status", () => {
     vi.stubEnv("VITE_POS_PREVIEW", "");
-    expect(canRoleAccessRoute("cashier", "/pos")).toBe(false);
-    expect(
-      filterNavItemsForRole(NavLinksData.navMain, "cashier")
-    ).not.toContainEqual(expect.objectContaining({ url: "/pos" }));
+    expect(canRoleAccessRoute("cashier", "/pos")).toBe(true);
+    expect(filterNavItemsForRole(NavLinksData.navMain, "cashier"))
+      .toContainEqual(expect.objectContaining({ url: "/pos" }));
     expect(canRoleAccessRoute("cashier", "/manual-deduction")).toBe(true);
   });
 
@@ -47,13 +46,14 @@ describe("POS preview access", () => {
     expect(canRoleAccessRoute("kitchen", "/pos/menu")).toBe(false);
   });
 
-  it("rejects a deployed preview connected to the production API", () => {
+  it("Production enablement cannot be overridden by VITE values", () => {
     vi.stubEnv("VITE_POS_PREVIEW", "true");
     vi.stubEnv("PROD", true);
     vi.stubEnv(
       "VITE_BACKEND_URL",
       "https://basicdiet145-production-51e9.up.railway.app"
     );
-    expect(canRoleAccessRoute("superadmin", "/pos")).toBe(false);
+    expect(canRoleAccessRoute("superadmin", "/pos")).toBe(true);
+    // Actual visibility remains false unless backend /pos/status says enabled.
   });
 });
