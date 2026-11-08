@@ -72,6 +72,10 @@ try {
       if (url.pathname.endsWith("/api/dashboard/auth/me")) {
         return route.fulfill(json({ status: true, token: "synthetic-qa-token-not-valid", user }));
       }
+      if (url.pathname.endsWith("/api/dashboard/pos/status")) {
+        return route.fulfill(json({ status: true, data: { enabled: true, environment: "staging",
+          financialWritesEnabled: false, documentType: "STAGING_TEST_NON_TAX" } }));
+      }
       if (url.pathname.endsWith("/api/dashboard/pos/catalog")) {
         return route.fulfill(json({ status: true, data: catalog }));
       }
