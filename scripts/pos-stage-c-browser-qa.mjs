@@ -48,6 +48,10 @@ try {
       if (pathname.endsWith("/api/dashboard/auth/me")) {
         return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: true, token: "synthetic-qa-token-not-valid", user }) });
       }
+      if (pathname.endsWith("/api/dashboard/pos/status")) {
+        return route.fulfill(respond({ enabled: true, environment: "staging",
+          financialWritesEnabled: false, documentType: "STAGING_TEST_NON_TAX" }));
+      }
       if (pathname.endsWith("/api/dashboard/pos/catalog/manage") && request.method() === "GET") {
         return route.fulfill(respond(state));
       }
