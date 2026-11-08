@@ -400,13 +400,13 @@ function DailyClosingPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-5 px-4 py-5 sm:px-6">
-                    <div aria-label="مبيعات POS المحسوبة من النظام" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {isPosV2 && <div aria-label="مبيعات POS المحسوبة من النظام" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <Value label="عدد فواتير الكاشير" value={hasServerTotals ? String(pos?.invoiceCount ?? 0) : "—"} />
                       <Value label="إجمالي فواتير الكاشير" value={hasServerTotals ? moneySar(pos?.grossHalalas ?? 0) : "—"} />
                       <Value label="المرتجعات (عدد / مبلغ)" value={hasServerTotals ? `${pos?.refundCount ?? 0} / ${moneySar(pos?.refundsHalalas ?? 0)}` : "—"} />
                       <Value label="صافي مبيعات الكاشير" value={hasServerTotals ? moneySar(pos?.netHalalas ?? 0) : "—"} />
-                    </div>
-                    <div aria-label="مستحقات التطبيقات من POS" className="space-y-3 rounded-2xl border border-border/70 p-4">
+                    </div>}
+                    {isPosV2 && <div aria-label="مستحقات التطبيقات من POS" className="space-y-3 rounded-2xl border border-border/70 p-4">
                       <h3 className="text-sm font-semibold">مستحقات كل تطبيق — من فواتير الكاشير</h3>
                       {appChannels.length ? appChannels.map(([channel, amount]) =>
                         <div key={channel} className="flex flex-wrap items-center justify-between gap-2 text-sm">
@@ -417,13 +417,14 @@ function DailyClosingPage() {
                         <span>إجمالي مستحقات التطبيقات</span>
                         <strong dir="ltr" className="tabular-nums">{hasServerTotals ? moneySar(expectedApps) : "—"}</strong>
                       </div>
-                    </div>
+                    </div>}
                     <div className="space-y-2 border-t pt-4">
                       <h3 className="text-sm font-semibold">{isPosV2 ? "قنوات أخرى غير مسجلة في POS" : "البيانات اليدوية للقنوات"}</h3>
                       <p className="text-xs text-muted-foreground">{isPosV2 ? "القنوات الأخرى تُضاف للمستحقات فقط عند الحفظ، ولا تُضاف للكاش أو الشبكة." : "هذه القيم أساس حساب التقفيلة القديمة LEGACY_V1."}</p>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-primary/20 bg-primary/[0.035] p-4">
+                      {!isPosV2 && <>
+<div className="rounded-2xl border border-primary/20 bg-primary/[0.035] p-4">
                         {amountField("مبيعات المطعم — يدوي", "restaurant", "بيان مستقل للمراجعة، وليس مصدر التحصيل المتوقع.")}
                       </div>
                       <div className="rounded-2xl border border-border/70 p-4">
@@ -432,7 +433,8 @@ function DailyClosingPage() {
                       <div className="rounded-2xl border border-border/70 p-4">
                         {amountField("مبيعات كيتا — يدوي", "keeta")}
                       </div>
-                      {form.other.map((app, index) => (
+                      </>}
+{form.other.map((app, index) => (
                         <div key={index} className="rounded-2xl border border-border/70 p-4">
                           <div className="mb-3 flex items-center justify-between gap-2">
                             <Label htmlFor={"extra-name-" + index}>اسم التطبيق الإضافي</Label>
@@ -444,6 +446,13 @@ function DailyClosingPage() {
                           <Input id={"extra-name-" + index} className="mb-3 h-11 rounded-xl" value={app.name}
                             placeholder="مثال: تطبيق توصيل" disabled={!canEdit}
                             onChange={e => updateOther(items => items.map((item, i) => i === index ? { ...item, name: e.target.value } : item))} />
+                          {isPosV2 && <>
+                            <Label htmlFor={"extra-reference-" + index} className="mb-2 block">مرجع القناة الأخرى</Label>
+                            <Input id={"extra-reference-" + index} aria-label={"مرجع القناة " + (index + 1)}
+                              value={app.reference} className="mb-3 h-11 rounded-xl" disabled={!canEdit}
+                              placeholder="مرجع فريد" onChange={e => updateOther(items => items.map((item, i) => i === index
+                                ? { ...item, reference: e.target.value } : item))} />
+                          </>}
                           <Label htmlFor={"extra-amount-" + index} className="mb-2 block">إجمالي المبيعات (ر.س)</Label>
                           <Input id={"extra-amount-" + index} type="number" min="0" step="0.01" dir="ltr"
                             className="h-12 rounded-xl text-left text-lg font-semibold tabular-nums"
@@ -453,11 +462,11 @@ function DailyClosingPage() {
                       ))}
                     </div>
                     {canEdit && form.other.length < 12 && <Button variant="outline" className="w-full rounded-xl border-dashed sm:w-auto" type="button"
-                      onClick={() => updateOther(items => [...items, { name: "", amount: "0" }])}>
+                      onClick={() => updateOther(items => [...items, { name: "", reference: "", amount: "0" }])}>
                       <Plus className="size-4" aria-hidden="true" /> إضافة تطبيق توصيل
                     </Button>}
                     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/50 px-4 py-3">
-                      <span className="text-sm font-medium">إجمالي القنوات المدخل يدويًا (لا يؤثر على الفرق)</span>
+                      <span className="text-sm font-medium">{isPosV2 ? "مستحقات القنوات الأخرى (بعد الحفظ)" : "إجمالي المبيعات اليدوية"}</span>
                       <strong dir="ltr" className="text-lg tabular-nums">{moneySar(manualChannelSales)}</strong>
                     </div>
                   </CardContent>
