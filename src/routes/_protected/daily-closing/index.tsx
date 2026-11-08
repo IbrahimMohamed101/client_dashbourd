@@ -203,6 +203,7 @@ function DailyClosingPage() {
   });
   const view = query.data;
   const locked = view?.status === "submitted" || view?.status === "approved";
+  const isPosV2 = view?.closingVersion === "POS_V2";
   const form = !edited && view ? formFromView(view) : formDraft;
   const showCountCorrection = countCorrectionChoice ?? (view?.confirmedSubscriptionCount != null);
   const showExtraNotes = extraNotesChoice ?? Boolean(view?.notes);
@@ -257,8 +258,8 @@ function DailyClosingPage() {
   const asHalala = (value: string) => Number.isFinite(Number(value)) ? Math.round(Number(value) * 100) : 0;
   // Manual channel inputs remain part of the existing PUT payload only.
   // They must never determine the expected cash/network or reconciliation.
-  const manualRestaurant = asHalala(form.restaurant);
-  const manualApps = asHalala(form.hungerstation) + asHalala(form.keeta) +
+  const manualRestaurant = isPosV2 ? 0 : asHalala(form.restaurant);
+  const manualApps = (isPosV2 ? 0 : asHalala(form.hungerstation) + asHalala(form.keeta)) +
     form.other.reduce((sum, channel) => sum + asHalala(channel.amount), 0);
   const manualChannelSales = manualRestaurant + manualApps;
   const countedCash = asHalala(form.cash);
@@ -270,8 +271,8 @@ function DailyClosingPage() {
   const subscriptionTotals = totals?.subscriptions;
   const expectedCash = totals?.expected.cashHalalas ?? 0;
   const expectedNetwork = totals?.expected.networkHalalas ?? 0;
-  const expectedApps = totals?.expected.appReceivableHalalas ?? 0;
-  const expectedTotal = totals?.expected.totalHalalas ?? 0;
+  const expectedApps = isPosV2 ? (totals?.expected.appReceivableHalalas ?? 0) : (view?.summary?.appReceivablesHalala ?? 0);
+  const expectedTotal = isPosV2 ? (totals?.expected.totalHalalas ?? 0) : (view?.summary?.totalSalesHalala ?? 0);
   const subscriptionCash = subscriptionTotals?.cashHalalas ?? 0;
   const subscriptionNetwork = subscriptionTotals?.visaHalalas ?? 0;
   const subscriptionCollections = subscriptionCash + subscriptionNetwork;
@@ -283,7 +284,7 @@ function DailyClosingPage() {
   const networkDifference = edited
     ? countedNetwork - expectedNetwork
     : view?.reconciliation?.networkDifferenceHalala ?? countedNetwork - expectedNetwork;
-  const difference = cashDifference + networkDifference;
+  const difference = isPosV2 ? cashDifference + networkDifference : (view?.summary?.overallDifferenceHalala ?? 0);
   // Preserve external-refund adjustments already included in expected.totalHalalas.
   const reconciledTotal = expectedTotal + difference;
   const appChannels = Object.entries(pos?.appReceivableByChannelHalalas ?? {})
@@ -292,10 +293,9 @@ function DailyClosingPage() {
   const countDiff = count - (automatic?.count ?? 0);
   const status = view?.status || "new";
   const statusLabels = { new: "لم تُحفظ", draft: "مسودة محفوظة", submitted: "بانتظار اعتماد المدير", approved: "معتمدة" };
-  const reviewNeeded = !hasServerTotals || countDiff !== 0 || difference !== 0 ||
-    (automatic?.reviewPaymentsCount ?? 0) > 0 ||
-    (automatic?.unknownHalala ?? 0) > 0 || (automatic?.refundsHalala ?? 0) > 0 ||
-    (pos?.unresolvedRefundInvoiceCount ?? 0) > 0;
+  // The mandatory-reason decision belongs exclusively to the backend.
+  const reviewNeeded = !hasServerTotals || (view?.requiresReason ?? false);
+  const reasonCodes = view?.reasonCodes ?? [];
   const differenceLabel = !hasServerTotals ? "الإجماليات غير متاحة" :
     difference === 0 ? (reviewNeeded ? "توجد ملاحظات للمراجعة" : "المبالغ متطابقة") :
     difference < 0 ? "يوجد عجز" : "يوجد زيادة";
@@ -330,7 +330,8 @@ function DailyClosingPage() {
             <div className="space-y-1">
               <p className="text-xs font-medium text-muted-foreground">بيسك دايت / حسابات المطعم</p>
               <h1 className="text-xl font-bold tracking-tight sm:text-2xl">تقفيلة اليوم</h1>
-              <p className="max-w-lg text-sm leading-6 text-muted-foreground">سجّل مبيعات كل مصدر، ثم طابق الكاش والشبكة مع إجمالي اليوم.</p>
+              <Badge variant="outline">{isPosV2 ? "POS_V2" : "LEGACY_V1"}</Badge>
+              <p className="max-w-lg text-sm leading-6 text-muted-foreground">{isPosV2 ? "مبيعات المطعم والتطبيقات من POS تلقائيًا؛ سجّل المعدود والقنوات الخارجية فقط." : "سجّل مبيعات كل مصدر، ثم طابق الكاش والشبكة مع إجمالي اليوم."}</p>
             </div>
           </div>
           <Badge variant="outline" className="h-8 rounded-full bg-background px-3 text-xs font-medium">
@@ -418,8 +419,8 @@ function DailyClosingPage() {
                       </div>
                     </div>
                     <div className="space-y-2 border-t pt-4">
-                      <h3 className="text-sm font-semibold">البيانات اليدوية للقنوات (للمراجعة)</h3>
-                      <p className="text-xs text-muted-foreground">لا تدخل هذه القيم في التحصيل المتوقع أو حساب الفرق؛ المصدر المعتمد هو expectedTotals.</p>
+                      <h3 className="text-sm font-semibold">{isPosV2 ? "قنوات أخرى غير مسجلة في POS" : "البيانات اليدوية للقنوات"}</h3>
+                      <p className="text-xs text-muted-foreground">{isPosV2 ? "القنوات الأخرى تُضاف للمستحقات فقط عند الحفظ، ولا تُضاف للكاش أو الشبكة." : "هذه القيم أساس حساب التقفيلة القديمة LEGACY_V1."}</p>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="rounded-2xl border border-primary/20 bg-primary/[0.035] p-4">
