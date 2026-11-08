@@ -273,8 +273,8 @@ function DailyClosingPage() {
   const expectedNetwork = totals?.expected.networkHalalas ?? 0;
   const expectedApps = isPosV2 ? (totals?.expected.appReceivableHalalas ?? 0) : (view?.summary?.appReceivablesHalala ?? 0);
   const expectedTotal = isPosV2 ? (totals?.expected.totalHalalas ?? 0) : (view?.summary?.totalSalesHalala ?? 0);
-  const subscriptionCash = subscriptionTotals?.cashHalalas ?? 0;
-  const subscriptionNetwork = subscriptionTotals?.visaHalalas ?? 0;
+  const subscriptionCash = isPosV2 ? (subscriptionTotals?.cashHalalas ?? 0) : (automatic?.cashHalala ?? 0);
+  const subscriptionNetwork = isPosV2 ? (subscriptionTotals?.visaHalalas ?? 0) : (automatic?.cardHalala ?? 0);
   const subscriptionCollections = subscriptionCash + subscriptionNetwork;
   // Reconciliation from GET is authoritative for persisted values. When the
   // user edits the counted inputs, apply its exact difference formula live.
@@ -379,7 +379,7 @@ function DailyClosingPage() {
                   </div>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2 border-t pt-4 sm:grid-cols-4">
-                  <Value label="مبيعات الكاشير (صافي)" value={hasServerTotals ? moneySar(pos?.netHalalas ?? 0) : "—"} />
+                  <Value label={isPosV2 ? "مبيعات الكاشير (صافي)" : "مبيعات المطعم"} value={hasServerTotals ? moneySar(isPosV2 ? (pos?.netHalalas ?? 0) : (view?.summary?.restaurantHalala ?? 0)) : "—"} />
                   <Value label="تحصيل الاشتراكات (كاش + شبكة)" value={hasServerTotals ? moneySar(subscriptionCollections) : "—"} />
                   <Value label="المعدود كاش + شبكة" value={moneySar(collected)} />
                   <Value label="مستحقات التطبيقات" value={hasServerTotals ? moneySar(expectedApps) : "—"} />
@@ -395,7 +395,7 @@ function DailyClosingPage() {
                       </span>
                       <div>
                         <CardTitle id="closing-sales-title" className="text-base sm:text-lg">1. المبيعات</CardTitle>
-                        <p className="mt-1 text-xs text-muted-foreground">فواتير ومرتجعات الكاشير تُحتسب تلقائيًا من النظام. القنوات اليدوية أدناه للمراجعة فقط.</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{isPosV2 ? "فواتير الكاشير ومرتجعاته محسوبة من السيرفر." : "مبيعات القنوات اليدوية محفوظة بمنطق التقفيلة القديمة."}</p>
                       </div>
                     </div>
                   </CardHeader>
@@ -511,7 +511,21 @@ function DailyClosingPage() {
                       </div>
                       <strong dir="ltr" className="text-lg tabular-nums">{moneySar(automatic?.moyasarHalala ?? 0)}</strong>
                     </div>
-                    <div aria-label="التوقعات والتسوية المالية" className="space-y-3 rounded-2xl bg-muted/40 p-4">
+                    {!isPosV2 && <div aria-label="التوقعات والتسوية المالية القديمة" className="space-y-3 rounded-2xl bg-muted/40 p-4">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <Value label="المتوقع تحصيله محليًا" value={moneySar(view?.summary?.localExpectedHalala ?? 0)} />
+                        <Value label="المعدود كاش وشبكة" value={moneySar(view?.summary?.localRecordedHalala ?? 0)} />
+                        <Value label="مستحقات التطبيقات اليدوية" value={moneySar(view?.summary?.appReceivablesHalala ?? 0)} />
+                        <Value label="المبيعات حسب التقفيلة القديمة" value={moneySar(view?.summary?.totalSalesHalala ?? 0)} />
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span>فرق التحصيل المحلي</span><strong dir="ltr">{moneySar(view?.summary?.localDifferenceHalala ?? 0)}</strong>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <span>الفرق الكلي — LEGACY_V1</span><strong dir="ltr">{moneySar(view?.summary?.overallDifferenceHalala ?? 0)}</strong>
+                      </div>
+                    </div>}
+                    {isPosV2 && <div aria-label="التوقعات والتسوية المالية" className="space-y-3 rounded-2xl bg-muted/40 p-4">
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                         <Value label="المفروض كاش" value={hasServerTotals ? moneySar(expectedCash) : "—"} />
                         <Value label="المفروض شبكة" value={hasServerTotals ? moneySar(expectedNetwork) : "—"} />
@@ -540,8 +554,8 @@ function DailyClosingPage() {
                           {hasServerTotals ? moneySar(difference) : "—"}
                         </strong>
                       </div>
-                    </div>
-                  </CardContent>
+                    </div>}
+                                    </CardContent>
                 </Card>
               </section>
 
