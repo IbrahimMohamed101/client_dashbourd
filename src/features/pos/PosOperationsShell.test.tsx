@@ -105,14 +105,14 @@ describe("POS operations dashboard Staging shell", () => {
     expect(screen.getByTestId("existing-user-form")).toBeInTheDocument();
   });
 
-  it("can enter close counts for review without submitting or storing a close", async () => {
+  it("opens the existing daily closing workflow instead of duplicating its form", async () => {
     const user = userEvent.setup();
     render(<PosOperationsShell catalog={catalog} />);
     await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
     await user.click(screen.getByRole("menuitem", { name: "التقفيلة اليومية" }));
-    await user.type(screen.getByRole("textbox", { name: "النقدية المعدودة" }), "500.25");
-    expect(screen.getByRole("textbox", { name: "النقدية المعدودة" })).toHaveValue("500.25");
-    expect(screen.getByRole("button", { name: "مراجعة وإغلاق التقفيلة" })).toBeDisabled();
-    expect(screen.getByText(/في الذاكرة المؤقتة للواجهة فقط/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "فتح تقفيلة اليوم الحالية" }))
+      .toHaveAttribute("href", "/daily-closing");
+    expect(screen.queryByRole("button", { name: "مراجعة وإغلاق التقفيلة" }))
+      .not.toBeInTheDocument();
   });
 });
