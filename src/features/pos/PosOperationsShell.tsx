@@ -141,7 +141,7 @@ function OrdersView({ onSale }: { onSale: () => void; catalog: PublishedPosCatal
 
 function SubscriptionView({ role }: { role: string | undefined }) {
   const [mode, setMode] = useState<"purchase" | "deduct">("purchase");
-  const canPurchase = canCreateCustomerSubscription(role);
+  const canPurchase = canCreateCustomerSubscription(role) || role === UserRoles.CASHIER;
   const canCreateUser = canCreateAppCustomer(role);
   return (
     <section aria-label="اشتراكات نقطة البيع" className="space-y-5">
@@ -173,14 +173,18 @@ function SubscriptionView({ role }: { role: string | undefined }) {
           خصم وجبات المشترك
         </Button>
       </div>
+      {mode === "purchase" && role === UserRoles.CASHIER && (
+        <p role="status" className="rounded-lg border bg-muted/50 p-3 text-sm">
+          صلاحية الكاشير الحالية تسمح بتحصيل اشتراكات كاش فقط؛ فيزا تحتاج دور المطعم أو الإدارة.
+        </p>
+      )}
       {mode === "deduct" ? (
         <ManualDeductionPage />
       ) : canPurchase ? (
-        <CreateSubscriptionFormContent />
+        <CreateSubscriptionFormContent allowedPaymentMethods={role === UserRoles.CASHIER ? ["cash"] : undefined} />
       ) : (
         <div className="rounded-xl border p-4 text-sm" role="status">
-          النظام الحالي لا يسمح لهذا الدور بإنشاء اشتراك مدفوع. لم نغيّر الصلاحيات
-          أو نتجاوز واجهة المصادقة؛ يلزم قرار صلاحيات مستقل قبل اختبار كاشير لهذه العملية.
+          لا يمكن لهذا الدور إنشاء اشتراك من نقطة البيع بصلاحيات النظام الحالية.
         </div>
       )}
     </section>
