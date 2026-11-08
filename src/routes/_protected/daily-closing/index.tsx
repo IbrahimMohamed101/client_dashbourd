@@ -339,12 +339,13 @@ function DailyClosingPage() {
           ? errorNotice(formatError(query.error))
           : view ? (
             <>
+              {!hasServerTotals && errorNotice("لم تصل إجماليات expectedTotals من السيرفر. حدّث البيانات قبل إرسال التقفيلة؛ لن نستخدم الحساب المحلي كبديل.")}
               <section aria-label="ملخص التقفيلة" className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">إجمالي مبيعات اليوم</p>
-                    <p className="text-3xl font-bold tracking-tight tabular-nums sm:text-4xl" dir="ltr">{moneySar(sales)}</p>
-                    <p className="text-xs leading-5 text-muted-foreground">المطعم + التطبيقات + تحصيل الاشتراكات قبل الاستردادات</p>
+                    <p className="text-sm font-medium text-muted-foreground">الإجمالي المتوقع من النظام</p>
+                    <p className="text-3xl font-bold tracking-tight tabular-nums sm:text-4xl" dir="ltr">{hasServerTotals ? moneySar(expectedTotal) : "—"}</p>
+                    <p className="text-xs leading-5 text-muted-foreground">كاش + شبكة + مستحقات التطبيقات بعد التسويات، دون تحصيل ميسر الخارجي</p>
                   </div>
                   <div className={!reviewNeeded
                     ? "rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300"
@@ -353,14 +354,14 @@ function DailyClosingPage() {
                       {!reviewNeeded ? <CheckCircle2 className="size-4" /> : <AlertTriangle className="size-4" />}
                       {differenceLabel}
                     </p>
-                    <p dir="ltr" className="mt-1 text-xl font-bold tabular-nums">{moneySar(overallDifference)}</p>
+                    <p dir="ltr" className="mt-1 text-xl font-bold tabular-nums">{hasServerTotals ? moneySar(difference) : "—"}</p>
                   </div>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2 border-t pt-4 sm:grid-cols-4">
-                  <Value label="مبيعات القنوات" value={moneySar(totalChannelSales)} />
-                  <Value label="تحصيل الاشتراكات" value={moneySar(automatic?.amountHalala ?? 0)} />
-                  <Value label="المحصّل كاش + شبكة" value={moneySar(collected)} />
-                  <Value label="مستحقات التطبيقات" value={moneySar(apps)} />
+                  <Value label="مبيعات الكاشير (صافي)" value={hasServerTotals ? moneySar(pos?.netHalalas ?? 0) : "—"} />
+                  <Value label="تحصيل الاشتراكات (كاش + شبكة)" value={hasServerTotals ? moneySar(subscriptionCollections) : "—"} />
+                  <Value label="المعدود كاش + شبكة" value={moneySar(collected)} />
+                  <Value label="مستحقات التطبيقات" value={hasServerTotals ? moneySar(expectedApps) : "—"} />
                 </div>
               </section>
 
@@ -373,20 +374,42 @@ function DailyClosingPage() {
                       </span>
                       <div>
                         <CardTitle id="closing-sales-title" className="text-base sm:text-lg">1. المبيعات</CardTitle>
-                        <p className="mt-1 text-xs text-muted-foreground">انقل الإجماليات من تقارير المطعم وتطبيقات التوصيل.</p>
+                        <p className="mt-1 text-xs text-muted-foreground">فواتير ومرتجعات الكاشير تُحتسب تلقائيًا من النظام. القنوات اليدوية أدناه للمراجعة فقط.</p>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-5 px-4 py-5 sm:px-6">
+                    <div aria-label="مبيعات POS المحسوبة من النظام" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <Value label="عدد فواتير الكاشير" value={hasServerTotals ? String(pos?.invoiceCount ?? 0) : "—"} />
+                      <Value label="إجمالي فواتير الكاشير" value={hasServerTotals ? moneySar(pos?.grossHalalas ?? 0) : "—"} />
+                      <Value label="المرتجعات (عدد / مبلغ)" value={hasServerTotals ? `${pos?.refundCount ?? 0} / ${moneySar(pos?.refundsHalalas ?? 0)}` : "—"} />
+                      <Value label="صافي مبيعات الكاشير" value={hasServerTotals ? moneySar(pos?.netHalalas ?? 0) : "—"} />
+                    </div>
+                    <div aria-label="مستحقات التطبيقات من POS" className="space-y-3 rounded-2xl border border-border/70 p-4">
+                      <h3 className="text-sm font-semibold">مستحقات كل تطبيق — من فواتير الكاشير</h3>
+                      {appChannels.length ? appChannels.map(([channel, amount]) =>
+                        <div key={channel} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                          <span>{appChannelName(channel)}</span>
+                          <strong dir="ltr" className="tabular-nums">{moneySar(amount)}</strong>
+                        </div>) : <p className="text-xs text-muted-foreground">لا توجد مستحقات تطبيقات مسجلة لهذا اليوم.</p>}
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-sm font-semibold">
+                        <span>إجمالي مستحقات التطبيقات</span>
+                        <strong dir="ltr" className="tabular-nums">{hasServerTotals ? moneySar(expectedApps) : "—"}</strong>
+                      </div>
+                    </div>
+                    <div className="space-y-2 border-t pt-4">
+                      <h3 className="text-sm font-semibold">البيانات اليدوية للقنوات (للمراجعة)</h3>
+                      <p className="text-xs text-muted-foreground">لا تدخل هذه القيم في التحصيل المتوقع أو حساب الفرق؛ المصدر المعتمد هو expectedTotals.</p>
+                    </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="rounded-2xl border border-primary/20 bg-primary/[0.035] p-4">
-                        {amountField("مبيعات المطعم", "restaurant", "الطلبات المباشرة فقط، بدون الاشتراكات.")}
+                        {amountField("مبيعات المطعم — يدوي", "restaurant", "بيان مستقل للمراجعة، وليس مصدر التحصيل المتوقع.")}
                       </div>
                       <div className="rounded-2xl border border-border/70 p-4">
-                        {amountField("مبيعات هنجرستيشن", "hungerstation")}
+                        {amountField("مبيعات هنجرستيشن — يدوي", "hungerstation")}
                       </div>
                       <div className="rounded-2xl border border-border/70 p-4">
-                        {amountField("مبيعات كيتا", "keeta")}
+                        {amountField("مبيعات كيتا — يدوي", "keeta")}
                       </div>
                       {form.other.map((app, index) => (
                         <div key={index} className="rounded-2xl border border-border/70 p-4">
@@ -413,8 +436,8 @@ function DailyClosingPage() {
                       <Plus className="size-4" aria-hidden="true" /> إضافة تطبيق توصيل
                     </Button>}
                     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/50 px-4 py-3">
-                      <span className="text-sm font-medium">إجمالي مبيعات المطعم والتطبيقات</span>
-                      <strong dir="ltr" className="text-lg tabular-nums">{moneySar(totalChannelSales)}</strong>
+                      <span className="text-sm font-medium">إجمالي القنوات المدخل يدويًا (لا يؤثر على الفرق)</span>
+                      <strong dir="ltr" className="text-lg tabular-nums">{moneySar(manualChannelSales)}</strong>
                     </div>
                   </CardContent>
                 </Card>
