@@ -83,14 +83,14 @@ describe("POS operations dashboard Staging shell", () => {
     expect(section.getByRole("button", { name: "تحديث" })).toBeEnabled();
   });
 
-  it("uses existing subscription/deduction components and keeps cashier permissions", async () => {
+  it("uses existing subscription/deduction components with backend-authorized cashier purchase", async () => {
     const user = userEvent.setup();
     render(<PosOperationsShell catalog={catalog} />);
     await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
     expect(screen.getByRole("menuitem", { name: "لوحة العمليات الحالية" }))
       .toHaveAttribute("href", "/operations");
     await user.click(screen.getByRole("menuitem", { name: "الاشتراكات" }));
-    expect(screen.getByText(/لا يسمح لهذا الدور بإنشاء اشتراك مدفوع/)).toBeInTheDocument();
+    expect(screen.getByTestId("existing-subscription-form")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "إنشاء مستخدم سريع" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "كل الاشتراكات" }))
       .toHaveAttribute("href", "/subscriptions");
