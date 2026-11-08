@@ -1,0 +1,30 @@
+name: POS D-092 Branch Operator Parity (Staging Only)
+on:
+  pull_request:
+    branches: [codex/pos-staging-preview]
+    paths:
+      - "src/lib/rolePermissions.ts"
+      - "src/constants/routes.ts"
+      - "src/lib/operationsBoard.ts"
+      - "src/features/pos/**"
+      - "src/components/pages/subscriptions/create/CreateSubscriptionFormContent.tsx"
+      - "tests/posD092BranchOperatorParity.test.ts"
+      - ".github/workflows/pos-d092-branch-parity.yml"
+jobs:
+  branch-operator-parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: D-092 branch role equality and full POS shell rendering
+        run: npx vitest run --maxWorkers=2 tests/posD092BranchOperatorParity.test.ts tests/roleRoutes.test.ts tests/operationsBoard.test.ts src/features/pos/PosOperationsShell.test.tsx
+      - name: Production build, TypeScript and lint
+        run: |
+          npm run typecheck
+          npm run lint
+          npm run build
