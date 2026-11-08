@@ -62,10 +62,18 @@ export type PosSaleIntent = PosFinanceQuoteRequest & {
   tender?: { method: "cash"; receivedHalalas: number } | { method: "network" };
 };
 export type PosActor = { id: string; name: string | null; email: string; role: string };
+export type PosSeller = {
+  legalNameAr: string; legalNameEn: string; vatRegistrationNumber: string;
+  crNumber: string; addressAr: string; addressEn: string;
+};
 export type PosInvoice = {
   _id: string;
   number: string;
   sequence: number;
+  documentKind?: "SIMPLIFIED_TAX_INVOICE" | "STAGING_TEST_NON_TAX";
+  documentType?: "SIMPLIFIED_TAX_INVOICE" | "STAGING_TEST_NON_TAX";
+  seller?: PosSeller;
+  qrPayloadBase64?: string | null;
   publishedRevision: number;
   channel: Channel;
   serviceMode: string;
@@ -85,6 +93,10 @@ export type PosInvoice = {
 };
 export type PosRefund = {
   _id: string;
+  documentKind?: "CREDIT_NOTE" | "STAGING_TEST_NON_TAX";
+  documentType?: "CREDIT_NOTE" | "STAGING_TEST_NON_TAX";
+  seller?: PosSeller;
+  qrPayloadBase64?: string | null;
   number: string;
   invoiceId: string;
   invoiceNumber: string;
