@@ -74,8 +74,8 @@ export function PosTaxDocumentReceipt({ doc, onClose, onRefund }: {
           <table className="w-full table-fixed text-xs">
             <thead><tr><th className="w-[42%] text-right">الصنف / الإضافة</th><th>العدد</th><th>الضريبة</th><th>الشامل</th></tr></thead>
             <tbody>{lineItems.map((line, i) => (
-              <tr key={credit ? line.lineId + i : line.id}>
-                <td className="break-words py-2">{line.parentLineId ? "إضافة: " : ""}{line.name} {line.variantLabel ? "— " + line.variantLabel : ""}</td>
+              <tr key={("lineId" in line ? line.lineId : line.id) + i}>
+                <td className="break-words py-2">{"parentLineId" in line && line.parentLineId ? "إضافة: " : ""}{line.name} {line.variantLabel ? "— " + line.variantLabel : ""}</td>
                 <td>{line.quantity}</td>
                 <td>{amount(line.vatHalalas)}</td>
                 <td className="font-semibold">{amount(line.grossHalalas)}</td>
