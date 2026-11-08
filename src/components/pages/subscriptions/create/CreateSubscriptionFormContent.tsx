@@ -336,10 +336,6 @@ export function CreateSubscriptionFormContent({
   );
 
   const onSubmit = async (data: CreateSubscriptionSchemaType) => {
-    if (allowedPaymentMethods && !allowedPaymentMethods.includes(data.paymentMethod)) {
-      ToastMessage("طريقة الدفع غير مصرح بها لهذا الدور. استخدم الدفع النقدي.", "error");
-      return;
-    }
     const quotePayload = buildSubscriptionQuotePayload(data);
     const createPayload = buildSubscriptionCreationPayload(data);
 
