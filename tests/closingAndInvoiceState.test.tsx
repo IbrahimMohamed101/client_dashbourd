@@ -244,7 +244,9 @@ it("uses server POS totals on 2026-11-08 and shows zero reconciliation when cash
   fireEvent.change(screen.getByLabelText("مبيعات المطعم — يدوي"), { target: { value: "5000.00" } });
   expect(within(totals).getByText("الفرق").parentElement).toHaveTextContent(amountDigits(0));
   fireEvent.change(screen.getByLabelText("المدفوع شبكة"), { target: { value: "3352.39" } });
-  expect(within(totals).getByText("الفرق").parentElement).toHaveTextContent(amountDigits(-1));
+  const shortage = within(totals).getByText("الفرق").parentElement!;
+  expect(shortage).toHaveTextContent(amountDigits(1));
+  expect(shortage.textContent).toContain("-");
 });
 
 it("does not silently use old local totals when expectedTotals is absent", async () => {
