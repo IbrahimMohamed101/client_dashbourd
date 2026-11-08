@@ -10,9 +10,10 @@ import { categories, previewProducts } from "./previewCatalog";
 // its navigation link while route-authorization tests verify the true router.
 vi.mock("@tanstack/react-router", () => ({
   Link: forwardRef<HTMLAnchorElement, { to: string; children: ReactNode; search?: unknown }>(
-    ({ to, children, search: _search, ...props }, ref) => (
-      <a href={to} ref={ref} {...props}>{children}</a>
-    ),
+    ({ to, children, search: _search, ...props }, ref) => {
+      void _search;
+      return <a href={to} ref={ref} {...props}>{children}</a>;
+    },
   ),
 }));
 
