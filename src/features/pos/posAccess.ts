@@ -1,4 +1,5 @@
 import { UserRoles, type UserRole } from "@/types/auth";
+import { isBranchOperator } from "@/lib/rolePermissions";
 
 const stagingApiOrigins = new Set([
   "https://basicdiet145-staging.up.railway.app",
@@ -28,8 +29,7 @@ export function canAccessPosPreview(role: UserRole, path = "/pos") {
   }
 
   return isPosPreviewPath(path) && (
-    role === UserRoles.CASHIER ||
-    role === UserRoles.RESTAURANT ||
+    isBranchOperator(role) ||
     role === UserRoles.ADMIN ||
     role === UserRoles.SUPERADMIN
   );
