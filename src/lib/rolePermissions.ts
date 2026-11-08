@@ -1,25 +1,31 @@
-import { UserRoles } from "@/types/auth";
+import { UserRoles, type UserRole } from "@/types/auth";
 
-const RESTAURANT_WRITE_ROLES = new Set<string>([
-  UserRoles.SUPERADMIN,
-  UserRoles.ADMIN,
+// D-092: a single branch-operator principal for ALL permission decisions.
+// Keep the actual user role intact for labels and audit. Do not spread two
+// separately maintained allowlists through the dashboard.
+export const BRANCH_OPERATOR_ROLES = Object.freeze([
   UserRoles.RESTAURANT,
   UserRoles.CASHIER,
-]);
+] as const);
 
-const CUSTOMER_PASSWORD_ROLES = new Set<string>([
+export function isBranchOperator(role: unknown): role is
+  typeof UserRoles.RESTAURANT | typeof UserRoles.CASHIER {
+  return typeof role === "string" &&
+    BRANCH_OPERATOR_ROLES.some((candidate) => candidate === role);
+}
+
+const MANAGEMENT_ROLES: ReadonlySet<string> = new Set([
   UserRoles.SUPERADMIN,
   UserRoles.ADMIN,
-  UserRoles.RESTAURANT,
-  UserRoles.CASHIER,
 ]);
 
 export function canManageRestaurantData(role: unknown): boolean {
-  return typeof role === "string" && RESTAURANT_WRITE_ROLES.has(role);
+  return isBranchOperator(role) ||
+    (typeof role === "string" && MANAGEMENT_ROLES.has(role));
 }
 
 export function canManageCustomerPasswords(role: unknown): boolean {
-  return typeof role === "string" && CUSTOMER_PASSWORD_ROLES.has(role);
+  return canManageRestaurantData(role);
 }
 
 export const canCreateAppCustomer = canManageRestaurantData;
