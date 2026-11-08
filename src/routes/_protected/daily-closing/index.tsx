@@ -18,9 +18,10 @@ export const Route = createFileRoute("/_protected/daily-closing/")({
   component: DailyClosingPage,
 });
 
-type OtherChannel = { name: string; amountHalala: number };
+type ClosingVersion = "LEGACY_V1" | "POS_V2";
+type OtherChannel = { name: string; reference?: string; amountHalala: number };
 type ClosingValues = {
-  channels: { restaurantHalala: number; hungerstationHalala: number; keetaHalala: number; other: OtherChannel[] };
+  channels: { restaurantHalala?: number; hungerstationHalala?: number; keetaHalala?: number; other: OtherChannel[] };
   collections: { cashHalala: number; cardHalala: number };
   confirmedSubscriptionCount: number | null;
   discrepancyReason: string;
@@ -102,15 +103,18 @@ type Reconciliation = {
 
 type ClosingView = ClosingValues & {
   businessDate: string; status: "new" | "draft" | "submitted" | "approved";
+  closingVersion: ClosingVersion; calculationMode: string;
+  requiresReason: boolean; reasonCodes: string[];
   automatic: Automatic; summary: Summary; expectedTotals: ServerExpectedTotals; reconciliation: Reconciliation;
   submittedAt: string | null; approvedAt: string | null;
   history: { actor: string; action: string; reason: string; at: string }[];
+  returnedSnapshots?: { actor: string; reason: string; at: string; snapshot: { closingVersion: ClosingVersion; expectedTotals: ServerExpectedTotals } }[];
 };
 type ClosingResponse = { status: boolean; data: ClosingView };
 
 type FormState = {
   restaurant: string; hungerstation: string; keeta: string;
-  other: { name: string; amount: string }[];
+  other: { name: string; reference: string; amount: string }[];
   cash: string; card: string;
   confirmedCount: string; discrepancyReason: string; notes: string;
 };
@@ -122,6 +126,17 @@ const moneySar = (halala: number) =>
   new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", minimumFractionDigits: 2 }).format(halala / 100);
 const inputSar = (halala: number) => (halala / 100).toFixed(2);
 const toHalala = (value: string) => Math.round(Number(value) * 100);
+const reasonMessages: Record<string, string> = {
+  CASH_DIFFERENCE: "فرق بين الكاش المعدود وكاش النظام",
+  NETWORK_DIFFERENCE: "فرق بين الشبكة المعدودة والشبكة المسجلة",
+  SUBSCRIPTION_COUNT_DIFFERENCE: "عدد الاشتراكات المؤكد لا يطابق النظام",
+  UNKNOWN_SUBSCRIPTION_HALALA: "مبالغ اشتراكات غير مصنفة",
+  SUBSCRIPTION_PAYMENTS_REVIEW: "دفعات اشتراكات تحتاج المراجعة",
+  SUBSCRIPTION_REFUNDS: "وجود مرتجعات اشتراكات",
+  LEGACY_AMOUNT_DIFFERENCE: "فرق في مبالغ التقفيلة القديمة",
+};
+export const closingReasonLabel = (code: string) =>
+  reasonMessages[code] ?? "سبب مراجعة من السيرفر: " + code;
 const defaultForm: FormState = {
   restaurant: "0", hungerstation: "0", keeta: "0", other: [], cash: "0", card: "0",
   confirmedCount: "", discrepancyReason: "", notes: "",
@@ -129,29 +144,34 @@ const defaultForm: FormState = {
 
 function formFromView(view: ClosingView): FormState {
   return {
-    restaurant: inputSar(view.channels.restaurantHalala),
-    hungerstation: inputSar(view.channels.hungerstationHalala),
-    keeta: inputSar(view.channels.keetaHalala),
-    other: view.channels.other.map((x) => ({ name: x.name, amount: inputSar(x.amountHalala) })),
+    restaurant: inputSar(view.channels.restaurantHalala ?? 0),
+    hungerstation: inputSar(view.channels.hungerstationHalala ?? 0),
+    keeta: inputSar(view.channels.keetaHalala ?? 0),
+    other: view.channels.other.map((x) => ({ name: x.name, reference: x.reference ?? "", amount: inputSar(x.amountHalala) })),
     cash: inputSar(view.collections.cashHalala),
     card: inputSar(view.collections.cardHalala),
     confirmedCount: view.confirmedSubscriptionCount === null ? "" : String(view.confirmedSubscriptionCount),
     discrepancyReason: view.discrepancyReason, notes: view.notes,
   };
 }
-function parseForm(form: FormState): ClosingValues {
+function parseForm(form: FormState, version: ClosingVersion): ClosingValues {
   const all = [form.restaurant, form.hungerstation, form.keeta, form.cash, form.card, ...form.other.map(x => x.amount)];
   if (all.some(v => !v.trim() || !/^\d+(?:\.\d{1,2})?$/.test(v) || !Number.isSafeInteger(toHalala(v)) || toHalala(v) > 1e12))
     throw new Error("يجب إدخال مبالغ صحيحة بالريال، بحد أقصى منزلتين عشريتين");
   if (form.other.some(x => !x.name.trim())) throw new Error("اكتب اسم التطبيق الإضافي");
+  if (version === "POS_V2" && form.other.some(x => !x.reference.trim())) throw new Error("مرجع القناة الإضافية مطلوب");
   if (form.confirmedCount.trim() && (!/^\d+$/.test(form.confirmedCount) || !Number.isSafeInteger(Number(form.confirmedCount))))
     throw new Error("عدد الاشتراكات المؤكد يجب أن يكون رقمًا صحيحًا");
   return {
     channels: {
-      restaurantHalala: toHalala(form.restaurant),
-      hungerstationHalala: toHalala(form.hungerstation),
-      keetaHalala: toHalala(form.keeta),
-      other: form.other.map(x => ({ name: x.name.trim(), amountHalala: toHalala(x.amount) })),
+      ...(version === "LEGACY_V1" ? {
+        restaurantHalala: toHalala(form.restaurant),
+        hungerstationHalala: toHalala(form.hungerstation),
+        keetaHalala: toHalala(form.keeta),
+      } : {}),
+      other: form.other.map(x => ({ name: x.name.trim(),
+        ...(version === "POS_V2" ? { reference: x.reference.trim() } : {}),
+        amountHalala: toHalala(x.amount) })),
     },
     collections: { cashHalala: toHalala(form.cash), cardHalala: toHalala(form.card) },
     confirmedSubscriptionCount: form.confirmedCount.trim() ? Number(form.confirmedCount) : null,
@@ -216,7 +236,7 @@ function DailyClosingPage() {
   const action = useMutation({
     mutationFn: async (kind: "save" | "submit" | "approve" | "return") => {
       if (kind === "save" || kind === "submit") {
-        const saved = (await api.put<ClosingResponse>(`/api/dashboard/daily-closings/${date}`, parseForm(form))).data.data;
+        const saved = (await api.put<ClosingResponse>(`/api/dashboard/daily-closings/${date}`, parseForm(form, view?.closingVersion ?? "LEGACY_V1"))).data.data;
         if (kind === "save") return saved;
       }
       return (await api.post<ClosingResponse>(`/api/dashboard/daily-closings/${date}/${kind}`,
@@ -715,14 +735,14 @@ function DailyClosingPage() {
                   <div className="flex w-full gap-2 sm:w-auto">
                     <Button variant="outline" className="h-11 flex-1 rounded-xl sm:flex-initial"
                       disabled={action.isPending} onClick={() => {
-                        try { parseForm(form); action.mutate("save"); } catch (e) { toast.error(formatError(e)); }
+                        try { parseForm(form, view?.closingVersion ?? "LEGACY_V1"); action.mutate("save"); } catch (e) { toast.error(formatError(e)); }
                       }}>
                       <Save className="size-4" aria-hidden="true" /> حفظ مسودة
                     </Button>
                     <Button className="h-11 flex-1 rounded-xl sm:flex-initial" disabled={action.isPending || !hasServerTotals}
                       onClick={() => {
                         try {
-                          parseForm(form);
+                          parseForm(form, view?.closingVersion ?? "LEGACY_V1");
                           if (reviewNeeded && !form.discrepancyReason.trim()) {
                             toast.error("اكتب سبب الاختلاف في قسم مراجعة التقفيلة قبل الإرسال");
                             document.getElementById("closing-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
