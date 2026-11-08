@@ -135,6 +135,7 @@ const reasonMessages: Record<string, string> = {
   SUBSCRIPTION_PAYMENTS_REVIEW: "دفعات اشتراكات تحتاج المراجعة",
   SUBSCRIPTION_REFUNDS: "وجود مرتجعات اشتراكات",
   LEGACY_AMOUNT_DIFFERENCE: "فرق في مبالغ التقفيلة القديمة",
+  LEGACY_RECONCILIATION_DIFFERENCE: "فرق تسوية التحصيل في التقفيلة القديمة",
 };
 const closingReasonLabel = (code: string) =>
   reasonMessages[code] ?? "سبب مراجعة من السيرفر: " + code;
@@ -267,7 +268,10 @@ function DailyClosingPage() {
   const countedNetwork = asHalala(form.card);
   const collected = countedCash + countedNetwork;
   const totals = view?.expectedTotals;
-  const hasServerTotals = Boolean(totals?.expected && totals?.pos && totals?.subscriptions);
+  // Historical LEGACY reports are authoritative without POS-specific fields.
+  const hasServerTotals = isPosV2
+    ? Boolean(totals?.expected && totals?.pos && totals?.subscriptions)
+    : Boolean(view?.summary);
   const pos = totals?.pos;
   const subscriptionTotals = totals?.subscriptions;
   const expectedCash = totals?.expected.cashHalalas ?? 0;
@@ -361,7 +365,7 @@ function DailyClosingPage() {
           ? errorNotice(formatError(query.error))
           : view ? (
             <>
-              {!hasServerTotals && errorNotice("لم تصل إجماليات expectedTotals من السيرفر. حدّث البيانات قبل إرسال التقفيلة؛ لن نستخدم الحساب المحلي كبديل.")}
+              {isPosV2 && !hasServerTotals && errorNotice("لم تصل إجماليات expectedTotals من السيرفر. حدّث البيانات قبل إرسال التقفيلة؛ لن نستخدم الحساب المحلي كبديل.")}
               <section aria-label="ملخص التقفيلة" className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="space-y-1">
