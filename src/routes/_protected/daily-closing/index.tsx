@@ -64,6 +64,7 @@ type Automatic = {
   rows: PaymentRow[];
 };
 type Summary = {
+  restaurantHalala?: number;
   totalSalesHalala: number; appReceivablesHalala: number; localExpectedHalala: number;
   localRecordedHalala: number; localDifferenceHalala: number; overallDifferenceHalala: number;
   recordedPlusReceivablesHalala: number; subscriptionCountDifference: number;
