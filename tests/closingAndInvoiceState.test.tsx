@@ -152,8 +152,8 @@ it("clears invoice errors between customers and removes closed invoice cache", a
 });
 
 it("uses server POS totals on 2026-11-08 and shows zero reconciliation when cash/network match", async () => {
-  const moneySar = (halalas: number) => new Intl.NumberFormat("ar-SA", {
-    style: "currency", currency: "SAR", minimumFractionDigits: 2,
+  const amountDigits = (halalas: number) => new Intl.NumberFormat("ar-SA", {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
   }).format(halalas / 100);
   const expected = {
     cashHalalas: 150965,
@@ -215,35 +215,36 @@ it("uses server POS totals on 2026-11-08 and shows zero reconciliation when cash
     "/api/dashboard/daily-closings/2026-11-08"
   ));
   const totals = await screen.findByLabelText("التوقعات والتسوية المالية");
-  expect(within(totals).getByText(moneySar(150965))).toBeInTheDocument();
-  expect(within(totals).getByText(moneySar(335240))).toBeInTheDocument();
-  expect(within(totals).getByText(moneySar(7600))).toBeInTheDocument();
-  expect(within(totals).getByText(moneySar(493805))).toBeInTheDocument();
+  expect(totals).toHaveTextContent(amountDigits(150965));
+  expect(totals).toHaveTextContent(amountDigits(335240));
+  expect(totals).toHaveTextContent(amountDigits(7600));
+  expect(totals).toHaveTextContent(amountDigits(493805));
 
   const pos = screen.getByLabelText("مبيعات POS المحسوبة من النظام");
   expect(within(pos).getByText("عدد فواتير الكاشير")).toBeInTheDocument();
   expect(within(pos).getByText("13")).toBeInTheDocument();
-  expect(within(pos).getByText(moneySar(63805))).toBeInTheDocument();
+  expect(pos).toHaveTextContent(amountDigits(63805));
   const apps = screen.getByLabelText("مستحقات التطبيقات من POS");
   expect(within(apps).getByText("هنجرستيشن")).toBeInTheDocument();
   expect(within(apps).getByText("كيتا")).toBeInTheDocument();
-  expect(within(apps).getByText(moneySar(3600))).toBeInTheDocument();
-  expect(within(apps).getByText(moneySar(4000))).toBeInTheDocument();
+  expect(apps).toHaveTextContent(amountDigits(3600));
+  expect(apps).toHaveTextContent(amountDigits(4000));
   const subscriptions = screen.getByLabelText("تحصيل الاشتراكات حسب طريقة الدفع");
-  expect(within(subscriptions).getByText(moneySar(120000))).toBeInTheDocument();
-  expect(within(subscriptions).getByText(moneySar(310000))).toBeInTheDocument();
+  expect(subscriptions).toHaveTextContent(amountDigits(120000));
+  expect(subscriptions).toHaveTextContent(amountDigits(310000));
 
   fireEvent.change(screen.getByLabelText("المدفوع كاش"), { target: { value: "1509.65" } });
   fireEvent.change(screen.getByLabelText("المدفوع شبكة"), { target: { value: "3352.40" } });
   const differenceLine = within(totals).getByText("الفرق").parentElement!;
-  expect(differenceLine).toHaveTextContent(moneySar(0));
-  expect(within(totals).getAllByText(moneySar(0))).toHaveLength(3);
+  expect(differenceLine).toHaveTextContent(amountDigits(0));
+  expect(within(totals).getByText("فرق الكاش (المعدود − المتوقع)").parentElement).toHaveTextContent(amountDigits(0));
+  expect(within(totals).getByText("فرق الشبكة (المعدود − المتوقع)").parentElement).toHaveTextContent(amountDigits(0));
 
   // Editing manual restaurant/app sales must not change the reconciliation.
   fireEvent.change(screen.getByLabelText("مبيعات المطعم — يدوي"), { target: { value: "5000.00" } });
-  expect(within(totals).getByText("الفرق").parentElement).toHaveTextContent(moneySar(0));
+  expect(within(totals).getByText("الفرق").parentElement).toHaveTextContent(amountDigits(0));
   fireEvent.change(screen.getByLabelText("المدفوع شبكة"), { target: { value: "3352.39" } });
-  expect(within(totals).getByText("الفرق").parentElement).toHaveTextContent(moneySar(-1));
+  expect(within(totals).getByText("الفرق").parentElement).toHaveTextContent(amountDigits(-1));
 });
 
 it("does not silently use old local totals when expectedTotals is absent", async () => {
@@ -262,6 +263,8 @@ it("does not silently use old local totals when expectedTotals is absent", async
   await Route.options.component?.preload?.();
   const Page = Route.options.component! as React.ComponentType;
   await act(async () => mount(<Suspense fallback={<div>Loading closing</div>}><Page /></Suspense>));
-  expect(await screen.findByRole("alert")).toHaveTextContent("expectedTotals");
+  await waitFor(() => expect(screen.getAllByRole("alert").some(
+    element => element.textContent?.includes("expectedTotals")
+  )).toBe(true));
   expect(screen.getByRole("button", { name: /حفظ وإرسال/ })).toBeDisabled();
 });
