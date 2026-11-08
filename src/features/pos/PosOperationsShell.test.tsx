@@ -94,8 +94,8 @@ describe("POS operations dashboard Staging shell", () => {
     expect(screen.getByRole("menuitem", { name: "لوحة العمليات الحالية" }))
       .toHaveAttribute("href", "/operations");
     await user.click(screen.getByRole("menuitem", { name: "الاشتراكات" }));
-    expect(screen.getByTestId("existing-subscription-form")).toHaveAttribute("data-allowed-methods", "cash");
-    expect(screen.getByText(/فيزا تحتاج دور المطعم أو الإدارة/)).toBeInTheDocument();
+    expect(screen.getByTestId("existing-subscription-form")).toHaveAttribute("data-allowed-methods", "all");
+    expect(screen.queryByText(/فيزا تحتاج دور المطعم أو الإدارة/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "إنشاء مستخدم سريع" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "كل الاشتراكات" }))
       .toHaveAttribute("href", "/subscriptions");
