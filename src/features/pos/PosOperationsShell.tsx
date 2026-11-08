@@ -10,19 +10,22 @@ import {
   Settings2,
   ShoppingBasket,
   Users,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { UserRoles } from "@/types/auth";
+import { canCreateAppCustomer, canCreateCustomerSubscription } from "@/lib/rolePermissions";
+import { CreateSubscriptionFormContent } from "@/components/pages/subscriptions/create/CreateSubscriptionFormContent";
+import ManualDeductionPage from "@/components/pages/manual-deduction/ManualDeductionPage";
 import { channels as defaultChannels } from "./previewCatalog";
 import type { PublishedPosCatalog } from "./catalogApi";
 import { PosWorkspace } from "./PosWorkspace";
 import { PosInvoiceHistory } from "./PosInvoiceHistory";
 
 type View = "sale" | "overview" | "orders" | "subscriptions" | "closing" | "settings";
-type SubscriptionMode = "new" | "renew" | "stack" | "deduct";
 
 const navigation: {
   id: View;
@@ -136,92 +139,48 @@ function OrdersView({ onSale }: { onSale: () => void; catalog: PublishedPosCatal
   return <PosInvoiceHistory onSale={onSale} />;
 }
 
-const modes: { id: SubscriptionMode; label: string }[] = [
-  { id: "new", label: "اشتراك جديد" },
-  { id: "renew", label: "تجديد" },
-  { id: "stack", label: "باقة إضافية" },
-  { id: "deduct", label: "خصم وجبة" },
-];
-
-function SubscriptionView() {
-  const [mode, setMode] = useState<SubscriptionMode>("new");
-  const [phone, setPhone] = useState("");
-  const [days, setDays] = useState("26");
-  const [grams, setGrams] = useState("150");
-  const [meals, setMeals] = useState("2");
-
+function SubscriptionView({ role }: { role: string | undefined }) {
+  const [mode, setMode] = useState<"purchase" | "deduct">("purchase");
+  const canPurchase = canCreateCustomerSubscription(role);
+  const canCreateUser = canCreateAppCustomer(role);
   return (
     <section aria-label="اشتراكات نقطة البيع" className="space-y-5">
-      <PageHeader title="اشتراكات العملاء" description="الإجراء النهائي يستخدم خدمات الاشتراكات والرصيد الرسمية، وليس منطق اشتراكات مكررًا في POS." />
-      <div className="rounded-xl border bg-card p-4">
-        <label className="grid gap-1 text-sm">
-          رقم جوال المشترك
-          <div className="flex flex-wrap gap-2">
-            <Input
-              aria-label="رقم جوال المشترك"
-              className="max-w-md flex-1"
-              dir="ltr"
-              type="tel"
-              autoComplete="off"
-              inputMode="tel"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              placeholder="05xxxxxxxx"
-              maxLength={20}
-            />
-            <Button disabled className="min-h-11">البحث في المشتركين</Button>
-          </div>
-        </label>
-        <p className="mt-2 text-xs text-muted-foreground">البحث معطّل إلى أن يتوفر ربط الموظف المصرّح به بخدمة العملاء الرسمية.</p>
-      </div>
-      <div role="group" aria-label="عملية الاشتراك" className="flex flex-wrap gap-2">
-        {modes.map((item) => (
-          <Button
-            key={item.id}
-            type="button"
-            variant={mode === item.id ? "default" : "outline"}
-            aria-pressed={mode === item.id}
-            className="min-h-11"
-            onClick={() => setMode(item.id)}
-          >
-            {item.label}
+      <PageHeader
+        title="اشتراكات العملاء"
+        description="نفس نماذج الاشتراك والخصم اليدوي الموجودة بالداشبورد، ونفس صلاحياتها وواجهات API الرسمية."
+        action={<div className="flex flex-wrap gap-2">
+          {canCreateUser ? (
+            <Button asChild variant="outline" className="min-h-11">
+              <Link to="/users/create">إنشاء مستخدم سريع</Link>
+            </Button>
+          ) : (
+            <p role="status" className="text-xs text-muted-foreground">
+              إنشاء مستخدم يحتاج صلاحية المطعم أو الإدارة حاليًا.
+            </p>
+          )}
+          <Button asChild variant="outline" className="min-h-11">
+            <Link to="/subscriptions">كل الاشتراكات</Link>
           </Button>
-        ))}
+        </div>}
+      />
+      <div role="group" aria-label="عملية الاشتراك" className="flex flex-wrap gap-2">
+        <Button type="button" className="min-h-11" variant={mode === "purchase" ? "default" : "outline"}
+          aria-pressed={mode === "purchase"} onClick={() => setMode("purchase")}>
+          جديد / تجديد / إضافة للرصيد
+        </Button>
+        <Button type="button" className="min-h-11" variant={mode === "deduct" ? "default" : "outline"}
+          aria-pressed={mode === "deduct"} onClick={() => setMode("deduct")}>
+          خصم وجبات المشترك
+        </Button>
       </div>
       {mode === "deduct" ? (
-        <div className="rounded-xl border bg-card p-4">
-          <h3 className="mb-2 font-bold">خصم وجبات المشترك</h3>
-          <PreviewNotice>خصم الوجبات يحتاج مشتركًا مؤكدًا وحالة اشتراك فعالة، ويستخدم aggregateBalance ومسار الخصم الرسمي دون إنشاء رصيد مستقل.</PreviewNotice>
-          <Button disabled className="mt-4 min-h-11">تأكيد خصم وجبة</Button>
-        </div>
+        <ManualDeductionPage />
+      ) : canPurchase ? (
+        <CreateSubscriptionFormContent />
       ) : (
-        <div className="rounded-xl border bg-card p-4">
-          <h3 className="mb-3 font-bold">{modes.find((item) => item.id === mode)?.label}</h3>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="grid gap-1 text-sm">
-              مدة الباقة
-              <select aria-label="مدة الباقة" className="min-h-11 rounded-md border bg-background px-3" value={days} onChange={(event) => setDays(event.target.value)}>
-                <option value="7">7 أيام</option><option value="26">26 يومًا</option><option value="30">30 يومًا</option>
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm">
-              وزن البروتين
-              <select aria-label="وزن البروتين" className="min-h-11 rounded-md border bg-background px-3" value={grams} onChange={(event) => setGrams(event.target.value)}>
-                <option value="100">100 جم</option><option value="150">150 جم</option><option value="200">200 جم</option>
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm">
-              الوجبات اليومية
-              <select aria-label="عدد الوجبات اليومية" className="min-h-11 rounded-md border bg-background px-3" value={meals} onChange={(event) => setMeals(event.target.value)}>
-                {[1, 2, 3, 4, 5].map((count) => <option key={count} value={count}>{count} وجبة</option>)}
-              </select>
-            </label>
-          </div>
-          <div className="mt-4 rounded-xl bg-muted/50 px-4 py-3 text-sm">
-            <p>الباقة المختارة: {days} يومًا · {grams} جم · {meals} وجبات يوميًا</p>
-            <p className="mt-1 text-muted-foreground">السعر النهائي والخصومات لا تُحسب هنا؛ يجب جلبها من التسعير الرسمي عند الربط.</p>
-          </div>
-          <Button disabled className="mt-4 min-h-11">الاستعلام عن السعر وإكمال الاشتراك</Button>
+        <div className="rounded-xl border p-4 text-sm" role="status">
+          النظام الحالي لا يسمح لهذا الدور بإنشاء اشتراك مدفوع. لم نغيّر الصلاحيات
+          أو نتجاوز واجهة المصادقة؛ يلزم قرار صلاحيات مستقل قبل اختبار كاشير لهذه العملية.
         </div>
       )}
     </section>
@@ -323,6 +282,12 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
               {label}
             </DropdownMenuItem>
           ))}
+          <DropdownMenuItem asChild className="min-h-12 gap-3">
+            <Link to="/operations" search={{ tab: undefined }}>
+              <Activity aria-hidden="true" className="size-5" />
+              لوحة العمليات الحالية
+            </Link>
+          </DropdownMenuItem>
           {canEditPosMenu && (
             <>
               <DropdownMenuSeparator />
@@ -358,7 +323,7 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
       )}
       {view === "overview" && <OverviewView catalog={catalog} onSale={() => setView("sale")} />}
       {view === "orders" && <OrdersView catalog={catalog} onSale={() => setView("sale")} />}
-      {view === "subscriptions" && <SubscriptionView />}
+      {view === "subscriptions" && <SubscriptionView role={user?.role} />}
       {view === "closing" && <ClosingView />}
       {view === "settings" && <SettingsView />}
     </div>
