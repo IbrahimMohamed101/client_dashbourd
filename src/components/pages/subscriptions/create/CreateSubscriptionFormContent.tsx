@@ -43,6 +43,8 @@ import { SubscriptionInvoiceDialog } from "../invoice/SubscriptionInvoiceDialog"
 interface CreateSubscriptionFormContentProps {
   /** Pre-set userId (when creating from user page). If provided, user selection is hidden. */
   userId?: string;
+  /** Optional POS-only narrowing. Existing dashboard route retains both methods. */
+  allowedPaymentMethods?: readonly ("cash" | "visa")[];
 }
 
 type ApiRecord = Record<string, unknown>;
@@ -156,6 +158,7 @@ function formatMoney(halala: number, currency: string) {
 
 export function CreateSubscriptionFormContent({
   userId,
+  allowedPaymentMethods,
 }: CreateSubscriptionFormContentProps) {
   const form = useCreateSubscriptionForm(userId || "");
   const navigate = useNavigate();
@@ -238,6 +241,16 @@ export function CreateSubscriptionFormContent({
   const { mutateAsync, isPending } = useCreateSubscriptionMutation();
   const isSubmitting = isPending || isValidatingPrice;
   const selectedPaymentMethod = form.watch("paymentMethod");
+  const cashierCashOnly = allowedPaymentMethods?.length === 1
+    && allowedPaymentMethods[0] === "cash";
+  const visiblePaymentOptions = allowedPaymentMethods
+    ? paymentOptions.filter(option => allowedPaymentMethods.includes(option.method))
+    : paymentOptions;
+  useEffect(() => {
+    if (cashierCashOnly && selectedPaymentMethod !== "cash") {
+      form.setValue("paymentMethod", "cash", { shouldValidate: true });
+    }
+  }, [cashierCashOnly, form, selectedPaymentMethod]);
 
   useEffect(() => {
     const subscription = form.watch((_value, { name }) => {
@@ -335,6 +348,10 @@ export function CreateSubscriptionFormContent({
   );
 
   const onSubmit = async (data: CreateSubscriptionSchemaType) => {
+    if (allowedPaymentMethods && !allowedPaymentMethods.includes(data.paymentMethod)) {
+      ToastMessage("طريقة الدفع غير مصرح بها لهذا الدور. استخدم الدفع النقدي.", "error");
+      return;
+    }
     const quotePayload = buildSubscriptionQuotePayload(data);
     const createPayload = buildSubscriptionCreationPayload(data);
 
@@ -611,7 +628,7 @@ export function CreateSubscriptionFormContent({
                 role="radiogroup"
                 aria-label="طريقة الدفع"
               >
-                {paymentOptions.map((option) => {
+                {visiblePaymentOptions.map((option) => {
                   const selected = selectedPaymentMethod === option.method;
                   const Icon = option.method === "cash" ? Banknote : CreditCard;
                   return (
