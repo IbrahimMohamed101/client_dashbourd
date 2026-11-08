@@ -4,12 +4,14 @@ const RESTAURANT_WRITE_ROLES = new Set<string>([
   UserRoles.SUPERADMIN,
   UserRoles.ADMIN,
   UserRoles.RESTAURANT,
+  UserRoles.CASHIER,
 ]);
 
 const CUSTOMER_PASSWORD_ROLES = new Set<string>([
   UserRoles.SUPERADMIN,
   UserRoles.ADMIN,
   UserRoles.RESTAURANT,
+  UserRoles.CASHIER,
 ]);
 
 export function canManageRestaurantData(role: unknown): boolean {
