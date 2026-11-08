@@ -31,6 +31,9 @@ vi.mock("@/components/pages/subscriptions/create/CreateSubscriptionFormContent",
 vi.mock("@/components/pages/manual-deduction/ManualDeductionPage", () => ({
   default: () => <div data-testid="existing-manual-deduction" />,
 }));
+vi.mock("@/components/pages/users/create-user-form", () => ({
+  CreateUserForm: () => <div data-testid="existing-user-form" />,
+}));
 
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
@@ -93,11 +96,13 @@ describe("POS operations dashboard Staging shell", () => {
     await user.click(screen.getByRole("menuitem", { name: "الاشتراكات" }));
     expect(screen.getByTestId("existing-subscription-form")).toHaveAttribute("data-allowed-methods", "cash");
     expect(screen.getByText(/فيزا تحتاج دور المطعم أو الإدارة/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "إنشاء مستخدم سريع" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إنشاء مستخدم سريع" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "كل الاشتراكات" }))
       .toHaveAttribute("href", "/subscriptions");
     await user.click(screen.getByRole("button", { name: "خصم وجبات المشترك" }));
     expect(screen.getByTestId("existing-manual-deduction")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "إنشاء مستخدم سريع" }));
+    expect(screen.getByTestId("existing-user-form")).toBeInTheDocument();
   });
 
   it("can enter close counts for review without submitting or storing a close", async () => {
