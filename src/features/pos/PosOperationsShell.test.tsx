@@ -25,10 +25,14 @@ vi.mock("@/components/ui/sidebar", () => ({
 
 vi.mock("./financialApi", () => ({ listPosSales: vi.fn().mockResolvedValue([]) }));
 vi.mock("@/components/pages/subscriptions/create/CreateSubscriptionFormContent", () => ({
-  CreateSubscriptionFormContent: () => <div data-testid="existing-subscription-form" />,
+  CreateSubscriptionFormContent: ({ allowedPaymentMethods }: { allowedPaymentMethods?: readonly string[] }) =>
+    <div data-testid="existing-subscription-form" data-allowed-methods={allowedPaymentMethods?.join(",") ?? "all"} />,
 }));
 vi.mock("@/components/pages/manual-deduction/ManualDeductionPage", () => ({
   default: () => <div data-testid="existing-manual-deduction" />,
+}));
+vi.mock("@/components/pages/users/create-user-form", () => ({
+  CreateUserForm: () => <div data-testid="existing-user-form" />,
 }));
 
 vi.mock("@/hooks/useAuth", () => ({
@@ -90,22 +94,25 @@ describe("POS operations dashboard Staging shell", () => {
     expect(screen.getByRole("menuitem", { name: "لوحة العمليات الحالية" }))
       .toHaveAttribute("href", "/operations");
     await user.click(screen.getByRole("menuitem", { name: "الاشتراكات" }));
-    expect(screen.getByText(/لا يسمح لهذا الدور بإنشاء اشتراك مدفوع/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "إنشاء مستخدم سريع" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("existing-subscription-form")).toHaveAttribute("data-allowed-methods", "cash");
+    expect(screen.getByText(/فيزا تحتاج دور المطعم أو الإدارة/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إنشاء مستخدم سريع" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "كل الاشتراكات" }))
       .toHaveAttribute("href", "/subscriptions");
     await user.click(screen.getByRole("button", { name: "خصم وجبات المشترك" }));
     expect(screen.getByTestId("existing-manual-deduction")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "إنشاء مستخدم سريع" }));
+    expect(screen.getByTestId("existing-user-form")).toBeInTheDocument();
   });
 
-  it("can enter close counts for review without submitting or storing a close", async () => {
+  it("opens the existing daily closing workflow instead of duplicating its form", async () => {
     const user = userEvent.setup();
     render(<PosOperationsShell catalog={catalog} />);
     await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
     await user.click(screen.getByRole("menuitem", { name: "التقفيلة اليومية" }));
-    await user.type(screen.getByRole("textbox", { name: "النقدية المعدودة" }), "500.25");
-    expect(screen.getByRole("textbox", { name: "النقدية المعدودة" })).toHaveValue("500.25");
-    expect(screen.getByRole("button", { name: "مراجعة وإغلاق التقفيلة" })).toBeDisabled();
-    expect(screen.getByText(/في الذاكرة المؤقتة للواجهة فقط/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "فتح تقفيلة اليوم الحالية" }))
+      .toHaveAttribute("href", "/daily-closing");
+    expect(screen.queryByRole("button", { name: "مراجعة وإغلاق التقفيلة" }))
+      .not.toBeInTheDocument();
   });
 });

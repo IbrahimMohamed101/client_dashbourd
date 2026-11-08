@@ -14,12 +14,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { UserRoles } from "@/types/auth";
 import { canCreateAppCustomer, canCreateCustomerSubscription } from "@/lib/rolePermissions";
 import { CreateSubscriptionFormContent } from "@/components/pages/subscriptions/create/CreateSubscriptionFormContent";
 import ManualDeductionPage from "@/components/pages/manual-deduction/ManualDeductionPage";
+import { CreateUserForm } from "@/components/pages/users/create-user-form";
 import { channels as defaultChannels } from "./previewCatalog";
 import type { PublishedPosCatalog } from "./catalogApi";
 import { PosWorkspace } from "./PosWorkspace";
@@ -140,9 +140,9 @@ function OrdersView({ onSale }: { onSale: () => void; catalog: PublishedPosCatal
 }
 
 function SubscriptionView({ role }: { role: string | undefined }) {
-  const [mode, setMode] = useState<"purchase" | "deduct">("purchase");
-  const canPurchase = canCreateCustomerSubscription(role);
-  const canCreateUser = canCreateAppCustomer(role);
+  const [mode, setMode] = useState<"purchase" | "deduct" | "user">("purchase");
+  const canPurchase = canCreateCustomerSubscription(role) || role === UserRoles.CASHIER;
+  const canCreateUser = canCreateAppCustomer(role) || role === UserRoles.CASHIER;
   return (
     <section aria-label="اشتراكات نقطة البيع" className="space-y-5">
       <PageHeader
@@ -150,9 +150,14 @@ function SubscriptionView({ role }: { role: string | undefined }) {
         description="نفس نماذج الاشتراك والخصم اليدوي الموجودة بالداشبورد، ونفس صلاحياتها وواجهات API الرسمية."
         action={<div className="flex flex-wrap gap-2">
           {canCreateUser ? (
-            <Button asChild variant="outline" className="min-h-11">
-              <Link to="/users/create">إنشاء مستخدم سريع</Link>
-            </Button>
+            role === UserRoles.CASHIER ? (
+              <Button type="button" variant="outline" className="min-h-11"
+                onClick={() => setMode("user")}>إنشاء مستخدم سريع</Button>
+            ) : (
+              <Button asChild variant="outline" className="min-h-11">
+                <Link to="/users/create">إنشاء مستخدم سريع</Link>
+              </Button>
+            )
           ) : (
             <p role="status" className="text-xs text-muted-foreground">
               إنشاء مستخدم يحتاج صلاحية المطعم أو الإدارة حاليًا.
@@ -173,14 +178,20 @@ function SubscriptionView({ role }: { role: string | undefined }) {
           خصم وجبات المشترك
         </Button>
       </div>
+      {mode === "purchase" && role === UserRoles.CASHIER && (
+        <p role="status" className="rounded-lg border bg-muted/50 p-3 text-sm">
+          صلاحية الكاشير الحالية تسمح بتحصيل اشتراكات كاش فقط؛ فيزا تحتاج دور المطعم أو الإدارة.
+        </p>
+      )}
       {mode === "deduct" ? (
         <ManualDeductionPage />
+      ) : mode === "user" && canCreateUser ? (
+        <CreateUserForm />
       ) : canPurchase ? (
-        <CreateSubscriptionFormContent />
+        <CreateSubscriptionFormContent allowedPaymentMethods={role === UserRoles.CASHIER ? ["cash"] : undefined} />
       ) : (
         <div className="rounded-xl border p-4 text-sm" role="status">
-          النظام الحالي لا يسمح لهذا الدور بإنشاء اشتراك مدفوع. لم نغيّر الصلاحيات
-          أو نتجاوز واجهة المصادقة؛ يلزم قرار صلاحيات مستقل قبل اختبار كاشير لهذه العملية.
+          لا يمكن لهذا الدور إنشاء اشتراك من نقطة البيع بصلاحيات النظام الحالية.
         </div>
       )}
     </section>
@@ -188,41 +199,21 @@ function SubscriptionView({ role }: { role: string | undefined }) {
 }
 
 function ClosingView() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [countedCash, setCountedCash] = useState("");
-  const [countedCard, setCountedCard] = useState("");
+  // G3 uses the current dashboard closing page and its existing
+  // draft → submit → approve API; never maintain two cashier closing forms.
   return (
     <section aria-label="التقفيلة اليومية لنقطة البيع" className="space-y-5">
-      <PageHeader title="التقفيلة اليومية" description="تقفيلة مالية واحدة غير قابلة للتعديل بعد الإغلاق، تشمل مصادر المطعم والاشتراكات والتطبيقات دون ازدواجية." />
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="grid gap-1 text-sm">
-          تاريخ التقفيلة
-          <Input aria-label="تاريخ التقفيلة" className="max-w-52" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-        </label>
-        <span className="rounded-full border px-3 py-2 text-xs text-muted-foreground">حالة اليوم: غير متصلة</span>
+      <PageHeader title="التقفيلة اليومية"
+        description="افتح تقفيلة الكاشير الأصلية لمطابقة مبيعات المطعم والتطبيقات والاشتراكات مع السيرفر." />
+      <div className="rounded-xl border bg-card p-5">
+        <p className="mb-4 text-sm text-muted-foreground">
+          صفحة التقفيلة الأصلية تحتفظ بنفس الصلاحيات والخطوات، ويضيف السيرفر لقطة
+          المتوقع والفرق عند الإرسال على Staging. لا تُدخل تقفيلة تجريبية ثانية هنا.
+        </p>
+        <Button asChild className="min-h-12">
+          <Link to="/daily-closing">فتح تقفيلة اليوم الحالية</Link>
+        </Button>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="إجمالي المبيعات" value="—" hint="مطعم + تطبيقات + اشتراكات" />
-        <Metric label="المرتجعات" value="—" hint="بتاريخ تنفيذ المرتجع" />
-        <Metric label="صافي المبيعات" value="—" hint="بدون تكرار تحصيل الاشتراكات" />
-        <Metric label="ضريبة القيمة المضافة" value="—" hint="من مستندات مالية معتمدة" />
-      </div>
-      <section className="rounded-xl border bg-card p-4">
-        <h3 className="mb-3 font-bold">مراجعة النقدية والشبكة</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm">
-            النقدية المعدودة (ريال)
-            <Input aria-label="النقدية المعدودة" dir="ltr" inputMode="decimal" placeholder="0.00" value={countedCash} onChange={(event) => setCountedCash(event.target.value.replace(/[^\d.]/g, ""))} />
-          </label>
-          <label className="grid gap-1 text-sm">
-            إجمالي الشبكة من جهاز الدفع (ريال)
-            <Input aria-label="إجمالي الشبكة" dir="ltr" inputMode="decimal" placeholder="0.00" value={countedCard} onChange={(event) => setCountedCard(event.target.value.replace(/[^\d.]/g, ""))} />
-          </label>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">هذه القيم في الذاكرة المؤقتة للواجهة فقط ولا تُحفظ أو تُحتسب كتقفيلة.</p>
-        <PreviewNotice>لا يمكن إغلاق يوم مالي قبل الربط بسجلات البيع والمرتجعات والاشتراكات ومعالجة حالة الإغلاق الموحّدة.</PreviewNotice>
-        <Button disabled className="mt-4 min-h-11">مراجعة وإغلاق التقفيلة</Button>
-      </section>
     </section>
   );
 }
