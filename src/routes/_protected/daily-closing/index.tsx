@@ -481,10 +481,24 @@ function DailyClosingPage() {
                       </div>
                       <strong dir="ltr" className="text-lg tabular-nums">{moneySar(automatic?.moyasarHalala ?? 0)}</strong>
                     </div>
-                    <div className="space-y-3 rounded-2xl bg-muted/40 p-4">
+                    <div aria-label="التوقعات والتسوية المالية" className="space-y-3 rounded-2xl bg-muted/40 p-4">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <Value label="المفروض كاش" value={hasServerTotals ? moneySar(expectedCash) : "—"} />
+                        <Value label="المفروض شبكة" value={hasServerTotals ? moneySar(expectedNetwork) : "—"} />
+                        <Value label="مستحقات التطبيقات" value={hasServerTotals ? moneySar(expectedApps) : "—"} />
+                        <Value label="الإجمالي المتوقع" value={hasServerTotals ? moneySar(expectedTotal) : "—"} />
+                      </div>
+                      <div className="flex justify-between gap-2 text-xs text-muted-foreground">
+                        <span>فرق الكاش (المعدود − المتوقع)</span>
+                        <strong dir="ltr">{hasServerTotals ? moneySar(cashDifference) : "—"}</strong>
+                      </div>
+                      <div className="flex justify-between gap-2 text-xs text-muted-foreground">
+                        <span>فرق الشبكة (المعدود − المتوقع)</span>
+                        <strong dir="ltr">{hasServerTotals ? moneySar(networkDifference) : "—"}</strong>
+                      </div>
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <span>المفروض يتحصّل كاش وشبكة</span>
-                        <strong dir="ltr" className="tabular-nums">{moneySar(expected)}</strong>
+                        <span>المفروض يتحصّل كاش وشبكة — من النظام</span>
+                        <strong dir="ltr" className="tabular-nums">{hasServerTotals ? moneySar(expectedCash + expectedNetwork) : "—"}</strong>
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <span>المسجّل فعليًا كاش وشبكة</span>
@@ -492,8 +506,8 @@ function DailyClosingPage() {
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
                         <span className="font-semibold">الفرق</span>
-                        <strong dir="ltr" className={collected === expected ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}>
-                          {moneySar(collected - expected)}
+                        <strong dir="ltr" className={hasServerTotals && difference === 0 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}>
+                          {hasServerTotals ? moneySar(difference) : "—"}
                         </strong>
                       </div>
                     </div>
@@ -517,8 +531,12 @@ function DailyClosingPage() {
                   <CardContent className="space-y-4 px-4 py-5 sm:px-6">
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       <Value label="اشتراكات جديدة" value={String(automatic?.count ?? 0)} />
-                      <Value label="تحصيل الاشتراكات" value={moneySar(automatic?.amountHalala ?? 0)} />
+                      <Value label="تحصيل الاشتراكات (الكاش + الشبكة)" value={hasServerTotals ? moneySar(subscriptionCollections) : "—"} />
                       <Value label="عدد عمليات الدفع" value={String(automatic?.paymentCount ?? automatic?.rows.length ?? 0)} />
+                    </div>
+                    <div aria-label="تحصيل الاشتراكات حسب طريقة الدفع" className="grid grid-cols-2 gap-3">
+                      <Value label="تحصيل اشتراكات كاش" value={hasServerTotals ? moneySar(subscriptionCash) : "—"} />
+                      <Value label="تحصيل اشتراكات شبكة" value={hasServerTotals ? moneySar(subscriptionNetwork) : "—"} />
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
                       <div>
@@ -612,15 +630,15 @@ function DailyClosingPage() {
                   <CardContent className="space-y-4 px-4 py-5 sm:px-6">
                     <div className="space-y-2 rounded-2xl bg-muted/40 p-4">
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <span>إجمالي المبيعات</span><strong dir="ltr">{moneySar(sales)}</strong>
+                        <span>الإجمالي المتوقع من النظام (كاش + شبكة + تطبيقات)</span><strong dir="ltr">{hasServerTotals ? moneySar(expectedTotal) : "—"}</strong>
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <span>تحصيل + ميسر + مستحقات التطبيقات</span><strong dir="ltr">{moneySar(receivedAndDue)}</strong>
+                        <span>المعدود + مستحقات التطبيقات بعد التسويات</span><strong dir="ltr">{hasServerTotals ? moneySar(reconciledTotal) : "—"}</strong>
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-base">
                         <span className="font-semibold">فرق التقفيلة</span>
-                        <strong dir="ltr" className={overallDifference === 0 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}>
-                          {moneySar(overallDifference)}
+                        <strong dir="ltr" className={hasServerTotals && difference === 0 ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}>
+                          {hasServerTotals ? moneySar(difference) : "—"}
                         </strong>
                       </div>
                     </div>
@@ -701,7 +719,7 @@ function DailyClosingPage() {
                       }}>
                       <Save className="size-4" aria-hidden="true" /> حفظ مسودة
                     </Button>
-                    <Button className="h-11 flex-1 rounded-xl sm:flex-initial" disabled={action.isPending}
+                    <Button className="h-11 flex-1 rounded-xl sm:flex-initial" disabled={action.isPending || !hasServerTotals}
                       onClick={() => {
                         try {
                           parseForm(form);
