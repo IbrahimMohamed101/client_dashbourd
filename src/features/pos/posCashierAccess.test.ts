@@ -31,11 +31,18 @@ describe("POS Staging cashier menu access", () => {
     }
   });
 
-  it("POS menu is denied when preview flag is off", () => {
-    vi.stubEnv("VITE_POS_PREVIEW", "false");
-    for (const role of [UserRoles.CASHIER, UserRoles.RESTAURANT]) {
-      expect(canRoleAccessRoute(role, "/pos/menu")).toBe(false);
-      expect(canRoleAccessRoute(role, "/pos")).toBe(false);
+  it("VITE flag cannot grant or deny the server-owned POS runtime capability", () => {
+    for (const preview of ["true", "false"]) {
+      vi.stubEnv("VITE_POS_PREVIEW", preview);
+      for (const role of [UserRoles.CASHIER, UserRoles.RESTAURANT]) {
+        expect(canRoleAccessRoute(role, "/pos/menu")).toBe(true);
+        expect(canRoleAccessRoute(role, "/pos")).toBe(true);
+      }
+      for (const role of [UserRoles.KITCHEN, UserRoles.COURIER]) {
+        expect(canRoleAccessRoute(role, "/pos")).toBe(false);
+      }
     }
+    // Page beforeLoad and sidebar must still check backend /pos/status;
+    // role eligibility alone never authorizes POS writes.
   });
 });
