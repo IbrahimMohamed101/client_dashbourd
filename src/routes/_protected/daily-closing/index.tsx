@@ -674,12 +674,16 @@ function DailyClosingPage() {
                     </div>
                     {reviewNeeded ? <div role="alert" className="flex gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
                       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                      فيه فرق في المبالغ أو الاشتراكات، أو حركة محتاجة مراجعة. اكتب السبب قبل إرسال التقفيلة.
+                      توجد أسباب مراجعة صادرة من السيرفر. اكتب السبب قبل الإرسال.
                     </div> : <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300">
                       <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
                       المبالغ متطابقة ولا توجد ملاحظات تستدعي التوضيح حسب البيانات الحالية.
                     </div>}
-                    <div className="space-y-2">
+                    {reasonCodes.length > 0 && <ul aria-label="أسباب الفرق من السيرفر" className="list-disc space-y-1 ps-5 text-sm">
+                        {reasonCodes.map(code => <li key={code}>{closingReasonLabel(code)}</li>)}
+                      </ul>}
+                      {edited && <p className="text-xs text-muted-foreground">أسباب المراجعة صادرة من آخر نسخة محفوظة؛ الحفظ يحدث الحساب من السيرفر.</p>}
+                      <div className="space-y-2">
                       <Label htmlFor="discrepancy-reason">
                         {reviewNeeded ? "سبب الفرق أو الملاحظة (مطلوب)" : "سبب الفرق أو الملاحظة (اختياري)"}
                       </Label>
@@ -701,6 +705,15 @@ function DailyClosingPage() {
                       <Info className="mt-1 size-4 shrink-0" aria-hidden="true" />
                       هنجرستيشن وكيتا مستحقات وليست بالضرورة أموالًا وصلت البنك. المبيعات لا تعني صافي الربح.
                     </div>
+                    {canApprove && (view.returnedSnapshots?.length ?? 0) > 0 && <details className="rounded-xl border p-3 text-sm">
+                      <summary className="cursor-pointer font-medium">سجل الإرجاعات المؤرشف ({view.returnedSnapshots?.length})</summary>
+                      <div className="mt-3 space-y-3">{view.returnedSnapshots?.map((entry, j) => (
+                        <div key={j} className="space-y-1 border-b pb-2">
+                          <p>{new Date(entry.at).toLocaleString("ar-SA", { timeZone: "Asia/Riyadh" })} — {entry.reason}</p>
+                          <p className="text-xs text-muted-foreground">الموظف: {entry.actor} · النسخة: {entry.snapshot.closingVersion}</p>
+                          <p className="text-xs">الإجمالي المجمد: {moneySar(entry.snapshot.expectedTotals?.expected?.totalHalalas ?? 0)}</p>
+                        </div>))}</div>
+                    </details>}
                     {view.history.length > 0 && <details className="rounded-xl border p-3 text-sm">
                       <summary className="cursor-pointer font-medium">سجل الإجراءات ({view.history.length})</summary>
                       <div className="mt-3 space-y-2">{view.history.map((entry, i) =>
@@ -753,11 +766,7 @@ function DailyClosingPage() {
                       onClick={() => {
                         try {
                           parseForm(form, view?.closingVersion ?? "LEGACY_V1");
-                          if (reviewNeeded && !form.discrepancyReason.trim()) {
-                            toast.error("اكتب سبب الاختلاف في قسم مراجعة التقفيلة قبل الإرسال");
-                            document.getElementById("closing-review")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                            return;
-                          }
+                          // The backend validates the saved counted inputs and returns the final reason codes.
                           action.mutate("submit");
                         } catch (e) { toast.error(formatError(e)); }
                       }}>
