@@ -125,6 +125,10 @@ try {
       if (path.endsWith("/api/dashboard/auth/me")) return route.fulfill(json({
         status: true, token: "synthetic-no-live-auth", user,
       }));
+      if (path.endsWith("/api/dashboard/pos/status")) return route.fulfill(json({
+        status: true, data: { enabled: true, environment: "staging",
+          financialWritesEnabled: true, documentType: "STAGING_TEST_NON_TAX" },
+      }));
       if (path.endsWith("/api/dashboard/pos/catalog")) return route.fulfill(json({
         status: true, data: catalog,
       }));
