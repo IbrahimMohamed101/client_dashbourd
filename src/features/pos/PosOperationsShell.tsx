@@ -141,7 +141,9 @@ function OrdersView({ onSale }: { onSale: () => void; catalog: PublishedPosCatal
 
 function SubscriptionView({ role }: { role: string | undefined }) {
   const [mode, setMode] = useState<"purchase" | "deduct">("purchase");
-  const canPurchase = canCreateCustomerSubscription(role);
+  // The existing dashboard subscription POST/quote endpoints already admit
+  // cashier. Only the standalone customer-creation route remains admin-only.
+  const canPurchase = role === UserRoles.CASHIER || canCreateCustomerSubscription(role);
   const canCreateUser = canCreateAppCustomer(role);
   return (
     <section aria-label="اشتراكات نقطة البيع" className="space-y-5">
