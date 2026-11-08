@@ -35,9 +35,10 @@ vi.mock("@/components/pages/users/create-user-form", () => ({
   CreateUserForm: () => <div data-testid="existing-user-form" />,
 }));
 
+const roleState = vi.hoisted(() => ({ role: "cashier" }));
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: () => ({
-    user: { role: "cashier", name: "", email: "branch-cashier@synthetic.example.test" },
+    user: { role: roleState.role, name: "", email: "branch-cashier@synthetic.example.test" },
   }),
 }));
 
@@ -48,6 +49,30 @@ const catalog = {
 };
 
 describe("POS operations dashboard Staging shell", () => {
+
+  it("D-092: restaurant and cashier render identical POS navigation sections and tender controls", async () => {
+    const user = userEvent.setup();
+    async function renderFor(role: "cashier" | "restaurant") {
+      roleState.role = role;
+      const view = render(<PosOperationsShell catalog={catalog} />);
+      await user.click(screen.getByRole("button", { name: "أقسام نقطة البيع" }));
+      const sections = screen.getAllByRole("menuitem")
+        .map((item) => item.textContent?.trim());
+      await user.click(screen.getByRole("menuitem", { name: "الاشتراكات" }));
+      const methods = screen.getByTestId("existing-subscription-form")
+        .getAttribute("data-allowed-methods");
+      const canCreateCustomer = screen.getByRole("button", { name: "إنشاء مستخدم سريع" })
+        .hasAttribute("disabled");
+      view.unmount();
+      return { sections, methods, canCreateCustomer };
+    }
+    try {
+      expect(await renderFor("cashier")).toEqual(await renderFor("restaurant"));
+    } finally {
+      roleState.role = "cashier";
+    }
+  });
+
   it("opens with a real POS catalog and presents the active sale review action", async () => {
     render(<PosOperationsShell catalog={catalog} />);
     expect(screen.getByRole("navigation", { name: "أقسام نقطة البيع" })).toBeInTheDocument();
