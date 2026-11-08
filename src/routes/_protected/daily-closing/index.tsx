@@ -135,7 +135,7 @@ const reasonMessages: Record<string, string> = {
   SUBSCRIPTION_REFUNDS: "وجود مرتجعات اشتراكات",
   LEGACY_AMOUNT_DIFFERENCE: "فرق في مبالغ التقفيلة القديمة",
 };
-export const closingReasonLabel = (code: string) =>
+const closingReasonLabel = (code: string) =>
   reasonMessages[code] ?? "سبب مراجعة من السيرفر: " + code;
 const defaultForm: FormState = {
   restaurant: "0", hungerstation: "0", keeta: "0", other: [], cash: "0", card: "0",
