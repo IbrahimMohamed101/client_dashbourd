@@ -25,7 +25,8 @@ vi.mock("@/components/ui/sidebar", () => ({
 
 vi.mock("./financialApi", () => ({ listPosSales: vi.fn().mockResolvedValue([]) }));
 vi.mock("@/components/pages/subscriptions/create/CreateSubscriptionFormContent", () => ({
-  CreateSubscriptionFormContent: () => <div data-testid="existing-subscription-form" />,
+  CreateSubscriptionFormContent: ({ allowedPaymentMethods }: { allowedPaymentMethods?: readonly string[] }) =>
+    <div data-testid="existing-subscription-form" data-allowed-methods={allowedPaymentMethods?.join(",") ?? "all"} />,
 }));
 vi.mock("@/components/pages/manual-deduction/ManualDeductionPage", () => ({
   default: () => <div data-testid="existing-manual-deduction" />,
@@ -90,7 +91,8 @@ describe("POS operations dashboard Staging shell", () => {
     expect(screen.getByRole("menuitem", { name: "لوحة العمليات الحالية" }))
       .toHaveAttribute("href", "/operations");
     await user.click(screen.getByRole("menuitem", { name: "الاشتراكات" }));
-    expect(screen.getByText(/لا يسمح لهذا الدور بإنشاء اشتراك مدفوع/)).toBeInTheDocument();
+    expect(screen.getByTestId("existing-subscription-form")).toHaveAttribute("data-allowed-methods", "cash");
+    expect(screen.getByText(/فيزا تحتاج دور المطعم أو الإدارة/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "إنشاء مستخدم سريع" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "كل الاشتراكات" }))
       .toHaveAttribute("href", "/subscriptions");
