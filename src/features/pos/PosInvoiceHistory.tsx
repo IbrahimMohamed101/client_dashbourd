@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { formatPreviewAmount } from "./previewCatalog";
 import { listPosSales, type PosInvoice, type PosRefund } from "./financialApi";
-import { PosInvoiceReceipt } from "./PosInvoiceReceipt";
+import { PosInvoiceReceipt, PosCreditNoteReceipt } from "./PosInvoiceReceipt";
 import { PosRefundDialog } from "./PosRefundDialog";
 
 export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
@@ -24,7 +24,7 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
     try {
       setInvoices(await listPosSales());
     } catch {
-      setError("تعذر تحميل فواتير Staging. تأكد من اتصال الباك إند وصلاحية المستخدم.");
+      setError("تعذر تحميل فواتير الكاشير. تأكد من اتصال الباك إند وصلاحية المستخدم.");
     } finally {
       setLoading(false);
     }
@@ -43,9 +43,9 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
     <section dir="rtl" aria-label="الطلبات والفواتير" className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold">الفواتير التجريبية — Staging</h2>
+          <h2 className="text-xl font-bold">فواتير نقطة البيع</h2>
           <p className="text-sm text-muted-foreground">
-            فواتير POS منفصلة عن الاشتراكات، وليست فواتير ضريبية ZATCA.
+            فواتير نقطة البيع مستقلة عن الاشتراكات، ويتم تحديد نوع المستند من السيرفر.
           </p>
         </div>
         <div className="flex gap-2">
@@ -75,7 +75,7 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
       </div>
       {savedRefund && (
         <p role="status" className="rounded-xl border bg-muted/50 p-3">
-          تم تسجيل المرتجع التجريبي {savedRefund.number} بقيمة {formatPreviewAmount(savedRefund.totals.grossHalalas)}.
+          تم تسجيل الإشعار الدائن {savedRefund.number} بقيمة {formatPreviewAmount(savedRefund.totals.grossHalalas)}.
           رد المبلغ الفعلي يتم خارج POS.
         </p>
       )}
@@ -83,7 +83,7 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
       <div className="rounded-xl border bg-card p-3">
         {loading ? <p role="status">جاري تحميل الفواتير…</p> : filtered.length === 0 ? (
           <p role="status" className="p-5 text-center text-muted-foreground">
-            لا توجد فواتير مطابقة على Staging.
+            لا توجد فواتير مطابقة.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -112,6 +112,8 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
           </div>
         )}
       </div>
+      {savedRefund && <div className="flex justify-end"><Button type="button" variant="outline" onClick={() => setSavedRefund(null)}>إغلاق إشعار المرتجع</Button></div>}
+      {savedRefund && <PosCreditNoteReceipt refund={savedRefund} onClose={() => setSavedRefund(null)} />}
       {selected && <PosInvoiceReceipt invoice={selected}
         onClose={() => setSelected(null)}
         onRefund={() => { setReturnInvoice(selected); setSelected(null); }} />}

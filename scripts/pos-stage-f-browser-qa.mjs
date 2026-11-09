@@ -125,6 +125,10 @@ try {
       if (path.endsWith("/api/dashboard/auth/me")) return route.fulfill(json({
         status: true, token: "synthetic-no-live-auth", user,
       }));
+      if (path.endsWith("/api/dashboard/pos/status")) return route.fulfill(json({
+        status: true, data: { enabled: true, environment: "staging",
+          financialWritesEnabled: true, documentType: "STAGING_TEST_NON_TAX" },
+      }));
       if (path.endsWith("/api/dashboard/pos/catalog")) return route.fulfill(json({
         status: true, data: catalog,
       }));
@@ -286,17 +290,17 @@ try {
       assert.ok(modalBounds && issueBounds && issueBounds.y + issueBounds.height <= viewport.height + 1,
         "Sale confirmation must be on-screen at every viewport");
       await issue.click();
-      const receipt = page.getByRole("dialog", { name: /الفاتورة STG-000001/ });
+      const receipt = page.getByRole("dialog", { name: /فاتورة STG-000001/ });
       await receipt.waitFor();
       assert.equal(invoices.length, 1, "One confirmation creates one invoice");
-      assert.match(await receipt.innerText(), /فاتورة تجريبية — غير ضريبية/);
-      assert.match(await receipt.innerText(), /الضريبة المستخرجة/);
+      assert.match(await receipt.innerText(), /تجريبية — Staging/);
+      assert.match(await receipt.innerText(), /ضريبة القيمة المضافة/);
       assert.equal(await cart.getByRole("listitem").count(), 0, "Cart clears after saved sale");
       await receipt.getByRole("button", { name: "إغلاق", exact: true }).click();
       await page.getByRole("button", { name: "أقسام نقطة البيع" }).click();
       await page.getByRole("menuitem", { name: "الطلبات والفواتير" }).click();
       await page.getByRole("button", { name: "عرض / مرتجع" }).click();
-      const detail = page.getByRole("dialog", { name: /الفاتورة STG-000001/ });
+      const detail = page.getByRole("dialog", { name: /فاتورة STG-000001/ });
       await detail.getByRole("button", { name: "تسجيل مرتجع" }).click();
       const refundDialog = page.getByRole("dialog", { name: /مرتجع الفاتورة STG-000001/ });
       await refundDialog.waitFor();
@@ -307,7 +311,7 @@ try {
       assert.equal(await register.isEnabled(), true);
       await register.click();
       assert.equal(refunds.length, 1, "One refund document for selected invoice");
-      await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      await page.getByText(/تم تسجيل الإشعار الدائن STG-R-000001/).waitFor();
       // Browser regression: final catalog 409 is not allowed to lock the
       // cashier even when the cart changes and the page gets reloaded.
       async function startFreshCheckout() {
@@ -340,10 +344,10 @@ try {
       });
       const beforeResale = invoices.length;
       await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
-      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ }).waitFor();
+      await page.getByRole("dialog", { name: /فاتورة STG-000001/ }).waitFor();
       assert.equal(invoices.length, beforeResale + 1,
         "409 followed by cart change and reload must allow new sale");
-      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ })
+      await page.getByRole("dialog", { name: /فاتورة STG-000001/ })
         .getByRole("button", { name: "إغلاق", exact: true }).click();
 
       // Timeout after committed write: retry with EXACT same key, one invoice.
@@ -353,10 +357,10 @@ try {
       await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
       await attemptDialog.getByRole("button", { name: "إعادة المحاولة" }).waitFor();
       await attemptDialog.getByRole("button", { name: "إعادة المحاولة" }).click();
-      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ }).waitFor();
+      await page.getByRole("dialog", { name: /فاتورة STG-000001/ }).waitFor();
       assert.equal(invoices.length, beforeRetry + 1,
         "timeout/retry must replay one invoice, not insert a second");
-      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ })
+      await page.getByRole("dialog", { name: /فاتورة STG-000001/ })
         .getByRole("button", { name: "إغلاق", exact: true }).click();
 
       // Timeout after the write: leaving dialog inspects the committed
@@ -367,10 +371,10 @@ try {
       await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
       await attemptDialog.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
       await attemptDialog.getByRole("button", { name: "رجوع للسلة" }).click();
-      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ }).waitFor();
+      await page.getByRole("dialog", { name: /فاتورة STG-000001/ }).waitFor();
       assert.equal(invoices.length, beforeRecover + 1,
         "committed operation must show previous receipt, not new sale");
-      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ })
+      await page.getByRole("dialog", { name: /فاتورة STG-000001/ })
         .getByRole("button", { name: "إغلاق", exact: true }).click();
 
       // Timeout BEFORE the request reaches the server: unknown 404 may be
@@ -386,7 +390,7 @@ try {
         name: /مراجعة الطلب وتأكيد الفاتورة التجريبية/,
       });
       await attemptDialog.getByRole("button", { name: /تأكيد البيع/ }).click();
-      await page.getByRole("dialog", { name: /الفاتورة STG-000001/ }).waitFor();
+      await page.getByRole("dialog", { name: /فاتورة STG-000001/ }).waitFor();
       assert.equal(invoices.length, beforeAbsent + 1,
         "server-side tombstone permits a NEW safe sale");
       await page.screenshot({ path: destination + "/f-safety-"
@@ -401,7 +405,7 @@ try {
         await page.getByRole("button", { name: "أقسام نقطة البيع" }).click();
         await page.getByRole("menuitem", { name: "الطلبات والفواتير" }).click();
         await page.getByRole("button", { name: "عرض / مرتجع" }).first().click();
-        const detail = page.getByRole("dialog", { name: /الفاتورة STG-000001/ });
+        const detail = page.getByRole("dialog", { name: /فاتورة STG-000001/ });
         await detail.getByRole("button", { name: "تسجيل مرتجع" }).click();
         const form = page.getByRole("dialog", { name: /مرتجع الفاتورة STG-000001/ });
         await form.waitFor();
@@ -416,7 +420,7 @@ try {
       await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
       await refundForm.getByText(/تغيرت الكمية المتاحة/).waitFor();
       await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
-      await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      await page.getByText(/تم تسجيل الإشعار الدائن STG-R-000001/).waitFor();
       assert.equal(refunds.length, 1, "409 rejection must release refund key");
 
       // Unknown response after a committed refund: SAME key retry yields 1.
@@ -425,7 +429,7 @@ try {
       await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
       await refundForm.getByRole("button", { name: "إعادة المحاولة" }).waitFor();
       await refundForm.getByRole("button", { name: "إعادة المحاولة" }).click();
-      await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      await page.getByText(/تم تسجيل الإشعار الدائن STG-R-000001/).waitFor();
       assert.equal(refunds.length, 1, "refund timeout/retry cannot duplicate partial refund");
 
       // Unknown response after commit, user presses Cancel: original refund
@@ -435,7 +439,7 @@ try {
       await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
       await refundForm.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
       await refundForm.getByRole("button", { name: "إلغاء", exact: true }).click();
-      await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      await page.getByText(/تم تسجيل الإشعار الدائن STG-R-000001/).waitFor();
       assert.equal(refunds.length, 1, "refund receipt recovery must not record twice");
 
       // Unknown response that never reached the server: tombstone it first,
@@ -449,7 +453,7 @@ try {
       await page.reload();
       refundForm = await startFreshRefund();
       await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
-      await page.getByText(/تم تسجيل المرتجع التجريبي STG-R-000001/).waitFor();
+      await page.getByText(/تم تسجيل الإشعار الدائن STG-R-000001/).waitFor();
       assert.equal(refunds.length, 1, "new refund after abandon must succeed");
       await page.screenshot({ path: destination + "/f-refund-safety-"
         + viewport.width + "x" + viewport.height + ".png" });

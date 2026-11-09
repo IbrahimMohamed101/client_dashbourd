@@ -25,6 +25,8 @@ test("navPermissions.test", () => {
 
   const restaurantUrls = navMainUrlsForRole("restaurant");
   assert.deepEqual(restaurantUrls, [
+    "/pos",
+    "/pos/menu",
     "/daily-closing",
     "/landing-leads",
     "/addons",
@@ -64,6 +66,8 @@ test("navPermissions.test", () => {
 
   assert.deepEqual(navMainUrlsForRole("admin"), [
     "/dashboard",
+    "/pos",
+    "/pos/menu",
     "/payments",
     "/daily-closing",
     "/accounting",

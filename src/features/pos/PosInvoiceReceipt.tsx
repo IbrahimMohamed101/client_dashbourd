@@ -1,107 +1,120 @@
 import { Button } from "@/components/ui/button";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { formatPreviewAmount } from "./previewCatalog";
-import type { PosInvoice } from "./financialApi";
+import type { PosInvoice, PosRefund, PosSeller } from "./financialApi";
 
-export function PosInvoiceReceipt({ invoice, onClose, onRefund }: {
-  invoice: PosInvoice;
+type Document = PosInvoice | PosRefund;
+const fallbackSeller: PosSeller = {
+  legalNameAr: "مؤسسة بيسيك دايت", legalNameEn: "Basic Diet Establishment",
+  vatRegistrationNumber: "313015429700003", crNumber: "7050136014",
+  addressAr: "جدة - حي الصفا - المغيرة بن عبدالله - 23455",
+  addressEn: "Jeddah - As Safa Dist",
+};
+function amount(halalas: number) { return formatPreviewAmount(halalas); }
+
+export function PosTaxDocumentReceipt({ doc, onClose, onRefund }: {
+  doc: Document;
   onClose: () => void;
   onRefund?: () => void;
 }) {
-  const tenderName = invoice.tender.method === "cash" ? "كاش"
-    : invoice.tender.method === "network" ? "شبكة" : "مستحق على تطبيق التوصيل";
+  const credit = "invoiceNumber" in doc;
+  const staging = doc.documentType === "STAGING_TEST_NON_TAX" ||
+    doc.documentKind === "STAGING_TEST_NON_TAX" ||
+    doc.number.startsWith("STG-");
+  const seller = doc.seller ?? fallbackSeller;
+  const totals = doc.totals;
+  const issuedAt = credit ? doc.recordedAt : doc.issuedAt;
+  const lineItems = credit ? doc.lines : doc.lines;
+  const discount = credit ? 0 : (doc.totals.totalDiscountHalalas ?? 0);
+  const beforeDiscount = credit ? totals.grossHalalas : doc.totals.beforeDiscountHalalas;
+  const payment = credit
+    ? (doc.method === "cash" ? "كاش" : doc.method === "network" ? "شبكة" : "خارجي")
+    : (doc.tender.method === "cash" ? "كاش" : doc.tender.method === "network" ? "شبكة" : "تطبيق توصيل");
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent dir="rtl" className="flex max-h-[92dvh] w-[calc(100vw-2rem)] max-w-2xl flex-col overflow-hidden text-right">
-        <DialogHeader className="shrink-0">
-          <DialogTitle>الفاتورة {invoice.number}</DialogTitle>
-          <DialogDescription>مستند Staging تجريبي فقط، ولا يمثل فاتورة ضريبية معتمدة.</DialogDescription>
+        <DialogHeader>
+          <DialogTitle>{credit ? "إشعار دائن" : "فاتورة"} {doc.number}</DialogTitle>
+          <DialogDescription>{staging ? "تجريبية — Staging. لا تمثل مستندًا ضريبيًا مُصدرًا." : "مستند نقطة البيع — بيانات المبالغ والرمز من السيرفر."}</DialogDescription>
         </DialogHeader>
-        <style>{`@media print {
-          @page { size: A4 portrait; margin: 13mm; }
+        <style>{String.raw`@media print {
+          @page { size: A4 portrait; margin: 12mm; }
           body * { visibility: hidden !important; }
           #pos-printable-receipt, #pos-printable-receipt * { visibility: visible !important; }
           #pos-printable-receipt {
             position: fixed !important; inset: 0 auto auto 0 !important;
-            width: 100% !important; overflow: visible !important; padding: 12mm;
-            color: black !important; background: white !important;
+            width: 100% !important; overflow: visible !important; padding: 8mm;
+            color: #000 !important; background: #fff !important;
           }
           #pos-printable-receipt table { width: 100%; border-collapse: collapse; }
-          #pos-printable-receipt th, #pos-printable-receipt td {
-            border-bottom: 1px solid #aaa; padding: 6px 4px; }
+          #pos-printable-receipt th, #pos-printable-receipt td { border-bottom: 1px solid #aaa; padding: 6px 3px; }
         }`}</style>
-        <section id="pos-printable-receipt" aria-label="بيانات الفاتورة التجريبية"
-          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain text-sm">
-          <h2 className="text-center text-xl font-extrabold">فاتورة تجريبية — غير ضريبية</h2>
-          <div className="grid gap-1 rounded-lg border p-3">
-            <p><strong>بيسك دايت — Staging</strong></p>
-            <p>الرقم: <b dir="ltr">{invoice.number}</b></p>
-            <p>التاريخ: {new Date(invoice.issuedAt).toLocaleString("ar-SA-u-nu-latn")}</p>
-            <p>قناة البيع: {invoice.channel}</p>
-            <p>الموظف: {invoice.actor.name ?? invoice.actor.email} ({invoice.actor.role})</p>
-            <p>المنيو المنشور: {invoice.publishedRevision}</p>
-            {invoice.externalOrderNumber && <p>مرجع التطبيق: {invoice.externalOrderNumber}</p>}
+        <section id="pos-printable-receipt" className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-white p-4 text-sm text-black" aria-label="مستند نقطة البيع">
+          <div className="text-center">
+            <img src="/logo.png" alt="" className="mx-auto mb-2 h-16 w-16 object-contain" />
+            <p className="text-lg font-bold">{seller.legalNameAr}</p>
+            <p>{seller.legalNameEn}</p>
+            <p>{seller.addressAr}</p>
+            <p>السجل التجاري: <b dir="ltr">{seller.crNumber}</b></p>
+            <p>الرقم الضريبي: <b dir="ltr">{seller.vatRegistrationNumber}</b></p>
+            <h2 className="my-3 border-y py-3 text-xl font-extrabold">
+              {credit ? "إشعار دائن — Credit Note" : "فاتورة ضريبية — Tax Invoice"}
+            </h2>
+            {staging && <p className="mb-2 border border-dashed p-2 font-bold">تجريبية — Staging · STAGING_TEST_NON_TAX</p>}
           </div>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full table-fixed text-xs sm:text-sm">
-              <thead><tr className="bg-muted">
-                <th className="w-[38%] p-2 text-right">الصنف</th>
-                <th className="w-[12%] p-2 text-right">العدد</th>
-                <th className="w-[18%] p-2 text-right">الخصم</th>
-                <th className="w-[16%] p-2 text-right">الضريبة</th>
-                <th className="w-[16%] p-2 text-right">الشامل</th>
-              </tr></thead>
-              <tbody>
-                {invoice.lines.map((line) => (
-                  <tr key={line.id} className="border-t">
-                    <td className="break-words p-2">
-                      {line.parentLineId ? "↳ إضافة: " : ""}{line.name} · {line.variantLabel}
-                    </td>
-                    <td className="p-2">{line.quantity}</td>
-                    <td className="p-2">{formatPreviewAmount(line.lineDiscountHalalas + line.invoiceDiscountPartHalalas)}</td>
-                    <td className="p-2">{formatPreviewAmount(line.vatHalalas)}</td>
-                    <td className="p-2 font-semibold">{formatPreviewAmount(line.grossHalalas)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid gap-1">
+            <p>الرقم: <strong dir="ltr">{doc.number}</strong></p>
+            {credit && <p>الفاتورة الأصلية: <b dir="ltr">{doc.invoiceNumber}</b></p>}
+            <p>تاريخ الإصدار: {new Date(issuedAt).toLocaleString("ar-SA-u-nu-latn")}</p>
+            {!credit && <p>قناة البيع: {doc.channel}</p>}
           </div>
-          <dl className="grid gap-2 border-t pt-3">
-            <div className="flex justify-between gap-2"><dt>الإجمالي قبل الخصم</dt>
-              <dd>{formatPreviewAmount(invoice.totals.beforeDiscountHalalas)}</dd></div>
-            <div className="flex justify-between gap-2"><dt>جميع الخصومات</dt>
-              <dd>{formatPreviewAmount(invoice.totals.totalDiscountHalalas)}</dd></div>
-            <div className="flex justify-between gap-2"><dt>الصافي بدون الضريبة</dt>
-              <dd>{formatPreviewAmount(invoice.totals.netHalalas)}</dd></div>
-            <div className="flex justify-between gap-2"><dt>الضريبة المستخرجة (15%)</dt>
-              <dd>{formatPreviewAmount(invoice.totals.vatHalalas)}</dd></div>
-            <div className="flex justify-between gap-2 border-t pt-2 text-lg font-bold"><dt>المجموع الشامل بعد الخصم</dt>
-              <dd>{formatPreviewAmount(invoice.totals.grossHalalas)}</dd></div>
-          </dl>
-          <div className="rounded-lg border bg-muted/50 p-3">
-            <p>طريقة التسجيل: {tenderName}</p>
-            {invoice.tender.method === "cash" && (
-              <p>المستلم: {formatPreviewAmount(invoice.tender.receivedHalalas ?? 0)} —
-                الباقي: {formatPreviewAmount(invoice.tender.changeHalalas ?? 0)}</p>
-            )}
-            {invoice.tender.method === "app_receivable" && (
-              <p>حالة التطبيق المُدخلة: {invoice.appPaymentStatus === "paid" ? "مدفوع" : "كاش"} —
-                هذا مستحق على التطبيق، لا يدخل درج المطعم.</p>
-            )}
+          <table className="w-full table-fixed text-xs">
+            <thead><tr><th className="w-[42%] text-right">الصنف / الإضافة</th><th>العدد</th><th>الضريبة</th><th>الشامل</th></tr></thead>
+            <tbody>{lineItems.map((line, i) => (
+              <tr key={("lineId" in line ? line.lineId : line.id) + i}>
+                <td className="break-words py-2">{"parentLineId" in line && line.parentLineId ? "إضافة: " : ""}{line.name} {line.variantLabel ? "— " + line.variantLabel : ""}</td>
+                <td>{line.quantity}</td>
+                <td>{amount(line.vatHalalas)}</td>
+                <td className="font-semibold">{amount(line.grossHalalas)}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+          <div className="space-y-2 border-t pt-3">
+            <div className="flex justify-between"><span>قبل الخصم (شامل الضريبة)</span><b>{amount(beforeDiscount)}</b></div>
+            <div className="flex justify-between"><span>الخصم</span><b>{amount(discount)}</b></div>
+            <div className="flex justify-between"><span>الإجمالي قبل الضريبة</span><b>{amount(totals.netHalalas)}</b></div>
+            <div className="flex justify-between"><span>ضريبة القيمة المضافة (15%)</span><b>{amount(totals.vatHalalas)}</b></div>
+            <div className="flex justify-between border-t pt-2 text-lg font-bold"><span>{credit ? "إجمالي الإشعار الدائن" : "الإجمالي شامل الضريبة"}</span><span>{amount(totals.grossHalalas)}</span></div>
           </div>
-          <p className="text-center text-xs font-bold">فاتورة تجريبية — غير ضريبية — ليست مستند ZATCA</p>
+          <p>طريقة {credit ? "المرتجع" : "الدفع"}: {payment}</p>
+          {credit && <p>سبب المرتجع: {doc.reason}</p>}
+          {doc.qrPayloadBase64 && <div className="flex flex-col items-center gap-1 border-t pt-4">
+            <QRCodeSVG value={doc.qrPayloadBase64} size={140} marginSize={1} />
+            <span className="text-xs">رمز QR الضريبي (TLV)</span>
+          </div>}
+          <p className="border-t pt-3 text-center text-xs">
+            {staging ? "مستند تجريبي — غير ضريبي" : credit ? "هذا إشعار دائن للفاتورة المذكورة أعلاه." : "شكرًا لتعاملكم مع بيسك دايت"}
+          </p>
         </section>
-        <DialogFooter className="!static !mx-0 !mb-0 !shrink-0 !border-t !bg-popover !px-0 !pt-3 !pb-0">
-          {onRefund && <Button type="button" variant="outline" className="min-h-12" onClick={onRefund}>
-            تسجيل مرتجع
-          </Button>}
-          <Button type="button" variant="outline" className="min-h-12"
-            onClick={() => window.print()}>طباعة من المتصفح</Button>
-          <Button type="button" className="min-h-12" onClick={onClose}>إغلاق</Button>
+        <DialogFooter className="shrink-0 border-t pt-3">
+          {!credit && onRefund && <Button type="button" variant="outline" onClick={onRefund}>تسجيل مرتجع</Button>}
+          <Button type="button" variant="outline" onClick={() => window.print()}>طباعة</Button>
+          <Button type="button" onClick={onClose}>إغلاق</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+export function PosInvoiceReceipt({ invoice, onClose, onRefund }: {
+  invoice: PosInvoice; onClose: () => void; onRefund?: () => void;
+}) {
+  return <PosTaxDocumentReceipt doc={invoice} onClose={onClose} onRefund={onRefund} />;
+}
+export function PosCreditNoteReceipt({ refund, onClose }: {
+  refund: PosRefund; onClose: () => void;
+}) {
+  return <PosTaxDocumentReceipt doc={refund} onClose={onClose} />;
 }

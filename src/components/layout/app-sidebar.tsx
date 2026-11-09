@@ -1,4 +1,7 @@
 import { NavMain } from "@/components/layout/nav-main";
+import { useQuery } from "@tanstack/react-query";
+import { posRuntimeStatusOptions } from "@/features/pos/posRuntimeStatus";
+import { isPosPreviewPath } from "@/features/pos/posAccess";
 import { NavSecondary } from "@/components/layout/nav-secondary";
 import { NavUser } from "@/components/layout/nav-user";
 import {
@@ -17,14 +20,17 @@ import type { UserRole } from "@/types/auth";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
-  const navMain = filterNavItemsForRole(NavLinksData.navMain, user?.role as UserRole | undefined);
-  const navSecondary = [
+  const posStatus = useQuery({ ...posRuntimeStatusOptions, enabled: Boolean(user) });
+  const filterDisabledPos = <T extends { url: string }>(items: T[]): T[] =>
+    items.filter((item) => !isPosPreviewPath(item.url) || posStatus.data?.enabled === true);
+  const navMain = filterDisabledPos(filterNavItemsForRole(NavLinksData.navMain, user?.role as UserRole | undefined));
+  const navSecondary = filterDisabledPos([
     ...filterNavItemsForRole(
       NavLinksData.navSecondary.filter((item) => item.url !== "#"),
       user?.role as UserRole | undefined
     ),
     ...NavLinksData.navSecondary.filter((item) => item.url === "#"),
-  ];
+  ]);
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
