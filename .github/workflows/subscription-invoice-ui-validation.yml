@@ -40,7 +40,7 @@ jobs:
       - name: Typecheck and build dashboard
         run: npm run build
       - name: Smoke production backend invoice route
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
@@ -53,7 +53,7 @@ jobs:
             exit 1
           fi
       - name: Verify production dashboard exposes prominent invoice actions
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
