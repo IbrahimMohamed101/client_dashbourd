@@ -218,7 +218,7 @@ export function CustomerManagementPage({ initialUserId }: { initialUserId?: stri
           <div>
             <h2 className="text-2xl font-bold tracking-tight">إدارة بيانات العملاء</h2>
             <p className="text-sm text-muted-foreground">
-              تعديل بيانات الحساب والعنوان للسوبر أدمين فقط مع تسجيل كل تغيير.
+              يُسجَّل كل تعديل على بيانات الحساب أو العنوان في سجل التدقيق.
             </p>
           </div>
         </div>

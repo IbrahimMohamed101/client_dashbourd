@@ -77,6 +77,8 @@ const RESTAURANT_ROUTES = [
   "/subscriptions",
   "/manual-deduction",
   "/users",
+  "/customer-management",
+  "/retention-reports",
   "/addons",
   "/delivery",
   "/menu",
