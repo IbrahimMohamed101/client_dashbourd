@@ -307,7 +307,7 @@ try {
       await refundDialog.getByRole("spinbutton", { name: "كمية مرتجع مياه" }).fill("1");
       await refundDialog.getByRole("textbox", { name: "سبب المرتجع" })
         .fill("إرجاع تجريبي بطلب العميل");
-      const register = refundDialog.getByRole("button", { name: "تسجيل المرتجع التجريبي" });
+      const register = refundDialog.getByRole("button", { name: "تسجيل المرتجع" });
       assert.equal(await register.isEnabled(), true);
       await register.click();
       assert.equal(refunds.length, 1, "One refund document for selected invoice");
@@ -417,16 +417,16 @@ try {
       // Terminal 409 is rejected, immediately allowing a new refund key.
       let refundForm = await startFreshRefund();
       nextRefundFault = "reject";
-      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع" }).click();
       await refundForm.getByText(/تغيرت الكمية المتاحة/).waitFor();
-      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع" }).click();
       await page.getByText(/تم تسجيل الإشعار الدائن STG-R-000001/).waitFor();
       assert.equal(refunds.length, 1, "409 rejection must release refund key");
 
       // Unknown response after a committed refund: SAME key retry yields 1.
       refundForm = await startFreshRefund();
       nextRefundFault = "abort-after";
-      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع" }).click();
       await refundForm.getByRole("button", { name: "إعادة المحاولة" }).waitFor();
       await refundForm.getByRole("button", { name: "إعادة المحاولة" }).click();
       await page.getByText(/تم تسجيل الإشعار الدائن STG-R-000001/).waitFor();
@@ -436,7 +436,7 @@ try {
       // receipt must be recovered from operation state instead of re-recorded.
       refundForm = await startFreshRefund();
       nextRefundFault = "abort-after";
-      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع" }).click();
       await refundForm.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
       await refundForm.getByRole("button", { name: "إلغاء", exact: true }).click();
       await page.getByText(/تم تسجيل الإشعار الدائن STG-R-000001/).waitFor();
@@ -446,13 +446,13 @@ try {
       // then safely accept a newly keyed refund, including after page reload.
       refundForm = await startFreshRefund();
       nextRefundFault = "abort-before";
-      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع" }).click();
       await refundForm.getByRole("button", { name: "إلغاء المحاولة" }).waitFor();
       await refundForm.getByRole("button", { name: "إلغاء", exact: true }).click();
       assert.equal(refunds.length, 0, "abandoned absent refund creates no document");
       await page.reload();
       refundForm = await startFreshRefund();
-      await refundForm.getByRole("button", { name: "تسجيل المرتجع التجريبي" }).click();
+      await refundForm.getByRole("button", { name: "تسجيل المرتجع" }).click();
       await page.getByText(/تم تسجيل الإشعار الدائن STG-R-000001/).waitFor();
       assert.equal(refunds.length, 1, "new refund after abandon must succeed");
       await page.screenshot({ path: destination + "/f-refund-safety-"
