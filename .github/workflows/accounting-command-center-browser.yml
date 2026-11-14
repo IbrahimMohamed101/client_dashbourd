@@ -1,0 +1,50 @@
+name: Superadmin accounting command center (synthetic browser)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/features/accounting/**'
+      - 'src/routes/_protected/accounting/**'
+      - 'scripts/accounting-command-browser-qa.mjs'
+      - '.github/workflows/accounting-command-center-browser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    name: Superadmin finance UI and XLSX (no production I/O)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      VITE_BACKEND_URL: ""
+      ACCOUNTING_QA_URL: http://127.0.0.1:4173
+      ACCOUNTING_QA_EVIDENCE: /tmp/basicdiet-superadmin-accounting
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run loopback-only UI and Excel QA
+        run: |
+          set -euo pipefail
+          npm run dev -- --host 127.0.0.1 --port 4173 --strictPort >/tmp/accounting-vite.log 2>&1 &
+          VITE_PID=$!
+          trap 'kill "$VITE_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+          node scripts/accounting-command-browser-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: superadmin-accounting-screenshots-and-xlsx
+          path: /tmp/basicdiet-superadmin-accounting
+          if-no-files-found: warn
