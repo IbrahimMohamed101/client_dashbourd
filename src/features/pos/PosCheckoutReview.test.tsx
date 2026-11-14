@@ -28,7 +28,7 @@ describe("POS Stage E preview-only checkout review", () => {
       externalOrderNumber="" externalPaymentStatus="paid" onClose={close} />);
     const dialog = within(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ }));
     expect(dialog.getAllByText(/74\.00/)).toHaveLength(2);
-    expect(dialog.getByText(/نوع الطلب:.*سفري/)).toBeInTheDocument();
+    expect(dialog.getByText(/نوع الطلب:/)).toHaveTextContent("سفري");
     expect(dialog.getByText(/زيادة دجاج/)).toBeInTheDocument();
     expect(dialog.getAllByText("غير محسوبة")).toHaveLength(2);
     expect(dialog.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ })).toBeDisabled();
