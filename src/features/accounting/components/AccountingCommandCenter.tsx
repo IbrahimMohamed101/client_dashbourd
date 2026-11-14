@@ -178,7 +178,7 @@ export function AccountingCommandCenter() {
       <AlertDescription>مركز القيادة المالية وتصدير بياناته متاحان للسوبر أدمن فقط.</AlertDescription>
     </Alert>;
   }
-  const loading = posQuery.isLoading || subscriptionQuery.isLoading;
+  const loading = posQuery.isLoading || onlineQuery.isLoading || subscriptionQuery.isLoading;
   return (
     <section dir="rtl" aria-label="مركز القيادة المالية" className="space-y-5 text-right">
       <header className="relative overflow-hidden rounded-3xl bg-slate-950 px-5 py-6 text-white shadow-sm sm:px-7 sm:py-8">
@@ -206,10 +206,11 @@ export function AccountingCommandCenter() {
             <ArrowDownToLine className="size-4" />
           </Button>
         </div>
-        <div className="relative mt-6 grid gap-2 border-t border-white/15 pt-4 text-xs text-slate-200 sm:grid-cols-3">
+        <div className="relative mt-6 grid gap-2 border-t border-white/15 pt-4 text-xs text-slate-200 sm:grid-cols-4">
           <span>الفترة: {range.from} — {range.to}</span>
           <span>الاشتراكات: {subscriptionQuery.isSuccess ? "متصلة" : "غير مكتملة"}</span>
           <span>نقطة البيع: {posQuery.isSuccess ? "متصلة" : "غير مكتملة"}</span>
+          <span>الدفع الفوري: {onlineQuery.isSuccess ? "متصل" : "غير مكتمل"}</span>
         </div>
       </header>
 
@@ -225,7 +226,8 @@ export function AccountingCommandCenter() {
             ))}
           </div>
           <Button type="button" variant="outline" className="min-h-10 gap-2"
-            onClick={() => { void posQuery.refetch(); void subscriptionQuery.refetch(); void catalogQuery.refetch(); }}>
+            onClick={() => { void posQuery.refetch(); void onlineQuery.refetch();
+              void subscriptionQuery.refetch(); void catalogQuery.refetch(); }}>
             <RefreshCcw className="size-4" /> تحديث البيانات
           </Button>
         </div>
@@ -251,12 +253,13 @@ export function AccountingCommandCenter() {
         </div>
       </div>
 
-      {(posQuery.isError || subscriptionQuery.isError) && (
+      {(posQuery.isError || onlineQuery.isError || subscriptionQuery.isError) && (
         <Alert variant="destructive">
           <AlertTriangle className="size-4" /><AlertTitle>البيانات المالية غير مكتملة</AlertTitle>
           <AlertDescription>
             {posQuery.isError ? "تعذر تحميل تقرير الكاشير من الباك إند. " : ""}
             {subscriptionQuery.isError ? "تعذر تحميل تحصيل الاشتراكات. " : ""}
+            {onlineQuery.isError ? "تعذر تحميل طلبات الدفع الفوري. " : ""}
             لن يظهر مجموع موحّد ولن يُسمح بتصدير ملف ناقص. تأكد من إتاحة واجهات التقارير وصلاحيات السوبر أدمن.
           </AlertDescription>
         </Alert>
@@ -265,10 +268,10 @@ export function AccountingCommandCenter() {
         <AlertTitle>لم يتم تصدير الملف</AlertTitle><AlertDescription>{exportError}</AlertDescription>
       </Alert>}
 
-      {loading ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {loading ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-36 rounded-2xl" />)}
       </div> : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Metric icon={<Layers className="size-5" />} title="صافي تحصيل الاشتراكات"
             value={money(subscriptionNet)} note="حسب التقرير المالي للاشتراكات" />
           <Metric icon={<ReceiptText className="size-5" />} title="مبيعات POS"
@@ -276,6 +279,9 @@ export function AccountingCommandCenter() {
           <Metric icon={<Wallet className="size-5" />} title="المباشر: كاش + شبكة"
             value={money(pos ? pos.summary.cashGrossHalalas + pos.summary.networkGrossHalalas : null)}
             note="قيمة الفواتير المباشرة قبل المرتجعات" />
+          <Metric icon={<ShoppingCart className="size-5" />} title="الطلبات الفورية المدفوعة"
+            value={money(online?.summary.paidGrossHalalas)}
+            note={`${number(online?.summary.paidCount)} طلب مدفوع أونلاين، مستقل عن POS`} />
           <Metric icon={<CreditCard className="size-5" />} title="مستحقات تطبيقات التوصيل"
             value={money(pos?.summary.appReceivableGrossHalalas)}
             note="ليست تحصيلًا نقديًا من المطعم" />
@@ -287,21 +293,22 @@ export function AccountingCommandCenter() {
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold">حركة المبيعات والتحصيل</h3>
-              <p className="mt-1 text-xs text-muted-foreground">صافي POS بعد الإشعارات مقابل صافي تحصيل الاشتراكات · ريال</p>
+              <p className="mt-1 text-xs text-muted-foreground">صافي POS والاشتراكات والطلبات الفورية · ريال</p>
             </div>
             <Badge variant="outline">بيانات سيرفر · تاريخ مالي</Badge>
           </div>
           {dailyChart.length ? (
-            <div className="h-72 w-full" dir="ltr" role="img" aria-label="مقارنة يومية بين POS والاشتراكات">
+            <div className="h-72 w-full" dir="ltr" role="img" aria-label="مقارنة يومية بين POS والاشتراكات والدفع الفوري">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dailyChart} margin={{ top: 12, right: 12, left: 0, bottom: 8 }}>
                   <CartesianGrid vertical={false} strokeDasharray="3 4" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} width={58} />
                   <Tooltip formatter={(v) => `${Number(v ?? 0).toFixed(2)} ر.س`} />
-                  <Legend formatter={(v) => v === "pos" ? "صافي POS" : "تحصيل الاشتراكات"} />
+                  <Legend formatter={(v) => v === "pos" ? "صافي POS" : v === "online" ? "الدفع الفوري" : "تحصيل الاشتراكات"} />
                   <Bar dataKey="pos" fill="#1E5F6A" radius={[4, 4, 0, 0]} maxBarSize={22} />
                   <Bar dataKey="subscriptions" fill="#D4A55B" radius={[4, 4, 0, 0]} maxBarSize={22} />
+                  <Bar dataKey="online" fill="#8178B4" radius={[4, 4, 0, 0]} maxBarSize={22} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -314,11 +321,13 @@ export function AccountingCommandCenter() {
             <MetricRow label="إجمالي إشعارات مرتجع POS" value={money(pos?.summary.refundDocumentsHalalas)} />
             <MetricRow label="صافي فواتير POS بعد الإشعارات" value={money(pos?.summary.netAfterRefundDocumentsHalalas)} />
             <MetricRow label="إجمالي المستحقات الخارجية" value={money(pos?.summary.appReceivableGrossHalalas)} />
+            <MetricRow label="مدفوعات أونلاين الفورية" value={money(online?.summary.paidGrossHalalas)} />
+            <MetricRow label="طلبات أونلاين بحالة مسترد" value={money(online?.summary.refundedStatusGrossHalalas)} />
             <div className="rounded-xl bg-muted/50 p-4">
               <dt className="text-sm text-muted-foreground">صافي الحركات المالية المسجلة</dt>
               <dd className="mt-2 text-2xl font-bold tabular-nums">{money(combinedNet)}</dd>
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                مجموع صافي تحصيل الاشتراكات وصافي فواتير POS بعد الإشعارات.
+                مجموع صافي تحصيل الاشتراكات وصافي فواتير POS بعد الإشعارات والطلبات الفورية بحالة مدفوع.
                 لا يساوي الربح أو رصيد البنك أو التسوية الفعلية مع التطبيقات.
               </p>
             </div>
@@ -381,12 +390,30 @@ export function AccountingCommandCenter() {
             جديد وتجديد وإضافة رصيد، مع مصدر الطلب ووسيلة التحصيل ومزوده، من تقرير الاشتراكات الرسمي.
           </p>
         </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <SubscriptionBreakdown title="نوع العملية" rows={subscriptions?.byPaymentType} />
           <SubscriptionBreakdown title="مصدر الطلب" rows={subscriptions?.bySourceChannel} />
           <SubscriptionBreakdown title="وسيلة الدفع" rows={subscriptions?.byPaymentMethod} />
           <SubscriptionBreakdown title="مزود الدفع" rows={subscriptions?.byPaymentProvider} />
         </div>
+      </section>
+
+      <section className="rounded-2xl border bg-card p-5 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-lg font-semibold">طلبات الدفع الفوري من الموقع والتطبيق</h3>
+            <p className="mt-1 text-xs text-muted-foreground">مصدر منفصل عن اشتراكات العملاء وفواتير الكاشير</p>
+          </div>
+          <span className="text-sm font-semibold">{number(online?.summary.paidCount)} مدفوع</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <InfoPill title="إجمالي الطلبات المدفوعة حاليًا" value={money(online?.summary.paidGrossHalalas)} />
+          <InfoPill title="طلبات أصبحت حالتها مسترد" value={money(online?.summary.refundedStatusGrossHalalas)} />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          حالة مسترد مستبعدة من مجموع المدفوع الحالي، ولا تُخصم مرتين.
+          التقرير يستخدم تاريخ إنشاء الطلب وفق حدود اليوم المالي المحفوظة.
+        </p>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
