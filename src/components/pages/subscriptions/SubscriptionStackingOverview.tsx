@@ -310,22 +310,22 @@ export function SubscriptionStackingOverview({
 
           {aggregateMeals ? (
             <div className="mt-4 grid gap-2 sm:grid-cols-4">
-            <div className="rounded-xl border bg-background/80 p-3">
-              <p className="text-[11px] text-muted-foreground">إجمالي الوجبات</p>
-              <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.totalMeals}</p>
-            </div>
-            <div className="rounded-xl border bg-background/80 p-3">
-              <p className="text-[11px] text-muted-foreground">الرصيد المجمع المسجل</p>
-              <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.remainingMeals}</p>
-            </div>
-            <div className="rounded-xl border bg-background/80 p-3">
-              <p className="text-[11px] text-muted-foreground">مستهلك</p>
-              <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.consumedMeals}</p>
-            </div>
-            <div className="rounded-xl border bg-background/80 p-3">
-              <p className="text-[11px] text-muted-foreground">محجوز</p>
-              <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.reservedMeals}</p>
-            </div>
+              <div className="rounded-xl border bg-background/80 p-3">
+                <p className="text-[11px] text-muted-foreground">إجمالي الوجبات</p>
+                <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.totalMeals}</p>
+              </div>
+              <div className="rounded-xl border bg-background/80 p-3">
+                <p className="text-[11px] text-muted-foreground">الرصيد المجمع المسجل</p>
+                <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.remainingMeals}</p>
+              </div>
+              <div className="rounded-xl border bg-background/80 p-3">
+                <p className="text-[11px] text-muted-foreground">مستهلك</p>
+                <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.consumedMeals}</p>
+              </div>
+              <div className="rounded-xl border bg-background/80 p-3">
+                <p className="text-[11px] text-muted-foreground">محجوز</p>
+                <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.reservedMeals}</p>
+              </div>
             </div>
           ) : (
             <p role="status" className="mt-4 rounded-xl border bg-background/80 p-3 text-sm text-muted-foreground">
