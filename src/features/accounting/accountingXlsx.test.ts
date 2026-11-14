@@ -48,7 +48,7 @@ describe("actual XLSX financial export", () => {
   it("prevents formula injection from external order references", () => {
     const files = zipEntries(createAccountingXlsx([{
       name: "البيانات", columns: [{ label: "مرجع" }],
-      rows: [['=HYPERLINK("https://example.test")'], ["<unsafe> & "quote""]],
+      rows: [['=HYPERLINK("https://example.test")'], [`<unsafe> & "quote"`]],
     }]));
     const xml = files["xl/worksheets/sheet1.xml"];
     expect(xml).toContain('t="inlineStr"');
