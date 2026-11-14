@@ -3,13 +3,11 @@ import { QRCodeSVG } from "qrcode.react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { formatPreviewAmount } from "./previewCatalog";
+import { formatPreviewAmount, type PosChannel } from "./previewCatalog";
+import { posChannelLabel } from "./posSaleChannels";
 
 const legacyServiceModeNames: Record<string, string> = {
   "dine-in": "محلي", takeaway: "سفري", delivery: "توصيل",
-};
-const channelNamesAr: Record<string, string> = {
-  restaurant: "المطعم", hungerstation: "هنجرستيشن", keeta: "كيتا",
 };
 import type { PosInvoice, PosRefund, PosSeller } from "./financialApi";
 
@@ -22,10 +20,11 @@ const fallbackSeller: PosSeller = {
 };
 function amount(halalas: number) { return formatPreviewAmount(halalas); }
 
-export function PosTaxDocumentReceipt({ doc, onClose, onRefund }: {
+export function PosTaxDocumentReceipt({ doc, onClose, onRefund, channels }: {
   doc: Document;
   onClose: () => void;
   onRefund?: () => void;
+  channels?: readonly PosChannel[];
 }) {
   const credit = "invoiceNumber" in doc;
   const staging = doc.documentType === "STAGING_TEST_NON_TAX" ||
@@ -76,7 +75,7 @@ export function PosTaxDocumentReceipt({ doc, onClose, onRefund }: {
             <p>الرقم: <strong dir="ltr">{doc.number}</strong></p>
             {credit && <p>الفاتورة الأصلية: <b dir="ltr">{doc.invoiceNumber}</b></p>}
             <p>تاريخ الإصدار: {new Date(issuedAt).toLocaleString("ar-SA-u-nu-latn")}</p>
-            {!credit && <p>قناة البيع: {channelNamesAr[doc.channel] ?? doc.channel}</p>}
+            {!credit && <p>قناة البيع: {posChannelLabel(doc.channel, channels)}</p>}
             {!credit && legacyServiceModeNames[doc.serviceMode] && (
               <p>نوع الطلب: {legacyServiceModeNames[doc.serviceMode]}</p>
             )}
@@ -118,10 +117,11 @@ export function PosTaxDocumentReceipt({ doc, onClose, onRefund }: {
     </Dialog>
   );
 }
-export function PosInvoiceReceipt({ invoice, onClose, onRefund }: {
+export function PosInvoiceReceipt({ invoice, onClose, onRefund, channels }: {
   invoice: PosInvoice; onClose: () => void; onRefund?: () => void;
+  channels?: readonly PosChannel[];
 }) {
-  return <PosTaxDocumentReceipt doc={invoice} onClose={onClose} onRefund={onRefund} />;
+  return <PosTaxDocumentReceipt doc={invoice} onClose={onClose} onRefund={onRefund} channels={channels} />;
 }
 export function PosCreditNoteReceipt({ refund, onClose }: {
   refund: PosRefund; onClose: () => void;
