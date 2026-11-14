@@ -84,7 +84,7 @@ try {
     const dialog = page.getByRole("dialog", { name: "أصناف غير متاحة في القناة الجديدة" });
     await dialog.waitFor();
     assert.match(await dialog.innerText(), /دجاج تجريبي/);
-    assert.equal(await cart.getByRole("listitem").count(), 1, "Must not remove unavailable items before confirmation");
+    assert.equal(await cart.locator("li").count(), 1, "Must not remove unavailable items before confirmation");
     await dialog.getByRole("button", { name: "ارجع إلى المطعم" }).click();
     assert.equal(await strip.getByRole("button", { name: "المطعم" }).getAttribute("aria-pressed"), "true");
     await strip.getByRole("button", { name: "Keeta" }).click();
