@@ -12,6 +12,7 @@ export type AccountingExcelSheet = {
 const encoder = new TextEncoder();
 function xmlText(value: unknown) {
   return String(value ?? "")
+    // eslint-disable-next-line no-control-regex -- XML 1.0 forbids these characters.
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
@@ -137,7 +138,8 @@ function zipStore(files: { path: string; xml: string }[]): Uint8Array {
 export function createAccountingXlsx(sheets: AccountingExcelSheet[]): Uint8Array {
   if (!sheets.length || sheets.length > 20 ||
       new Set(sheets.map(x => x.name)).size !== sheets.length ||
-      sheets.some(x => !x.name || x.name.length > 31 || /[\\/:*?\[\]]/.test(x.name))) {
+      sheets.some(x => !x.name || x.name.length > 31 ||
+        [...x.name].some(char => ["/", ":", "*", "?", "[", "]", String.fromCharCode(92)].includes(char)))) {
     throw new Error("أسماء أوراق Excel غير صالحة.");
   }
   const files = [
