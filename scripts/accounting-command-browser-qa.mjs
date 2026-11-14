@@ -81,6 +81,26 @@ const subscriptionReport = {
     netMovementHalala: 120000, sourceChannel: "app",
     paymentMethod: "card", provider: "moyasar", needsReview: false }],
 };
+const onlineReport = {
+  reportType: "one-time-range",
+  range: { from: "2026-10-16", to: "2026-11-14", days: 30,
+    timezone: "Asia/Riyadh", basis: "historical cutoff" },
+  summary: { paidCount: 1, paidGrossHalalas: 1700,
+    refundedStatusCount: 1, refundedStatusGrossHalalas: 900, unpricedPaidCount: 0 },
+  daily: [{ businessDate: "2026-11-14", paidCount: 1, paidGrossHalalas: 1700,
+    refundedStatusCount: 1, refundedStatusGrossHalalas: 900, unpricedPaidCount: 0 }],
+  items: [{
+    number: "SYN-ONLINE-1", businessDate: "2026-11-14", createdAt: issuedAt,
+    paymentStatus: "paid", status: "fulfilled", fulfillmentMethod: "pickup",
+    grossHalalas: 1700,
+  }, {
+    number: "SYN-ONLINE-2", businessDate: "2026-11-14", createdAt: issuedAt,
+    paymentStatus: "refunded", status: "canceled", fulfillmentMethod: "pickup",
+    grossHalalas: 900,
+  }],
+  pagination: { offset: 0, limit: 100, total: 2, hasMore: false },
+  generatedAt: issuedAt, notes: ["synthetic only"],
+};
 const browser = await chromium.launch({ headless: true });
 const report = [];
 try {
@@ -106,6 +126,9 @@ try {
           url.searchParams.get("from"), url.searchParams.get("to"),
         ) }),
       );
+      if (path.endsWith("/api/dashboard/accounting/one-time/range")) {
+        return route.fulfill(asJson({ status: true, data: onlineReport }));
+      }
       if (path.endsWith("/api/dashboard/accounting/subscription-payments/range")) {
         return route.fulfill(asJson({ status: true, data: subscriptionReport }));
       }
@@ -125,6 +148,8 @@ try {
       await center.waitFor({ timeout: 25_000 });
       await center.getByText("1,200.00 ر.س").first().waitFor({ timeout: 25_000 });
       assert.match(await center.innerText(), /مستحقات تطبيقات التوصيل/);
+      assert.match(await center.innerText(), /طلبات الدفع الفوري/);
+      assert.match(await center.innerText(), /17.00 ر.س/);
       assert.match(await center.innerText(), /جاهز/);
       assert.match(await center.innerText(), /صافي الحركات المالية المسجلة/);
       assert.equal(await center.getByRole("button",
