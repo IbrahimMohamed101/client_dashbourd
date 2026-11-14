@@ -15,7 +15,7 @@ function PosEntryPage() {
       </section>
     );
   }
-  return <PosSalePage />;
+  return <PosSalePage documentType={status.data.documentType} />;
 }
 
 export const Route = createFileRoute("/_protected/pos/")({ component: PosEntryPage });
