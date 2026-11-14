@@ -215,7 +215,7 @@ describe("POS preview workspace", () => {
     await user.click(screen.getByRole("button", { name: /200 جم/ }));
     await user.click(screen.getByRole("button", { name: /أضف للسلة/ }));
     const cart = within(screen.getByRole("complementary", { name: "السلة التجريبية" }));
-    await user.click(screen.getByRole("button", { name: "Keeta" });
+    await user.click(screen.getByRole("button", { name: "Keeta" }));
     const dialog = within(screen.getByRole("dialog", { name: "أصناف غير متاحة في القناة الجديدة" }));
     expect(dialog.getByText(/دجاج تكا.*200 جم/)).toBeInTheDocument();
     expect(cart.getByRole("listitem", { hidden: true })).toHaveTextContent("دجاج تكا");
