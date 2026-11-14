@@ -1,3 +1,4 @@
+import { isBranchOperator } from "@/lib/rolePermissions";
 import type {
   DashboardOpsActionRequest,
   DashboardOpsListResponse,
@@ -29,7 +30,7 @@ const ALL_OPERATIONS_SCREENS: OperationsScreen[] = [
 const ROLE_SCREEN_MAP: Record<string, OperationsScreenConfig> = {
   kitchen: { label: "المطبخ والاستلام", screens: ["kitchen", "pickup"] },
   cashier: { label: "العمليات", screens: ALL_OPERATIONS_SCREENS },
-  restaurant: { label: "المطعم", screens: ["kitchen", "pickup"] },
+  restaurant: { label: "المطعم", screens: ALL_OPERATIONS_SCREENS },
   courier: { label: "التوصيل", screens: ["courier"] },
   admin: { label: "جميع العمليات", screens: ALL_OPERATIONS_SCREENS },
   superadmin: { label: "جميع العمليات", screens: ALL_OPERATIONS_SCREENS },
@@ -268,11 +269,9 @@ function normalizeOrderItems(raw: unknown): UnifiedQueueItem["items"] {
 
 export function getScreensForRole(role: string | null | undefined): OperationsScreenConfig {
   if (!role) return { label: "", screens: [] };
-  if (role === "restaurant") {
-    return {
-      label: ROLE_SCREEN_MAP.restaurant.label,
-      screens: ALL_OPERATIONS_SCREENS,
-    };
+  if (isBranchOperator(role)) {
+    // Labels remain role-specific; the actual operations screens are identical.
+    return { label: ROLE_SCREEN_MAP[role].label, screens: ALL_OPERATIONS_SCREENS };
   }
   return ROLE_SCREEN_MAP[role] || { label: "", screens: [] };
 }

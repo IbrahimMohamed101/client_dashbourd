@@ -3,6 +3,7 @@ import { ToastMessage } from "@/components/global/ToastMessage";
 import { Button } from "@/components/ui/button";
 import useCreateSubscriptionForm from "@/hooks/useCreateSubscriptionForm";
 import { getApiErrorMessage } from "@/lib/apiErrors";
+import { SUBSCRIPTION_PAYMENT_METHODS } from "@/lib/rolePermissions";
 import type { CreateSubscriptionSchemaType } from "@/lib/validations/createSubscriptionSchema";
 import type { User } from "@/types/userTypes";
 import type { PromoCodeDTO } from "@/types/financeTypes";
@@ -66,10 +67,12 @@ type CreatedSubscription = {
   stacked: boolean;
 };
 
-const FALLBACK_PAYMENT_OPTIONS: PaymentMethodOption[] = [
-  { method: "cash", labelAr: "كاش", gatewayRequired: false },
-  { method: "visa", labelAr: "فيزا", gatewayRequired: false },
-];
+const FALLBACK_PAYMENT_OPTIONS: PaymentMethodOption[] =
+  SUBSCRIPTION_PAYMENT_METHODS.map((method) => ({
+    method,
+    labelAr: method === "cash" ? "كاش" : "فيزا",
+    gatewayRequired: false,
+  }));
 
 function asRecord(value: unknown): ApiRecord | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -238,6 +241,7 @@ export function CreateSubscriptionFormContent({
   const { mutateAsync, isPending } = useCreateSubscriptionMutation();
   const isSubmitting = isPending || isValidatingPrice;
   const selectedPaymentMethod = form.watch("paymentMethod");
+  const visiblePaymentOptions = paymentOptions;
 
   useEffect(() => {
     const subscription = form.watch((_value, { name }) => {
@@ -611,7 +615,7 @@ export function CreateSubscriptionFormContent({
                 role="radiogroup"
                 aria-label="طريقة الدفع"
               >
-                {paymentOptions.map((option) => {
+                {visiblePaymentOptions.map((option) => {
                   const selected = selectedPaymentMethod === option.method;
                   const Icon = option.method === "cash" ? Banknote : CreditCard;
                   return (

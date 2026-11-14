@@ -8,8 +8,8 @@ describe("landing lead CRM route permissions", () => {
     expect(canRoleAccessRoute("restaurant", "/landing-leads")).toBe(true);
   });
 
-  it("does not expose customer phone numbers to operational-only roles", () => {
-    expect(canRoleAccessRoute("cashier", "/landing-leads")).toBe(false);
+  it("grants cashier the restaurant CRM access but denies kitchen/courier", () => {
+    expect(canRoleAccessRoute("cashier", "/landing-leads")).toBe(true);
     expect(canRoleAccessRoute("kitchen", "/landing-leads")).toBe(false);
     expect(canRoleAccessRoute("courier", "/landing-leads")).toBe(false);
   });

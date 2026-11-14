@@ -1,5 +1,7 @@
 import { UserRoles } from "@/types/auth";
 import type { UserRole } from "@/types/auth";
+import { canAccessPosPreview, isPosPreviewPath } from "@/features/pos/posAccess";
+import { BRANCH_OPERATOR_ROLES, isBranchOperator } from "@/lib/rolePermissions";
 
 const SUPERADMIN_ROUTES = [
   "/dashboard",
@@ -67,15 +69,6 @@ const KITCHEN_ROUTES = [
 
 const COURIER_ROUTES = ["/delivery", "/operations", "/profile"];
 
-const CASHIER_ROUTES = [
-  "/daily-closing",
-  "/manual-deduction",
-  "/operations",
-  "/one-time-orders",
-  "/users",
-  "/profile",
-];
-
 const RESTAURANT_ROUTES = [
   "/daily-closing",
   "/landing-leads",
@@ -90,6 +83,10 @@ const RESTAURANT_ROUTES = [
   "/premium-meals",
   "/profile",
 ];
+
+// Cashier is the operating owner of the branch and shares restaurant routes.
+// Do not add admin-only or superadmin-only routes here.
+const CASHIER_ROUTES = RESTAURANT_ROUTES;
 
 const RESTAURANT_DENIED_ROUTES: string[] = [];
 
@@ -113,9 +110,8 @@ const ROLE_ROUTES: Record<UserRole, string[]> = {
   [UserRoles.RESTAURANT]: RESTAURANT_ROUTES,
 };
 
-const ROLE_DENIED_ROUTES: Partial<Record<UserRole, string[]>> = {
-  [UserRoles.RESTAURANT]: RESTAURANT_DENIED_ROUTES,
-};
+const ROLE_DENIED_ROUTES: Partial<Record<UserRole, string[]>> =
+  Object.fromEntries(BRANCH_OPERATOR_ROLES.map((role) => [role, RESTAURANT_DENIED_ROUTES]));
 
 const escapeRegex = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -137,8 +133,11 @@ const isRouteMatch = (routes: string[], pathName: string) =>
 
 const canRoleAccessRoute = (role: UserRole | undefined, pathName: string) => {
   if (!role) return false;
-  if (isRouteMatch(ROLE_DENIED_ROUTES[role] ?? [], pathName)) return false;
-  return isRouteMatch(ROLE_ROUTES[role] ?? [], pathName);
+  if (isPosPreviewPath(pathName)) return canAccessPosPreview(role, pathName);
+  // Both role labels use exactly the same branch-operator route table.
+  const effectiveRole = isBranchOperator(role) ? UserRoles.RESTAURANT : role;
+  if (isRouteMatch(ROLE_DENIED_ROUTES[effectiveRole] ?? [], pathName)) return false;
+  return isRouteMatch(ROLE_ROUTES[effectiveRole] ?? [], pathName);
 };
 
 export {

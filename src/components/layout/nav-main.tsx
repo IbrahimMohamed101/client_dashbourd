@@ -7,10 +7,10 @@ import { Link } from "@tanstack/react-router";
 type NavItem = { title: string; url: string; icon?: React.ReactNode };
 const GROUPS = [
   { title: "الرئيسية", paths: ["/dashboard"] },
-  { title: "العمليات", paths: ["/operations", "/daily-closing", "/manual-deduction", "/delivery", "/one-time-orders"] },
+  { title: "العمليات", paths: ["/pos", "/operations", "/daily-closing", "/manual-deduction", "/delivery", "/one-time-orders"] },
   { title: "المالية", paths: ["/payments", "/accounting", "/subscription-audit", "/promo-codes"] },
   { title: "العملاء والتقارير", paths: ["/customer-management", "/retention-reports", "/users", "/landing-leads", "/subscriptions"] },
-  { title: "المنتجات والخدمات", paths: ["/menu", "/packages", "/premium-meals", "/addons", "/zones"] },
+  { title: "المنتجات والخدمات", paths: ["/pos/menu", "/menu", "/packages", "/premium-meals", "/addons", "/zones"] },
   { title: "الإدارة", paths: ["/dashboard-users"] },
 ] as const;
 

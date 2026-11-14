@@ -1,0 +1,46 @@
+name: POS Staging UI Validation
+on:
+  push:
+    branches:
+      - codex/pos-staging-preview
+      - codex/cashier-restaurant-ui-staging-20261105
+  pull_request:
+    branches:
+      - codex/pos-staging-preview
+    paths:
+      - "src/features/pos/**"
+      - "src/routes/_protected/pos/**"
+      - "src/routes/_protected/route.tsx"
+      - "src/constants/routes.ts"
+      - "tests/roleRoutes.test.ts"
+      - "src/lib/authMiddleware.ts"
+      - ".github/workflows/pos-staging-ui-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pos-staging-ui
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint / UI tests / Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: ESLint entire dashboard
+        run: npm run lint
+      - name: UI tests
+        run: npx vitest run --maxWorkers=2 src/features/pos
+      - name: Full dashboard regression suite
+        run: npx vitest run --maxWorkers=2
+      - name: Build and TypeScript
+        run: npm run build
