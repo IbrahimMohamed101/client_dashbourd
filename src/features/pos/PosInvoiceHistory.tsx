@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { formatPreviewAmount } from "./previewCatalog";
+import type { PublishedPosCatalog } from "./catalogApi";
+import { posChannelLabel } from "./posSaleChannels";
 import { listPosSales, type PosInvoice, type PosRefund } from "./financialApi";
 import { PosInvoiceReceipt, PosCreditNoteReceipt } from "./PosInvoiceReceipt";
 import { PosRefundDialog } from "./PosRefundDialog";
 
-export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
+export function PosInvoiceHistory({ onSale, catalog }: { onSale: () => void; catalog: PublishedPosCatalog }) {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState<PosInvoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +33,8 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
 
+  const configuredChannels = catalog.channels ?? [];
+  const invoiceChannelIds = [...new Set(["restaurant", ...configuredChannels.map(item => item.id), ...invoices.map(item => item.channel)])];
   const filtered = invoices.filter(invoice =>
     (channel === "all" || invoice.channel === channel)
     && (!search.trim() || [
@@ -63,13 +67,9 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
           <select aria-label="قناة الفواتير" className="min-h-12 rounded-md border bg-background px-3"
             value={channel} onChange={e => setChannel(e.target.value)}>
             <option value="all">كل القنوات</option>
-            <option value="restaurant">المطعم</option>
-            <option value="hungerstation">HungerStation</option>
-            <option value="keeta">Keeta</option>
-            {invoices.map(invoice => invoice.channel)
-              .filter((id, index, arr) => id !== "restaurant" && id !== "keeta"
-                && id !== "hungerstation" && arr.indexOf(id) === index)
-              .map(id => <option value={id} key={id}>{id}</option>)}
+            {invoiceChannelIds.map(id => <option value={id} key={id}>
+              {posChannelLabel(id, configuredChannels)}
+            </option>)}
           </select>
         </label>
       </div>
@@ -97,7 +97,7 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
                 {filtered.map(invoice => (
                   <tr key={invoice._id} className="border-t">
                     <td className="p-3 font-semibold">{invoice.number}</td>
-                    <td className="p-3">{invoice.channel}</td>
+                    <td className="p-3">{posChannelLabel(invoice.channel, configuredChannels)}</td>
                     <td className="p-3">{new Date(invoice.issuedAt).toLocaleString("ar-SA-u-nu-latn")}</td>
                     <td className="p-3">{invoice.actor.name ?? invoice.actor.email}</td>
                     <td className="p-3 tabular-nums">{formatPreviewAmount(invoice.totals.grossHalalas)}</td>
@@ -114,10 +114,10 @@ export function PosInvoiceHistory({ onSale }: { onSale: () => void }) {
       </div>
       {savedRefund && <div className="flex justify-end"><Button type="button" variant="outline" onClick={() => setSavedRefund(null)}>إغلاق إشعار المرتجع</Button></div>}
       {savedRefund && <PosCreditNoteReceipt refund={savedRefund} onClose={() => setSavedRefund(null)} />}
-      {selected && <PosInvoiceReceipt invoice={selected}
+      {selected && <PosInvoiceReceipt invoice={selected} channels={configuredChannels}
         onClose={() => setSelected(null)}
         onRefund={() => { setReturnInvoice(selected); setSelected(null); }} />}
-      {returnInvoice && <PosRefundDialog invoice={returnInvoice} operatorId={user?.id}
+      {returnInvoice && <PosRefundDialog key={returnInvoice._id} invoice={returnInvoice} operatorId={user?.id}
         onClose={() => setReturnInvoice(null)}
         onRecorded={refund => {
           setSavedRefund(refund);
