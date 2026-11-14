@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity, AlertTriangle, ArrowDownToLine, CalendarDays, CreditCard,
@@ -383,7 +383,7 @@ export function AccountingCommandCenter() {
 }
 
 function Metric({ icon, title, value, note }: {
-  icon: React.ReactNode; title: string; value: string; note: string;
+  icon: ReactNode; title: string; value: string; note: string;
 }) {
   return (
     <div className="rounded-2xl border bg-card p-5 shadow-sm">
