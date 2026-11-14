@@ -346,6 +346,21 @@ export function AccountingCommandCenter() {
         </div>
       </section>
 
+      <section className="rounded-2xl border bg-card p-5 shadow-sm">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">تفاصيل تحصيل الاشتراكات</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            جديد وتجديد وإضافة رصيد، مع مصدر الطلب ووسيلة التحصيل ومزوده، من تقرير الاشتراكات الرسمي.
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <SubscriptionBreakdown title="نوع العملية" rows={subscriptions?.byPaymentType} />
+          <SubscriptionBreakdown title="مصدر الطلب" rows={subscriptions?.bySourceChannel} />
+          <SubscriptionBreakdown title="وسيلة الدفع" rows={subscriptions?.byPaymentMethod} />
+          <SubscriptionBreakdown title="مزود الدفع" rows={subscriptions?.byPaymentProvider} />
+        </div>
+      </section>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-2xl border bg-card p-5 shadow-sm">
           <h3 className="flex items-center gap-2 font-semibold"><ReceiptText className="size-4" /> أحدث فواتير الفترة</h3>
@@ -408,4 +423,25 @@ function InfoPill({ title, value }: { title: string; value: string }) {
 }
 function EmptyState({ text }: { text: string }) {
   return <p role="status" className="p-5 text-center text-sm text-muted-foreground">{text}</p>;
+}
+
+function SubscriptionBreakdown({ title, rows }: {
+  title: string;
+  rows?: Array<{ key?: string | null; labelAr?: string | null;
+    totalHalala?: number | null; count?: number | null }> | null;
+}) {
+  return <div className="rounded-xl border bg-muted/10 p-4">
+    <h4 className="mb-3 text-sm font-semibold">{title}</h4>
+    <div className="space-y-2">
+      {rows?.map((item, index) => <div key={item.key ?? index}
+        className="flex items-center justify-between gap-2 border-b pb-2 last:border-0">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium">{item.labelAr || item.key || "غير مصنف"}</p>
+          <p className="text-[11px] text-muted-foreground">{number(item.count)} حركة</p>
+        </div>
+        <span className="shrink-0 text-xs font-semibold tabular-nums">{money(item.totalHalala)}</span>
+      </div>)}
+      {!rows?.length && <p className="text-xs text-muted-foreground">لا توجد تفاصيل متاحة للفترة.</p>}
+    </div>
+  </div>;
 }
