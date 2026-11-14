@@ -229,12 +229,14 @@ function ProductOptions({
   );
 }
 
-export function PosWorkspace({ catalog, operatorName = "موظف", navigation, operatorId }: {
+export function PosWorkspace({ catalog, operatorName = "موظف", navigation, operatorId, documentType }: {
   catalog: PublishedPosCatalog;
   operatorName?: string;
   navigation?: ReactNode;
   operatorId?: string | null;
+  documentType?: string;
 }) {
+  const isTaxInvoice = documentType === "SIMPLIFIED_TAX_INVOICE";
   // Read business-only draft references once per signed-in operator. No
   // client-side total is ever considered an approved payable amount.
   const channels = useMemo(() => visibleSaleChannels(catalog), [catalog]);
@@ -366,7 +368,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           const error = parseApiError(cause);
           setFinanceReview(null);
           setFinanceFailure({
-            key, message: error.message ?? "تعذر احتساب الفاتورة من سيرفر Staging.",
+            key, message: error.message ?? (isTaxInvoice ? "تعذر احتساب الفاتورة من السيرفر." : "تعذر احتساب الفاتورة من سيرفر Staging."),
           });
         }).finally(() => { if (active) setFinanceLoading(false); });
     }, 300);
@@ -403,7 +405,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           setQuoteReview(null);
           setQuoteFailure({ key, message: error.code === "POS_CATALOG_CONFLICT"
             ? "تم نشر منيو أحدث. حدّث الصفحة وراجع الأسعار قبل البيع."
-            : error.message || "تعذر تسعير التطبيق من سيرفر Staging." });
+            : error.message || (isTaxInvoice ? "تعذر تسعير التطبيق من السيرفر." : "تعذر تسعير التطبيق من سيرفر Staging.") });
         })
         .finally(() => { if (active) setQuoteLoading(false); });
     }, 300);
@@ -437,7 +439,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         message: messages[error.code ?? ""] ?? (
           error.status === 401 || error.status === 403
             ? "الجلسة أو الصلاحيات غير صالحة. سجّل الدخول مرة أخرى."
-            : "تعذر الاتصال بتسعير Staging. لم يتم تسجيل أي عملية بيع."
+            : (isTaxInvoice ? "تعذر الاتصال بالسيرفر. لم يتم تسجيل أي عملية بيع." : "تعذر الاتصال بتسعير Staging. لم يتم تسجيل أي عملية بيع.")
         ),
       });
     } finally {
@@ -710,7 +712,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
       )}
       <div className="grid min-h-0 flex-1 gap-1 overflow-hidden p-0 md:grid-cols-[minmax(0,1fr)_minmax(22.5rem,25rem)]">
         <section
-          aria-label="الكتالوج التجريبي"
+          aria-label={isTaxInvoice ? "كتالوج نقطة البيع" : "الكتالوج التجريبي"}
           className="flex min-h-0 min-w-0 flex-col gap-0 overflow-hidden rounded-2xl border bg-card p-1"
         >
           <div
@@ -793,7 +795,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
 
         <aside
           id="pos-cart"
-          aria-label="السلة التجريبية"
+          aria-label={isTaxInvoice ? "سلة نقطة البيع" : "السلة التجريبية"}
           className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden rounded-2xl border border-s-4 border-s-primary bg-card p-3"
         >
           <div className="flex shrink-0 items-center gap-2">
@@ -872,14 +874,14 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                   الحالة المختارة: {appPaymentStatus === "paid" ? "مدفوع" : "كاش"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  يُسجَّل البيع التجريبي كمستحق على التطبيق، وكاش التطبيقات لا يُضاف لدرج المطعم.
+                  {isTaxInvoice ? "يُسجَّل طلب التطبيق كمستحق على القناة، وكاش التطبيقات لا يُضاف لدرج المطعم." : "يُسجَّل البيع التجريبي كمستحق على التطبيق، وكاش التطبيقات لا يُضاف لدرج المطعم."}
                 </p>
               </div>
             )}
 
             {cart.length === 0 ? (
               <p className="py-5 text-sm text-muted-foreground">
-                اختر صنفًا لتجربة إضافته إلى السلة.
+                {isTaxInvoice ? "اختر صنفًا لإضافته إلى السلة." : "اختر صنفًا لتجربة إضافته إلى السلة."}
               </p>
             ) : (
               <ul className="divide-y">
@@ -980,7 +982,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
             </p>}
             {verifiedFinanceQuote && (
               <section aria-label="تسعير الفاتورة النهائي" className="rounded-xl border bg-muted/50 p-3 text-sm">
-                <h3 className="font-bold">تسعير سيرفر Staging · المنيو {verifiedFinanceQuote.revision}</h3>
+                <h3 className="font-bold">{isTaxInvoice ? "تسعير السيرفر" : "تسعير سيرفر Staging"} · المنيو {verifiedFinanceQuote.revision}</h3>
                 <div className="mt-1 flex justify-between gap-2">
                   <span>الخصم</span><strong>{formatPreviewAmount(verifiedFinanceQuote.totals.totalDiscountHalalas)}</strong>
                 </div>
@@ -1005,7 +1007,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
                   <strong>{formatPreviewAmount(verifiedQuote.provisionalSubtotalHalalas)}</strong>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  هذا ليس إجمالي الفاتورة النهائي؛ الضريبة والخصومات والسداد غير مفعّلة.
+                  {isTaxInvoice ? "الإجمالي النهائي يحدده السيرفر عند المراجعة" : "هذا ليس إجمالي الفاتورة النهائي؛ الضريبة والخصومات والسداد غير مفعّلة."}
                 </p>
               </section>
             )}
@@ -1052,6 +1054,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           quote={verifiedFinanceQuote}
           request={financeRequest}
           channelName={channels.find(item => item.id === channel)?.label ?? channel}
+          documentType={documentType}
           externalOrderNumber={externalOrderNumber}
           externalPaymentStatus={appPaymentStatus}
           operatorId={operatorId}
@@ -1075,7 +1078,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           }}
         />
       )}
-      {issuedInvoice && <PosInvoiceReceipt invoice={issuedInvoice}
+      {issuedInvoice && <PosInvoiceReceipt invoice={issuedInvoice} channels={catalog.channels}
         onClose={() => setIssuedInvoice(null)} />}
       {product && !staleCart && (
         <ProductOptions
