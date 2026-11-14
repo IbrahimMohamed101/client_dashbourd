@@ -5,6 +5,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { formatPreviewAmount } from "./previewCatalog";
+import { channelAccentStyle } from "./posSaleChannels";
 import type { PosQuote } from "./quoteApi";
 
 export function PosCheckoutReview({
@@ -12,7 +13,7 @@ export function PosCheckoutReview({
 }: {
   quote: PosQuote;
   channelName: string;
-  serviceMode: "dine-in" | "takeaway" | "delivery";
+  serviceMode?: "restaurant" | "dine-in" | "takeaway" | "delivery";
   externalOrderNumber: string;
   externalPaymentStatus: "paid" | "cash";
   onClose: () => void;
@@ -31,8 +32,11 @@ export function PosCheckoutReview({
         </DialogHeader>
         <section aria-label="تفاصيل مراجعة الطلب" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-2 text-sm">
           <div className="flex flex-wrap justify-between gap-2 rounded-lg border bg-muted/50 p-3">
-            <span>قناة البيع: <strong>{channelName}</strong></span>
-            {restaurant && <span>نوع الطلب: <strong>{serviceNames[serviceMode]}</strong></span>}
+            <span>قناة البيع: <strong className="rounded bg-primary px-2 py-1 text-primary-foreground"
+              style={channelAccentStyle(quote.channel)}>{channelName}</strong></span>
+            {restaurant && serviceMode && serviceMode !== "restaurant" && (
+              <span>نوع الطلب: <strong>{serviceNames[serviceMode]}</strong></span>
+            )}
             {!restaurant && (
               <span>رقم طلب التطبيق: <strong>{externalOrderNumber.trim() || "غير محدد"}</strong></span>
             )}

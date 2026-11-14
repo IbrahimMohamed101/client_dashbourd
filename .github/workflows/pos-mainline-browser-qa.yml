@@ -33,6 +33,8 @@ jobs:
             script: scripts/pos-stage-f-browser-qa.mjs
           - suite: ux
             script: scripts/pos-ux-a-browser-qa.mjs
+          - suite: channel-ux
+            script: scripts/pos-channel-ux-browser-qa.mjs
     env:
       VITE_POS_PREVIEW: "true"
       VITE_BACKEND_URL: ""

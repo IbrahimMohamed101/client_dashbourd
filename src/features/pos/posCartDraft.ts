@@ -3,7 +3,7 @@ import type { Addon, Channel, Product, Variant } from "./previewCatalog";
 
 export type PosSelection = { product: Product; variant: Variant; addons: Addon[] };
 export type PosCartLine = PosSelection & { id: string; quantity: number };
-export type ServiceMode = "dine-in" | "takeaway" | "delivery";
+export type ServiceMode = "restaurant" | "dine-in" | "takeaway" | "delivery";
 export type PosCartDraft = {
   revision: number;
   channel: Channel;
@@ -117,7 +117,7 @@ export function readPosCartDraft(operatorId: string | null | undefined,
       || !Number.isFinite(raw.savedAt) || typeof raw.savedAt !== "number"
       || raw.savedAt > Date.now() || Date.now() - raw.savedAt > MAX_AGE_MS
       || !validId(raw.channel)
-      || !["dine-in", "takeaway", "delivery"].includes(String(raw.serviceMode))
+      || !["restaurant", "dine-in", "takeaway", "delivery"].includes(String(raw.serviceMode))
       || !Array.isArray(raw.lines) || raw.lines.length < 1 || raw.lines.length > MAX_CART_LINES)
       return null;
     const lines = raw.lines.map(cleanLine);

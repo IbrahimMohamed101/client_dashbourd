@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { parseApiError } from "@/lib/apiErrors";
 import { formatPreviewAmount } from "./previewCatalog";
+import { channelAccentStyle } from "./posSaleChannels";
 import { parseHalalas } from "./posDiscountMath";
 import {
   issuePosSale, abandonPosOperation, getPosOperation, getActivePosOperation, getPosSale,
@@ -16,13 +17,12 @@ import {
 } from "./financialApi";
 
 export function PosFinancialCheckout({
-  quote, request, channelName, serviceMode,
+  quote, request, channelName,
   externalOrderNumber, externalPaymentStatus, operatorId, onClose, onSale,
 }: {
   quote: PosFinanceQuote;
   request: PosFinanceQuoteRequest;
   channelName: string;
-  serviceMode: "dine-in" | "takeaway" | "delivery";
   externalOrderNumber: string;
   externalPaymentStatus: "paid" | "cash";
   operatorId?: string | null;
@@ -119,7 +119,7 @@ export function PosFinancialCheckout({
   async function confirm() {
     if (!allowed || inFlight.current || menuConflict) return;
     const body: PosSaleIntent = restaurant ? {
-      ...request, serviceMode,
+      ...request,
       tender: method === "cash"
         ? { method: "cash", receivedHalalas: received! }
         : { method: "network" },
@@ -201,10 +201,10 @@ export function PosFinancialCheckout({
             فاتورة تجريبية — غير ضريبية — لا يوجد ربط بجهاز دفع أو Moyasar أو ZATCA.
           </p>
           <div className="flex flex-wrap justify-between gap-2">
-            <span>القناة: <b>{channelName}</b></span>
+            <span>القناة: <b className="rounded bg-primary px-2 py-1 text-primary-foreground"
+              style={request.channel === "restaurant" ? undefined : channelAccentStyle(request.channel)}>
+              {channelName}</b></span>
             <span>عدد السطور: {quote.lines.length}</span>
-            {restaurant && <span>نوع الطلب: {serviceMode === "takeaway" ? "سفري"
-              : serviceMode === "delivery" ? "توصيل" : "محلي"}</span>}
             {!restaurant && <span>مرجع التطبيق: {externalOrderNumber || "غير محدد"}</span>}
           </div>
           <div className="overflow-x-auto rounded-lg border">

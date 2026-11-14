@@ -56,7 +56,7 @@ export type PosFinanceQuote = {
   note: string;
 };
 export type PosSaleIntent = PosFinanceQuoteRequest & {
-  serviceMode?: "dine-in" | "takeaway" | "delivery";
+  serviceMode?: "restaurant" | "dine-in" | "takeaway" | "delivery";
   externalOrderNumber?: string;
   appPaymentStatus?: "paid" | "cash";
   tender?: { method: "cash"; receivedHalalas: number } | { method: "network" };
