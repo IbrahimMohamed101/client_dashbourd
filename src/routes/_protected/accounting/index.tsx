@@ -8,6 +8,7 @@ import {
   ReceiptTextIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  LayoutDashboardIcon,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,8 @@ import {
   type AccountingRangePresetId,
 } from "@/features/accounting/accountingRange";
 import { AccountingRangeInsights } from "@/features/accounting/components/AccountingRangeInsights";
+import { AccountingCommandCenter } from "@/features/accounting/components/AccountingCommandCenter";
+import { useAuth } from "@/hooks/useAuth";
 import { LegacyDailyAccountingReport } from "@/features/accounting/components/LegacyDailyAccountingReport";
 import { MarketingAnalyticsReport } from "@/features/accounting/components/MarketingAnalyticsReport";
 import { LandingAnalyticsReport } from "@/features/accounting/components/LandingAnalyticsReport";
@@ -65,7 +68,7 @@ export const Route = createFileRoute("/_protected/accounting/")({
   component: AccountingPage,
 });
 
-type AccountingTab = "subscription-payments" | "marketing-analytics" | "legacy-daily";
+type AccountingTab = "command-center" | "subscription-payments" | "marketing-analytics" | "legacy-daily";
 type AccountingReportMode = SubscriptionPaymentReportMode | "range";
 type RangePresetSelection = AccountingRangePresetId | "custom";
 
@@ -86,7 +89,10 @@ const initialLegacyParams = resolveAccountingDailyReportParams({
 });
 
 function AccountingPage() {
-  const [activeTab, setActiveTab] = useState<AccountingTab>("subscription-payments");
+  const { user } = useAuth();
+  const showCommandCenter = user?.role === "superadmin";
+  const [activeTab, setActiveTab] = useState<AccountingTab>("command-center");
+  const selectedTab = showCommandCenter ? activeTab : activeTab === "command-center" ? "subscription-payments" : activeTab;
   const [reportMode, setReportMode] = useState<AccountingReportMode>("daily");
   const [date, setDate] = useState(initialDailyParams.date);
   const [month, setMonth] = useState(initialMonthlyParams.month);
@@ -135,19 +141,19 @@ function AccountingPage() {
 
   const dailyQuery = useSubscriptionPaymentDailyReportQuery(
     dailyParams,
-    activeTab === "subscription-payments" && reportMode === "daily"
+    selectedTab === "subscription-payments" && reportMode === "daily"
   );
   const monthlyQuery = useSubscriptionPaymentMonthlyReportQuery(
     monthlyParams,
-    activeTab === "subscription-payments" && reportMode === "monthly"
+    selectedTab === "subscription-payments" && reportMode === "monthly"
   );
   const rangeQuery = useSubscriptionPaymentRangeReportQuery(
     rangeParams,
-    activeTab === "subscription-payments" && reportMode === "range"
+    selectedTab === "subscription-payments" && reportMode === "range"
   );
   const legacyQuery = useAccountingDailyReportQuery(
     legacyParams,
-    activeTab === "legacy-daily"
+    selectedTab === "legacy-daily"
   );
 
   const activeReportQuery =
@@ -192,17 +198,20 @@ function AccountingPage() {
 
   return (
     <div className="space-y-5 px-4 py-5 text-right lg:px-6" dir="rtl">
-      {activeTab !== "marketing-analytics" ? (
+      {selectedTab !== "marketing-analytics" && selectedTab !== "command-center" ? (
         <AccountingHeader range={appliedRange} reportMode={reportMode} />
       ) : null}
 
       <Tabs
-        value={activeTab}
+        value={selectedTab}
         onValueChange={(value) => setActiveTab(value as AccountingTab)}
         className="space-y-5"
         dir="rtl"
       >
-        <TabsList className="grid h-11 w-full grid-cols-3 rounded-xl bg-muted/60 p-1 lg:w-fit lg:min-w-[660px]">
+        <TabsList className={"grid h-auto min-h-11 w-full rounded-xl bg-muted/60 p-1 lg:w-fit " + (showCommandCenter ? "grid-cols-2 gap-1 sm:grid-cols-4 lg:min-w-[840px]" : "grid-cols-3 lg:min-w-[660px]")}>
+          {showCommandCenter && <TabsTrigger value="command-center" className="gap-2">
+            <LayoutDashboardIcon className="size-4" /> مركز القيادة المالية
+          </TabsTrigger>}
           <TabsTrigger value="subscription-payments" className="gap-2">
             <ReceiptTextIcon className="size-4" />
             تحصيل الاشتراكات
@@ -216,6 +225,10 @@ function AccountingPage() {
             التقرير التشغيلي اليومي
           </TabsTrigger>
         </TabsList>
+
+        {showCommandCenter && <TabsContent value="command-center" className="space-y-5">
+          <AccountingCommandCenter />
+        </TabsContent>}
 
         <TabsContent value="subscription-payments" className="space-y-5">
           <SubscriptionPaymentFilters
