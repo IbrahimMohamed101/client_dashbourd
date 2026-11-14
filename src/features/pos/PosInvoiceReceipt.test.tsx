@@ -7,13 +7,15 @@ import type { PosInvoice } from "./financialApi";
 const invoice = {
   _id: "invoice", number: "TST-0001", sequence: 1, publishedRevision: 1,
   channel: "restaurant", serviceMode: "restaurant",
+  actor: { id: "cashier", name: "Test", email: "synthetic@example.test", role: "cashier" },
+  externalOrderNumber: null, appPaymentStatus: null,
   issuedAt: "2026-11-14T00:00:00Z", note: "test",
   lines: [], totals: {
     beforeDiscountHalalas: 500, lineDiscountHalalas: 0,
     invoiceDiscountHalalas: 0, totalDiscountHalalas: 0,
     grossHalalas: 500, netHalalas: 435, vatHalalas: 65,
   }, tender: { method: "network" },
-} as PosInvoice;
+} satisfies PosInvoice;
 
 describe("POS historical receipt service mode compatibility", () => {
   for (const [serviceMode, label] of [
