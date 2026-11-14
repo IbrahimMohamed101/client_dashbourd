@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, Minus, Plus, Search, ShoppingBasket, Pencil, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  channels as defaultChannels,
   formatPreviewAmount,
   previewUnitPrice,
   type Addon,
@@ -238,7 +237,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
 }) {
   // Read business-only draft references once per signed-in operator. No
   // client-side total is ever considered an approved payable amount.
-  const channels = visibleSaleChannels(catalog);
+  const channels = useMemo(() => visibleSaleChannels(catalog), [catalog]);
   const [restored] = useState(() => readPosCartDraft(operatorId, catalog));
   const [channel, setChannel] = useState<Channel>(() => {
     const saved = restored?.channel ?? readLastPosChannel();
@@ -278,7 +277,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
     } else {
       rememberPosChannel(channel);
     }
-  }, [catalog, channel]);
+  }, [channels, channel]);
 
   useEffect(() => {
     if (!undoState) return;
