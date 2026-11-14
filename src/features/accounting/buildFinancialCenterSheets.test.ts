@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildFinancialCenterSheets } from "./buildFinancialCenterSheets";
 import type { SubscriptionPaymentRangeReportData } from "./accountingRangeTypes";
 import type { PosAccountingRange } from "./posAccountingApi";
+import type { OneTimeAccountingRange } from "./oneTimeAccountingApi";
 
 const subscriptions = {
   reportType: "monthly",
@@ -57,24 +58,42 @@ const pos = {
   generatedAt: "2026-11-15T12:00:00Z", notes: [],
 } satisfies PosAccountingRange;
 
+const onlineOrder = { number: "SYN-ONLINE-1", businessDate: "2026-11-15",
+  createdAt: "2026-11-15T10:00:00Z", paymentStatus: "paid" as const,
+  status: "fulfilled", fulfillmentMethod: "pickup", grossHalalas: 1700 };
+const online: OneTimeAccountingRange = {
+  reportType: "one-time-range",
+  range: { from: "2026-11-15", to: "2026-11-15", days: 1,
+    timezone: "Asia/Riyadh", basis: "historical cutoff" },
+  summary: { paidCount: 1, paidGrossHalalas: 1700,
+    refundedStatusCount: 0, refundedStatusGrossHalalas: 0, unpricedPaidCount: 0 },
+  daily: [{ businessDate: "2026-11-15", paidCount: 1, paidGrossHalalas: 1700,
+    refundedStatusCount: 0, refundedStatusGrossHalalas: 0, unpricedPaidCount: 0 }],
+  items: [onlineOrder], pagination: { offset: 0, limit: 100, total: 1, hasMore: false },
+  generatedAt: "2026-11-15T12:00:00Z", notes: [],
+};
 describe("superadmin financial workbook", () => {
   it("keeps external app receivables separate from cashier cash", () => {
-    const sheets = buildFinancialCenterSheets(subscriptions, pos, [invoice], [refund],
+    const sheets = buildFinancialCenterSheets(subscriptions, pos, [invoice], [refund], online, [onlineOrder],
       [{ id: "jahez", label: "جاهز منشور" }]);
-    expect(sheets).toHaveLength(7);
+    expect(sheets).toHaveLength(8);
     const summary = sheets[0].rows;
     expect(summary.find(row => row[0] === "الكاش المباشر")?.[1]).toBe(0);
     expect(summary.find(row => row[0] === "مستحقات تطبيقات التوصيل")?.[1]).toBe(9);
-    expect(summary.find(row => row[0] === "صافي الحركات المالية المسجلة")?.[1]).toBe(1206);
+    expect(summary.find(row => row[0] === "صافي الحركات المالية المسجلة")?.[1]).toBe(1223);
+    expect(summary.find(row => row[0] === "مدفوعات الطلبات الفورية أونلاين")?.[1]).toBe(17);
     expect(sheets[1].rows[0][0]).toBe("جاهز منشور");
     expect(sheets[2].rows[0][6]).toBe("مستحق على التطبيق");
     expect(sheets[3].rows[0][4]).toBe(3);
-    expect(sheets[4].rows[0]).toContain("جديد");
+    expect(sheets[4].rows[0][0]).toBe("SYN-ONLINE-1");
+    expect(sheets[5].rows[0]).toContain("جديد");
   });
   it("rejects a truncated invoice/refund export rather than silently omitting rows", () => {
-    expect(() => buildFinancialCenterSheets(subscriptions, pos, [], [refund]))
+    expect(() => buildFinancialCenterSheets(subscriptions, pos, [invoice], [refund], online, []))
       .toThrow(/غير مكتمل/);
-    expect(() => buildFinancialCenterSheets(subscriptions, pos, [invoice], []))
+    expect(() => buildFinancialCenterSheets(subscriptions, pos, [], [refund], online, [onlineOrder]))
+      .toThrow(/غير مكتمل/);
+    expect(() => buildFinancialCenterSheets(subscriptions, pos, [invoice], [], online, [onlineOrder]))
       .toThrow(/غير مكتمل/);
   });
 });
