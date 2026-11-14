@@ -5,6 +5,9 @@ import {
 } from "@/components/ui/dialog";
 import { formatPreviewAmount } from "./previewCatalog";
 
+const legacyServiceModeNames: Record<string, string> = {
+  "dine-in": "محلي", takeaway: "سفري", delivery: "توصيل",
+};
 const channelNamesAr: Record<string, string> = {
   restaurant: "المطعم", hungerstation: "هنجرستيشن", keeta: "كيتا",
 };
@@ -74,6 +77,9 @@ export function PosTaxDocumentReceipt({ doc, onClose, onRefund }: {
             {credit && <p>الفاتورة الأصلية: <b dir="ltr">{doc.invoiceNumber}</b></p>}
             <p>تاريخ الإصدار: {new Date(issuedAt).toLocaleString("ar-SA-u-nu-latn")}</p>
             {!credit && <p>قناة البيع: {channelNamesAr[doc.channel] ?? doc.channel}</p>}
+            {!credit && legacyServiceModeNames[doc.serviceMode] && (
+              <p>نوع الطلب: {legacyServiceModeNames[doc.serviceMode]}</p>
+            )}
           </div>
           <table className="w-full table-fixed text-xs">
             <thead><tr><th className="w-[42%] text-right">الصنف / الإضافة</th><th>العدد</th><th>الضريبة</th><th>الشامل</th></tr></thead>

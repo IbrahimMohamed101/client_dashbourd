@@ -1,8 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Check, ChevronDown, Minus, Plus, Search, ShoppingBasket, Pencil, Trash2, Undo2, X } from "lucide-react";
+import { Check, Minus, Plus, Search, ShoppingBasket, Pencil, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Dialog,
@@ -24,6 +23,7 @@ import {
   type Variant,
 } from "./previewCatalog";
 import type { PublishedPosCatalog } from "./catalogApi";
+import { channelAccentStyle, visibleSaleChannels, readLastPosChannel, rememberPosChannel } from "./posSaleChannels";
 import { fetchPosQuote, type PosQuote } from "./quoteApi";
 import { validatePosCheckoutReview } from "./checkoutReview";
 import { PosFinancialCheckout } from "./PosFinancialCheckout";
@@ -57,43 +57,7 @@ function defaultVariant(product: Product, channel: Channel): Variant | undefined
 }
 
 
-function ChannelSwitchMenu({
-  channels, selected, onSelect, disabled, compact,
-}: {
-  channels: readonly { id: string; label: string }[];
-  selected: string;
-  onSelect: (channel: string) => void;
-  disabled: boolean;
-  compact: boolean;
-}) {
-  const selectedLabel = channels.find((entry) => entry.id === selected)?.label ?? selected;
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" disabled={disabled}
-          aria-label={compact ? `تغيير قناة البيع: ${selectedLabel}` : "قنوات أخرى"}
-          className="flex min-h-12 max-w-full min-w-0 gap-2 border-2 border-primary px-3 text-sm">
-          <span className="min-w-0 truncate font-semibold" title={selectedLabel}>
-            {selectedLabel}
-          </span>
-          {!compact && <span className="hidden shrink-0 2xl:inline">قنوات أخرى</span>}
-          <ChevronDown aria-hidden="true" className="size-4 shrink-0" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-52 text-right">
-        {channels.map((entry) => (
-          <DropdownMenuItem key={entry.id} className="min-h-12 gap-2"
-            disabled={entry.id === selected} onSelect={() => onSelect(entry.id)}>
-            {entry.id === selected && <Check aria-hidden="true" className="size-4 text-primary" />}
-            {entry.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-type UndoState = { previous: CartLine[]; revision: number; channel: string; expiresAt: number };
+type UndoState = { previous: CartLine[]; revision: number; channel: string; expiresAt: number; kind?: "channel" | "removal" };
 
 function cartTotal(cart: CartLine[], channel: Channel) {
   let total = 0;
@@ -274,8 +238,12 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
 }) {
   // Read business-only draft references once per signed-in operator. No
   // client-side total is ever considered an approved payable amount.
+  const channels = visibleSaleChannels(catalog);
   const [restored] = useState(() => readPosCartDraft(operatorId, catalog));
-  const [channel, setChannel] = useState<Channel>(restored?.channel ?? "restaurant");
+  const [channel, setChannel] = useState<Channel>(() => {
+    const saved = restored?.channel ?? readLastPosChannel();
+    return channels.some((entry) => entry.id === saved) ? saved : "restaurant";
+  });
   const [pendingChannel, setPendingChannel] = useState<Channel | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
   const [search, setSearch] = useState("");
@@ -283,7 +251,6 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [cart, setCart] = useState<CartLine[]>(restored?.lines ?? []);
   const [cartRevision, setCartRevision] = useState(restored?.revision ?? catalog.revision);
-  const [serviceMode, setServiceMode] = useState<"dine-in" | "takeaway" | "delivery">(restored?.serviceMode ?? "takeaway");
   const [undoState, setUndoState] = useState<UndoState | null>(null);
   const [cartNotice, setCartNotice] = useState<string | null>(null);
   const [lastAddedId, setLastAddedId] = useState<string | null>(null);
@@ -301,8 +268,17 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const [issuedInvoice, setIssuedInvoice] = useState<PosInvoice | null>(null);
 
   useEffect(() => {
-    writePosCartDraft(operatorId, { revision: cartRevision, channel, serviceMode, lines: cart });
-  }, [operatorId, cartRevision, channel, serviceMode, cart]);
+    writePosCartDraft(operatorId, { revision: cartRevision, channel, serviceMode: "restaurant", lines: cart });
+  }, [operatorId, cartRevision, channel, cart]);
+
+  useEffect(() => {
+    if (!channels.some((entry) => entry.id === channel)) {
+      setChannel("restaurant");
+      setPendingChannel(null);
+    } else {
+      rememberPosChannel(channel);
+    }
+  }, [catalog, channel]);
 
   useEffect(() => {
     if (!undoState) return;
@@ -312,7 +288,6 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   }, [undoState]);
 
   const { categories, products } = catalog;
-  const channels = catalog.channels ?? defaultChannels;
   const availableAddons = products
     .filter((item) => item.category === "addons")
     .map(({ id, name, variants }) => ({
@@ -323,7 +298,9 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const staleCart = cart.length > 0 && cartRevision !== catalog.revision;
   const itemCount = cart.reduce((count, line) => count + line.quantity, 0);
   const total = cartTotal(cart, channel);
-  const nextTotal = pendingChannel ? cartTotal(cart, pendingChannel) : null;
+  const incompatibleLines = pendingChannel
+    ? cart.filter((line) => previewUnitPrice(line.variant, line.addons, pendingChannel) === null)
+    : [];
   const quoteRequest = {
     revision: catalog.revision,
     channel,
@@ -520,19 +497,39 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
   const searchTerm = search.trim();
   const visibleProducts = products.filter((item) =>
     item.active !== false && (item.category !== "addons" || item.sellStandalone === true)
+    && item.variants.some((variant) => variant.prices[channel] != null)
   ).filter((item) =>
     searchTerm
       ? item.name.includes(searchTerm)
       : category === null || item.category === category
   );
 
+  function commitChannelChange(next: Channel, remaining: CartLine[]) {
+    setUndoState({
+      kind: "channel", previous: cart, revision: cartRevision, channel,
+      expiresAt: Date.now() + 5000,
+    });
+    setCart(remaining);
+    setChannel(next);
+    setPendingChannel(null);
+    setLastAddedId(null);
+    setCartNotice(null);
+    setQuoteReview(null);
+    setQuoteFailure(null);
+    setFinanceReview(null);
+    setFinanceFailure(null);
+  }
+
   function chooseChannel(next: Channel) {
-    if (next === channel || staleCart) return;
-    if (cart.length) setPendingChannel(next);
-    else {
+    if (next === channel || staleCart || !channels.some((entry) => entry.id === next)) return;
+    if (!cart.length) {
       setChannel(next);
       setUndoState(null);
       setCartNotice(null);
+    } else if (cart.some((line) => previewUnitPrice(line.variant, line.addons, next) === null)) {
+      setPendingChannel(next);
+    } else {
+      commitChannelChange(next, cart);
     }
   }
 
@@ -617,12 +614,16 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
 
   function undoRemoval() {
     if (!undoState || Date.now() > undoState.expiresAt
-      || undoState.revision !== cartRevision || undoState.channel !== channel) return;
+      || undoState.revision !== cartRevision
+      || (undoState.kind !== "channel" && undoState.channel !== channel)) return;
+    if (undoState.kind === "channel") setChannel(undoState.channel);
     setCart(undoState.previous);
     setLastAddedId(null);
     setUndoState(null);
     setQuoteReview(null);
     setQuoteFailure(null);
+    setFinanceReview(null);
+    setFinanceFailure(null);
   }
 
   return (
@@ -635,54 +636,6 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         className="flex h-16 max-h-16 min-h-16 shrink-0 items-center gap-2 overflow-hidden border-b bg-card px-2 sm:px-3">
         <SidebarTrigger aria-label="فتح القائمة الجانبية" className="size-12 shrink-0" />
         <img src="/logo.png" alt="بيسك دايت" className="hidden size-10 shrink-0 object-contain sm:block" />
-        <div role="group" aria-label="قناة البيع"
-          className="flex min-w-0 max-w-[40vw] shrink-0 items-center whitespace-nowrap xl:max-w-[30vw]">
-          {channels.length > 3 ? (
-            <ChannelSwitchMenu channels={channels} selected={channel}
-              onSelect={chooseChannel} disabled={staleCart} compact={false} />
-          ) : (
-            <>
-              <div className="min-w-0 xl:hidden">
-                <ChannelSwitchMenu channels={channels} selected={channel}
-                  onSelect={chooseChannel} disabled={staleCart} compact />
-              </div>
-              <div className="hidden min-w-0 items-center gap-2 xl:flex">
-                {channels.map((option) => (
-                  <Button key={option.id} type="button"
-                    variant={channel === option.id ? "secondary" : "outline"}
-                    aria-pressed={channel === option.id}
-                    disabled={staleCart}
-                    className={"min-h-12 shrink-0 border-2 px-3 text-sm " +
-                      (channel === option.id ? "border-primary font-bold" : "border-transparent")}
-                    onClick={() => chooseChannel(option.id)}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-        {channel === "restaurant" && (
-          <div role="group" aria-label="نوع طلب المطعم"
-            className="flex shrink-0 gap-1 rounded-lg border p-0.5">
-            {([
-              ["dine-in", "محلي"],
-              ["takeaway", "سفري"],
-              ["delivery", "توصيل"],
-            ] as const).map(([mode, label]) => (
-              <Button key={mode} type="button"
-                variant={serviceMode === mode ? "secondary" : "ghost"}
-                aria-pressed={serviceMode === mode}
-                className={"min-h-12 shrink-0 px-2 text-sm " +
-                  (serviceMode === mode ? "border border-primary font-semibold" : "")}
-                onClick={() => setServiceMode(mode)}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-        )}
         <div className="relative min-w-24 flex-1">
           <Search aria-hidden="true"
             className="pointer-events-none absolute start-3 top-3.5 size-5 text-muted-foreground" />
@@ -699,6 +652,25 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           title={operatorName}>{operatorName}</span>
         {navigation}
       </header>
+      <div role="group" aria-label="قناة البيع" data-testid="pos-channel-strip"
+        className="flex min-h-14 w-full min-w-0 shrink-0 items-center gap-2 overflow-x-auto overscroll-x-contain touch-pan-x whitespace-nowrap border-b bg-card px-2 py-1">
+        {channels.length === 1 ? (
+          <span className="flex min-h-12 shrink-0 items-center rounded-lg bg-primary px-4 font-bold text-primary-foreground"
+            aria-label="القناة الوحيدة: المطعم">المطعم</span>
+        ) : channels.map((option) => (
+          <Button key={option.id} type="button"
+            variant={channel === option.id ? "default" : "outline"}
+            aria-pressed={channel === option.id}
+            disabled={staleCart}
+            style={channel === option.id ? channelAccentStyle(option.id) : undefined}
+            className={"min-h-12 shrink-0 border-2 px-4 text-sm " +
+              (channel === option.id ? "font-bold" : "border-border")}
+            onClick={() => chooseChannel(option.id)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
       {staleCart && (
         <section role="status" aria-label="مراجعة اختلاف أسعار المنيو"
           className="grid shrink-0 gap-3 rounded-xl border bg-card p-4 text-sm">
@@ -830,7 +802,8 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
               aria-hidden="true"
               className="size-5 text-primary"
             />
-            <h2 className="font-bold">سلة {channels.find((item) => item.id === channel)?.label ?? channel}</h2>
+            <h2 className="rounded-lg bg-primary px-2 py-1 font-bold text-primary-foreground"
+              style={channelAccentStyle(channel)}>سلة {channels.find((item) => item.id === channel)?.label ?? channel}</h2>
             <span
               className="rounded-full bg-muted px-2 text-sm"
               aria-label="عدد الأصناف"
@@ -851,8 +824,11 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
             {undoState && !staleCart && (
               <div role="status" className="mb-2 flex items-center justify-between gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm">
-                <span>تم حذف صنف أو تفريغ السلة. التراجع متاح لمدة 5 ثوانٍ.</span>
-                <Button type="button" variant="outline" aria-label="تراجع عن الحذف"
+                <span>{undoState.kind === "channel"
+                  ? `تم تحويل السلة إلى ${channels.find((entry) => entry.id === channel)?.label ?? channel}. التراجع متاح لمدة 5 ثوانٍ.`
+                  : "تم حذف صنف أو تفريغ السلة. التراجع متاح لمدة 5 ثوانٍ."}</span>
+                <Button type="button" variant="outline"
+                  aria-label={undoState.kind === "channel" ? "تراجع عن تحويل القناة" : "تراجع عن الحذف"}
                   className="min-h-12 shrink-0" onClick={undoRemoval}>
                   <Undo2 aria-hidden="true" /> تراجع
                 </Button>
@@ -1077,7 +1053,6 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
           quote={verifiedFinanceQuote}
           request={financeRequest}
           channelName={channels.find(item => item.id === channel)?.label ?? channel}
-          serviceMode={serviceMode}
           externalOrderNumber={externalOrderNumber}
           externalPaymentStatus={appPaymentStatus}
           operatorId={operatorId}
@@ -1117,42 +1092,35 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         />
       )}
       {pendingChannel && !staleCart && (
-        <Dialog
-          open
-          onOpenChange={(open) => {
-            if (!open) setPendingChannel(null);
-          }}
-        >
+        <Dialog open onOpenChange={(open) => { if (!open) setPendingChannel(null); }}>
           <DialogContent dir="rtl" className="text-right">
             <DialogHeader>
-              <DialogTitle>تغيير قناة البيع</DialogTitle>
+              <DialogTitle>أصناف غير متاحة في القناة الجديدة</DialogTitle>
               <DialogDescription>
-                {nextTotal === null
-                  ? "بعض الأصناف غير مسعّرة في القناة الجديدة. أزلها من السلة قبل التغيير."
-                  : `الإجمالي الحالي ${formatPreviewAmount(total ?? 0)}، والجديد ${formatPreviewAmount(nextTotal)}.`}
+                الأصناف التالية غير مسعّرة في {channels.find((entry) => entry.id === pendingChannel)?.label ?? pendingChannel}.
+                لن نحذف أي صنف إلا بعد تأكيدك.
               </DialogDescription>
             </DialogHeader>
+            <ul className="max-h-52 list-disc space-y-2 overflow-y-auto pe-5 text-sm">
+              {incompatibleLines.map((line) => (
+                <li key={line.id}>
+                  {line.product.name} — {line.variant.label}
+                  {line.addons.length ? ` (${line.addons.map((addon) => addon.name).join("، ")})` : ""}
+                </li>
+              ))}
+            </ul>
             <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-12"
-                onClick={() => setPendingChannel(null)}
-              >
-                إلغاء
+              <Button type="button" variant="outline" className="min-h-12"
+                onClick={() => setPendingChannel(null)}>
+                ارجع إلى {channels.find((entry) => entry.id === channel)?.label ?? channel}
               </Button>
-              <Button
-                type="button"
-                className="min-h-12"
-                disabled={nextTotal === null}
+              <Button type="button" className="min-h-12"
                 onClick={() => {
-                  if (!pendingChannel || nextTotal === null) return;
-                  setChannel(pendingChannel);
-                  setPendingChannel(null);
-                  setUndoState(null);
-                }}
-              >
-                تأكيد تغيير القناة
+                  if (!pendingChannel) return;
+                  commitChannelChange(pendingChannel, cart.filter((line) =>
+                    previewUnitPrice(line.variant, line.addons, pendingChannel) !== null));
+                }}>
+                احذف الأصناف غير المتاحة وكمّل
               </Button>
             </DialogFooter>
           </DialogContent>
