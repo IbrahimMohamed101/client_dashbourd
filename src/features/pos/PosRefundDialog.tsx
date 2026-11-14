@@ -9,14 +9,11 @@ import {
 import { parseApiError } from "@/lib/apiErrors";
 import { formatPreviewAmount } from "./previewCatalog";
 import { estimateRefundGrossHalalas } from "./posRefundEstimate";
+import { refundDefaultMethod } from "./posRefundMethods";
 import {
   listPosRefunds, recordPosRefund, getPosRefund, getPosOperation, getActivePosOperation, abandonPosOperation,
   type PosInvoice, type PosRefund, type PosRefundRequest,
 } from "./financialApi";
-
-export function refundDefaultMethod(method: PosInvoice["tender"]["method"]): "cash" | "network" | "external" {
-  return method === "cash" ? "cash" : method === "network" ? "network" : "external";
-}
 
 export function PosRefundDialog({ invoice, operatorId, onClose, onRecorded }: {
   invoice: PosInvoice;
