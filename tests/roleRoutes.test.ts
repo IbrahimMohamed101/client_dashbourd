@@ -86,6 +86,8 @@ test("roleRoutes.test", () => {
     "/subscriptions",
     "/manual-deduction",
     "/users",
+    "/customer-management",
+    "/retention-reports",
     "/addons",
     "/delivery",
     "/menu",
@@ -112,7 +114,13 @@ test("roleRoutes.test", () => {
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/customer-management"), true);
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/retention-reports"), true);
   assert.equal(canRoleAccessRoute(UserRoles.ADMIN, "/retention-reports"), false);
-  assert.equal(canRoleAccessRoute(UserRoles.CASHIER, "/retention-reports"), false);
+  for (const route of ["/customer-management", "/retention-reports"]) {
+    assert.equal(canRoleAccessRoute(UserRoles.RESTAURANT, route), true);
+    assert.equal(canRoleAccessRoute(UserRoles.CASHIER, route), true);
+    assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, route), false);
+    assert.equal(canRoleAccessRoute(UserRoles.COURIER, route), false);
+    assert.equal(canRoleAccessRoute(undefined, route), false);
+  }
   assert.equal(canRoleAccessRoute(UserRoles.SUPERADMIN, "/one-time-orders"), true);
   assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/operations"), true);
   assert.equal(canRoleAccessRoute(UserRoles.KITCHEN, "/one-time-orders"), true);

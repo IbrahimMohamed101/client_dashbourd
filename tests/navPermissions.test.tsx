@@ -37,6 +37,8 @@ test("navPermissions.test", () => {
     "/premium-meals",
     "/delivery",
     "/users",
+    "/customer-management",
+    "/retention-reports",
   ]);
   assert.equal(restaurantUrls.includes("/landing-leads"), true);
   assert.equal(restaurantUrls.includes("/dashboard"), false);
