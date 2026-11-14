@@ -28,6 +28,7 @@ describe("POS Stage E preview-only checkout review", () => {
       externalOrderNumber="" externalPaymentStatus="paid" onClose={close} />);
     const dialog = within(screen.getByRole("dialog", { name: /مراجعة الطلب قبل إصدار الفاتورة/ }));
     expect(dialog.getAllByText(/74\.00/)).toHaveLength(2);
+    expect(dialog.getByText(/نوع الطلب:.*سفري/)).toBeInTheDocument();
     expect(dialog.getByText(/زيادة دجاج/)).toBeInTheDocument();
     expect(dialog.getAllByText("غير محسوبة")).toHaveLength(2);
     expect(dialog.getByRole("button", { name: /تأكيد البيع وإصدار الفاتورة/ })).toBeDisabled();
@@ -41,6 +42,12 @@ describe("POS Stage E preview-only checkout review", () => {
     expect(dialog.getByText(/لا يتم تحصيل نقد/)).toBeInTheDocument();
     await user.click(dialog.getByRole("button", { name: "رجوع للسلة" }));
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("hides the current restaurant service mode in order review", () => {
+    render(<PosCheckoutReview quote={quote} channelName="المطعم" serviceMode="restaurant"
+      externalOrderNumber="" externalPaymentStatus="paid" onClose={() => undefined} />);
+    expect(screen.queryByText(/نوع الطلب/)).not.toBeInTheDocument();
   });
 
   it("shows external app status without claiming it was paid or adding cash to drawer", () => {

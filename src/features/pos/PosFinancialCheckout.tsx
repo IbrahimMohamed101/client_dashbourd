@@ -201,7 +201,7 @@ export function PosFinancialCheckout({
             فاتورة تجريبية — غير ضريبية — لا يوجد ربط بجهاز دفع أو Moyasar أو ZATCA.
           </p>
           <div className="flex flex-wrap justify-between gap-2">
-            <span>القناة: <b className="rounded px-2 py-1 text-white"
+            <span>القناة: <b className="rounded bg-primary px-2 py-1 text-primary-foreground"
               style={request.channel === "restaurant" ? undefined : channelAccentStyle(request.channel)}>
               {channelName}</b></span>
             <span>عدد السطور: {quote.lines.length}</span>
