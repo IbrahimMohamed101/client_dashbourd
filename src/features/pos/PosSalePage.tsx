@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { fetchPosCatalog, posCatalogKey } from "./catalogApi";
 import { PosOperationsShell } from "./PosOperationsShell";
 
-export function PosSalePage() {
+export function PosSalePage({ documentType }: { documentType?: string }) {
   const query = useQuery({
     queryKey: posCatalogKey,
     queryFn: fetchPosCatalog,
     refetchOnWindowFocus: "always",
   });
-  if (query.data) return <PosOperationsShell catalog={query.data} />;
+  if (query.data) return <PosOperationsShell catalog={query.data} documentType={documentType} />;
   return (
     <section
       dir="rtl"
