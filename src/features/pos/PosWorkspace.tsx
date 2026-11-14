@@ -373,7 +373,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         }).finally(() => { if (active) setFinanceLoading(false); });
     }, 300);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [financeKey, staleCart, invalidDiscount, cart.length]);
+  }, [financeKey, staleCart, invalidDiscount, cart.length, isTaxInvoice]);
   // App-channel price previews should update as soon as the cashier changes
   // the cart/channel. Requests are keyed to the exact snapshot: a late reply
   // cannot overwrite the current basket's price, and server money remains
@@ -410,7 +410,7 @@ export function PosWorkspace({ catalog, operatorName = "موظف", navigation, o
         .finally(() => { if (active) setQuoteLoading(false); });
     }, 300);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [channel, quoteKey, staleCart, cart.length, total]);
+  }, [channel, quoteKey, staleCart, cart.length, total, isTaxInvoice]);
   // An earlier open dialog may not silently reappear after a re-quote.
   useEffect(() => {
     if (!verifiedFinanceQuote) setCheckoutOpen(false);
