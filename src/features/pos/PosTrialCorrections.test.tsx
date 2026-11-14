@@ -2,7 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PosRefundDialog, refundDefaultMethod } from "./PosRefundDialog";
+import { PosRefundDialog } from "./PosRefundDialog";
+import { refundDefaultMethod } from "./posRefundMethods";
 import { PosInvoiceHistory } from "./PosInvoiceHistory";
 import { listPosRefunds, listPosSales, type PosInvoice } from "./financialApi";
 import type { PublishedPosCatalog } from "./catalogApi";
