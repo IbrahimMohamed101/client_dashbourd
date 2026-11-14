@@ -17,12 +17,13 @@ import {
 } from "./financialApi";
 
 export function PosFinancialCheckout({
-  quote, request, channelName,
+  quote, request, channelName, documentType,
   externalOrderNumber, externalPaymentStatus, operatorId, onClose, onSale,
 }: {
   quote: PosFinanceQuote;
   request: PosFinanceQuoteRequest;
   channelName: string;
+  documentType?: string;
   externalOrderNumber: string;
   externalPaymentStatus: "paid" | "cash";
   operatorId?: string | null;
@@ -40,6 +41,7 @@ export function PosFinancialCheckout({
   const [failed, setFailed] = useState<string | null>(null);
   const attempt = useRef<{ signature: string; key: string } | null>(null);
   const restaurant = request.channel === "restaurant";
+  const isTaxInvoice = documentType === "SIMPLIFIED_TAX_INVOICE";
   const received = parseHalalas(receivedText);
   const allowedCash = received !== null && received >= quote.totals.grossHalalas;
   const allowed = !busy && (!restaurant || method === "network" || allowedCash);
@@ -190,15 +192,15 @@ export function PosFinancialCheckout({
     <Dialog open onOpenChange={open => { if (!open && !busy) void handleBack(); }}>
       <DialogContent dir="rtl" className="flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl flex-col overflow-hidden text-right">
         <DialogHeader className="shrink-0">
-          <DialogTitle>مراجعة الطلب وتأكيد الفاتورة التجريبية</DialogTitle>
+          <DialogTitle>{isTaxInvoice ? "مراجعة الطلب وإصدار الفاتورة" : "مراجعة الطلب وتأكيد الفاتورة التجريبية"}</DialogTitle>
           <DialogDescription>
-            الأسعار الشاملة والضريبة والخصومات من سيرفر Staging، نسخة المنيو {quote.revision}.
+            {isTaxInvoice ? `الأسعار والضريبة والخصومات من السيرفر، نسخة المنيو ${quote.revision}.` : `الأسعار الشاملة والضريبة والخصومات من سيرفر Staging، نسخة المنيو ${quote.revision}.`}
           </DialogDescription>
         </DialogHeader>
-        <section aria-label="مراجعة الفاتورة النهائية التجريبية"
+        <section aria-label={isTaxInvoice ? "مراجعة الفاتورة النهائية" : "مراجعة الفاتورة النهائية التجريبية"}
           className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain text-sm">
           <p role="status" className="rounded-lg border bg-muted/50 p-3 font-bold">
-            فاتورة تجريبية — غير ضريبية — لا يوجد ربط بجهاز دفع أو Moyasar أو ZATCA.
+            {isTaxInvoice ? "فاتورة ضريبية مبسطة — يتم إصدارها برقم تسلسلي ورمز QR" : "فاتورة تجريبية — غير ضريبية — لا يوجد ربط بجهاز دفع أو Moyasar أو ZATCA."}
           </p>
           <div className="flex flex-wrap justify-between gap-2">
             <span>القناة: <b className="rounded bg-primary px-2 py-1 text-primary-foreground"
@@ -243,7 +245,7 @@ export function PosFinancialCheckout({
           </dl>
           {restaurant ? (
             <fieldset className="rounded-lg border p-3">
-              <legend className="px-1 font-semibold">وسيلة الدفع (تسجيل Staging فقط)</legend>
+              <legend className="px-1 font-semibold">{isTaxInvoice ? "وسيلة الدفع" : "وسيلة الدفع (تسجيل Staging فقط)"}</legend>
               <div className="mt-2 flex gap-2">
                 {([["cash", "كاش"], ["network", "شبكة"]] as const).map(([id, label]) => (
                   <Button key={id} type="button" variant={method === id ? "secondary" : "outline"}
@@ -289,7 +291,7 @@ export function PosFinancialCheckout({
           {!menuConflict && <Button type="button" className="min-h-14"
             disabled={!allowed} onClick={() => void confirm()}>
             {busy ? "جار حفظ الفاتورة..." : locked
-              ? "إعادة المحاولة" : "تأكيد البيع وإصدار الفاتورة التجريبية"}
+              ? "إعادة المحاولة" : isTaxInvoice ? "تأكيد البيع وإصدار الفاتورة" : "تأكيد البيع وإصدار الفاتورة التجريبية"}
           </Button>}
         </DialogFooter>
       </DialogContent>
