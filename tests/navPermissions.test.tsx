@@ -16,20 +16,17 @@ test("navPermissions.test", () => {
     "cashier"
   ).map((item) => item.url);
 
-  assert.deepEqual(cashierUrls, [
-    "/daily-closing",
-    "/operations",
-    "/manual-deduction",
-    "/users",
-  ]);
+  assert.deepEqual(cashierUrls, navMainUrlsForRole("restaurant"));
 
   assert.equal(cashierUrls.includes("/payments"), false);
-  assert.equal(cashierUrls.includes("/subscriptions"), false);
-  assert.equal(cashierUrls.includes("/menu"), false);
+  assert.equal(cashierUrls.includes("/subscriptions"), true);
+  assert.equal(cashierUrls.includes("/menu"), true);
   assert.equal(cashierUrls.includes("/packages"), false);
 
   const restaurantUrls = navMainUrlsForRole("restaurant");
   assert.deepEqual(restaurantUrls, [
+    "/pos",
+    "/pos/menu",
     "/daily-closing",
     "/landing-leads",
     "/addons",
@@ -69,6 +66,8 @@ test("navPermissions.test", () => {
 
   assert.deepEqual(navMainUrlsForRole("admin"), [
     "/dashboard",
+    "/pos",
+    "/pos/menu",
     "/payments",
     "/daily-closing",
     "/accounting",

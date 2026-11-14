@@ -123,9 +123,19 @@ describe("menu Meal Builder auth gate", () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
-  it("redirects unauthorized users after auth resolves without mounting Meal Builder", async () => {
+  it("cashier inherits restaurant Meal Builder access after D-091", async () => {
     useAuthMock.mockReturnValue({
       user: { role: UserRoles.CASHIER },
+      isLoading: false,
+    });
+    render(<MenuPage />);
+    expect(await screen.findByTestId("meal-builder-page")).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects unauthorized kitchen users after auth resolves without mounting Meal Builder", async () => {
+    useAuthMock.mockReturnValue({
+      user: { role: UserRoles.KITCHEN },
       isLoading: false,
     });
 
@@ -138,10 +148,10 @@ describe("menu Meal Builder auth gate", () => {
     );
   });
 
-  it("preserves other menu tabs for unauthorized users", async () => {
+  it("preserves other menu tabs for non-Meal Builder users", async () => {
     routeSearch.tab = "catalog";
     useAuthMock.mockReturnValue({
-      user: { role: UserRoles.CASHIER },
+      user: { role: UserRoles.KITCHEN },
       isLoading: false,
     });
 
