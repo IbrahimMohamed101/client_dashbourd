@@ -215,7 +215,7 @@ export interface SubscriptionStackingReadModel {
   parentSubscriptionId: string;
   parentRole: string;
   manualDeductionAllowed: boolean;
-  aggregateBalance: SubscriptionAggregateBalance;
+  aggregateBalance: SubscriptionAggregateBalance | null;
   packages: SubscriptionPurchase[];
   transactions: SubscriptionPurchasePayment[];
 }
