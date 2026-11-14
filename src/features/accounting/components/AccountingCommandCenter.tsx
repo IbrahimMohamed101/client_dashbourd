@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity, AlertTriangle, ArrowDownToLine, CalendarDays, CreditCard,
-  FileSpreadsheet, Layers, RefreshCcw, ReceiptText, ShieldCheck, Wallet,
+  FileSpreadsheet, Layers, RefreshCcw, ReceiptText, ShieldCheck, Wallet, ShoppingCart,
 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer,
   Tooltip, XAxis, YAxis } from "recharts";
@@ -26,6 +26,7 @@ import {
   type PosAccountingRefund,
 } from "../posAccountingApi";
 import { buildFinancialCenterSheets } from "../buildFinancialCenterSheets";
+import { fetchOneTimeAccountingRange, type OneTimeAccountingOrder } from "../oneTimeAccountingApi";
 import { createAccountingXlsx, downloadAccountingXlsx } from "../accountingXlsx";
 
 const money = (value: number | undefined | null) =>
@@ -55,6 +56,13 @@ export function AccountingCommandCenter() {
     staleTime: 30_000,
     retry: false,
   });
+  const onlineQuery = useQuery({
+    queryKey: ["accounting", "command-center", "one-time", range.from, range.to],
+    queryFn: () => fetchOneTimeAccountingRange({ ...range, limit: 100, offset: 0 }),
+    enabled: isSuperadmin,
+    staleTime: 30_000,
+    retry: false,
+  });
   const subscriptionQuery = useQuery({
     queryKey: ["accounting", "command-center", "subscriptions", range.from, range.to],
     queryFn: () => fetchSubscriptionPaymentRangeReport({
@@ -73,32 +81,40 @@ export function AccountingCommandCenter() {
   });
 
   const pos = posQuery.data;
+  const online = onlineQuery.data;
   const subscriptions = subscriptionQuery.data?.data;
   const subscriptionNet = subscriptions?.summary?.netCollectionHalala;
-  const complete = Boolean(pos && subscriptions && Array.isArray(subscriptions.items) &&
-    typeof subscriptionNet === "number" && !posQuery.isFetching && !subscriptionQuery.isFetching);
+  const complete = Boolean(pos && online && subscriptions && Array.isArray(subscriptions.items) &&
+    typeof subscriptionNet === "number" && !posQuery.isFetching && !onlineQuery.isFetching &&
+    !subscriptionQuery.isFetching);
   const channels = catalogQuery.data?.channels;
-  const combinedNet = complete ? subscriptionNet! + pos!.summary.netAfterRefundDocumentsHalalas : null;
+  const combinedNet = complete ? subscriptionNet! + pos!.summary.netAfterRefundDocumentsHalalas +
+    online!.summary.paidGrossHalalas : null;
   const channelRows = useMemo(() => {
     if (!pos) return [];
     return pos.channels.filter(item => channelFilter === "all" || item.channel === channelFilter);
   }, [pos, channelFilter]);
   const dailyChart = useMemo(() => {
     if (!pos) return [];
-    const dates = new Map<string, { date: string; pos: number; subscriptions: number }>();
+    const dates = new Map<string, { date: string; pos: number; subscriptions: number; online: number }>();
     for (const day of pos.daily) {
       dates.set(day.businessDate, {
-        date: day.businessDate, pos: day.netAfterRefundDocumentsHalalas / 100, subscriptions: 0,
+        date: day.businessDate, pos: day.netAfterRefundDocumentsHalalas / 100, subscriptions: 0, online: 0,
       });
     }
     for (const day of subscriptions?.dailyBreakdown ?? []) {
       if (!day.businessDate) continue;
-      const item = dates.get(day.businessDate) ?? { date: day.businessDate, pos: 0, subscriptions: 0 };
+      const item = dates.get(day.businessDate) ?? { date: day.businessDate, pos: 0, subscriptions: 0, online: 0 };
       item.subscriptions = (day.netCollectionHalala ?? 0) / 100;
       dates.set(day.businessDate, item);
     }
+    for (const day of online?.daily ?? []) {
+      const item = dates.get(day.businessDate) ?? { date: day.businessDate, pos: 0, subscriptions: 0, online: 0 };
+      item.online = day.paidGrossHalalas / 100;
+      dates.set(day.businessDate, item);
+    }
     return [...dates.values()].sort((a, b) => a.date.localeCompare(b.date));
-  }, [pos, subscriptions]);
+  }, [pos, subscriptions, online]);
 
   function choosePreset(next: AccountingRangePresetId) {
     const updated = resolveAccountingRangePreset(next, getTodayKSADate());
@@ -110,17 +126,19 @@ export function AccountingCommandCenter() {
     setRange({ ...draft }); setChannelFilter("all"); setExportError(null);
   }
   async function exportFullExcel() {
-    if (!pos || !subscriptions || !complete || exporting) return;
+    if (!pos || !online || !subscriptions || !complete || exporting) return;
     setExporting(true);
     setExportError(null);
     try {
-      const maxItems = Math.max(pos.pagination.invoicesTotal, pos.pagination.refundsTotal);
+      const maxItems = Math.max(pos.pagination.invoicesTotal, pos.pagination.refundsTotal,
+        online.pagination.total);
       // Never generate an apparently complete workbook from truncated records.
       if (maxItems > 10_000) {
         throw new Error("عدد الحركات يتجاوز حد التصدير الآمن (10,000 لكل نوع). استخدم نطاقًا أقصر.");
       }
       const invoices: PosAccountingInvoice[] = [...pos.invoices];
       const refunds: PosAccountingRefund[] = [...pos.refunds];
+      const onlineOrders: OneTimeAccountingOrder[] = [...online.items];
       for (let offset = pos.pagination.limit; offset < maxItems; offset += 250) {
         const page = await fetchPosAccountingRange({ ...range, offset, limit: 250 });
         if (page.pagination.invoicesTotal !== pos.pagination.invoicesTotal ||
@@ -132,7 +150,17 @@ export function AccountingCommandCenter() {
         invoices.push(...page.invoices);
         refunds.push(...page.refunds);
       }
-      const sheets = buildFinancialCenterSheets(subscriptions, pos, invoices, refunds, channels);
+      for (let offset = online.pagination.limit; offset < online.pagination.total; offset += 250) {
+        const page = await fetchOneTimeAccountingRange({ ...range, offset, limit: 250 });
+        if (page.pagination.total !== online.pagination.total ||
+            page.summary.paidGrossHalalas !== online.summary.paidGrossHalalas ||
+            page.summary.refundedStatusGrossHalalas !== online.summary.refundedStatusGrossHalalas) {
+          throw new Error("تغيّرت الطلبات الفورية أثناء التصدير؛ حدّث التقرير ثم حاول مجددًا.");
+        }
+        onlineOrders.push(...page.items);
+      }
+      const sheets = buildFinancialCenterSheets(subscriptions, pos, invoices, refunds,
+        online, onlineOrders, channels);
       downloadAccountingXlsx(
         createAccountingXlsx(sheets),
         `BasicDiet-Financial-Center-${range.from}-${range.to}.xlsx`,
