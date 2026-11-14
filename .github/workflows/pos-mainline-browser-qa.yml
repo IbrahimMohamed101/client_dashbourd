@@ -35,6 +35,8 @@ jobs:
             script: scripts/pos-ux-a-browser-qa.mjs
           - suite: channel-ux
             script: scripts/pos-channel-ux-browser-qa.mjs
+          - suite: production-trial
+            script: scripts/pos-production-trial-browser-qa.mjs
     env:
       VITE_POS_PREVIEW: "true"
       VITE_BACKEND_URL: ""
