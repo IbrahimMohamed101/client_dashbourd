@@ -28,6 +28,14 @@ describe("POS preview workspace", () => {
     window.localStorage.clear();
     window.sessionStorage.clear();
   });
+  it("shows operational labels only for simplified-tax-invoice runtime status", () => {
+    render(<PosWorkspace catalog={catalog} documentType="SIMPLIFIED_TAX_INVOICE" />);
+    expect(screen.getByRole("region", { name: "كتالوج نقطة البيع" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "سلة نقطة البيع" })).toBeInTheDocument();
+    expect(screen.getByText("اختر صنفًا لإضافته إلى السلة.")).toBeInTheDocument();
+    expect(screen.queryByText(/تجريبية|Staging/)).not.toBeInTheDocument();
+  });
+
   it("opens on categories and reprices a fully priced cart immediately with undo", async () => {
     const user = userEvent.setup();
     render(<PosWorkspace catalog={catalog} />);

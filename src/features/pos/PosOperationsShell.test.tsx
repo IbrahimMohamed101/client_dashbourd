@@ -4,7 +4,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PosOperationsShell } from "./PosOperationsShell";
-import { categories, previewProducts } from "./previewCatalog";
+import { categories, previewProducts, channels } from "./previewCatalog";
 
 // This shell test does not mount a real TanStack Router. Use an anchor for
 // its navigation link while route-authorization tests verify the true router.
@@ -44,6 +44,7 @@ vi.mock("@/hooks/useAuth", () => ({
 
 const catalog = {
   revision: 3,
+  channels: [...channels],
   categories: [...categories],
   products: previewProducts,
 };

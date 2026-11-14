@@ -33,3 +33,17 @@ describe("POS historical receipt service mode compatibility", () => {
     cleanup();
   });
 });
+
+describe("POS receipt channel labels", () => {
+  it("translates Jahez when no published catalog entry exists", () => {
+    render(<PosInvoiceReceipt invoice={{ ...invoice, channel: "jahez" }} onClose={() => undefined} />);
+    expect(screen.getByText("قناة البيع: جاهز")).toBeInTheDocument();
+    cleanup();
+  });
+  it("uses a published custom label over fallback on historical receipts", () => {
+    render(<PosInvoiceReceipt invoice={{ ...invoice, channel: "jahez" }}
+      channels={[{ id: "jahez", label: "جاهز - جدة" }]} onClose={() => undefined} />);
+    expect(screen.getByText("قناة البيع: جاهز - جدة")).toBeInTheDocument();
+    cleanup();
+  });
+});

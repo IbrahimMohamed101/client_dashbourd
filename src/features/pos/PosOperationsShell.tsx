@@ -91,9 +91,10 @@ function EmptyData({ heading, detail }: { heading: string; detail: string }) {
   );
 }
 
-function OverviewView({ catalog, onSale }: {
+function OverviewView({ catalog, onSale, isTaxInvoice }: {
   catalog: PublishedPosCatalog;
   onSale: () => void;
+  isTaxInvoice: boolean;
 }) {
   const active = catalog.products.filter((item) => item.active).length;
   const channels = catalog.channels ?? defaultChannels;
@@ -101,7 +102,7 @@ function OverviewView({ catalog, onSale }: {
     <section aria-labelledby="pos-overview-title" className="space-y-5">
       <PageHeader
         title="ملخص نقطة البيع"
-        description="الأصناف المنشورة بيانات فعلية من منيو الكاشير المستقل. بيانات المبيعات لا تظهر قبل ربطها بالسيرفر."
+        description={isTaxInvoice ? "الأصناف المنشورة من منيو الكاشير؛ المبيعات المسجلة تجدها في الطلبات والفواتير." : "الأصناف المنشورة بيانات فعلية من منيو الكاشير المستقل. بيانات المبيعات لا تظهر قبل ربطها بالسيرفر."}
         action={<Button onClick={onSale} className="min-h-11">ابدأ طلبًا جديدًا</Button>}
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -111,7 +112,7 @@ function OverviewView({ catalog, onSale }: {
         <Metric label="مبيعات اليوم" value="—" hint="يتطلب API مبيعات موثقًا" />
       </div>
       <PreviewNotice>
-        لا توجد معاملات مالية معروضة في هذا الإصدار. لا يتم حساب صافي المبيعات أو النقدية أو الضريبة من بيانات افتراضية.
+        {isTaxInvoice ? "هذه الصفحة لا تعرض إحصاءات مالية؛ راجع قائمة الفواتير للمعاملات المسجلة. لا تُحتسب الضريبة من بيانات افتراضية." : "لا توجد معاملات مالية معروضة في هذا الإصدار. لا يتم حساب صافي المبيعات أو النقدية أو الضريبة من بيانات افتراضية."}
       </PreviewNotice>
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-xl border bg-card p-4">
@@ -127,15 +128,15 @@ function OverviewView({ catalog, onSale }: {
         </section>
         <section className="rounded-xl border bg-card p-4">
           <h3 className="mb-4 font-bold">آخر النشاطات</h3>
-          <EmptyData heading="لم تُحمّل نشاطات الكاشير" detail="سيظهر هنا سجل العمليات الفعلي بعد توفير واجهة القراءة من Staging." />
+          <EmptyData heading="لم تُحمّل نشاطات الكاشير" detail={isTaxInvoice ? "سجل الفواتير الفعلي متاح في الطلبات والفواتير؛ هذه البطاقة لا تعرض نشاطًا بعد." : "سيظهر هنا سجل العمليات الفعلي بعد توفير واجهة القراءة من Staging."} />
         </section>
       </div>
     </section>
   );
 }
 
-function OrdersView({ onSale }: { onSale: () => void; catalog: PublishedPosCatalog }) {
-  return <PosInvoiceHistory onSale={onSale} />;
+function OrdersView({ onSale, catalog }: { onSale: () => void; catalog: PublishedPosCatalog }) {
+  return <PosInvoiceHistory onSale={onSale} catalog={catalog} />;
 }
 
 function SubscriptionView({ role }: { role: string | undefined }) {
@@ -186,7 +187,7 @@ function SubscriptionView({ role }: { role: string | undefined }) {
   );
 }
 
-function ClosingView() {
+function ClosingView({ isTaxInvoice }: { isTaxInvoice: boolean }) {
   // G3 uses the current dashboard closing page and its existing
   // draft → submit → approve API; never maintain two cashier closing forms.
   return (
@@ -195,8 +196,7 @@ function ClosingView() {
         description="افتح تقفيلة الكاشير الأصلية لمطابقة مبيعات المطعم والتطبيقات والاشتراكات مع السيرفر." />
       <div className="rounded-xl border bg-card p-5">
         <p className="mb-4 text-sm text-muted-foreground">
-          صفحة التقفيلة الأصلية تحتفظ بنفس الصلاحيات والخطوات، ويضيف السيرفر لقطة
-          المتوقع والفرق عند الإرسال على Staging. لا تُدخل تقفيلة تجريبية ثانية هنا.
+          {isTaxInvoice ? "التقفيلة الأصلية تحتفظ بنفس الصلاحيات والخطوات، ويحسب السيرفر المتوقع والفرق عند الإرسال." : "صفحة التقفيلة الأصلية تحتفظ بنفس الصلاحيات والخطوات، ويضيف السيرفر لقطة المتوقع والفرق عند الإرسال على Staging. لا تُدخل تقفيلة تجريبية ثانية هنا."}
         </p>
         <Button asChild className="min-h-12">
           <Link to="/daily-closing">فتح تقفيلة اليوم الحالية</Link>
@@ -229,7 +229,8 @@ function SettingsView() {
   );
 }
 
-export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }) {
+export function PosOperationsShell({ catalog, documentType }: { catalog: PublishedPosCatalog; documentType?: string }) {
+  const isTaxInvoice = documentType === "SIMPLIFIED_TAX_INVOICE";
   const [view, setView] = useState<View>("sale");
   const { user } = useAuth();
   const canEditPosMenu = canManageMenuData(user?.role);
@@ -292,15 +293,16 @@ export function PosOperationsShell({ catalog }: { catalog: PublishedPosCatalog }
         <PosWorkspace
           key={user?.id ?? "anonymous-preview"}
           catalog={catalog}
+          documentType={documentType}
           operatorId={user?.id}
           operatorName={user?.name?.trim() || user?.email?.split("@")[0] || "موظف"}
           navigation={navigationMenu}
         />
       )}
-      {view === "overview" && <OverviewView catalog={catalog} onSale={() => setView("sale")} />}
+      {view === "overview" && <OverviewView catalog={catalog} isTaxInvoice={isTaxInvoice} onSale={() => setView("sale")} />}
       {view === "orders" && <OrdersView catalog={catalog} onSale={() => setView("sale")} />}
       {view === "subscriptions" && <SubscriptionView role={user?.role} />}
-      {view === "closing" && <ClosingView />}
+      {view === "closing" && <ClosingView isTaxInvoice={isTaxInvoice} />}
       {view === "settings" && <SettingsView />}
     </div>
   );

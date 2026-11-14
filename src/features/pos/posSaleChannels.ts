@@ -45,3 +45,12 @@ export function rememberPosChannel(channelId: string) {
     // Storage can be blocked; channel selection still works for this sale.
   }
 }
+
+// Use the published catalog's label; fallbacks support archived invoices.
+export const POS_CHANNEL_FALLBACK_LABELS: Record<string, string> = {
+  restaurant: "المطعم", hungerstation: "هنجرستيشن", keeta: "كيتا", jahez: "جاهز",
+};
+export function posChannelLabel(channelId: string, channels?: readonly { id: string; label: string }[]): string {
+  const published = channels?.find((entry) => entry.id === channelId)?.label?.trim();
+  return published || POS_CHANNEL_FALLBACK_LABELS[channelId] || channelId;
+}

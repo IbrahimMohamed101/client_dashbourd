@@ -9,6 +9,7 @@ import {
 import { parseApiError } from "@/lib/apiErrors";
 import { formatPreviewAmount } from "./previewCatalog";
 import { estimateRefundGrossHalalas } from "./posRefundEstimate";
+import { refundDefaultMethod } from "./posRefundMethods";
 import {
   listPosRefunds, recordPosRefund, getPosRefund, getPosOperation, getActivePosOperation, abandonPosOperation,
   type PosInvoice, type PosRefund, type PosRefundRequest,
@@ -24,7 +25,7 @@ export function PosRefundDialog({ invoice, operatorId, onClose, onRecorded }: {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
   const [reason, setReason] = useState("");
-  const [method, setMethod] = useState<"cash" | "network" | "external">("external");
+  const [method, setMethod] = useState<"cash" | "network" | "external">(() => refundDefaultMethod(invoice.tender.method));
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);

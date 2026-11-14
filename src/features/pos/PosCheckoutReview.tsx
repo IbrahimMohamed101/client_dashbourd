@@ -9,25 +9,27 @@ import { channelAccentStyle } from "./posSaleChannels";
 import type { PosQuote } from "./quoteApi";
 
 export function PosCheckoutReview({
-  quote, channelName, serviceMode, externalOrderNumber, externalPaymentStatus, onClose,
+  quote, channelName, serviceMode, externalOrderNumber, externalPaymentStatus, onClose, documentType,
 }: {
   quote: PosQuote;
   channelName: string;
   serviceMode?: "restaurant" | "dine-in" | "takeaway" | "delivery";
+  documentType?: string;
   externalOrderNumber: string;
   externalPaymentStatus: "paid" | "cash";
   onClose: () => void;
 }) {
   const [restaurantTender, setRestaurantTender] = useState<"cash" | "network">("cash");
   const restaurant = quote.channel === "restaurant";
+  const isTaxInvoice = documentType === "SIMPLIFIED_TAX_INVOICE";
   const serviceNames = { "dine-in": "محلي", takeaway: "سفري", delivery: "توصيل" };
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent dir="rtl" className="flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-2xl flex-col overflow-hidden text-right">
         <DialogHeader className="shrink-0">
-          <DialogTitle>مراجعة الطلب قبل إصدار الفاتورة — معاينة</DialogTitle>
+          <DialogTitle>{isTaxInvoice ? "معاينة أسعار الطلب" : "مراجعة الطلب قبل إصدار الفاتورة — معاينة"}</DialogTitle>
           <DialogDescription>
-            تسعير من السيرفر للمنيو المنشور رقم {quote.revision}، لكنه ليس فاتورة ضريبية ولا طلبًا مسجلًا.
+            {isTaxInvoice ? `هذه معاينة أسعار للمنيو المنشور رقم ${quote.revision}، وليست فاتورة مُصدرة.` : `تسعير من السيرفر للمنيو المنشور رقم ${quote.revision}، لكنه ليس فاتورة ضريبية ولا طلبًا مسجلًا.`}
           </DialogDescription>
         </DialogHeader>
         <section aria-label="تفاصيل مراجعة الطلب" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-2 text-sm">
@@ -86,7 +88,7 @@ export function PosCheckoutReview({
           </div>
           {restaurant ? (
             <fieldset className="rounded-lg border p-3">
-              <legend className="px-1 font-semibold">وسيلة الدفع المقترحة — اختيار تجريبي</legend>
+              <legend className="px-1 font-semibold">{isTaxInvoice ? "وسيلة الدفع المقترحة — معاينة فقط" : "وسيلة الدفع المقترحة — اختيار تجريبي"}</legend>
               <div className="mt-2 flex gap-2">
                 <Button type="button" variant={restaurantTender === "cash" ? "secondary" : "outline"}
                   className={"min-h-12 flex-1 gap-2 border-2 " + (restaurantTender === "cash"
@@ -113,12 +115,12 @@ export function PosCheckoutReview({
                 حالة الدفع المُدخلة من الكاشير: {externalPaymentStatus === "paid" ? "مدفوع" : "كاش"}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                هذه حالة تجريبية، وليست تأكيدًا من تطبيق التوصيل أو إثبات تحصيل.
+                {isTaxInvoice ? "هذه الحالة للمعاينة فقط، وليست إثبات تحصيل من تطبيق التوصيل." : "هذه حالة تجريبية، وليست تأكيدًا من تطبيق التوصيل أو إثبات تحصيل."}
               </p>
             </div>
           )}
           <p role="status" className="rounded-lg border border-dashed p-3 text-sm">
-            المرحلة E للتأكد من شكل الطلب وتسعيره فقط. لا توجد صلاحية لتأكيد البيع أو إصدار فاتورة أو تسجيل تحصيل.
+            {isTaxInvoice ? "هذه شاشة معاينة فقط؛ إصدار الفاتورة يتم من مراجعة البيع النهائية." : "المرحلة E للتأكد من شكل الطلب وتسعيره فقط. لا توجد صلاحية لتأكيد البيع أو إصدار فاتورة أو تسجيل تحصيل."}
           </p>
         </section>
         <DialogFooter className="!static !mx-0 !mb-0 !shrink-0 !border-t !bg-popover !px-0 !pt-3 !pb-0">
