@@ -7,6 +7,7 @@ on:
       - 'src/features/pos/**'
       - 'src/routes/_protected/pos/**'
       - 'scripts/pos-*-browser-qa.mjs'
+      - 'scripts/pos-mainline-disabled-browser-qa.mjs'
       - '.github/workflows/pos-mainline-browser-qa.yml'
   push:
     branches: [codex/pos-mainline-integration]
@@ -24,6 +25,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - suite: disabled
+            script: scripts/pos-mainline-disabled-browser-qa.mjs
           - suite: catalog
             script: scripts/pos-stage-c-browser-qa.mjs
           - suite: sale-refund
