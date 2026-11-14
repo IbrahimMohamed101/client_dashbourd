@@ -14,6 +14,10 @@ import {
   type PosInvoice, type PosRefund, type PosRefundRequest,
 } from "./financialApi";
 
+export function refundDefaultMethod(method: PosInvoice["tender"]["method"]): "cash" | "network" | "external" {
+  return method === "cash" ? "cash" : method === "network" ? "network" : "external";
+}
+
 export function PosRefundDialog({ invoice, operatorId, onClose, onRecorded }: {
   invoice: PosInvoice;
   operatorId?: string | null;
@@ -24,7 +28,7 @@ export function PosRefundDialog({ invoice, operatorId, onClose, onRecorded }: {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState<string | null>(null);
   const [reason, setReason] = useState("");
-  const [method, setMethod] = useState<"cash" | "network" | "external">("external");
+  const [method, setMethod] = useState<"cash" | "network" | "external">(() => refundDefaultMethod(invoice.tender.method));
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
