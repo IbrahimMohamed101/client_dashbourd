@@ -247,7 +247,7 @@ export function SubscriptionStackingOverview({
     item.status === "expired" || item.status === "exhausted" || item.status === "canceled"
   );
 
-  const aggregateMeals = currentStackingAggregateBalance(subscription) || stacking.aggregateBalance;
+  const aggregateMeals = currentStackingAggregateBalance(subscription);
   const orderedPackages = [...stacking.packages].sort((left, right) => {
     const rank = (status: string | null) =>
       status === "active" ? 0 : status === "paid_scheduled" ? 1 : 2;
@@ -301,12 +301,15 @@ export function SubscriptionStackingOverview({
             <div>
               <p className="font-bold">ملخص سجل المشتريات</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                هذا هو الرصيد المجمع المسجل للحاوية التشغيلية. لا يعني ذلك أن كل رصيد ظاهر داخل باقة تاريخية قابل للاستهلاك من هذه الباقة نفسها.
+                {aggregateMeals
+                  ? "هذا هو الرصيد المجمع المسجل للحاوية التشغيلية. لا يعني ذلك أن كل رصيد ظاهر داخل باقة تاريخية قابل للاستهلاك من هذه الباقة نفسها."
+                  : "تعرض الباقات أدناه سجل المشتريات، وليس بالضرورة رصيدًا قابلًا للاستهلاك اليوم."}
               </p>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          {aggregateMeals ? (
+            <div className="mt-4 grid gap-2 sm:grid-cols-4">
             <div className="rounded-xl border bg-background/80 p-3">
               <p className="text-[11px] text-muted-foreground">إجمالي الوجبات</p>
               <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.totalMeals}</p>
@@ -323,7 +326,12 @@ export function SubscriptionStackingOverview({
               <p className="text-[11px] text-muted-foreground">محجوز</p>
               <p className="mt-1 text-xl font-black tabular-nums">{aggregateMeals.reservedMeals}</p>
             </div>
-          </div>
+            </div>
+          ) : (
+            <p role="status" className="mt-4 rounded-xl border bg-background/80 p-3 text-sm text-muted-foreground">
+              لا يوجد رصيد مجمع حالي يمكن عرضه لهذا التاريخ. راجع حالة الباقات المرتبطة أدناه؛ الأرصدة التاريخية أو المجدولة ليست رصيدًا متاحًا الآن.
+            </p>
+          )}
         </div>
 
         <section>
