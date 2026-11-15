@@ -59,15 +59,15 @@ describe("POS stage C manager interaction", () => {
     const user = userEvent.setup();
     mount();
     const list = within(await screen.findByRole("group", { name: "قائمة أصناف الكاشير" }));
-    expect(list.getByRole("button", { name: "دجاج بالزبدة", exact: true })).toBeInTheDocument();
+    expect(list.getByRole("button", { name: "دجاج بالزبدة" })).toBeInTheDocument();
     await user.type(screen.getByRole("searchbox", { name: "بحث في أصناف الكاشير" }), "سلطة");
-    expect(list.getByRole("button", { name: "سلطة بيسك", exact: true })).toBeInTheDocument();
-    expect(list.queryByRole("button", { name: "دجاج بالزبدة", exact: true })).not.toBeInTheDocument();
+    expect(list.getByRole("button", { name: "سلطة بيسك" })).toBeInTheDocument();
+    expect(list.queryByRole("button", { name: "دجاج بالزبدة" })).not.toBeInTheDocument();
     await user.clear(screen.getByRole("searchbox", { name: "بحث في أصناف الكاشير" }));
     await user.click(screen.getByRole("button", { name: "المخفية" }));
-    expect(list.queryByRole("button", { name: "سلطة بيسك", exact: true })).not.toBeInTheDocument();
+    expect(list.queryByRole("button", { name: "سلطة بيسك" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "الكل" }));
-    expect(list.getByRole("button", { name: "سلطة بيسك", exact: true })).toBeInTheDocument();
+    expect(list.getByRole("button", { name: "سلطة بيسك" })).toBeInTheDocument();
   });
 
   it("saves three channel prices as a draft and shows old/new before publishing", async () => {
@@ -171,7 +171,7 @@ describe("POS stage C manager interaction", () => {
     });
     const user = userEvent.setup();
     mount();
-    await user.click(await screen.findByRole("button", { name: "دجاج بالزبدة", exact: true }));
+    await user.click(await screen.findByRole("button", { name: "دجاج بالزبدة" }));
     await user.click(screen.getByRole("button", { name: "نسخ الصنف كمسودة مخفية" }));
     expect(screen.getByDisplayValue("نسخة من دجاج بالزبدة")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "يظهر في الكاشير بعد النشر" })).not.toBeChecked();
@@ -203,7 +203,7 @@ describe("POS stage C manager interaction", () => {
     await user.click(screen.getByRole("button", { name: "إلغاء" }));
     expect(screen.getByRole("button", { name: "حفظ المسودة" })).toBeDisabled();
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "التصنيف", exact: true }), "drinks");
+    await user.selectOptions(screen.getByRole("combobox", { name: "التصنيف" }), "drinks");
     await user.click(screen.getByRole("button", { name: "إضافة صنف" }));
     expect(screen.getByRole("combobox", { name: "تصنيف الصنف" })).toHaveValue("drinks");
     await user.type(screen.getByRole("textbox", { name: "اسم الصنف" }), "صنف اختبار");
@@ -218,7 +218,7 @@ describe("POS stage C manager interaction", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "تصنيف زيادة دجاج 50 جم" }), "meals");
     await user.click(screen.getByRole("button", { name: "حذف زيادة لحم 50 جم" }));
     await user.click(screen.getByRole("button", { name: "إلغاء" }));
-    expect(screen.getByRole("button", { name: "زيادة لحم 50 جم", exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "زيادة لحم 50 جم" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "حذف زيادة لحم 50 جم" }));
     await user.click(screen.getByRole("button", { name: "حذف من المسودة" }));
     expect(vi.mocked(savePosDraft)).not.toHaveBeenCalled();
