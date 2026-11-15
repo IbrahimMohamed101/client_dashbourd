@@ -84,11 +84,11 @@ try {
       await page.getByRole("group", { name: "قائمة أصناف الكاشير" }).waitFor({ timeout: 14000 });
       const list = page.getByRole("group", { name: "قائمة أصناف الكاشير" });
       await page.getByRole("searchbox", { name: "بحث في أصناف الكاشير" }).fill("مياه");
-      assert.equal(await list.getByRole("button", { name: /مياه/ }).count(), 1);
+      assert.equal(await list.getByRole("button", { name: "مياه", exact: true }).count(), 1);
       await page.getByRole("button", { name: "المخفية" }).click();
-      assert.equal(await list.getByRole("button", { name: /مياه/ }).count(), 1);
+      assert.equal(await list.getByRole("button", { name: "مياه", exact: true }).count(), 1);
       await page.getByRole("button", { name: "الظاهرة" }).click();
-      assert.equal(await list.getByRole("button", { name: /مياه/ }).count(), 0);
+      assert.equal(await list.getByRole("button", { name: "مياه", exact: true }).count(), 0);
       await page.getByRole("button", { name: "الكل" }).click();
       await page.getByRole("searchbox", { name: "بحث في أصناف الكاشير" }).fill("");
       await page.getByRole("button", { name: "جدول الأسعار" }).click();
@@ -166,11 +166,13 @@ try {
         "Even approved new prices require save and publish");
 
       // Phase D: clones are independent, hidden and preserve explicit addon rules.
-      await page.getByRole("button", { name: "تعديل صنف" }).click();
+      await page.getByRole("button", { name: "الأصناف", exact: true }).click();
+      await list.getByRole("button", { name: "دجاج بالزبدة", exact: true }).click();
       await page.getByRole("button", { name: "نسخ الصنف كمسودة مخفية" }).click();
       assert.equal(await page.getByRole("textbox", { name: "اسم الصنف" }).inputValue(), "نسخة من دجاج بالزبدة");
       assert.equal(await page.getByRole("checkbox", { name: "يظهر في الكاشير بعد النشر" }).isChecked(), false);
       await page.getByRole("button", { name: "منع كل الإضافات" }).click();
+      await page.getByRole("button", { name: "إضافة إلى المسودة" }).click();
       await page.getByRole("button", { name: "حفظ المسودة" }).click();
       await page.getByRole("button", { name: "مراجعة ونشر" }).click();
       await page.getByRole("button", { name: "نشر المنيو" }).click();

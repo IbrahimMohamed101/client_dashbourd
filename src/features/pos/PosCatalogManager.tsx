@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eye, EyeOff, Layers, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,7 +41,24 @@ type EditCatalog = Omit<Catalog, "products" | "channels"> & {
   channels: PosChannel[];
   products: EditProduct[];
 };
+type EditorView = "individual" | "bulk" | "channels";
 const selectStyle = "min-h-11 w-full rounded-md border bg-background px-2";
+
+function recategorize(product: EditProduct, category: string): EditProduct {
+  if (category === product.category) return product;
+  return {
+    ...product,
+    category,
+    sellStandalone: category === "addons" ? false : undefined,
+    ...(category === "addons" ? { hasAddons: false, allowedAddonIds: undefined } : {}),
+  };
+}
+
+function removeAddonReferences(products: EditProduct[], addonId: string) {
+  return products.map((item) => item.allowedAddonIds?.includes(addonId) ? {
+    ...item, allowedAddonIds: item.allowedAddonIds.filter((id) => id !== addonId),
+  } : item);
+}
 
 function emptyVariant(label = "حصة", currentChannels: PosChannel[] = [...defaultChannels]): EditVariant {
   return {
@@ -76,6 +94,7 @@ function serializeDraft(edit: EditCatalog): Catalog {
     categories: edit.categories,
     products: edit.products.map((item) => ({
       ...item,
+      active: item.active !== false,
       variants: item.variants.map((variant) => ({
         ...variant,
         prices: Object.fromEntries(
@@ -100,24 +119,32 @@ function serializeDraft(edit: EditCatalog): Catalog {
 
 function CatalogEditor({
   data,
+  editorView,
+  setEditorView,
   reload,
 }: {
   data: PosCatalogManagerState;
+  editorView: EditorView;
+  setEditorView: (view: EditorView) => void;
   reload: () => void;
 }) {
   const client = useQueryClient();
   const [edit, setEdit] = useState(() =>
     editableCatalog(data.draft ?? data.published)
   );
-  const [selection, setSelection] = useState(edit.products[0]?.id ?? "");
+  const [product, setProduct] = useState<EditProduct | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<EditProduct | null>(null);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [categoryId, setCategoryId] = useState(edit.categories[0]?.id ?? "");
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [dirty, setDirty] = useState(false);
   const [productSearch, setProductSearch] = useState("");
+  const [bulkSearch, setBulkSearch] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState<"all" | "visible" | "hidden">("all");
   const [confirm, setConfirm] = useState(false);
   const [zeroPriceDialog, setZeroPriceDialog] = useState(false);
   const [error, setError] = useState("");
-  const [editorView, setEditorView] = useState<"individual" | "bulk">("individual");
   const [bulkChannel, setBulkChannel] = useState<Channel>("restaurant");
   const [showAllChannels, setShowAllChannels] = useState(false);
   const [priceCopySource, setPriceCopySource] = useState<Channel>("restaurant");
@@ -130,12 +157,18 @@ function CatalogEditor({
   const [newChannelId, setNewChannelId] = useState("");
   const [newChannelLabel, setNewChannelLabel] = useState("");
   const channels = edit.channels;
+  const categoryLabels = new Map(edit.categories.map(({ id, label }) => [id, label]));
   const search = productSearch.trim().toLocaleLowerCase();
+  const priceSearch = bulkSearch.trim().toLocaleLowerCase();
+  const matches = (item: EditProduct, term: string) => !term
+    || item.name.toLocaleLowerCase().includes(term)
+    || categoryLabels.get(item.category)?.toLocaleLowerCase().includes(term);
   const visibleProducts = edit.products.filter((item) =>
-    (!search || item.name.toLocaleLowerCase().includes(search)
-      || edit.categories.some((entry) => entry.id === item.category && entry.label.toLocaleLowerCase().includes(search)))
+    matches(item, search)
+    && (!categoryFilter || item.category === categoryFilter)
     && (visibilityFilter === "all" || (visibilityFilter === "visible" ? item.active !== false : item.active === false))
   );
+  const bulkProducts = edit.products.filter((item) => matches(item, priceSearch));
   const effectiveCopySource = channels.some((item) => item.id === priceCopySource)
     ? priceCopySource : channels[0]?.id ?? "";
   const effectiveCopyTarget = channels.some((item) => item.id === priceCopyTarget && item.id !== effectiveCopySource)
@@ -144,31 +177,32 @@ function CatalogEditor({
     && Number(priceCopyMarkup) <= 300;
   const copyPreview = copyChannelPrices(
     edit, effectiveCopySource, effectiveCopyTarget,
-    new Set(visibleProducts.map((item) => item.id)), priceCopyMode,
+    new Set(bulkProducts.map((item) => item.id)), priceCopyMode,
     { increasePercent: validMarkup ? Number(priceCopyMarkup) : 0,
       rounding: priceCopyRounding, allowNewPrices },
   );
   const reviewChanges = data.draft ? getPosCatalogChanges(data.published, data.draft) : [];
-  const product =
-    edit.products.find((item) => item.id === selection) ?? edit.products[0];
-  const category =
-    edit.categories.find((item) => item.id === categoryId) ??
-    edit.categories[0];
+  const editingExisting = product !== null && edit.products.some((item) => item.id === product.id);
+  const selectedCategory = edit.categories.find((item) => item.id === categoryId);
   const update = (next: EditCatalog) => {
     setEdit(next);
     setDirty(true);
     setError("");
   };
-  const updateProduct = (next: EditProduct) =>
+  function saveProduct(next: EditProduct) {
+    const previous = edit.products.find((item) => item.id === next.id);
+    const products = previous
+      ? edit.products.map((item) => item.id === next.id ? next : item)
+      : [...edit.products, next];
     update({
       ...edit,
-      products: edit.products.map((item) =>
-        item.id === next.id ? next : item
-      ),
+      products: previous?.category === "addons" && next.category !== "addons"
+        ? removeAddonReferences(products, next.id) : products,
     });
+  }
   const updateVariant = (next: EditVariant) => {
     if (product)
-      updateProduct({
+      setProduct({
         ...product,
         variants: product.variants.map((item) =>
           item.id === next.id ? next : item
@@ -241,29 +275,34 @@ function CatalogEditor({
   }
 
   function addCategory() {
+    const label = categoryName.trim();
+    if (!label) return;
     const id = crypto.randomUUID();
-    update({ ...edit, categories: [...edit.categories, { id, label: "" }] });
+    update({ ...edit, categories: [...edit.categories, { id, label }] });
     setCategoryId(id);
+    setCategoryName("");
   }
 
   function addProduct() {
-    const id = crypto.randomUUID();
+    const category = edit.categories.find((item) => item.id === categoryFilter) ?? edit.categories[0];
     if (!category) return;
+    setProduct({
+      id: crypto.randomUUID(),
+      name: "",
+      category: category.id,
+      active: true,
+      hasAddons: false,
+      variants: [emptyVariant("حصة", channels)],
+    });
+  }
+
+  function removeProduct(item: EditProduct) {
+    const remaining = edit.products.filter(({ id }) => id !== item.id);
     update({
       ...edit,
-      products: [
-        ...edit.products,
-        {
-          id,
-          name: "",
-          category: category.id,
-          active: true,
-          hasAddons: false,
-          variants: [emptyVariant("حصة", channels)],
-        },
-      ],
+      products: item.category === "addons" ? removeAddonReferences(remaining, item.id) : remaining,
     });
-    setSelection(id);
+    setRemoveTarget(null);
   }
 
   return (
@@ -334,7 +373,7 @@ function CatalogEditor({
               أوافق صراحةً على تسعير أحجام كانت غير متاحة في قناة الوجهة (ستتاح للبيع بعد النشر).
             </label>
             <p role="status" className="rounded-lg border bg-muted p-3 text-sm">
-              {copyPreview.changed} سعر سيتغير من أصل {visibleProducts.length} صنف مطابق للبحث.
+              {copyPreview.changed} سعر سيتغير من أصل {bulkProducts.length} صنف مطابق للبحث.
               {priceCopyMode === "overwrite" ? " ستُستبدل الأسعار الموجودة في قناة الوجهة." : " لن تتغير الأسعار الموجودة."}
             </p>
             {copyPreview.blockedNewPrices.length > 0 && <p role="alert" className="rounded-lg border p-3 text-sm font-medium">
@@ -373,7 +412,7 @@ function CatalogEditor({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
+      <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-3 shadow-sm sm:px-4">
         <div>
           <p className="font-semibold">
             النسخة المنشورة {data.publishedRevision}
@@ -431,7 +470,7 @@ function CatalogEditor({
           aria-pressed={editorView === "individual"}
           onClick={() => setEditorView("individual")}
         >
-          تعديل صنف
+          الأصناف
         </Button>
         <Button
           type="button"
@@ -440,6 +479,10 @@ function CatalogEditor({
           onClick={() => setEditorView("bulk")}
         >
           جدول الأسعار
+        </Button>
+        <Button type="button" variant={editorView === "channels" ? "default" : "outline"}
+          aria-pressed={editorView === "channels"} onClick={() => setEditorView("channels")}>
+          قنوات البيع
         </Button>
       </div>
       {error && (
@@ -453,10 +496,11 @@ function CatalogEditor({
           </Button>
         </div>
       )}
+      {editorView === "channels" && (
       <section aria-label="إدارة قنوات البيع" className="grid gap-3 rounded-xl border bg-card p-4">
         <div>
           <h2 className="font-bold">قنوات البيع المستقلة</h2>
-          <p className="text-sm text-muted-foreground">أضف قناة جديدة دون تعديل الكود. الأسعار الجديدة تظل غير مسعّرة إلى أن تدخلها وتنشر المسودة.</p>
+          <p className="text-sm text-muted-foreground">حدّد أسعار الأصناف في القناة الجديدة من جدول الأسعار.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {channels.map((item) => (
@@ -482,6 +526,7 @@ function CatalogEditor({
             disabled={busy || channels.length >= 30} onClick={addChannel}>إضافة قناة</Button>
         </div>
       </section>
+      )}
       {editorView === "bulk" ? (
         <section className="grid gap-4 rounded-xl border bg-card p-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -508,17 +553,17 @@ function CatalogEditor({
                 عرض كل القنوات
               </label>
               <Button type="button" variant="outline" className="min-h-11"
-                disabled={busy || channels.length < 2 || visibleProducts.length === 0}
+                disabled={busy || channels.length < 2 || bulkProducts.length === 0}
                 onClick={() => { setAllowNewPrices(false); setPriceCopyDialog(true); }}>نسخ أسعار قناة</Button>
             </div>
           </div>
           <label className="grid gap-1 text-sm">
             بحث في جدول الأسعار
             <Input type="search" aria-label="بحث في جدول أسعار الكاشير"
-              placeholder="اسم الصنف أو التصنيف" value={productSearch}
-              onChange={(event) => setProductSearch(event.target.value)} />
+              placeholder="اسم الصنف أو التصنيف" value={bulkSearch}
+              onChange={(event) => setBulkSearch(event.target.value)} />
           </label>
-          <p className="text-xs text-muted-foreground">عرض {visibleProducts.length} من {edit.products.length} صنف.</p>
+          <p className="text-xs text-muted-foreground">عرض {bulkProducts.length} من {edit.products.length} صنف.</p>
           <div className="max-h-[65dvh] overflow-auto rounded-xl border">
             <table className="w-full min-w-[38rem] border-collapse text-right text-sm">
               <thead className="sticky top-0 bg-muted">
@@ -532,12 +577,12 @@ function CatalogEditor({
                 </tr>
               </thead>
               <tbody>
-                {visibleProducts.flatMap((item) =>
+                {bulkProducts.flatMap((item) =>
                   item.variants.map((variant) => (
                     <tr key={`${item.id}/${variant.id}`} className="border-t">
                       <td className="p-3 font-semibold">{item.name}</td>
                       <td className="p-3">{variant.label}</td>
-                      <td className="p-3">{item.active ? "ظاهر" : "مخفي"}</td>
+                      <td className="p-3">{item.active !== false ? "ظاهر" : "مخفي"}</td>
                       {(showAllChannels ? channels : channels.filter((channel) => channel.id === bulkChannel)).map((channel) => (
                         <td className="p-2" key={channel.id}>
                           <Input
@@ -573,361 +618,422 @@ function CatalogEditor({
             </table>
           </div>
         </section>
-      ) : (
-      <fieldset
-        disabled={busy}
-        className="grid min-w-0 gap-4 lg:grid-cols-[minmax(14rem,20rem)_minmax(0,1fr)]"
-      >
-        <section className="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-4">
-          <h2 className="font-bold">التصنيفات والأصناف</h2>
-          <label className="grid gap-1 text-sm">
-            التصنيف
-            <select
-              className={selectStyle}
-              value={category?.id ?? ""}
-              onChange={(event) => setCategoryId(event.target.value)}
-            >
-              {!category && <option value="">أضف تصنيفًا</option>}
-              {edit.categories.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.label || "تصنيف جديد"}
-                </option>
-              ))}
-            </select>
-          </label>
-          {category && (
-            <label className="grid gap-1 text-sm">
-              اسم التصنيف
-              <Input
-                className="min-h-11"
-                value={category.label}
-                maxLength={100}
-                onChange={(event) =>
-                  update({
-                    ...edit,
-                    categories: edit.categories.map((entry) =>
-                      entry.id === category.id
-                        ? { ...entry, label: event.target.value }
-                        : entry
-                    ),
-                  })
-                }
-              />
-            </label>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addCategory}
-            disabled={edit.categories.length >= 50}
-          >
-            إضافة تصنيف
-          </Button>
-          <hr />
-          <label className="grid gap-1 text-sm">
-            البحث في الأصناف
-            <Input
-              type="search"
-              aria-label="بحث في أصناف الكاشير"
-              placeholder="اسم الصنف أو التصنيف"
-              value={productSearch}
-              onChange={(event) => setProductSearch(event.target.value)}
-            />
-          </label>
-          <div role="group" aria-label="عرض الأصناف" className="flex flex-wrap gap-2">
-            {([
-              ["all", "الكل"], ["visible", "الظاهرة"], ["hidden", "المخفية"],
-            ] as const).map(([id, label]) => (
-              <Button key={id} type="button" size="sm"
-                variant={visibilityFilter === id ? "default" : "outline"}
-                aria-pressed={visibilityFilter === id}
-                onClick={() => setVisibilityFilter(id)}
-              >{label}</Button>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground" role="status">
-            عرض {visibleProducts.length} من {edit.products.length} صنف
-          </p>
-          <div role="group" aria-label="قائمة أصناف الكاشير"
-            className="grid max-h-[40dvh] gap-1.5 overflow-y-auto rounded-lg border p-2">
-            {visibleProducts.map((item) => (
-              <button type="button" key={item.id}
-                aria-pressed={product?.id === item.id}
-                onClick={() => setSelection(item.id)}
-                className={"flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-right text-sm transition-colors " +
-                  (product?.id === item.id ? "border-primary bg-primary/10 font-semibold" : "border-transparent hover:bg-muted")}
-              >
-                <span className="min-w-0 truncate">{item.name || "صنف جديد"}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {item.active === false ? "مخفي" : "ظاهر"}
+      ) : editorView === "individual" && (
+        <section aria-label="إدارة أصناف الكاشير" className="min-w-0 rounded-xl border bg-card">
+          <div className="grid gap-4 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-bold">الأصناف</h2>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" className="min-h-11" disabled={busy}
+                  onClick={() => setCategoryManagerOpen(true)}>
+                  <Layers aria-hidden="true" /> إدارة التصنيفات
+                </Button>
+                <Button type="button" className="min-h-11" onClick={addProduct}
+                  disabled={busy || edit.categories.length === 0 || edit.products.length >= 500}>
+                  <Plus aria-hidden="true" /> إضافة صنف
+                </Button>
+              </div>
+            </div>
+            <div className="grid items-end gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(10rem,14rem)_auto]">
+              <label className="grid min-w-0 gap-1 text-sm">
+                البحث
+                <span className="relative">
+                  <Search aria-hidden="true" className="pointer-events-none absolute start-3 top-3.5 size-4 text-muted-foreground" />
+                  <Input type="search" aria-label="بحث في أصناف الكاشير" className="min-h-11 ps-9"
+                    placeholder="اسم الصنف أو التصنيف" value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)} />
                 </span>
-              </button>
-            ))}
+              </label>
+              <label className="grid gap-1 text-sm">
+                التصنيف
+                <select className={selectStyle} value={categoryFilter}
+                  onChange={(event) => setCategoryFilter(event.target.value)}>
+                  <option value="">كل التصنيفات</option>
+                  {edit.categories.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                </select>
+              </label>
+              <div role="group" aria-label="عرض الأصناف" className="flex min-h-11 flex-wrap items-center gap-1 rounded-lg bg-muted p-1">
+                {([["all", "الكل"], ["visible", "الظاهرة"], ["hidden", "المخفية"]] as const).map(([id, label]) => (
+                  <Button key={id} type="button" size="sm"
+                    variant={visibilityFilter === id ? "default" : "ghost"}
+                    aria-pressed={visibilityFilter === id} onClick={() => setVisibilityFilter(id)}>
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground" role="status">
+              عرض {visibleProducts.length} من {edit.products.length} صنف
+            </p>
+          </div>
+          <div role="group" aria-label="قائمة أصناف الكاشير" className="divide-y border-t">
+            <div aria-hidden="true"
+              className="hidden grid-cols-[minmax(0,1fr)_minmax(9rem,14rem)_6rem_9rem] items-center gap-4 bg-muted/50 px-5 py-2 text-xs font-medium text-muted-foreground md:grid">
+              <span>الصنف</span><span>التصنيف</span><span>الظهور</span><span>الإجراءات</span>
+            </div>
+            {visibleProducts.map((item) => {
+              const hidden = item.active === false;
+              return (
+                <div key={item.id}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-3 hover:bg-muted/25 md:grid-cols-[minmax(0,1fr)_minmax(9rem,14rem)_6rem_9rem] md:gap-4 md:px-5">
+                  <Button type="button" variant="ghost" onClick={() => setProduct(item)}
+                    className="h-10 min-w-0 justify-start gap-2 px-1 text-start font-semibold"
+                    title={item.name} disabled={busy}>
+                    <Pencil aria-hidden="true" className="shrink-0 text-muted-foreground" />
+                    <span className="truncate">{item.name}</span>
+                  </Button>
+                  <select aria-label={`تصنيف ${item.name}`} className={selectStyle + " order-3 min-h-10 md:order-none"}
+                    value={item.category} disabled={busy}
+                    onChange={(event) => saveProduct(recategorize(item, event.target.value))}>
+                    {edit.categories.map((entry) => (
+                      <option key={entry.id} value={entry.id}
+                        disabled={entry.id === "addons" && item.variants.length !== 1}>{entry.label}</option>
+                    ))}
+                  </select>
+                  <span className={"order-2 w-fit rounded-full px-2.5 py-1 text-xs font-medium md:order-none " +
+                    (hidden ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
+                    {hidden ? "مخفي" : "ظاهر"}
+                  </span>
+                  <div className="order-4 flex justify-end gap-1 md:order-none md:justify-start">
+                    <Button type="button" variant="outline" size="sm" className="min-h-10"
+                      aria-label={(hidden ? "إظهار " : "إخفاء ") + item.name} disabled={busy}
+                      onClick={() => saveProduct({ ...item, active: hidden })}>
+                      {hidden ? <Eye aria-hidden="true" /> : <EyeOff aria-hidden="true" />}
+                      {hidden ? "إظهار" : "إخفاء"}
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" className="size-10 text-destructive"
+                      aria-label={`حذف ${item.name}`} title="حذف الصنف من المسودة" disabled={busy}
+                      onClick={() => setRemoveTarget(item)}>
+                      <Trash2 aria-hidden="true" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
             {visibleProducts.length === 0 && (
-              <p className="p-3 text-sm text-muted-foreground">لا توجد أصناف مطابقة. غيّر البحث أو فلتر الظهور.</p>
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                {edit.products.length ? "لا توجد أصناف مطابقة." : "ابدأ بإضافة أول صنف."}
+              </p>
             )}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addProduct}
-            disabled={!category || edit.products.length >= 500}
-          >
-            إضافة صنف
-          </Button>
         </section>
-        <section className="grid min-w-0 content-start gap-4 rounded-xl border bg-card p-4">
-          <h2 className="font-bold">بيانات الصنف وأسعاره</h2>
-          {product ? (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">
-                  انسخ الصنف بأحجامه وأسعاره، وستظل النسخة مخفية حتى تُظهرها وتنشر المسودة.
-                </p>
-                <Button type="button" variant="outline"
-                  disabled={busy || edit.products.length >= 500}
-                  onClick={() => {
-                    const id = crypto.randomUUID();
-                    const copy = duplicateDraftProduct(product, id, product.variants.map(() => crypto.randomUUID()));
-                    update({ ...edit, products: [...edit.products, copy] });
-                    setSelection(id);
-                    setProductSearch("");
-                    setVisibilityFilter("all");
-                  }}>نسخ الصنف كمسودة مخفية</Button>
-              </div>
-              <label className="grid gap-1 text-sm">
-                اسم الصنف
-                <Input
-                  className="min-h-11"
-                  value={product.name}
-                  maxLength={100}
-                  onChange={(event) =>
-                    updateProduct({ ...product, name: event.target.value })
-                  }
-                />
-              </label>
-              <label className="grid gap-1 text-sm">
-                تصنيف الصنف
-                <select
-                  className={selectStyle}
-                  value={product.category}
-                  onChange={(event) =>
-                    updateProduct({
-                      ...product,
-                      category: event.target.value,
-                      sellStandalone: event.target.value === "addons" ? product.sellStandalone === true : undefined,
-                      ...(event.target.value === "addons"
-                        ? { hasAddons: false, allowedAddonIds: undefined } : {}),
-                    })
-                  }
-                >
-                  {edit.categories.map((entry) => (
-                    <option
-                      key={entry.id}
-                      value={entry.id}
-                      disabled={
-                        entry.id === "addons" && product.variants.length !== 1
-                      }
-                    >
-                      {entry.label || "تصنيف جديد"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1 text-sm">
-                الحجم الافتراضي للكاشير
-                <select
-                  aria-label="الحجم الافتراضي للصنف"
-                  className={selectStyle}
-                  value={product.defaultVariantId ?? ""}
-                  onChange={(event) =>
-                    updateProduct({
-                      ...product,
-                      defaultVariantId: event.target.value || undefined,
-                    })
-                  }
-                >
-                  <option value="">تلقائي (150 جم للوجبات إن توفر)</option>
-                  {product.variants.map((variant) => (
-                    <option key={variant.id} value={variant.id}>{variant.label || variant.id}</option>
-                  ))}
-                </select>
-                <span className="text-xs text-muted-foreground">
-                  لو الحجم المختار غير مسعّر في قناة بيع، الكاشير يختار أول حجم مسعّر بدلًا منه.
-                </span>
-              </label>
-              <div className="flex flex-wrap gap-4 text-sm">
-                <label className="flex min-h-10 items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={product.active !== false}
+      )}
+      <Dialog open={product !== null} onOpenChange={(open) => { if (!open) setProduct(null); }}>
+        {product && (
+          <DialogContent dir="rtl" className="grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>{editingExisting ? "تعديل الصنف" : "إضافة صنف"}</DialogTitle>
+              <DialogDescription>تظهر تغييرات الصنف في الكاشير بعد حفظ المسودة ونشرها.</DialogDescription>
+            </DialogHeader>
+            <div className="grid min-w-0 gap-4 overflow-y-auto overscroll-contain p-1">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1 text-sm">
+                  اسم الصنف
+                  <Input
+                    className="min-h-11"
+                    value={product.name}
+                    maxLength={100}
                     onChange={(event) =>
-                      updateProduct({
-                        ...product,
-                        active: event.target.checked,
-                      })
+                      setProduct({ ...product, name: event.target.value })
                     }
                   />
-                  يظهر في الكاشير بعد النشر
                 </label>
-                {product.category === "addons" && (
-                  <label className="flex min-h-12 items-center gap-2">
-                    <input type="checkbox" aria-label="تباع الإضافة منفردة"
-                      checked={product.sellStandalone === true}
-                      onChange={(event) =>
-                        updateProduct({ ...product, sellStandalone: event.target.checked })
-                      }
-                    />
-                    تباع الإضافة منفردة (بدون وجبة)
-                  </label>
-                )}
-                {product.category !== "addons" && (
-                  <label className="flex min-h-10 items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={product.hasAddons === true}
-                      onChange={(event) =>
-                        updateProduct({
-                          ...product,
-                          hasAddons: event.target.checked,
-                          allowedAddonIds: event.target.checked ? product.allowedAddonIds : undefined,
-                        })
-                      }
-                    />
-                    يقبل إضافات
-                  </label>
-                )}
-              </div>
-              {product.category === "addons" && !product.sellStandalone && (
-                <p className="text-xs text-muted-foreground">هذه الإضافة تظهر داخل خيارات الوجبات فقط ولا تظهر كبطاقة مستقلة للبيع.</p>
-              )}
-              {product.category !== "addons" && product.hasAddons === true && (
-                <fieldset className="grid gap-2 rounded-lg border p-3 text-sm">
-                  <legend className="px-2 font-semibold">الإضافات المسموحة لهذا الصنف</legend>
-                  <p className="text-muted-foreground">تحديد الإضافات يمنع بيع تركيبات غير مناسبة. الإضافات غير محددة القيود مسبقًا.</p>
-                  <div className="flex flex-wrap gap-2">
-                     <Button type="button" variant="outline" size="sm"
-                       onClick={() => updateProduct({ ...product, allowedAddonIds: undefined })}>
-                       السماح بكل الإضافات
-                     </Button>
-                     <Button type="button" variant="outline" size="sm"
-                       onClick={() => updateProduct({ ...product, allowedAddonIds: [] })}>
-                       منع كل الإضافات
-                     </Button>
-                   </div>
-                   <p role="status" className="text-xs text-muted-foreground">
-                     {product.allowedAddonIds === undefined
-                       ? "جميع الإضافات مسموحة لهذا الصنف"
-                       : `${product.allowedAddonIds.length} إضافة مسموحة لهذا الصنف`}
-                   </p>
-                   <div className="flex flex-wrap gap-4">
-                    {edit.products.filter((addon) => addon.category === "addons").map((addon) => (
-                      <label key={addon.id} className="flex min-h-10 items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={product.allowedAddonIds === undefined
-                            || product.allowedAddonIds.includes(addon.id)}
-                          onChange={(event) => {
-                            const allowed = product.allowedAddonIds ??
-                              edit.products.filter((item) => item.category === "addons").map((item) => item.id);
-                            const next = event.target.checked
-                              ? [...new Set([...allowed, addon.id])]
-                              : allowed.filter((id) => id !== addon.id);
-                            updateProduct({ ...product, allowedAddonIds: next });
-                          }}
-                        />
-                        {addon.name || "إضافة جديدة"}
-                      </label>
+                <label className="grid gap-1 text-sm">
+                  تصنيف الصنف
+                  <select
+                    className={selectStyle}
+                    value={product.category}
+                    onChange={(event) => setProduct(recategorize(product, event.target.value))}
+                  >
+                    {edit.categories.map((entry) => (
+                      <option
+                        key={entry.id}
+                        value={entry.id}
+                        disabled={
+                          entry.id === "addons" && product.variants.length !== 1
+                        }
+                      >
+                        {entry.label || "تصنيف جديد"}
+                      </option>
                     ))}
-                  </div>
-                </fieldset>
-              )}
-              <p className="text-sm text-muted-foreground">
-                الأسعار بالريال. الخانة الفارغة تعني أن الحجم غير متاح للبيع في
-                القناة.
-              </p>
-              {product.variants.map((variant, index) => (
-                <fieldset
-                  key={variant.id}
-                  className="grid min-w-0 gap-2 rounded-lg border p-3 sm:grid-cols-2 xl:grid-cols-4"
-                >
-                  <legend className="px-2 text-sm">الحجم {index + 1}</legend>
-                  <label className="grid gap-1 text-sm">
-                    اسم الحجم
-                    <Input
-                      value={variant.label}
-                      maxLength={100}
-                      onChange={(event) =>
-                        updateVariant({ ...variant, label: event.target.value })
-                      }
-                    />
-                  </label>
-                  {channels.map((channel) => (
-                    <label key={channel.id} className="grid gap-1 text-sm">
-                      {channel.label}
+                  </select>
+                </label>
+              </div>
+              <label className="flex min-h-10 items-center gap-2 text-sm">
+                <input type="checkbox" checked={product.active !== false}
+                  onChange={(event) => setProduct({ ...product, active: event.target.checked })} />
+                يظهر في الكاشير بعد النشر
+              </label>
+              <section aria-label="أسعار وأحجام الصنف" className="grid gap-3 border-t pt-4">
+                <h3 className="font-semibold">الأسعار والأحجام</h3>
+                <p className="text-sm text-muted-foreground">
+                  الأسعار بالريال. الخانة الفارغة تعني أن الحجم غير متاح للبيع في
+                  القناة.
+                </p>
+                {product.variants.map((variant, index) => (
+                  <fieldset
+                    key={variant.id}
+                    className="grid min-w-0 gap-2 rounded-lg border p-3 sm:grid-cols-2 xl:grid-cols-4"
+                  >
+                    <legend className="px-2 text-sm">الحجم {index + 1}</legend>
+                    <label className="grid gap-1 text-sm">
+                      اسم الحجم
                       <Input
-                        inputMode="decimal"
-                        dir="ltr"
-                        placeholder="غير مسعّر"
-                        value={variant.prices[channel.id]}
+                        value={variant.label}
+                        maxLength={100}
                         onChange={(event) =>
-                          updateVariant({
-                            ...variant,
-                            prices: {
-                              ...variant.prices,
-                              [channel.id]: event.target.value,
-                            },
-                          })
+                          updateVariant({ ...variant, label: event.target.value })
                         }
                       />
                     </label>
-                  ))}
-                  {product.variants.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="justify-self-start"
-                      onClick={() =>
-                        updateProduct({
-                          ...product,
-                          variants: product.variants.filter(
-                            (item) => item.id !== variant.id
-                          ),
-                          defaultVariantId: product.defaultVariantId === variant.id
-                            ? undefined : product.defaultVariantId,
-                        })
-                      }
-                    >
-                      إزالة الحجم {index + 1}
-                    </Button>
+                    {channels.map((channel) => (
+                      <label key={channel.id} className="grid gap-1 text-sm">
+                        {channel.label}
+                        <Input
+                          inputMode="decimal"
+                          dir="ltr"
+                          placeholder="غير مسعّر"
+                          value={variant.prices[channel.id]}
+                          onChange={(event) =>
+                            updateVariant({
+                              ...variant,
+                              prices: {
+                                ...variant.prices,
+                                [channel.id]: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    ))}
+                    {product.variants.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="justify-self-start"
+                        onClick={() =>
+                          setProduct({
+                            ...product,
+                            variants: product.variants.filter(
+                              (item) => item.id !== variant.id
+                            ),
+                            defaultVariantId: product.defaultVariantId === variant.id
+                              ? undefined : product.defaultVariantId,
+                          })
+                        }
+                      >
+                        إزالة الحجم {index + 1}
+                      </Button>
+                    )}
+                  </fieldset>
+                ))}
+                {product.category !== "addons" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="justify-self-start"
+                    disabled={product.variants.length >= 10}
+                    onClick={() =>
+                      setProduct({
+                        ...product,
+                        variants: [...product.variants, emptyVariant("", channels)],
+                      })
+                    }
+                  >
+                    إضافة حجم
+                  </Button>
+                )}
+              </section>
+              <details className="rounded-lg border p-3" open={product.hasAddons || undefined}>
+                <summary className="cursor-pointer text-sm font-semibold">إعدادات الحجم والإضافات</summary>
+                <div className="mt-3 grid gap-3">
+                <label className="grid gap-1 text-sm">
+                  الحجم الافتراضي للكاشير
+                  <select
+                    aria-label="الحجم الافتراضي للصنف"
+                    className={selectStyle}
+                    value={product.defaultVariantId ?? ""}
+                    onChange={(event) =>
+                      setProduct({
+                        ...product,
+                        defaultVariantId: event.target.value || undefined,
+                      })
+                    }
+                  >
+                    <option value="">تلقائي (150 جم للوجبات إن توفر)</option>
+                    {product.variants.map((variant) => (
+                      <option key={variant.id} value={variant.id}>{variant.label || variant.id}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-muted-foreground">
+                    لو الحجم المختار غير مسعّر في قناة بيع، الكاشير يختار أول حجم مسعّر بدلًا منه.
+                  </span>
+                </label>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  {product.category === "addons" && (
+                    <label className="flex min-h-12 items-center gap-2">
+                      <input type="checkbox" aria-label="تباع الإضافة منفردة"
+                        checked={product.sellStandalone === true}
+                        onChange={(event) =>
+                          setProduct({ ...product, sellStandalone: event.target.checked })
+                        }
+                      />
+                      تباع الإضافة منفردة (بدون وجبة)
+                    </label>
                   )}
-                </fieldset>
-              ))}
-              {product.category !== "addons" && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="justify-self-start"
-                  disabled={product.variants.length >= 10}
-                  onClick={() =>
-                    updateProduct({
-                      ...product,
-                      variants: [...product.variants, emptyVariant("", channels)],
-                    })
-                  }
-                >
-                  إضافة حجم
+                  {product.category !== "addons" && (
+                    <label className="flex min-h-10 items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={product.hasAddons === true}
+                        onChange={(event) =>
+                          setProduct({
+                            ...product,
+                            hasAddons: event.target.checked,
+                            allowedAddonIds: event.target.checked ? product.allowedAddonIds : undefined,
+                          })
+                        }
+                      />
+                      يقبل إضافات
+                    </label>
+                  )}
+                </div>
+                {product.category === "addons" && !product.sellStandalone && (
+                  <p className="text-xs text-muted-foreground">هذه الإضافة تظهر داخل خيارات الوجبات فقط ولا تظهر كبطاقة مستقلة للبيع.</p>
+                )}
+                {product.category !== "addons" && product.hasAddons === true && (
+                  <fieldset className="grid gap-2 rounded-lg border p-3 text-sm">
+                    <legend className="px-2 font-semibold">الإضافات المسموحة لهذا الصنف</legend>
+                    <p className="text-muted-foreground">تحديد الإضافات يمنع بيع تركيبات غير مناسبة. الإضافات غير محددة القيود مسبقًا.</p>
+                    <div className="flex flex-wrap gap-2">
+                       <Button type="button" variant="outline" size="sm"
+                         onClick={() => setProduct({ ...product, allowedAddonIds: undefined })}>
+                         السماح بكل الإضافات
+                       </Button>
+                       <Button type="button" variant="outline" size="sm"
+                         onClick={() => setProduct({ ...product, allowedAddonIds: [] })}>
+                         منع كل الإضافات
+                       </Button>
+                     </div>
+                     <p role="status" className="text-xs text-muted-foreground">
+                       {product.allowedAddonIds === undefined
+                         ? "جميع الإضافات مسموحة لهذا الصنف"
+                         : `${product.allowedAddonIds.length} إضافة مسموحة لهذا الصنف`}
+                     </p>
+                     <div className="flex flex-wrap gap-4">
+                      {edit.products.filter((addon) => addon.category === "addons").map((addon) => (
+                        <label key={addon.id} className="flex min-h-10 items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={product.allowedAddonIds === undefined
+                              || product.allowedAddonIds.includes(addon.id)}
+                            onChange={(event) => {
+                              const allowed = product.allowedAddonIds ??
+                                edit.products.filter((item) => item.category === "addons").map((item) => item.id);
+                              const next = event.target.checked
+                                ? [...new Set([...allowed, addon.id])]
+                                : allowed.filter((id) => id !== addon.id);
+                              setProduct({ ...product, allowedAddonIds: next });
+                            }}
+                          />
+                          {addon.name || "إضافة جديدة"}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                )}
+                </div>
+              </details>
+            </div>
+            <DialogFooter className="sm:border-t sm:pt-3">
+              {editingExisting && (
+                <Button type="button" variant="ghost" className="sm:me-auto" disabled={edit.products.length >= 500}
+                  onClick={() => setProduct(duplicateDraftProduct(product, crypto.randomUUID(),
+                    product.variants.map(() => crypto.randomUUID())))}>
+                  نسخ الصنف كمسودة مخفية
                 </Button>
               )}
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              أضف صنفًا من قائمة التصنيفات والأصناف.
-            </p>
+              <Button type="button" variant="outline" onClick={() => setProduct(null)}>إلغاء</Button>
+              <Button type="button" disabled={busy || !product.name.trim() || product.variants.some((item) => !item.label.trim())}
+                onClick={() => {
+                  saveProduct(product);
+                  if (!editingExisting) {
+                    setCategoryFilter("");
+                    setProductSearch(product.name);
+                    setVisibilityFilter("all");
+                  }
+                  setProduct(null);
+                }}>
+                {editingExisting ? "تطبيق التعديل" : "إضافة إلى المسودة"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+      <Dialog open={removeTarget !== null} onOpenChange={(open) => { if (!open) setRemoveTarget(null); }}>
+        {removeTarget && (
+          <DialogContent dir="rtl">
+            <DialogHeader>
+              <DialogTitle>حذف «{removeTarget.name}»؟</DialogTitle>
+              <DialogDescription>
+                سيُحذف الصنف من المنيو بعد حفظ المسودة ونشرها. لو الإيقاف مؤقت، استخدم إخفاء الصنف.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setRemoveTarget(null)}>إلغاء</Button>
+              <Button type="button" variant="destructive" onClick={() => removeProduct(removeTarget)}>حذف من المسودة</Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+      <Dialog open={categoryManagerOpen} onOpenChange={setCategoryManagerOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>إدارة التصنيفات</DialogTitle>
+            <DialogDescription>أضف تصنيفًا أو غيّر اسم تصنيف موجود في المسودة.</DialogDescription>
+          </DialogHeader>
+          {selectedCategory && (
+            <div className="grid gap-3">
+              <label className="grid gap-1 text-sm">
+                التصنيف الحالي
+                <select className={selectStyle} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+                  {edit.categories.map((entry) => <option key={entry.id} value={entry.id}>{entry.label}</option>)}
+                </select>
+              </label>
+              <form key={categoryId} className="grid items-end gap-2 sm:grid-cols-[1fr_auto]"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const label = String(new FormData(event.currentTarget).get("categoryLabel")).trim();
+                  if (label && label !== selectedCategory.label) update({
+                    ...edit,
+                    categories: edit.categories.map((entry) =>
+                      entry.id === categoryId ? { ...entry, label } : entry),
+                  });
+                }}>
+                <label className="grid gap-1 text-sm">
+                  اسم التصنيف
+                  <Input name="categoryLabel" className="min-h-11" required
+                    defaultValue={selectedCategory.label} maxLength={100} />
+                </label>
+                <Button type="submit" variant="outline" className="min-h-11">تعديل الاسم</Button>
+              </form>
+            </div>
           )}
-        </section>
-      </fieldset>
-      )}
+          <form className="grid items-end gap-2 sm:grid-cols-[1fr_auto]"
+            onSubmit={(event) => { event.preventDefault(); addCategory(); }}>
+            <label className="grid gap-1 text-sm">
+              اسم التصنيف الجديد
+              <Input className="min-h-11" required maxLength={100} value={categoryName}
+                onChange={(event) => setCategoryName(event.target.value)} />
+            </label>
+            <Button type="submit" variant="outline" className="min-h-11"
+              disabled={!categoryName.trim() || edit.categories.length >= 50}>إضافة تصنيف</Button>
+          </form>
+          <DialogFooter>
+            <Button type="button" onClick={() => setCategoryManagerOpen(false)}>تم</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {confirm && data.draft && (
         <Dialog
           open
@@ -996,6 +1102,7 @@ function CatalogEditor({
 export function PosCatalogManager() {
   const client = useQueryClient();
   const [reloadCount, setReloadCount] = useState(0);
+  const [editorView, setEditorView] = useState<EditorView>("individual");
   const query = useQuery({
     queryKey: posManagerKey,
     queryFn: fetchPosManager,
@@ -1018,6 +1125,8 @@ export function PosCatalogManager() {
         <CatalogEditor
           key={`${query.data.revision}/${reloadCount}`}
           data={query.data}
+          editorView={editorView}
+          setEditorView={setEditorView}
           reload={() => {
             void client
               .fetchQuery({

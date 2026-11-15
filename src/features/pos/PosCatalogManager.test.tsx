@@ -59,15 +59,15 @@ describe("POS stage C manager interaction", () => {
     const user = userEvent.setup();
     mount();
     const list = within(await screen.findByRole("group", { name: "قائمة أصناف الكاشير" }));
-    expect(list.getByRole("button", { name: /دجاج بالزبدة/ })).toBeInTheDocument();
+    expect(list.getByRole("button", { name: "دجاج بالزبدة" })).toBeInTheDocument();
     await user.type(screen.getByRole("searchbox", { name: "بحث في أصناف الكاشير" }), "سلطة");
-    expect(list.getByRole("button", { name: /سلطة بيسك/ })).toBeInTheDocument();
-    expect(list.queryByRole("button", { name: /دجاج بالزبدة/ })).not.toBeInTheDocument();
+    expect(list.getByRole("button", { name: "سلطة بيسك" })).toBeInTheDocument();
+    expect(list.queryByRole("button", { name: "دجاج بالزبدة" })).not.toBeInTheDocument();
     await user.clear(screen.getByRole("searchbox", { name: "بحث في أصناف الكاشير" }));
     await user.click(screen.getByRole("button", { name: "المخفية" }));
-    expect(list.queryByRole("button", { name: /سلطة بيسك/ })).not.toBeInTheDocument();
+    expect(list.queryByRole("button", { name: "سلطة بيسك" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "الكل" }));
-    expect(list.getByRole("button", { name: /سلطة بيسك/ })).toBeInTheDocument();
+    expect(list.getByRole("button", { name: "سلطة بيسك" })).toBeInTheDocument();
   });
 
   it("saves three channel prices as a draft and shows old/new before publishing", async () => {
@@ -171,12 +171,13 @@ describe("POS stage C manager interaction", () => {
     });
     const user = userEvent.setup();
     mount();
-    await screen.findByRole("button", { name: "نسخ الصنف كمسودة مخفية" });
+    await user.click(await screen.findByRole("button", { name: "دجاج بالزبدة" }));
     await user.click(screen.getByRole("button", { name: "نسخ الصنف كمسودة مخفية" }));
     expect(screen.getByDisplayValue("نسخة من دجاج بالزبدة")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "يظهر في الكاشير بعد النشر" })).not.toBeChecked();
     await user.click(screen.getByRole("button", { name: "منع كل الإضافات" }));
     expect(screen.getByText("0 إضافة مسموحة لهذا الصنف")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "إضافة إلى المسودة" }));
     await user.click(screen.getByRole("button", { name: "حفظ المسودة" }));
     await waitFor(() => expect(vi.mocked(savePosDraft)).toHaveBeenCalledTimes(1));
     const saved = vi.mocked(savePosDraft).mock.calls[0][1];
@@ -184,6 +185,55 @@ describe("POS stage C manager interaction", () => {
     expect(clone?.active).toBe(false);
     expect(clone?.defaultVariantId).toBe(clone?.variants[1].id);
     expect(clone?.allowedAddonIds).toEqual([]);
+  });
+
+  it("adds, moves, hides, restores and removes products through the draft list", async () => {
+    const published = baseCatalog();
+    published.products[0].allowedAddonIds = ["extra-chicken", "extra-beef"];
+    vi.mocked(fetchPosManager).mockResolvedValue({
+      revision: 7, publishedRevision: 7, published, draft: null,
+    });
+    vi.mocked(savePosDraft).mockImplementation(async (revision, draft) => ({
+      revision: revision + 1, publishedRevision: 7, published, draft,
+    }));
+    const user = userEvent.setup();
+    mount();
+    await user.click(await screen.findByRole("button", { name: "إضافة صنف" }));
+    await user.type(screen.getByRole("textbox", { name: "اسم الصنف" }), "صنف اختبار");
+    await user.click(screen.getByRole("button", { name: "إلغاء" }));
+    expect(screen.getByRole("button", { name: "حفظ المسودة" })).toBeDisabled();
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "التصنيف" }), "drinks");
+    await user.click(screen.getByRole("button", { name: "إضافة صنف" }));
+    expect(screen.getByRole("combobox", { name: "تصنيف الصنف" })).toHaveValue("drinks");
+    await user.type(screen.getByRole("textbox", { name: "اسم الصنف" }), "صنف اختبار");
+    await user.type(screen.getByRole("textbox", { name: "المطعم" }), "8.50");
+    await user.click(screen.getByRole("button", { name: "إضافة إلى المسودة" }));
+    await user.click(screen.getByRole("button", { name: "إخفاء صنف اختبار" }));
+    expect(screen.getByRole("button", { name: "إظهار صنف اختبار" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "إظهار صنف اختبار" }));
+    await user.click(screen.getByRole("button", { name: "إخفاء صنف اختبار" }));
+    await user.clear(screen.getByRole("searchbox", { name: "بحث في أصناف الكاشير" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "تصنيف مياه" }), "desserts");
+    await user.selectOptions(screen.getByRole("combobox", { name: "تصنيف زيادة دجاج 50 جم" }), "meals");
+    await user.click(screen.getByRole("button", { name: "حذف زيادة لحم 50 جم" }));
+    await user.click(screen.getByRole("button", { name: "إلغاء" }));
+    expect(screen.getByRole("button", { name: "زيادة لحم 50 جم" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "حذف زيادة لحم 50 جم" }));
+    await user.click(screen.getByRole("button", { name: "حذف من المسودة" }));
+    expect(vi.mocked(savePosDraft)).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "حفظ المسودة" }));
+    await waitFor(() => expect(vi.mocked(savePosDraft)).toHaveBeenCalledTimes(1));
+    const saved = vi.mocked(savePosDraft).mock.calls[0][1];
+    expect(saved.products.find((item) => item.name === "صنف اختبار")).toMatchObject({
+      category: "drinks", active: false, variants: [{ prices: { restaurant: 850 } }],
+    });
+    expect(saved.products.find((item) => item.id === "water")?.category).toBe("desserts");
+    expect(saved.products.find((item) => item.id === "butter")?.allowedAddonIds).toEqual([]);
+    expect(saved.products.find((item) => item.id === "extra-beef")).toBeUndefined();
+    await user.click(screen.getByRole("button", { name: "مراجعة ونشر" }));
+    const review = within(screen.getByRole("region", { name: "مراجعة تغييرات منيو الكاشير" }));
+    expect(review.getByRole("row", { name: /تصنيف · مياه.*المشروبات.*الحلويات/ })).toBeInTheDocument();
   });
 
 });

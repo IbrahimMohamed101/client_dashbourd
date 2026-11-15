@@ -32,9 +32,11 @@ export function getPosCatalogChanges(before: Catalog, after: Catalog): CatalogCh
       add("structure", "إزالة قناة بيع", channel.label, "محذوفة");
     }
   }
+  const oldCategories = new Map(before.categories.map(({ id, label }) => [id, label]));
+  const newCategories = new Map(after.categories.map(({ id, label }) => [id, label]));
   for (const category of after.categories) {
-    const original = before.categories.find((entry) => entry.id === category.id);
-    add("structure", "تصنيف · " + category.id, toText(original?.label), category.label);
+    const original = oldCategories.get(category.id);
+    add("structure", original ? "اسم التصنيف" : "إضافة تصنيف", toText(original), category.label);
   }
   for (const category of before.categories) {
     if (!after.categories.some((entry) => entry.id === category.id)) {
@@ -50,7 +52,11 @@ export function getPosCatalogChanges(before: Catalog, after: Catalog): CatalogCh
     if (!old) add("product", "إضافة صنف", "غير موجود", itemLabel);
     else {
       add("product", "اسم الصنف · " + itemLabel, old.name, product.name);
-      add("product", "تصنيف · " + itemLabel, old.category, product.category);
+      if (old.category !== product.category) {
+        add("product", "تصنيف · " + itemLabel,
+          oldCategories.get(old.category) ?? old.category,
+          newCategories.get(product.category) ?? product.category);
+      }
       add("product", "ظهور · " + itemLabel, stateText(old.active), stateText(product.active));
       add("product", "إضافات · " + itemLabel, old.hasAddons === true ? "مسموحة" : "غير مسموحة", product.hasAddons === true ? "مسموحة" : "غير مسموحة");
       add("product", "بيع منفرد · " + itemLabel, old.sellStandalone === true ? "نعم" : "لا", product.sellStandalone === true ? "نعم" : "لا");
