@@ -293,7 +293,12 @@ export function CreateSubscriptionFormContent({
     ];
     if (!(await form.trigger(fields))) {
       setAppliedPromo(null);
-      setPromoError("أكمل بيانات العميل والباقة والتوصيل أو فرع الاستلام المطلوبة أولًا، ثم اضغط تطبيق الكود.");
+      const delivery = form.getValues("delivery");
+      setPromoError(
+        delivery.type === "delivery" && !delivery.zoneId?.trim()
+          ? "اختر منطقة التوصيل أولًا، ثم اضغط تطبيق الكود."
+          : "أكمل بيانات العميل والباقة والتوصيل أو فرع الاستلام المطلوبة أولًا، ثم اضغط تطبيق الكود."
+      );
       return;
     }
 
@@ -315,8 +320,11 @@ export function CreateSubscriptionFormContent({
       setPaymentOptions(readPaymentMethodOptions(response));
     } catch (error: unknown) {
       setAppliedPromo(null);
+      const errorMessage = getApiErrorMessage(error);
       setPromoError(
-        getApiErrorMessage(error) || "تعذر تطبيق كود الخصم. حاول مرة أخرى."
+        errorMessage.includes("Delivery zone is required for delivery subscriptions")
+          ? "اختر منطقة التوصيل أولًا، ثم اضغط تطبيق الكود."
+          : errorMessage || "تعذر تطبيق كود الخصم. حاول مرة أخرى."
       );
     } finally {
       setIsApplyingPromo(false);
