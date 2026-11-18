@@ -36,6 +36,7 @@ export function OperationsCourierBoard({
         isPending={isPending}
         pendingActions={pendingActions}
         onAction={onAction}
+        showDeliveryPreparation
       />
     </div>
   );
