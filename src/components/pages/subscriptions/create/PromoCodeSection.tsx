@@ -130,7 +130,7 @@ export function PromoCodeSection({
             type="button"
             variant="secondary"
             disabled={isApplying || !promoCode?.trim()}
-            onClick={onApply}
+            onClick={() => onApply()}
             className="shrink-0 gap-2"
           >
             {isApplying && <Loader2 className="size-4 animate-spin" />}
