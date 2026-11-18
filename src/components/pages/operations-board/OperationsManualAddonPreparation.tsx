@@ -14,6 +14,7 @@ function blockedReason(plan: OperationAddonPlan) {
   switch (plan.blockReason) {
     case "NO_ADDON_BALANCE": return "رصيد الإضافة انتهى";
     case "ADDON_BALANCE_MISSING": return "الرصيد غير متاح — يحتاج مراجعة";
+    case "STACKING_EXTRA_MANAGED_SEPARATELY": return "رصيد التجديد المجمع له معالجة مستقلة — يحتاج مراجعة";
     case "UNRESOLVED_OLDER_RESERVATION": return "حجز قديم يحتاج مراجعة قبل التجهيز";
     case "ALREADY_SELECTED_FOR_TODAY": return "تم تحديد حصة اليوم";
     case "DAY_NOT_PREPARABLE": return "التجهيز متاح فقط أثناء تحضير طلب اليوم";
