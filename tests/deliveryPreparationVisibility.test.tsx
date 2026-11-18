@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OperationsDeliveryAddonBadges, OperationsDeliveryPreparationDetails } from "../src/components/pages/operations-board/OperationsDeliveryPreparation";
 import { buildKitchenV2Presentation } from "../src/lib/operationsKitchenV2Presentation";
 import type { UnifiedQueueItem } from "../src/types/dashboardOpsTypes";
@@ -34,7 +35,11 @@ function operation(withDailyAddon = true): UnifiedQueueItem {
 test("delivery card shows purchased plan separately from actual daily addons", () => {
   const item = operation();
   const kitchen = buildKitchenV2Presentation(item);
-  const header = renderToStaticMarkup(<OperationsDeliveryAddonBadges item={item} presentation={kitchen} />);
+  const header = renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <OperationsDeliveryAddonBadges item={item} presentation={kitchen} />
+    </QueryClientProvider>
+  );
   const details = renderToStaticMarkup(<OperationsDeliveryPreparationDetails presentation={kitchen} />);
 
   assert.match(header, /مشترك في عصائر/);
@@ -48,7 +53,11 @@ test("delivery card shows purchased plan separately from actual daily addons", (
 test("paid plan without a daily selection never becomes a preparation item", () => {
   const item = operation(false);
   const kitchen = buildKitchenV2Presentation(item);
-  const header = renderToStaticMarkup(<OperationsDeliveryAddonBadges item={item} presentation={kitchen} />);
+  const header = renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <OperationsDeliveryAddonBadges item={item} presentation={kitchen} />
+    </QueryClientProvider>
+  );
   const details = renderToStaticMarkup(<OperationsDeliveryPreparationDetails presentation={kitchen} />);
 
   assert.match(header, /مشترك في عصائر/);
@@ -62,4 +71,39 @@ test("without a valid kitchen contract do not invent meals from entitlement", ()
   const details = renderToStaticMarkup(<OperationsDeliveryPreparationDetails presentation={p} />);
   assert.match(details, /إصدار بيانات المطبخ غير مدعوم/);
   assert.doesNotMatch(details, /وجبة دجاج مشروم/);
+});
+
+test("available addon with a single valid product shows a staff preparation button", () => {
+  const item = operation(false);
+  item.addonPlans = [{
+    addonPlanId: "plan-1", balanceBucketId: "bucket-1",
+    labelI18n: { ar: "سناك" }, selectedTodayQty: 0,
+    remainingQty: 7, reservedQty: 0, consumedQty: 0,
+    canPrepare: true, products: [{ productId: "product-1", name: "بار سناك" }],
+  }];
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <OperationsDeliveryAddonBadges item={item} presentation={buildKitchenV2Presentation(item)} />
+    </QueryClientProvider>
+  );
+  assert.match(html, /تجهيز حصة من سناك/);
+  assert.match(html, /7 متاح/);
+  assert.match(html, /حجز فقط/);
+});
+
+test("customer selected the addon already: no staff preparation button", () => {
+  const item = operation();
+  item.addonPlans = [{
+    addonPlanId: "plan-1", balanceBucketId: "bucket-1",
+    labelI18n: { ar: "سناك" }, selectedTodayQty: 1,
+    remainingQty: 6, reservedQty: 1, consumedQty: 0,
+    canPrepare: false, blockReason: "ALREADY_SELECTED_FOR_TODAY",
+  }];
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <OperationsDeliveryAddonBadges item={item} presentation={buildKitchenV2Presentation(item)} />
+    </QueryClientProvider>
+  );
+  assert.doesNotMatch(html, /تجهيز حصة من سناك/);
+  assert.match(html, /تم اختيار 1 لليوم/);
 });
