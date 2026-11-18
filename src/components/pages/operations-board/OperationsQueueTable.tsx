@@ -24,6 +24,10 @@ import { buildOperationsOrderPresentation } from "@/lib/operationsOrderPresentat
 import type { QueueAction, UnifiedQueueItem } from "@/types/dashboardOpsTypes";
 import { isOneTimeOrder, isPickupRequest } from "@/types/dashboardOpsTypes";
 import { OperationsKitchenV2Summary } from "./OperationsKitchenV2Summary";
+import {
+  OperationsDeliveryAddonBadges,
+  OperationsDeliveryPreparationDetails,
+} from "./OperationsDeliveryPreparation";
 import { OperationsOrderDetailsDialog } from "./OperationsOrderDetailsDialog";
 import { OperationsOrderItemSummary } from "./OperationsOrderItemSummary";
 
@@ -38,6 +42,7 @@ interface OperationsQueueTableProps {
     isDangerous?: boolean
   ) => void;
   onFulfill?: (item: UnifiedQueueItem) => void;
+  showDeliveryPreparation?: boolean;
 }
 
 type ButtonVariant = ComponentProps<typeof Button>["variant"];
@@ -334,12 +339,14 @@ function OperationsQueueCard({
   onAction,
   onFulfill,
   onDetails,
+  showDeliveryPreparation = false,
 }: {
   item: UnifiedQueueItem;
   pendingActions?: PendingOperationsActions;
   onAction: OperationsQueueTableProps["onAction"];
   onFulfill?: OperationsQueueTableProps["onFulfill"];
   onDetails: (item: UnifiedQueueItem) => void;
+  showDeliveryPreparation?: boolean;
 }) {
   const kitchen = buildKitchenV2Presentation(item);
   const order = buildOperationsOrderPresentation(item);
@@ -389,6 +396,10 @@ function OperationsQueueCard({
           </a>
         </div>
 
+        {showDeliveryPreparation && item.mode === "delivery" ? (
+          <OperationsDeliveryAddonBadges item={item} presentation={kitchen} />
+        ) : null}
+
         {item.orderNumber ? (
           <div className="mt-2 flex flex-wrap gap-2">
             <Badge variant="outline" className="rounded-lg px-2.5 py-1" dir="ltr">
@@ -400,7 +411,11 @@ function OperationsQueueCard({
 
       <div className="flex flex-1 flex-col gap-3 p-3.5">
         <FulfillmentSummary item={item} />
-        <OperationsKitchenV2Summary presentation={kitchen} compact />
+        {showDeliveryPreparation && item.mode === "delivery" ? (
+          <OperationsDeliveryPreparationDetails presentation={kitchen} />
+        ) : (
+          <OperationsKitchenV2Summary presentation={kitchen} compact />
+        )}
         {isOneTimeOrder(item) && order.items.length ? (
           <div className="grid gap-2">
             {order.items.slice(0, 2).map((orderItem) => (
@@ -433,6 +448,7 @@ export function OperationsQueueTable({
   pendingActions,
   onAction,
   onFulfill,
+  showDeliveryPreparation = false,
 }: OperationsQueueTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [detailsItem, setDetailsItem] = useState<UnifiedQueueItem | null>(null);
@@ -491,6 +507,7 @@ export function OperationsQueueTable({
               onAction={onAction}
               onFulfill={onFulfill}
               onDetails={setDetailsItem}
+              showDeliveryPreparation={showDeliveryPreparation}
             />
           ))}
         </div>
