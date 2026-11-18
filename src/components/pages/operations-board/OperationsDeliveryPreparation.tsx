@@ -74,7 +74,9 @@ export function OperationsDeliveryAddonBadges({
       ) : planLabels.length ? (
         <p className="flex items-center gap-1.5 text-xs text-amber-800 dark:text-amber-300">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-          لا توجد إضافات مختارة للتحضير اليوم؛ الاشتراك وحده ليس طلب تجهيز.
+          {presentation.supported
+            ? "لا توجد إضافات مختارة للتحضير اليوم؛ الاشتراك وحده ليس طلب تجهيز."
+            : "تعذر التحقق من اختيارات الإضافات اليوم؛ راجع بيانات التحضير قبل التجهيز."}
         </p>
       ) : null}
     </div>
