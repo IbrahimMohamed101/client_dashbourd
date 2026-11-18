@@ -47,8 +47,8 @@ export type SubscriptionQuotePayload = Omit<
   "payment"
 >;
 
-export function normalizePromoCode(value: string | undefined) {
-  const normalized = value?.trim().toUpperCase() || "";
+export function normalizePromoCode(value: unknown) {
+  const normalized = typeof value === "string" ? value.trim().toUpperCase() : "";
   return normalized || undefined;
 }
 
