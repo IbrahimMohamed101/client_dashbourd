@@ -144,6 +144,13 @@ export interface KitchenAddonGroup {
   items: KitchenAddonItem[];
 }
 
+export interface OperationAddonPlan {
+  addonPlanId?: string | null;
+  label?: string | null;
+  labelI18n?: LocalizedText | null;
+  quantityPerDay?: number | null;
+}
+
 export interface KitchenV2 {
   version: "v2";
   purpose?: "meal_preparation" | string;
@@ -257,6 +264,8 @@ export interface OperationItem {
   pickup?: OperationPickup | null;
   delivery?: OperationDelivery | null;
   kitchen?: KitchenV2 | null;
+  /** Purchased addon plans; not necessarily selected for today's delivery. */
+  addonPlans?: OperationAddonPlan[];
   allowedActions: OperationAction[];
   timestamps: {
     createdAt: string | null;
