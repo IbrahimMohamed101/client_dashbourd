@@ -146,9 +146,19 @@ export interface KitchenAddonGroup {
 
 export interface OperationAddonPlan {
   addonPlanId?: string | null;
+  balanceBucketId?: string | null;
+  entitlementKey?: string | null;
   label?: string | null;
   labelI18n?: LocalizedText | null;
   quantityPerDay?: number | null;
+  selectedTodayQty?: number | null;
+  stillNeededQty?: number | null;
+  remainingQty?: number | null;
+  reservedQty?: number | null;
+  consumedQty?: number | null;
+  canPrepare?: boolean;
+  blockReason?: string | null;
+  products?: Array<{ productId: string; name: string; nameI18n?: LocalizedText | null }>;
 }
 
 export interface KitchenV2 {
