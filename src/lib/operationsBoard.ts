@@ -408,6 +408,9 @@ export function normalizeOperationsQueueItem(
     pickup: pickup as UnifiedQueueItem["pickup"],
     delivery: delivery as UnifiedQueueItem["delivery"],
     kitchen,
+    addonPlans: Array.isArray(record.addonPlans)
+      ? record.addonPlans as UnifiedQueueItem["addonPlans"]
+      : [],
     allowedActions: normalizeAllowedActions(record.allowedActions),
     timestamps: {
       createdAt: asString(timestamps?.createdAt) || asString(record.createdAt),
