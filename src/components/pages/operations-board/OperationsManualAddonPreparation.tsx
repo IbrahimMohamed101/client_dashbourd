@@ -13,6 +13,7 @@ function planLabel(plan: OperationAddonPlan) {
 function blockedReason(plan: OperationAddonPlan) {
   switch (plan.blockReason) {
     case "NO_ADDON_BALANCE": return "رصيد الإضافة انتهى";
+    case "SUBSCRIPTION_NOT_CURRENT": return "الاشتراك خارج فترة الصلاحية — لا يمكن تجهيز إضافة";
     case "ADDON_BALANCE_MISSING": return "الرصيد غير متاح — يحتاج مراجعة";
     case "STACKING_EXTRA_MANAGED_SEPARATELY": return "رصيد التجديد المجمع له معالجة مستقلة — يحتاج مراجعة";
     case "UNRESOLVED_OLDER_RESERVATION": return "حجز قديم يحتاج مراجعة قبل التجهيز";
