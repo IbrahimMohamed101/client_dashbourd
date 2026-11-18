@@ -1,5 +1,6 @@
 import { AlertTriangle, ChefHat, PackagePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { OperationsManualAddonPreparation } from "./OperationsManualAddonPreparation";
 import {
   resolveOperationsLocalizedText,
   type PresentedKitchenV2,
@@ -59,6 +60,9 @@ export function OperationsDeliveryAddonBadges({
             ))}
           </div>
         </div>
+      ) : null}
+      {presentation.supported && item.source === "subscription" ? (
+        <OperationsManualAddonPreparation item={item} />
       ) : null}
       {presentation.addonGroups.length ? (
         <div>
