@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-const state = vi.hoisted(() => ({ data: {} as unknown, paid: undefined as unknown }));
+const state = vi.hoisted(() => ({ data: {} as unknown, paid: undefined as unknown, paidError: false }));
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: (options: { queryKey?: unknown[] }) => ({ data: options.queryKey?.[0] === "landing-paid-conversions" ? state.paid : state.data, isFetching: false, isError: false, refetch: vi.fn() }),
+  useQuery: (options: { queryKey?: unknown[] }) => ({ data: options.queryKey?.[0] === "landing-paid-conversions" ? state.paid : state.data, isFetching: false, isError: options.queryKey?.[0] === "landing-paid-conversions" && state.paidError, refetch: vi.fn() }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useMutation: () => ({ isPending: false, mutate: vi.fn() }),
 }));
 import { LandingLeadsPage } from '../src/features/landing-leads/LandingLeadsPage';
 import { LandingAnalyticsReport } from '../src/features/accounting/components/LandingAnalyticsReport';
-afterEach(() => { cleanup(); state.paid = undefined; });
+afterEach(() => { cleanup(); state.paid = undefined; state.paidError = false; });
 
 describe('website offer inquiries and conversion reporting', () => {
   it('shows no chosen plan and offer interest without inventing a paid subscription', () => {
@@ -46,8 +46,17 @@ describe('website offer inquiries and conversion reporting', () => {
     render(<LandingAnalyticsReport />);
     expect(screen.getByText('مدفوعات التطبيق المكتملة')).toBeTruthy();
     expect(screen.getByText('أول عملية دفع مسجلة للعميل')).toBeTruthy();
-    expect(screen.getByText('مدفوعات بدون رابط موقع مثبت')).toBeTruthy();
-    expect(screen.getByText('instagram')).toBeTruthy();
+    expect(screen.getByText('مدفوعات غير منسوبة لاكتساب الموقع')).toBeTruthy();
+    expect(screen.getByText('إنستجرام')).toBeTruthy();
+  });
+  it('shows explicit unavailable state instead of reporting zero when paid API fails', () => {
+    state.data = undefined;
+    state.paid = undefined;
+    state.paidError = true;
+    render(<LandingAnalyticsReport />);
+    expect(screen.getByText('بيانات الاشتراكات المدفوعة غير متاحة الآن.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'إعادة المحاولة' })).toBeTruthy();
+    expect(screen.queryByText('مدفوعات التطبيق المكتملة')).toBeNull();
   });
   it('does not turn missing legacy funnel measurements into zero conversions', () => {
     state.data = { kpis: { pageViews: 10, sessions: 10, ctaClicks: 2, uniqueLeads: 1,

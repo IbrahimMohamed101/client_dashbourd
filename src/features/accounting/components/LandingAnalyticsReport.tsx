@@ -43,6 +43,8 @@ const locationLabels: Record<string,string> = {
   plans: "الباقات", final: "آخر الصفحة",
   ios: "iOS", android: "Android", desktop: "كمبيوتر",
   app_store: "App Store", google_play: "Google Play",
+  instagram: "إنستجرام", facebook: "فيسبوك", meta: "ميتا", tiktok: "تيك توك",
+  google: "جوجل", snapchat: "سناب شات", whatsapp: "واتساب", youtube: "يوتيوب",
   direct: "غير محدد",
   unattributed: "مصدر غير معروف (بدون UTM أو إحالة)",
   unspecified: "غير محدد",
@@ -149,7 +151,7 @@ export function LandingAnalyticsReport() {
       <Card className="rounded-2xl" aria-label="الاشتراكات المدفوعة المكتملة">
         <CardHeader>
           <CardTitle className="text-base">الاشتراكات المدفوعة المكتملة</CardTitle>
-          <p className="text-sm leading-6 text-muted-foreground">عمليات التطبيق المدفوعة والمطبقة مع طلب اشتراك مكتمل. لا تُحسب النقرات أو الطلبات غير المدفوعة. ربط الموقع استنتاج من طلب تواصل موافق عليه خلال 30 يومًا قبل الدفع، وليس إثباتًا لنسبة الإعلان.</p>
+          <p className="text-sm leading-6 text-muted-foreground">عمليات التطبيق المدفوعة والمطبقة مع طلب اشتراك مكتمل. لا تُحسب النقرات أو الطلبات غير المدفوعة. إسناد اكتساب العميل يقتصر على أول عملية شراء مسجلة، بناءً على طلب تواصل موافق عليه خلال 30 يومًا قبل الدفع، وليس إثباتًا لنسبة الإعلان.</p>
         </CardHeader>
         <CardContent className="space-y-3">
           {paidQuery.isFetching && <p className="text-sm">جاري جلب الاشتراكات المدفوعة...</p>}
@@ -166,15 +168,15 @@ export function LandingAnalyticsReport() {
                   ["عمليات متكررة أو تجديد", fmt(paid.repeatOrRenewalPurchases)],
                   ["مدفوعات من نوع تجديد", fmt(paid.renewalPayments)],
                   ["سجل شراء غير محسوم", fmt(paid.unknownPurchaseHistory)],
-                  ["مدفوعات مرتبطة بطلب تواصل", fmt(paid.leadMatched)],
-                  ["مدفوعات بدون رابط موقع مثبت", fmt(paid.unmatched)],
+                  ["أول مشتريات مرتبطة بطلب تواصل", fmt(paid.leadMatched)],
+                  ["مدفوعات غير منسوبة لاكتساب الموقع", fmt(paid.unmatched)],
                   ["إيرادات المدفوعات المكتملة", money(paid.amountHalala)],
-                  ["إيرادات مرتبطة بطلب تواصل", money(paid.leadMatchedAmountHalala)],
+                  ["إيرادات أول مشتريات مرتبطة بطلب تواصل", money(paid.leadMatchedAmountHalala)],
                 ] as const).map(([label, value]) => (
                   <div className="rounded-lg border p-3" key={label}><p className="text-xs text-muted-foreground">{label}</p><strong className="tabular-nums text-lg">{value}</strong></div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">أول عملية مسجلة تستند إلى تاريخ المدفوعات المتاح عبر القنوات، وقد لا تشمل سجلات تاريخية ناقصة. لا يمكن إسناد عمليات التحميل وحدها إلى الموقع.</p>
+              <p className="text-xs text-muted-foreground">إيرادات التجديد والشراء المتكرر تدخل في الإجمالي فقط، ولا تُنسب لمصدر الاكتساب. أول عملية مسجلة تستند إلى تاريخ المدفوعات المتاح عبر القنوات، وقد لا تشمل سجلات تاريخية ناقصة. لا يمكن إسناد عمليات التحميل وحدها إلى الموقع.</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-right text-sm">
                   <thead><tr><th className="p-2">مصدر طلب التواصل</th><th className="p-2">المدفوعات</th><th className="p-2">الإيرادات</th></tr></thead>
