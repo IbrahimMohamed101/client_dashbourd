@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-const state = vi.hoisted(() => ({ data: {} as unknown }));
+const state = vi.hoisted(() => ({ data: {} as unknown, paid: undefined as unknown, paidError: false }));
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({ data: state.data, isFetching: false, isError: false, refetch: vi.fn() }),
+  useQuery: (options: { queryKey?: unknown[] }) => ({ data: options.queryKey?.[0] === "landing-paid-conversions" ? state.paid : state.data, isFetching: false, isError: options.queryKey?.[0] === "landing-paid-conversions" && state.paidError, refetch: vi.fn() }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
   useMutation: () => ({ isPending: false, mutate: vi.fn() }),
 }));
 import { LandingLeadsPage } from '../src/features/landing-leads/LandingLeadsPage';
 import { LandingAnalyticsReport } from '../src/features/accounting/components/LandingAnalyticsReport';
-afterEach(cleanup);
+afterEach(() => { cleanup(); state.paid = undefined; state.paidError = false; });
 
 describe('website offer inquiries and conversion reporting', () => {
   it('shows no chosen plan and offer interest without inventing a paid subscription', () => {
@@ -38,6 +38,26 @@ describe('website offer inquiries and conversion reporting', () => {
     expect(screen.getByText('طلبات تواصل فريدة محفوظة')).toBeTruthy();
     expect(screen.getByText('إتمام التسجيل حسب موضع الزر')).toBeTruthy();
   });
+  it('shows verified paid conversion counts separately from clicks and manual lead states', () => {
+    state.data = undefined;
+    state.paid = { completed: 2, activationPayments: 1, renewalPayments: 1, firstRecordedPaidPurchases: 1,
+      repeatOrRenewalPurchases: 1, unknownPurchaseHistory: 0, amountHalala: 20000, leadMatched: 1,
+      leadMatchedAmountHalala: 10000, unmatched: 1, sources: [{ source: "instagram", completed: 1, amountHalala: 10000 }] };
+    render(<LandingAnalyticsReport />);
+    expect(screen.getByText('مدفوعات التطبيق المكتملة')).toBeTruthy();
+    expect(screen.getByText('أول عملية دفع مسجلة للعميل')).toBeTruthy();
+    expect(screen.getByText('مدفوعات غير منسوبة لاكتساب الموقع')).toBeTruthy();
+    expect(screen.getByText('إنستجرام')).toBeTruthy();
+  });
+  it('shows explicit unavailable state instead of reporting zero when paid API fails', () => {
+    state.data = undefined;
+    state.paid = undefined;
+    state.paidError = true;
+    render(<LandingAnalyticsReport />);
+    expect(screen.getByText('بيانات الاشتراكات المدفوعة غير متاحة الآن.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'إعادة المحاولة' })).toBeTruthy();
+    expect(screen.queryByText('مدفوعات التطبيق المكتملة')).toBeNull();
+  });
   it('does not turn missing legacy funnel measurements into zero conversions', () => {
     state.data = { kpis: { pageViews: 10, sessions: 10, ctaClicks: 2, uniqueLeads: 1,
       storeClicks: 0, storeClickRate: 0, navClicks: 0, sectionViews: 0, faqOpens: 0, reelClicks: 0 },
@@ -45,6 +65,7 @@ describe('website offer inquiries and conversion reporting', () => {
       referrers: [], plans: [], daily: [],
     };
     render(<LandingAnalyticsReport />);
+    expect(screen.queryByText('مدفوعات التطبيق المكتملة')).toBeNull();
     expect(screen.queryByText('فتح نموذج التسجيل')).toBeNull();
     expect(screen.queryByText('إشارات إتمام نموذج التسجيل')).toBeNull();
     expect(screen.getByText('طلبات تواصل فريدة محفوظة')).toBeTruthy();

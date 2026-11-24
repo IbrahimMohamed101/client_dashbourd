@@ -27,6 +27,14 @@ interface LandingAnalyticsData {
   reels: Bucket[]; referrers: Bucket[]; plans: Bucket[];
   note: string;
 }
+interface PaidConversions {
+  completed: number; activationPayments: number; renewalPayments: number;
+  firstRecordedPaidPurchases: number; repeatOrRenewalPurchases: number;
+  unknownPurchaseHistory: number; amountHalala: number; leadMatched: number;
+  leadMatchedAmountHalala: number; unmatched: number;
+  sources: Array<{ source: string; completed: number; amountHalala: number }>;
+}
+const money = (halala: number) => new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR" }).format(halala / 100);
 const initialRange = resolveAccountingRangePreset("last30", getTodayKSADate());
 const fmt = (n: number) => new Intl.NumberFormat("ar-SA").format(n);
 const locationLabels: Record<string,string> = {
@@ -35,6 +43,8 @@ const locationLabels: Record<string,string> = {
   plans: "الباقات", final: "آخر الصفحة",
   ios: "iOS", android: "Android", desktop: "كمبيوتر",
   app_store: "App Store", google_play: "Google Play",
+  instagram: "إنستجرام", facebook: "فيسبوك", meta: "ميتا", tiktok: "تيك توك",
+  google: "جوجل", snapchat: "سناب شات", whatsapp: "واتساب", youtube: "يوتيوب",
   direct: "غير محدد",
   unattributed: "مصدر غير معروف (بدون UTM أو إحالة)",
   unspecified: "غير محدد",
@@ -74,6 +84,19 @@ export function LandingAnalyticsReport() {
     staleTime: 60_000,
     retry: false,
   });
+  const paidQuery = useQuery({
+    queryKey: ["landing-paid-conversions", range.from, range.to],
+    queryFn: async () => {
+      const response = await api.get<{ status: boolean; data: PaidConversions }>(
+        "/api/landing-analytics/paid-conversions", { params: range }
+      );
+      const data = response.data.data;
+      if (!data || typeof data.completed !== "number" || !Array.isArray(data.sources)) throw new Error("Invalid paid conversion report");
+      return data;
+    },
+    staleTime: 60_000, retry: false,
+  });
+  const paid = paidQuery.data;
   const report = query.data;
   const cards = report ? [
     ["مشاهدات الصفحة", report.kpis.pageViews],
@@ -123,6 +146,45 @@ export function LandingAnalyticsReport() {
             تعذر جلب التقرير من الخادم.
             <Button variant="outline" onClick={() => void query.refetch()}>إعادة المحاولة</Button>
           </div>}
+        </CardContent>
+      </Card>
+      <Card className="rounded-2xl" aria-label="الاشتراكات المدفوعة المكتملة">
+        <CardHeader>
+          <CardTitle className="text-base">الاشتراكات المدفوعة المكتملة</CardTitle>
+          <p className="text-sm leading-6 text-muted-foreground">عمليات التطبيق المدفوعة والمطبقة مع طلب اشتراك مكتمل. لا تُحسب النقرات أو الطلبات غير المدفوعة. إسناد اكتساب العميل يقتصر على أول عملية شراء مسجلة، بناءً على طلب تواصل موافق عليه خلال 30 يومًا قبل الدفع، وليس إثباتًا لنسبة الإعلان.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {paidQuery.isFetching && <p className="text-sm">جاري جلب الاشتراكات المدفوعة...</p>}
+          {paidQuery.isError && <div className="flex flex-wrap items-center gap-2 text-sm text-destructive">
+            بيانات الاشتراكات المدفوعة غير متاحة الآن.
+            <Button variant="outline" onClick={() => void paidQuery.refetch()}>إعادة المحاولة</Button>
+          </div>}
+          {paid && (
+            <>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {([
+                  ["مدفوعات التطبيق المكتملة", fmt(paid.completed)],
+                  ["أول عملية دفع مسجلة للعميل", fmt(paid.firstRecordedPaidPurchases)],
+                  ["عمليات متكررة أو تجديد", fmt(paid.repeatOrRenewalPurchases)],
+                  ["مدفوعات من نوع تجديد", fmt(paid.renewalPayments)],
+                  ["سجل شراء غير محسوم", fmt(paid.unknownPurchaseHistory)],
+                  ["أول مشتريات مرتبطة بطلب تواصل", fmt(paid.leadMatched)],
+                  ["مدفوعات غير منسوبة لاكتساب الموقع", fmt(paid.unmatched)],
+                  ["إيرادات المدفوعات المكتملة", money(paid.amountHalala)],
+                  ["إيرادات أول مشتريات مرتبطة بطلب تواصل", money(paid.leadMatchedAmountHalala)],
+                ] as const).map(([label, value]) => (
+                  <div className="rounded-lg border p-3" key={label}><p className="text-xs text-muted-foreground">{label}</p><strong className="tabular-nums text-lg">{value}</strong></div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">إيرادات التجديد والشراء المتكرر تدخل في الإجمالي فقط، ولا تُنسب لمصدر الاكتساب. أول عملية مسجلة تستند إلى تاريخ المدفوعات المتاح عبر القنوات، وقد لا تشمل سجلات تاريخية ناقصة. لا يمكن إسناد عمليات التحميل وحدها إلى الموقع.</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-sm">
+                  <thead><tr><th className="p-2">مصدر طلب التواصل</th><th className="p-2">المدفوعات</th><th className="p-2">الإيرادات</th></tr></thead>
+                  <tbody>{paid.sources.map(row => <tr className="border-t" key={row.source}><td className="p-2 break-all">{getLabel(row.source)}</td><td className="p-2">{fmt(row.completed)}</td><td className="p-2">{money(row.amountHalala)}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
       {report && (
